@@ -1,6 +1,7 @@
 
+from ctypes import c_float
+from ctypes import POINTER
 from ctypes import create_string_buffer
-from numpy.core._internal import _ctypes
 
 from ctypes import c_char_p
 from ctypes import byref
@@ -18,7 +19,6 @@ import level_kinds
 #TODO: maybe determine time step from file data
 class RPN():
     def __init__(self, path = ''):
-        application_properties.set_current_directory()
         try:
             self._dll = CDLL('rmnlib.so')
         except OSError:
@@ -29,7 +29,9 @@ class RPN():
         self.ETIKET_DEFAULT  = 16 * ' '
         self.GRIDTYPE_DEFAULT = 2 * ' '
 
-        self._current_dt_seconds = -1
+        self._current_output_dt_seconds = -1
+
+        self._current_info = None ##map containing info cocerning the last read record
 
 
         self.current_grid_type = 'Z' #self.GRIDTYPE_DEFAULT
@@ -83,15 +85,25 @@ class RPN():
         self._dll.fclos_wrapper.restype = c_int
         self._dll.fclos_wrapper.argtypes = [c_int]
 
+        #fstsui
+        self._dll.fstsui_wrapper.restype = c_int
+        self._dll.fstsui_wrapper.argtypes = [c_int, POINTER(c_int), POINTER(c_int), POINTER(c_int)]
+
+        #convip
+        p_c_int = POINTER(c_int)
+        self._dll.convip_wrapper.argtypes = [p_c_int, POINTER(c_float), p_c_int, p_c_int, c_char_p, p_c_int]
 
     def get_output_step_in_seconds(self):
-        return self._current_dt_seconds
+        return self._current_output_dt_seconds
 
     def close(self):
         print  'close status: ', self._dll.fstfrm_wrapper(self._file_unit)
         self._dll.fclos_wrapper(self._file_unit)
  #       dlclose(self._dll._handle)
         del self._dll
+
+    def get_number_of_records(self):
+        return self._dll.fstnbr_wrapper(self._file_unit)
 
     def get_key_of_any_record(self):
         ni = c_int(0)
@@ -112,16 +124,10 @@ class RPN():
         #int fstinf_wrapper(int iun, int *ni, int *nj, int *nk, int datev,char *in_etiket,
         #             int ip1, int ip2, int ip3, char *in_typvar, char *in_nomvar)
 
-
-        print 'ip1 = ', ip1.value
-        print 'var name = ', in_nomvar.value
-        print 'len(etiket.value) = ', len(etiket.value)
-        print len(in_nomvar.value)
         key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
-        print 'got record for ', in_nomvar.value
-        print 'any key = ', key
+        
         return key
 
 
@@ -129,8 +135,8 @@ class RPN():
     def get_longitudes_and_latitudes(self):
 
         key = self.get_key_of_any_record()
-        ig = self._print_record_info(key, verbose = True) #sets grid type
-
+        info = self._get_record_info(key, verbose = True) #sets grid type
+        ig = info['ig']
 
         ni = c_int(0)
         nj = c_int(0)
@@ -159,7 +165,7 @@ class RPN():
 
         print 'hor_key = ', hor_key
 
-        self._print_record_info(hor_key)
+        self._get_record_info(hor_key)
 
         hor_key = c_int(hor_key)
         data = np.zeros((ni.value,), dtype = np.float32)
@@ -184,7 +190,8 @@ class RPN():
         print 'grid type: ', self.current_grid_type
         print 'grid ref: ', self.current_grid_reference
 
-        ig = self._print_record_info(hor_key, verbose = True)
+        info = self._get_record_info(hor_key, verbose = True)
+        ig = info['ig']
 
         print self.current_grid_type
         grid_type = create_string_buffer(self.current_grid_type)
@@ -241,23 +248,21 @@ class RPN():
         #             int ip1, int ip2, int ip3, char *in_typvar, char *in_nomvar)
 
 
-        print 'ip1 = ', ip1.value
-        print 'var name = ', in_nomvar.value
         key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
 
-        print 'key = ', key
+        
         data = np.zeros((nk.value, nj.value, ni.value,), dtype = np.float32)
         
-        self._print_record_info(key)
+        self._current_info = self._get_record_info(key)
 
         #read the record
         print self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
         data = np.transpose(data, (2, 1, 0))
-        return data
+        return data[:,:, 0]
 
-    def _print_record_info(self, key, verbose = True):
+    def _get_record_info(self, key, verbose = False):
         dateo = c_int()
         dt_seconds = c_int()
         npas = c_int()
@@ -311,16 +316,99 @@ class RPN():
             print 'varname: ', nomvar.value
 
         
-        self._current_dt_seconds = dt_seconds.value * npas.value
-        print 'current grid type ', self.current_grid_type
+        self._current_output_dt_seconds = dt_seconds.value * npas.value
         if '>>' in nomvar.value or '^^' in nomvar.value:
             self.current_grid_reference = grid_type.value
         else:
             self.current_grid_type = grid_type.value
         print 'current grid type ', self.current_grid_type
-        return [ig1, ig2, ig3, ig4]
 
+        result = {}
+        result['ig'] = [ig1, ig2, ig3, ig4]
+        result['ip'] = [ip1, ip2, ip3]
+        result['shape'] = [ni, nj, nk]
+        result['dateo'] = dateo
+        result['dt_seconds'] = dt_seconds
+        result['npas'] = npas
+        result['varname'] = nomvar
+        self._current_info = result #update info from the last read record
+        return result
+
+
+    ##returns None, if there is no next record satisfying the last search parameters
+    def get_next_record(self):
+        ni, nj, nk = self._current_info['shape']
+        key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
+
+ 
+        if key <= 0: return None
+        data = np.zeros((nk.value, nj.value, ni.value,), dtype = np.float32)
+        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
+        data = np.transpose(data, (2, 1, 0))
+
+        self._get_record_info(key)
+        return data[:,:,0]
+
+    def get_current_level(self, level_kind = level_kinds.ARBITRARY):
+        ip1 = self._current_info['ip'][0]
+        print 'ip1 = ', ip1
+        level_value = c_float(-1)
+        mode = c_int(-1) #from ip to real value
+        kind = c_int(level_kind)
+        flag = c_int(0)
+        string = create_string_buffer(' ', 128)
+        #print 'before convip'
+        self._dll.convip_wrapper( byref(ip1), byref(level_value), byref( kind ) , byref(mode), string, byref(flag) )
+        return level_value.value
+        pass
+
+    def get_current_validity_date(self):
+        '''
+        returns validity date in hours from the start
+        '''
+
+        ##have to search for data records in order to see dt and npas
+        if self._current_info == None:
+            key = self.get_key_of_any_record()
+            self._get_record_info(key)
+
+        while self._current_info['varname'].value.strip().lower() in ['>>','^^', 'hy']:
+            self.get_next_record()
+
+
+        print 'dateo  = ' , self._current_info['dateo']
+        print 'dt_seconds = ', self._current_info['dt_seconds']
+        print 'npas = ', self._current_info['npas']
+        print 'varname = ', self._current_info['varname'].value
+        return self._current_info['ip'][1] ##ip2
+        pass
+
+  
+    def get_3D_field(self, name = 'SAND', level_kind = level_kinds.ARBITRARY):
+        '''
+        returns a map {level => 2d field}
+        '''
+        result = {}
+        data1 = self.get_first_record_for_name(name)
+        result[self.get_current_level(level_kind = level_kind)] = data1
+
+        while data1 != None:
+            data1 = self.get_next_record()
+            if data1 != None:
+                result[self.get_current_level(level_kind = level_kind)] = data1
+        return result
+
+
+def test():
+    #path = 'data/geophys_africa'
+    path = 'data/pm1989010100_00000003p'
+    rpnObj = RPN(path)
+    datev = rpnObj.get_current_validity_date()
+    print 'validity date = ', datev.value
+    print rpnObj.get_number_of_records()
+    rpnObj.close()
 
 
 if __name__ == "__main__":
+    test()
     print "Hello World"
