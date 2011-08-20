@@ -1,3 +1,3 @@
 Author: Oleksandr Huziy
-Python interface to rmnlib using ctypes
+Python interface to rmnlib using ctypes and wrapper dynamic library,
 the wrapper .so library is created in the RPNc(also here at github) project.
