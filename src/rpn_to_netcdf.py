@@ -6,7 +6,7 @@ __date__ ="$Jul 25, 2011 4:56:03 PM$"
 
 import netCDF4 as nc
 import application_properties
-application_properties.set_current_directory()
+
 from rpn import RPN
 
 import os
@@ -67,7 +67,7 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa'):
     clayField = rpnFile.get_3D_field('CLAY')
     rpnFile.close()
 
-    ncFile = nc.Dataset('sand_clay_3d.nc', 'w', format = 'NETCDF3_CLASSIC')
+    ncFile = nc.Dataset('sand_clay_3d_na.nc', 'w', format = 'NETCDF3_CLASSIC')
 
     
     nx, ny = sandField[1].shape
@@ -123,7 +123,8 @@ def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_rec
 
 
 if __name__ == "__main__":
-#    extract_sand_and_clay_from_rpn()
+    application_properties.set_current_directory()
+#    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
 #    delete_files_with_nrecords()
-    extract_runoff_to_netcdf_folder()
+    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
     print "Hello World"

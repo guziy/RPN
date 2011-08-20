@@ -1,3 +1,4 @@
+import os.path
 
 from ctypes import c_float
 from ctypes import POINTER
@@ -10,15 +11,43 @@ __author__="huziy"
 __date__ ="$Apr 5, 2011 12:26:05 PM$"
 
 from ctypes import *
-import application_properties
 import numpy as np
 
-
+import os
 
 import level_kinds
-#TODO: maybe determine time step from file data
+import data_types
+
 class RPN():
-    def __init__(self, path = ''):
+    '''
+    Class for reading and writing rpn files
+    usage:
+        rObj = RPN(path = 'your path', mode = 'r')
+        rObj = RPN(path = 'your path', mode = 'w')
+
+    methods:
+        get_first_record_for_name_and_level(self, varname = '', level = -1,
+                                                  level_kind = level_kinds.ARBITRARY)
+        get_3D_field(self, name = 'SAND', level_kind = level_kinds.ARBITRARY)
+        get_current_level(self, level_kind = level_kinds.ARBITRARY)
+        get_current_validity_date(self)
+        get_first_record_for_name(self, varname)
+        get_next_record(self)
+        get_longitudes_and_latitudes(self)
+        get_key_of_any_record(self)
+        get_number_of_records(self)
+        close(self)
+        get_ip1_from_level(self, level, level_kind = level_kinds.ARBITRARY)
+        write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY, data = None )
+
+
+
+
+    '''
+    def __init__(self, path = '', mode = 'r'):
+        if not os.path.isfile(path) and mode == 'r':
+            raise Exception('{0} does not exist, or is not a file'.format(path))
+
         try:
             self._dll = CDLL('rmnlib.so')
         except OSError:
@@ -27,29 +56,34 @@ class RPN():
         self.VARNAME_DEFAULT = 8 * ' '
         self.VARTYPE_DEFAULT = 4 * ' '
         self.ETIKET_DEFAULT  = 16 * ' '
-        self.GRIDTYPE_DEFAULT = 2 * ' '
+        self.GRIDTYPE_DEFAULT = 'Z'
 
         self._current_output_dt_seconds = -1
 
-        self._current_info = None ##map containing info cocerning the last read record
+        self.FROM_LEVEL_TO_IP1_MODE = 1
+        self.FROM_IP1_TO_LEVEL_MODE = -1
+
+        self._current_info = None ##map containing info concerning the last read record
 
 
-        self.current_grid_type = 'Z' #self.GRIDTYPE_DEFAULT
-        self.current_grid_reference = 'E' #TODO: maybe it can be determined somehow from the record header
+        self.current_grid_type = self.GRIDTYPE_DEFAULT
+        self.current_grid_reference = 'E' 
 
         rpn_file_path = create_string_buffer(path)
-        options = c_char_p('RND+R/O')
+        if mode == 'w':
+            if os.path.isfile(path):
+                os.remove(path)
+            options = c_char_p('RND')
+        else:
+            options = c_char_p('RND+R/O')
         dummy = c_int(0)
 
         self._dll.fnom_wrapper.argtypes = [POINTER(c_int), c_char_p, c_char_p, c_int]
         self._dll.fnom_wrapper.restype = c_int
         self._file_unit = c_int()
         self._dll.fnom_wrapper(byref(self._file_unit), rpn_file_path, options, dummy)
-        print self._file_unit.value
+        
 
-
-
-        options.value = 'RND'
         self.nrecords = self._dll.fstouv_wrapper(self._file_unit, options)
 
 
@@ -93,13 +127,22 @@ class RPN():
         p_c_int = POINTER(c_int)
         self._dll.convip_wrapper.argtypes = [p_c_int, POINTER(c_float), p_c_int, p_c_int, c_char_p, p_c_int]
 
+        #fstecr
+        self._dll.fstecr_wrapper.argtypes = [
+            POINTER(c_float),
+            c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int,
+            c_int, c_int,
+            c_char_p, c_char_p, c_char_p, c_char_p,
+            c_int, c_int, c_int, c_int, c_int, c_int
+        ]
+
+
     def get_output_step_in_seconds(self):
         return self._current_output_dt_seconds
 
     def close(self):
         print  'close status: ', self._dll.fstfrm_wrapper(self._file_unit)
         self._dll.fclos_wrapper(self._file_unit)
- #       dlclose(self._dll._handle)
         del self._dll
 
     def get_number_of_records(self):
@@ -193,7 +236,7 @@ class RPN():
         info = self._get_record_info(hor_key, verbose = True)
         ig = info['ig']
 
-        print self.current_grid_type
+        print 'grid type: ',  self.current_grid_type
         grid_type = create_string_buffer(self.current_grid_type)
         grid_reference = create_string_buffer(self.current_grid_reference)
 
@@ -252,6 +295,7 @@ class RPN():
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
 
+        if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
         
         data = np.zeros((nk.value, nj.value, ni.value,), dtype = np.float32)
         
@@ -337,6 +381,10 @@ class RPN():
 
     ##returns None, if there is no next record satisfying the last search parameters
     def get_next_record(self):
+        if self._current_info == None:
+            key = self.get_key_of_any_record()
+            self._get_record_info(key)
+        
         ni, nj, nk = self._current_info['shape']
         key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
 
@@ -350,6 +398,9 @@ class RPN():
         return data[:,:,0]
 
     def get_current_level(self, level_kind = level_kinds.ARBITRARY):
+        '''
+        returns level value for the last read record
+        '''
         ip1 = self._current_info['ip'][0]
         print 'ip1 = ', ip1
         level_value = c_float(-1)
@@ -364,7 +415,7 @@ class RPN():
 
     def get_current_validity_date(self):
         '''
-        returns validity date in hours from the start
+        returns validity date in hours from the start of the last read record
         '''
 
         ##have to search for data records in order to see dt and npas
@@ -380,7 +431,7 @@ class RPN():
         print 'dt_seconds = ', self._current_info['dt_seconds']
         print 'npas = ', self._current_info['npas']
         print 'varname = ', self._current_info['varname'].value
-        return self._current_info['ip'][1] ##ip2
+        return self._current_info['ip'][1].value ##ip2
         pass
 
   
@@ -399,16 +450,85 @@ class RPN():
         return result
 
 
+
+    def get_ip1_from_level(self, level, level_kind = level_kinds.ARBITRARY):
+        lev = c_float(level)
+        lev_kind = c_int(level_kind)
+        str_form = create_string_buffer('')
+        ip1 = c_int(0)
+        self._dll.convip_wrapper(byref(ip1), byref(lev), byref(lev_kind),
+                            byref(c_int(self.FROM_LEVEL_TO_IP1_MODE)), str_form, byref(c_int(0)))
+
+        return ip1.value
+
+
+
+    def write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY,
+                             data = None, grid_type = 'Z' ):
+        '''
+        Do not care about grid type just write data to the file
+        int fstecr_wrapper(float* field, int bits_per_value, int iun,
+                              int date, int deet, int npas,
+                              int ni, int nj, int nk,
+                              int ip1, int ip2, int ip3,
+                              char *in_typvar, char *in_nomvar,
+                              char *in_etiket, char *in_grtyp,
+                              int ig1, int ig2, int ig3, int ig4,
+                              int datyp, int rewrite)
+
+        '''
+        theData = np.array(data.transpose(), dtype = np.float32)
+        nbits = c_int(-32)
+        date = c_int(0)
+        deet = c_int(0)
+        npas = c_int(0)
+        nk = c_int(1)
+
+        ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
+        ip2 = c_int(0)
+        ip3 = c_int(0)
+        ni, nj = theData.shape
+        ni = c_int(ni)
+        nj = c_int(nj)
+        ig1 = c_int(0)
+        ig2 = c_int(0)
+        ig3 = c_int(0)
+        ig4 = c_int(0)
+        typvar = create_string_buffer(self.VARTYPE_DEFAULT)
+        nomvar = create_string_buffer(name)
+        etiket = create_string_buffer(self.ETIKET_DEFAULT)
+        grtyp = create_string_buffer(grid_type)
+        datyp = c_int(data_types.IEEE_floating_point)
+        rewrite = c_int(1)
+
+
+
+
+        status = self._dll.fstecr_wrapper( theData.ctypes.data_as(POINTER(c_float)),
+                                  nbits, self._file_unit, date, deet, npas,
+                                  ni, nj, nk,
+                                  ip1, ip2, ip3, typvar, nomvar,
+                                  etiket, grtyp,
+                                  ig1, ig2, ig3, ig4,
+                                  datyp, rewrite
+                                  )
+
+        print 'write status: {0}'.format(status)
+
+
+        pass
+
 def test():
     #path = 'data/geophys_africa'
     path = 'data/pm1989010100_00000003p'
     rpnObj = RPN(path)
     datev = rpnObj.get_current_validity_date()
-    print 'validity date = ', datev.value
+    print 'validity date = ', datev
     print rpnObj.get_number_of_records()
     rpnObj.close()
 
-
+import application_properties
 if __name__ == "__main__":
+    application_properties.set_current_directory()
     test()
     print "Hello World"
