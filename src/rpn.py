@@ -181,6 +181,9 @@ class RPN():
 
     def get_3D_record_for_name_and_level(self, varname = '', level = -1,
                                         level_kind = level_kinds.ARBITRARY):
+        '''
+        TODO: add comments
+        '''
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -222,7 +225,6 @@ class RPN():
         print self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
 
         data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
-        #data = np.transpose(data, (2, 1, 0))
         return data
 
 
@@ -322,7 +324,8 @@ class RPN():
     def get_first_record_for_name_and_level(self, varname = '', level = -1,
                                                   level_kind = level_kinds.ARBITRARY):
         '''
-        returns data of the first encountered record,
+        returns data of the first encountered record that satisfies the
+        query, and returns the 2d field, if the rcord is 3d then it takes the 2d subset
         corresponding to the first 3rd dimension
         '''
         return self.get_3D_record_for_name_and_level(varname = varname, level = level,
