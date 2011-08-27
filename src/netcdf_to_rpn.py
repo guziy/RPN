@@ -15,7 +15,7 @@ def convert(nc_path = 'data/directions_qc_dx0.1.nc'):
     rObj = RPN('infocell.rpn' , mode = 'w')
     for ncName, rpnName in ncNameToRpnName.iteritems():
         data = ds.variables[ncName][:]
-        grid_type = 'E' if rpnName in ['>>', '^^'] else 'Z'
+        grid_type = 'E' if rpnName in ['>>', '^^'] else ' '
         rObj.write_2D_field(name = rpnName, level = 1, data = data, grid_type = grid_type)
     rObj.close()
 

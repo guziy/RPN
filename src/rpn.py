@@ -477,7 +477,11 @@ class RPN():
                               int datyp, int rewrite)
 
         '''
-        theData = np.array(data.transpose(), dtype = np.float32)
+        #theData = np.array(data.transpose(), dtype = np.float32)
+        theData = np.reshape(data, data.size, order = 'F')
+        theData = np.array(theData, dtype = np.float32)
+
+        
         nbits = c_int(-32)
         date = c_int(0)
         deet = c_int(0)
@@ -487,7 +491,7 @@ class RPN():
         ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
         ip2 = c_int(0)
         ip3 = c_int(0)
-        ni, nj = theData.shape
+        ni, nj = data.shape
         ni = c_int(ni)
         nj = c_int(nj)
         ig1 = c_int(0)

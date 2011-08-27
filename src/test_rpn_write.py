@@ -19,6 +19,12 @@ def test():
         for j in xrange(ny):
             data[i, j] = i ** 2 + j ** 2
 
+    plt.figure()
+    plt.title('before')
+    plt.pcolormesh(data)
+    plt.colorbar()
+
+
     rObj.write_2D_field('test', level = 1, data = data, grid_type = '')
     rObj.close()
 
@@ -26,7 +32,12 @@ def test():
     x = rObj.get_first_record_for_name('test')
     rObj.close()
 
-    plt.pcolormesh(x.transpose())
+    print x.shape
+
+
+    plt.figure()
+    plt.title('after')
+    plt.pcolormesh(x)
     plt.colorbar()
     plt.show()
 
