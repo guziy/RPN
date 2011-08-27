@@ -179,6 +179,52 @@ class RPN():
         
         return key
 
+    def get_3D_record_for_name_and_level(self, varname = '', level = -1,
+                                        level_kind = level_kinds.ARBITRARY):
+        ni = c_int(0)
+        nj = c_int(0)
+        nk = c_int(0)
+        datev = c_int(-1)
+        etiket = create_string_buffer( self.ETIKET_DEFAULT )
+
+
+        if level == -1:
+            ip1 = c_int(-1)
+        else:
+            ip1 = c_int(self._dll.ip1_all_wrapper(c_float(level), c_int(level_kind)))
+        ip2 = c_int(-1)
+        ip3 = c_int(-1)
+        in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
+
+        in_nomvar = self.VARNAME_DEFAULT
+        in_nomvar = varname + in_nomvar
+        in_nomvar = in_nomvar[:8]
+        in_nomvar = create_string_buffer(in_nomvar)
+
+        #int fstinf_wrapper(int iun, int *ni, int *nj, int *nk, int datev,char *in_etiket,
+        #             int ip1, int ip2, int ip3, char *in_typvar, char *in_nomvar)
+
+
+        key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
+                                 ip1, ip2, ip3, in_typvar, in_nomvar
+                                )
+
+        if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
+
+        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float32)
+
+
+
+
+        self._current_info = self._get_record_info(key)
+
+        #read the record
+        print self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
+
+        data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
+        #data = np.transpose(data, (2, 1, 0))
+        return data
+
 
     #get longitudes for the record
     def get_longitudes_and_latitudes(self):
@@ -276,52 +322,12 @@ class RPN():
     def get_first_record_for_name_and_level(self, varname = '', level = -1,
                                                   level_kind = level_kinds.ARBITRARY):
         '''
-        TODO: add comment
+        returns data of the first encountered record,
+        corresponding to the first 3rd dimension
         '''
+        return self.get_3D_record_for_name_and_level(varname = varname, level = level,
+                            level_kind = level_kind)[:,:,0]
 
-        ni = c_int(0)
-        nj = c_int(0)
-        nk = c_int(0)
-        datev = c_int(-1)
-        etiket = create_string_buffer( self.ETIKET_DEFAULT )
-
-
-        if level == -1:
-            ip1 = c_int(-1)
-        else:
-            ip1 = c_int(self._dll.ip1_all_wrapper(c_float(level), c_int(level_kind)))
-        ip2 = c_int(-1)
-        ip3 = c_int(-1)
-        in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
-
-        in_nomvar = self.VARNAME_DEFAULT
-        in_nomvar = varname + in_nomvar
-        in_nomvar = in_nomvar[:8]
-        in_nomvar = create_string_buffer(in_nomvar)
-
-        #int fstinf_wrapper(int iun, int *ni, int *nj, int *nk, int datev,char *in_etiket,
-        #             int ip1, int ip2, int ip3, char *in_typvar, char *in_nomvar)
-
-
-        key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
-                                 ip1, ip2, ip3, in_typvar, in_nomvar
-                                )
-
-        if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
-        
-        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float32)
-
-
-
-
-        self._current_info = self._get_record_info(key)
-
-        #read the record
-        print self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
-
-        data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
-        #data = np.transpose(data, (2, 1, 0))
-        return data[:,:, 0]
 
     def _get_record_info(self, key, verbose = False):
         '''
