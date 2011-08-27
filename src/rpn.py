@@ -297,13 +297,18 @@ class RPN():
 
         if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
         
-        data = np.zeros((nk.value, nj.value, ni.value,), dtype = np.float32)
-        
+        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float32)
+
+
+
+
         self._current_info = self._get_record_info(key)
 
         #read the record
         print self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
-        data = np.transpose(data, (2, 1, 0))
+
+        data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
+        #data = np.transpose(data, (2, 1, 0))
         return data[:,:, 0]
 
     def _get_record_info(self, key, verbose = False):

@@ -61,10 +61,11 @@ def plot_field_2d(lons_2d, lats_2d, field_2d, start_lon = -180, end_lon = 0, col
 
 
 def test():
+
     path = 'data/pm1957090100_00589248p'
     #path = 'data/crcm_sim_with_lakes/data_selected/Coupled11_36cpu_Test_C_198505/pm1957090100_00727920p'
     rpn = RPN(path)
-#    data = rpn.get_first_record_for_name_and_level(varname = 'FV', level = 7 )
+    data = rpn.get_first_record_for_name_and_level(varname = 'FV', level = 7 )
 
     lons, lats = rpn.get_longitudes_and_latitudes()
 
@@ -74,7 +75,8 @@ def test():
 
 #    plot_field_2d(lons, lats, data[:,:,0])
 
-    plot_field_2d(lons, lats, lons)
+    print data.shape
+    plot_field_2d(lons, lats, data)
 
 
     plt.savefig('plot.png')
@@ -85,7 +87,8 @@ def test():
     plt.show()
 
 
-
+import application_properties
 if __name__ == "__main__":
+    application_properties.set_current_directory()
     test()
     print "Hello World"
