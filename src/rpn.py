@@ -146,9 +146,15 @@ class RPN():
         del self._dll
 
     def get_number_of_records(self):
+        '''
+        returns number of records inside the rpn file
+        '''
         return self._dll.fstnbr_wrapper(self._file_unit)
 
     def get_key_of_any_record(self):
+        '''
+        Returns the key of the first data record, i.e. not >>, ^^ or hy
+        '''
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -176,6 +182,9 @@ class RPN():
 
     #get longitudes for the record
     def get_longitudes_and_latitudes(self):
+        '''
+        get longitudes and latitudes of the fields in the rpn file
+        '''
 
         key = self.get_key_of_any_record()
         info = self._get_record_info(key, verbose = True) #sets grid type
@@ -258,14 +267,17 @@ class RPN():
         return np.transpose(lons_2d), np.transpose(lats_2d)
         
 
-  
-
-    #returns first met record for the field varname
     def get_first_record_for_name(self, varname):
+        '''
+        returns first met record for the field varname
+        '''
         return self.get_first_record_for_name_and_level(varname, -1)
 
     def get_first_record_for_name_and_level(self, varname = '', level = -1,
                                                   level_kind = level_kinds.ARBITRARY):
+        '''
+        TODO: add comment
+        '''
 
         ni = c_int(0)
         nj = c_int(0)
@@ -312,6 +324,9 @@ class RPN():
         return data[:,:, 0]
 
     def _get_record_info(self, key, verbose = False):
+        '''
+        TODO: add a comment
+        '''
         dateo = c_int()
         dt_seconds = c_int()
         npas = c_int()
@@ -384,8 +399,10 @@ class RPN():
         return result
 
 
-    ##returns None, if there is no next record satisfying the last search parameters
     def get_next_record(self):
+        '''
+        returns None, if there is no next record satisfying the last search parameters
+        '''
         if self._current_info == None:
             key = self.get_key_of_any_record()
             self._get_record_info(key)
@@ -395,9 +412,9 @@ class RPN():
 
  
         if key <= 0: return None
-        data = np.zeros((nk.value, nj.value, ni.value,), dtype = np.float32)
+        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float32)
         self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
-        data = np.transpose(data, (2, 1, 0))
+        data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
 
         self._get_record_info(key)
         return data[:,:,0]
@@ -482,7 +499,6 @@ class RPN():
                               int datyp, int rewrite)
 
         '''
-        #theData = np.array(data.transpose(), dtype = np.float32)
         theData = np.reshape(data, data.size, order = 'F')
         theData = np.array(theData, dtype = np.float32)
 
