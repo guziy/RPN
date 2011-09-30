@@ -19,6 +19,7 @@ def test():
         for j in xrange(ny):
             data[i, j] = i ** 2 + j ** 2
 
+    print 'before ', data.shape, data.min(), data.max(), data.mean()
     plt.figure()
     plt.title('before')
     plt.pcolormesh(data)
@@ -32,7 +33,7 @@ def test():
     x = rObj.get_first_record_for_name('test')
     rObj.close()
 
-    print x.shape
+    print 'after ', x.shape, x.min(), x.max(), x.mean()
 
 
     plt.figure()
