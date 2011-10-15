@@ -18,8 +18,11 @@ import os
 import level_kinds
 import data_types
 
+from datetime import datetime
+from datetime import timedelta
+
 class RPN():
-    '''
+    """
     Class for reading and writing rpn files
     usage:
         rObj = RPN(path = 'your path', mode = 'r')
@@ -39,12 +42,11 @@ class RPN():
         close(self)
         get_ip1_from_level(self, level, level_kind = level_kinds.ARBITRARY)
         write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY, data = None )
-
-
-
-
-    '''
+    """
     def __init__(self, path = '', mode = 'r'):
+        """
+
+        """
         if not os.path.isfile(path) and mode == 'r':
             raise Exception('{0} does not exist, or is not a file'.format(path))
 
@@ -146,15 +148,15 @@ class RPN():
         del self._dll
 
     def get_number_of_records(self):
-        '''
+        """
         returns number of records inside the rpn file
-        '''
+        """
         return self._dll.fstnbr_wrapper(self._file_unit)
 
     def get_key_of_any_record(self):
-        '''
+        """
         Returns the key of the first data record, i.e. not >>, ^^ or hy
-        '''
+        """
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -181,9 +183,9 @@ class RPN():
 
     def get_3D_record_for_name_and_level(self, varname = '', level = -1,
                                         level_kind = level_kinds.ARBITRARY):
-        '''
+        """
         TODO: add comments
-        '''
+        """
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -230,9 +232,9 @@ class RPN():
 
     #get longitudes for the record
     def get_longitudes_and_latitudes(self):
-        '''
+        """
         get longitudes and latitudes of the fields in the rpn file
-        '''
+        """
 
         key = self.get_key_of_any_record()
         info = self._get_record_info(key, verbose = True) #sets grid type
@@ -316,26 +318,26 @@ class RPN():
         
 
     def get_first_record_for_name(self, varname):
-        '''
+        """
         returns first met record for the field varname
-        '''
+        """
         return self.get_first_record_for_name_and_level(varname, -1)
 
     def get_first_record_for_name_and_level(self, varname = '', level = -1,
                                                   level_kind = level_kinds.ARBITRARY):
-        '''
+        """
         returns data of the first encountered record that satisfies the
         query, and returns the 2d field, if the rcord is 3d then it takes the 2d subset
         corresponding to the first 3rd dimension
-        '''
+        """
         return self.get_3D_record_for_name_and_level(varname = varname, level = level,
                             level_kind = level_kind)[:,:,0]
 
 
     def _get_record_info(self, key, verbose = False):
-        '''
-        TODO: add a comment
-        '''
+        """
+        store the properties of the record with key, to the internal dictionary
+        """
         dateo = c_int()
         dt_seconds = c_int()
         npas = c_int()
@@ -409,10 +411,10 @@ class RPN():
 
 
     def get_next_record(self):
-        '''
+        """
         returns None, if there is no next record satisfying the last search parameters
-        '''
-        if self._current_info == None:
+        """
+        if self._current_info is None:
             key = self.get_key_of_any_record()
             self._get_record_info(key)
         
@@ -429,9 +431,9 @@ class RPN():
         return data[:,:,0]
 
     def get_current_level(self, level_kind = level_kinds.ARBITRARY):
-        '''
+        """
         returns level value for the last read record
-        '''
+        """
         ip1 = self._current_info['ip'][0]
         print 'ip1 = ', ip1
         level_value = c_float(-1)
@@ -445,12 +447,12 @@ class RPN():
         pass
 
     def get_current_validity_date(self):
-        '''
-        returns validity date in hours from the start of the last read record
-        '''
+        """
+        returns validity date in hours from the simulation start, of the last read record
+        """
 
         ##have to search for data records in order to see dt and npas
-        if self._current_info == None:
+        if self._current_info is None:
             key = self.get_key_of_any_record()
             self._get_record_info(key)
 
@@ -465,18 +467,48 @@ class RPN():
         return self._current_info['ip'][1].value ##ip2
         pass
 
+    def get_dateo_of_last_read_record(self):
+        """
+        returns date of origin, the start date of the simulation
+        """
+        if self._current_info:
+            return self._current_info["dateo"]
+        else:
+            raise Exception("No current info has been stored: please make sure you read some records first.")
+
+
+    def get_datetime_for_the_last_read_record(self):
+        """
+        returns datetime object corresponding to the last read record
+        """
+        if self._current_info:
+            dateo = self._current_info["dateo"].value ##int of the form MMDDYYHHR
+            forecastHour = self.get_current_validity_date()
+
+            dateo_s = "%09d" % dateo
+            start_date = datetime.strptime(dateo_s, "%m%d%y%H" + "%d" % (dateo % 10))
+            return start_date + timedelta(hours = forecastHour)
+
+        else:
+            raise Exception("No current info has been stored: please make sure you read some records first.")
+
+
+
+
+
+
   
     def get_3D_field(self, name = 'SAND', level_kind = level_kinds.ARBITRARY):
-        '''
+        """
         returns a map {level => 2d field}
-        '''
+        """
         result = {}
         data1 = self.get_first_record_for_name(name)
         result[self.get_current_level(level_kind = level_kind)] = data1
 
-        while data1 != None:
+        while data1 is not None:
             data1 = self.get_next_record()
-            if data1 != None:
+            if data1 is not None:
                 result[self.get_current_level(level_kind = level_kind)] = data1
         return result
 
@@ -496,7 +528,7 @@ class RPN():
 
     def write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY,
                              data = None, grid_type = 'Z' ):
-        '''
+        """
         Do not care about grid type just write data to the file
         int fstecr_wrapper(float* field, int bits_per_value, int iun,
                               int date, int deet, int npas,
@@ -507,7 +539,7 @@ class RPN():
                               int ig1, int ig2, int ig3, int ig4,
                               int datyp, int rewrite)
 
-        '''
+        """
         theData = np.reshape(data, data.size, order = 'F')
         theData = np.array(theData, dtype = np.float32)
 
