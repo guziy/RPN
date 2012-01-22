@@ -1,4 +1,6 @@
+from scipy.spatial.kdtree import KDTree
 import application_properties
+from util.geo import lat_lon
 
 __author__ = 'huziy'
 
@@ -19,8 +21,15 @@ class Crcm5ModelDataManager:
         pass
 
 
-    def get_timeseries_for_station(self, station):
+    def get_timeseries_for_station(self, station, y):
         #TODO: implement
+        """
+        get model data for the gridcell corresponding to the station
+        :type station: data.cehq_station.Station
+        :type y: data.timeseries.TimeSeries
+        """
+
+
         pass
 
     def _get_any_file_path(self):
@@ -41,7 +50,8 @@ class Crcm5ModelDataManager:
 
         #create kdtree for easier and faster lookup of the corresponding points
         #model <=> obs, for comparison
-        #xyz =
+        [x, y, z] = lat_lon.lon_lat_to_cartesian_normalized(self.lons2D.flatten(), self.lats2D.flatten())
+        self.kdtree = KDTree(zip(x, y, z))
 
 
         pass
@@ -87,8 +97,10 @@ class Crcm5ModelDataManager:
         corresponding to t: start_date <= t <= end_date
         returns a map {month_number : mean_value_2d_field}
         file_name_prefix = can be "pm" or "dp"
-        """
 
+        :type start_date: datetime.datetime or None
+        :type end_date: datetime.datetime or None
+        """
 
         [start_year, end_year] = self._get_start_and_end_year()
 

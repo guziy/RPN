@@ -40,9 +40,9 @@ class LatLonHolder():
         return self.Ny
 
     def get_ix(self, composite_index):
-        '''
+        """
         ix goes from 1 to Nx
-        '''
+        """
         return composite_index % self.Nx + 1
 
     def get_iy(self, composite_index):
@@ -57,10 +57,10 @@ class LatLonHolder():
 
     #private methods
     def _read_lon_lat(self, path, subtract_360 = False):
-        '''
+        """
         read longitudes or latitudes of the domin cells,
         from the specified path
-        '''
+        """
         result = []
         f = open(path)
         f.readline()
