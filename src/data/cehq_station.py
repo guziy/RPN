@@ -1,3 +1,5 @@
+import itertools
+
 __author__="huziy"
 __date__ ="$8 dec. 2010 10:38:26$"
 
@@ -124,9 +126,11 @@ class Station:
 
     def remove_record_for_date(self, the_date):
         if the_date in self.dates:
-            i = self.dates.index(the_date)
+            i = int(self.dates.index(the_date))
+            del self.date_to_value[self.dates[i]]
             del self.dates[i]
             del self.values[i]
+
 
     def get_timeseries_length(self):
         assert len(self.dates) == len( self.date_to_value ), 'list_len, dict_len = {0},{1}'.format(len(self.dates), len( self.date_to_value ))
@@ -143,7 +147,6 @@ class Station:
         dates = []
         values = []
 
-        time_step = None
 
         self.id = re.findall(r"\d+", os.path.basename(path) )[0]
         for line in f:
@@ -156,7 +159,7 @@ class Station:
             if 'bassin versant:' in line_lower:
                 group = re.findall(r"\d+", line)
                 self.drainage_km2 = float(group[0])
-                if line_lower.ends_with("naturel"):
+                if line_lower.endswith("naturel"):
                     self.natural = True
                 else:
                     self.natural = False
@@ -224,6 +227,61 @@ class Station:
 
 
 
+    def delete_data_after_date(self, the_date):
+        """
+        delete values corresponding to the dates later than the_date,
+        does not delete the value corresponding to the_date
+        """
+        vector = map( lambda x: x > the_date, self.dates)
+
+        if True not in vector:
+            return
+
+        if False not in vector:
+            self.dates = []
+            self.values = []
+            self.date_to_value = {}
+            return
+
+        index = vector.index(True)
+
+        for d in self.dates[index:]:
+            del self.date_to_value[d]
+
+        del self.dates[index:], self.values[index:]
+
+
+
+
+
+
+
+    def delete_data_before_date(self, the_date):
+        """
+        delete values corresponding to the dates earlier than the_date,
+        does not delete the value corresponding to the_date
+        """
+        vector = map( lambda x: x < the_date, self.dates)
+
+        if True not in vector:
+            return
+
+        if False not in vector:
+            self.dates = []
+            self.values = []
+            self.date_to_value = {}
+            return
+
+        index = vector.index(False)
+        for d in self.dates[:index]:
+            del self.date_to_value[d]
+
+
+        del self.dates[:index], self.values[:index]
+
+        pass
+
+
 def print_info_of(station_ids):
     for the_id in station_ids:
         s = Station()
@@ -234,8 +292,13 @@ def print_info_of(station_ids):
 
 def read_station_data(folder = 'data/cehq_measure_data',
                       only_natural = True,
-                      skip_incomplete_years = True
+                      start_date = None,
+                      end_date = None
                       ):
+    """
+    if start_date is not None then delete values for t < start_date
+    if end_date is not None then delete values for t > end_date
+    """
     stations = []
     for file in os.listdir(folder):
         if not '.txt' in file:
@@ -243,8 +306,24 @@ def read_station_data(folder = 'data/cehq_measure_data',
         path = os.path.join(folder, file)
         s = Station()
         s.parse_from_cehq(path, only_natural=only_natural)
-        if only_natural and s.natural:
-            stations.append(s)
+
+
+
+        if start_date is not None:
+            s.delete_data_before_date(start_date)
+
+        if end_date is not None:
+            s.delete_data_after_date(end_date)
+
+        #only save stations with nonzero timeseries length
+        if s.get_timeseries_length():
+            if only_natural:
+                if s.natural:
+                    stations.append(s)
+            else:
+                stations.append(s)
+
+
     return stations
 
 
