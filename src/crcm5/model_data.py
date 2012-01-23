@@ -1,3 +1,5 @@
+from datetime import datetime
+from mpl_toolkits.basemap import Basemap, maskoceans
 from scipy.spatial.kdtree import KDTree
 import application_properties
 from util.geo import lat_lon
@@ -18,16 +20,28 @@ class Crcm5ModelDataManager:
         self.month_folder_name_format = "%s_%d%02d"
         self._read_lat_lon_fields()
         self._set_month_folder_prefix()
+        self._read_static_data()
         pass
 
 
-    def get_timeseries_for_station(self, station, y):
+    def get_timeseries_for_station(self, station):
         #TODO: implement
         """
         get model data for the gridcell corresponding to the station
         :type station: data.cehq_station.Station
-        :type y: data.timeseries.TimeSeries
+        :rtype: data.timeseries.Timeseries
         """
+        lon, lat = station.longitude, station.latitude
+        x0 = lat_lon.lon_lat_to_cartesian_normalized(lon, lat)
+
+        [distances, indices] = self.kdtree.query(x0, k = 4)
+
+        acc_area_1d = self.accumulation_area_km2.flatten()
+
+        da_diff = np.abs( acc_area_1d[indices] - station.drainage_km2)
+        min_da_diff = min(da_diff)
+
+
 
 
         pass
@@ -84,6 +98,14 @@ class Crcm5ModelDataManager:
             all_years.append( int( file_name.split("_")[-1][:-2] ) )
         return min(all_years), max(all_years)
 
+
+    def _get_timeseries_for_point(self, ix, iy, var_name = "STFL",
+                                          file_name_prefix = "pm"):
+        #TODO:implement
+        """
+        returns timeseries object for data: data[:, ix, iy]
+        """
+        pass
 
 
     def get_monthly_mean_fields(self, start_date = None,
@@ -147,13 +169,53 @@ class Crcm5ModelDataManager:
         return data
 
 
+
+    def _read_static_data(self):
+        """
+         get drainage area fields
+
+        """
+        #TODO: change the way how the drainage area is read
+        #TODO: i.e. instead of taking the margins just add the drainage area as the variable in the model
+
+        file_path = os.path.join(self.samples_folder, "..")
+        file_path = os.path.join(file_path, "infocell.rpn")
+        rpnObj = RPN(file_path)
+        #TODO: Custom margins, fix it
+        self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FACC")[10:-10, 10:-10]
+        self.slope = rpnObj.get_first_record_for_name("SLOP")[10:-10, 10:-10]
+        rpnObj.close()
+
+        pass
+
+
 def test_mean():
     plt.figure()
     manager = Crcm5ModelDataManager()
     #plt.pcolormesh(manager.get_monthly_mean_fields(months = [6])[6].transpose())
 
+    basemap = Basemap(projection="omerc", no_rot=True, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0,
+            llcrnrlon=manager.lons2D[0,0], llcrnrlat=manager.lats2D[0,0],
+            urcrnrlon=manager.lons2D[-1,-1], urcrnrlat=manager.lats2D[-1, -1],
+            resolution="l"
+    )
 
+    [x, y] = basemap(manager.lons2D, manager.lats2D)
+    #data = manager.get_monthly_mean_fields(months=[6])[6]
+    data = np.log( manager.accumulation_area_km2 )
+
+    #get ocean mask
+    #lons2D = manager.lons2D[:,:]
+    #lons2D[lons2D >= 180] -= 360.0
+    #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
+
+    data = np.ma.masked_where(manager.slope == -1, data)
+
+    #data = np.ma.masked_where(data < 0.1, data)
+    basemap.pcolormesh(x, y, data)
     plt.colorbar()
+    basemap.drawcoastlines(linewidth=0.5)
+
     plt.savefig("mean.png")
     pass
 
