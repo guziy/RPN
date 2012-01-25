@@ -24,6 +24,17 @@ class TimeSeries:
 
 
 
+class DateValuePair:
+    def __init__(self, date = None, value = None):
+        """
+        Object for holding corresponding date and value
+        pairs
+        """
+        self.date = date
+        self.value = value
+        pass
+
+
 def main():
     #TODO: implement
     pass

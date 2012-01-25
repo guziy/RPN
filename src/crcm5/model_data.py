@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from mpl_toolkits.basemap import Basemap, maskoceans
 from scipy.spatial.kdtree import KDTree
 import application_properties
+from data.timeseries import DateValuePair
 from util.geo import lat_lon
 
 __author__ = 'huziy'
@@ -21,10 +22,14 @@ class Crcm5ModelDataManager:
         self._read_lat_lon_fields()
         self._set_month_folder_prefix()
         self._read_static_data()
+        self._set_simulation_start_date()
         pass
 
 
-    def get_timeseries_for_station(self, station):
+    def get_timeseries_for_station(self, station, var_name = "STFL",
+                                          file_name_prefix = "pm",
+                                          start_date = None, end_date = None
+                                          ):
         #TODO: implement
         """
         get model data for the gridcell corresponding to the station
@@ -41,6 +46,19 @@ class Crcm5ModelDataManager:
         da_diff = np.abs( acc_area_1d[indices] - station.drainage_km2)
         min_da_diff = min(da_diff)
 
+        select_index = -1
+        select_dist = np.inf
+        for d, i, da_dist in zip(distances, indices, da_diff):
+            if da_dist == min_da_diff:
+                if d < select_dist:
+                    select_dist = d
+                    select_index = i
+
+        acc_area_1d[:select_index] = -1
+        acc_area_1d[select_index+1:] = -1
+
+        restored = np.reshape(acc_area_1d, self.accumulation_area_km2.shape)
+        [i, j] = np.where(restored > 0)
 
 
 
@@ -100,11 +118,47 @@ class Crcm5ModelDataManager:
 
 
     def _get_timeseries_for_point(self, ix, iy, var_name = "STFL",
-                                          file_name_prefix = "pm"):
-        #TODO:implement
+                                          file_name_prefix = "pm",
+                                          start_date = None,
+                                          end_date = None
+                                          ):
+        #TODO:improve performance
         """
         returns timeseries object for data: data[:, ix, iy]
         """
+
+        dv = []
+
+
+        month_folder_names = os.listdir(self.samples_folder)
+
+        month_folder_paths = map( lambda x: os.path.join(self.samples_folder, x), month_folder_names)
+
+        for month_folder_path in month_folder_paths:
+            for file_name in os.listdir(month_folder_path):
+                if file_name.startswith("."): continue
+                if "_" not in file_name: continue
+
+                file_path = os.path.join(month_folder_path, file_name)
+                rpnObj = RPN(file_path)
+                forecast_hour = rpnObj.get_current_validity_date()
+                rpnObj.close()
+
+                d = self.simulation_start_date + timedelta(hours = forecast_hour)
+                if start_date is not None:
+                    if d < start_date: continue
+
+                if end_date is not None:
+                    if d > end_date: continue
+
+                rpnObj = RPN(file_path)
+                field = rpnObj.get_first_record_for_name(var_name)
+                dv.append(DateValuePair(date = d, value = field[ix, iy]))
+                rpnObj.close()
+
+        dv.sort(key= lambda x: x.date)
+        return dv
+
         pass
 
 
@@ -187,6 +241,14 @@ class Crcm5ModelDataManager:
         rpnObj.close()
 
         pass
+
+    def _set_simulation_start_date(self):
+        """
+        Determine the starting date of the simulation
+        """
+        path = self._get_any_file_path()
+        date_str = os.path.basename(path).split("_")[0][2:]
+        self.simulation_start_date = datetime.strptime(date_str, "%Y%m%d%H")
 
 
 def test_mean():
