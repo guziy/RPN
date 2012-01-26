@@ -28,7 +28,19 @@ class Station:
         
         self.date_to_value = {}
         
-        
+
+    def get_monthly_normals(self):
+        """
+        returns the list of 12 monthly normals corresponding
+        to the 12 months [0->Jan, ..., 11->Dec]
+        """
+        result = np.zeros((12,))
+        for m in xrange(1, 13):
+            bool_vector = map(lambda x : x.month == m, self.dates)
+            indices = np.where(bool_vector)[0]
+            result[m - 1] = np.mean(np.array(self.values)[indices])
+        return result
+
     def get_value_for_date(self, the_date):
         if len(self.date_to_value) != len(self.dates):
             self.date_to_value = dict(zip(self.dates, self.values))
@@ -293,11 +305,14 @@ def print_info_of(station_ids):
 def read_station_data(folder = 'data/cehq_measure_data',
                       only_natural = True,
                       start_date = None,
-                      end_date = None
+                      end_date = None,
+                      selected_ids = None
                       ):
     """
+    :rtype: list of data.cehq_station.Station
     if start_date is not None then delete values for t < start_date
     if end_date is not None then delete values for t > end_date
+
     """
     stations = []
     for file in os.listdir(folder):
@@ -305,6 +320,13 @@ def read_station_data(folder = 'data/cehq_measure_data',
             continue
         path = os.path.join(folder, file)
         s = Station()
+
+        s_id = re.findall(r"\d+", os.path.basename(path) )[0]
+        if selected_ids is not None:
+            if s_id not in selected_ids:
+                continue
+
+
         s.parse_from_cehq(path, only_natural=only_natural)
 
 

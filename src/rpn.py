@@ -1,11 +1,3 @@
-import os.path
-
-from ctypes import c_float
-from ctypes import POINTER
-from ctypes import create_string_buffer
-
-from ctypes import c_char_p
-from ctypes import byref
 
 __author__="huziy"
 __date__ ="$Apr 5, 2011 12:26:05 PM$"
@@ -143,7 +135,7 @@ class RPN():
         return self._current_output_dt_seconds
 
     def close(self):
-        print  'close status: ', self._dll.fstfrm_wrapper(self._file_unit)
+        self._dll.fstfrm_wrapper(self._file_unit)
         self._dll.fclos_wrapper(self._file_unit)
         del self._dll
 
@@ -224,7 +216,7 @@ class RPN():
         self._current_info = self._get_record_info(key)
 
         #read the record
-        print self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
+        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
 
         data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
         return data
@@ -251,8 +243,7 @@ class RPN():
         ip3 = c_int(-1)
 
 
-        print 'varname default = ', self.VARNAME_DEFAULT
-       
+
         #read longitudes
         in_nomvar = '>>'
         in_nomvar = create_string_buffer(in_nomvar[:2])
@@ -261,11 +252,11 @@ class RPN():
 
         hor_key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk),
                                             datev, etiket, ip1, ip2, ip3, in_typvar, in_nomvar)
-        print in_nomvar.value
-        print in_typvar.value
+        #print in_nomvar.value
+        #print in_typvar.value
         assert hor_key >= 0, 'hor_key = {0}'.format(hor_key)
 
-        print 'hor_key = ', hor_key
+        #print 'hor_key = ', hor_key
 
         self._get_record_info(hor_key)
 
@@ -284,18 +275,17 @@ class RPN():
         self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), ver_key, ni, nj, nk)
         lats = data[:]
 
-        print 'ver_key = ', ver_key.value
 
         n_lons = lons.shape[0]
         n_lats = lats.shape[0]
 
-        print 'grid type: ', self.current_grid_type
-        print 'grid ref: ', self.current_grid_reference
+        #print 'grid type: ', self.current_grid_type
+        #print 'grid ref: ', self.current_grid_reference
 
         info = self._get_record_info(hor_key, verbose = True)
         ig = info['ig']
 
-        print 'grid type: ',  self.current_grid_type
+        #print 'grid type: ',  self.current_grid_type
         grid_type = create_string_buffer(self.current_grid_type)
         grid_reference = create_string_buffer(self.current_grid_reference)
 
@@ -396,7 +386,7 @@ class RPN():
             self.current_grid_reference = grid_type.value
         else:
             self.current_grid_type = grid_type.value
-        print 'current grid type ', self.current_grid_type
+        #print 'current grid type ', self.current_grid_type
 
         result = {}
         result['ig'] = [ig1, ig2, ig3, ig4]
@@ -418,7 +408,7 @@ class RPN():
             key = self.get_key_of_any_record()
             self._get_record_info(key)
         
-        ni, nj, nk = self._current_info['shape']
+        [ni, nj, nk] = self._current_info['shape']
         key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
 
  
@@ -435,7 +425,7 @@ class RPN():
         returns level value for the last read record
         """
         ip1 = self._current_info['ip'][0]
-        print 'ip1 = ', ip1
+        #print 'ip1 = ', ip1
         level_value = c_float(-1)
         mode = c_int(-1) #from ip to real value
         kind = c_int(level_kind)
@@ -457,13 +447,14 @@ class RPN():
             self._get_record_info(key)
 
         while self._current_info['varname'].value.strip().lower() in ['>>','^^', 'hy']:
-            self.get_next_record()
+            [ni, nj, nk] = self._current_info['shape']
+            key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
+            self._get_record_info(key)
 
-
-        print 'dateo  = ' , self._current_info['dateo']
-        print 'dt_seconds = ', self._current_info['dt_seconds']
-        print 'npas = ', self._current_info['npas']
-        print 'varname = ', self._current_info['varname'].value
+        #print 'dateo  = ' , self._current_info['dateo']
+        #print 'dt_seconds = ', self._current_info['dt_seconds']
+        #print 'npas = ', self._current_info['npas']
+        #print 'varname = ', self._current_info['varname'].value
         return self._current_info['ip'][1].value ##ip2
         pass
 
@@ -553,7 +544,7 @@ class RPN():
         ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
         ip2 = c_int(0)
         ip3 = c_int(0)
-        ni, nj = data.shape
+        [ni, nj] = data.shape
         ni = c_int(ni)
         nj = c_int(nj)
         ig1 = c_int(0)
@@ -579,7 +570,7 @@ class RPN():
                                   datyp, rewrite
                                   )
 
-        print 'write status: {0}'.format(status)
+        #print 'write status: {0}'.format(status)
 
 
         pass

@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
+from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import Basemap, maskoceans
 from scipy.spatial.kdtree import KDTree
 import application_properties
-from data.timeseries import DateValuePair
+from data import cehq_station
+from data.timeseries import DateValuePair, TimeSeries
+from util import plot_utils
 from util.geo import lat_lon
 
 __author__ = 'huziy'
@@ -15,7 +18,8 @@ import matplotlib.pyplot as plt
 
 class Crcm5ModelDataManager:
 
-    def __init__(self, samples_folder_path = "data/gemclim/quebec/Samples"):
+    def __init__(self, samples_folder_path = "data/gemclim/quebec/Samples",
+                 var_name = "STFL", file_name_prefix = "pm"):
         self.samples_folder = samples_folder_path
         self._month_folder_prefix = None
         self.month_folder_name_format = "%s_%d%02d"
@@ -23,14 +27,16 @@ class Crcm5ModelDataManager:
         self._set_month_folder_prefix()
         self._read_static_data()
         self._set_simulation_start_date()
+        self.var_name = var_name
+        self.file_name_prefix = file_name_prefix
+        self.date_to_field_cache = {}
+
         pass
 
 
-    def get_timeseries_for_station(self, station, var_name = "STFL",
-                                          file_name_prefix = "pm",
-                                          start_date = None, end_date = None
+    def get_timeseries_for_station(self, station,
+                                    start_date = None, end_date = None
                                           ):
-        #TODO: implement
         """
         get model data for the gridcell corresponding to the station
         :type station: data.cehq_station.Station
@@ -39,7 +45,7 @@ class Crcm5ModelDataManager:
         lon, lat = station.longitude, station.latitude
         x0 = lat_lon.lon_lat_to_cartesian_normalized(lon, lat)
 
-        [distances, indices] = self.kdtree.query(x0, k = 4)
+        [distances, indices] = self.kdtree.query(x0, k = 32)
 
         acc_area_1d = self.accumulation_area_km2.flatten()
 
@@ -50,18 +56,21 @@ class Crcm5ModelDataManager:
         select_dist = np.inf
         for d, i, da_dist in zip(distances, indices, da_diff):
             if da_dist == min_da_diff:
-                if d < select_dist:
-                    select_dist = d
-                    select_index = i
-
+                #if d < select_dist:
+                select_dist = d
+                select_index = i
+        assert select_index >= 0
         acc_area_1d[:select_index] = -1
         acc_area_1d[select_index+1:] = -1
 
         restored = np.reshape(acc_area_1d, self.accumulation_area_km2.shape)
         [i, j] = np.where(restored > 0)
 
+        ts = self._get_timeseries_for_point(i,j, start_date = start_date,
+                        end_date = end_date)
 
-
+        ts.metadata["acc_area_km2"] = acc_area_1d[select_index]
+        return ts
         pass
 
     def _get_any_file_path(self):
@@ -117,14 +126,11 @@ class Crcm5ModelDataManager:
         return min(all_years), max(all_years)
 
 
-    def _get_timeseries_for_point(self, ix, iy, var_name = "STFL",
-                                          file_name_prefix = "pm",
-                                          start_date = None,
-                                          end_date = None
-                                          ):
-        #TODO:improve performance
+    def _get_timeseries_for_point(self, ix, iy,
+                            start_date = None, end_date = None):
         """
         returns timeseries object for data: data[:, ix, iy]
+        Note: uses caching in order to decrease IO operations
         """
 
         dv = []
@@ -138,6 +144,7 @@ class Crcm5ModelDataManager:
             for file_name in os.listdir(month_folder_path):
                 if file_name.startswith("."): continue
                 if "_" not in file_name: continue
+                if not file_name.startswith(self.file_name_prefix): continue
 
                 file_path = os.path.join(month_folder_path, file_name)
                 rpnObj = RPN(file_path)
@@ -151,13 +158,21 @@ class Crcm5ModelDataManager:
                 if end_date is not None:
                     if d > end_date: continue
 
-                rpnObj = RPN(file_path)
-                field = rpnObj.get_first_record_for_name(var_name)
-                dv.append(DateValuePair(date = d, value = field[ix, iy]))
-                rpnObj.close()
+                if self.date_to_field_cache.has_key(d):
+                    value = self.date_to_field_cache[d][ix, iy]
+                else:
+                    rpnObj = RPN(file_path)
+                    field = rpnObj.get_first_record_for_name(self.var_name)
+                    rpnObj.close()
+                    self.date_to_field_cache[d] = field
+                    value = field[ix, iy]
+
+                dv.append(DateValuePair(date = d, value = value))
+
 
         dv.sort(key= lambda x: x.date)
-        return dv
+        return TimeSeries(data = map(lambda x: x.value, dv),
+                          time = map(lambda x: x.date, dv) )
 
         pass
 
@@ -254,6 +269,8 @@ class Crcm5ModelDataManager:
 def test_mean():
     plt.figure()
     manager = Crcm5ModelDataManager()
+
+
     #plt.pcolormesh(manager.get_monthly_mean_fields(months = [6])[6].transpose())
 
     basemap = Basemap(projection="omerc", no_rot=True, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0,
@@ -281,8 +298,51 @@ def test_mean():
     plt.savefig("mean.png")
     pass
 
+def compare():
+    manager = Crcm5ModelDataManager()
+    selected_ids = ["104001", "103715", "093806", "093801", "092715",
+                    "081006", "061502", "040830", "080718"]
+
+    start_date = datetime(1985, 1, 1)
+    end_date = datetime(1990, 12, 31)
+
+    stations = cehq_station.read_station_data(selected_ids = selected_ids,
+            start_date=start_date, end_date=end_date
+    )
+
+    plot_utils.apply_plot_params(width_pt=None, height_cm =30.0, width_cm=16, font_size=12)
+    fig = plt.figure()
+    #two columns
+    gs = GridSpec( len(stations) // 2 + len(stations) % 2, 2, hspace=0.4, wspace=0.4 )
+    line_model, line_obs = None, None
+    #: :type s: data.cehq_station.Station
+    for i, s in enumerate(stations):
+        model_ts = manager.get_timeseries_for_station(s, start_date = start_date, end_date = end_date)
+        ax = fig.add_subplot( gs[i // 2, i % 2] )
+
+        m_data = model_ts.get_monthly_normals()
+
+        s_data = s.get_monthly_normals()
+
+        line_model = ax.plot(xrange(1, 13), m_data, label = "Model (CRCM5)", lw = 3, color = "b")
+        line_obs = ax.plot(xrange(1, 13), s_data, label = "Observation", lw = 3, color = "r")
+
+        ax.set_title("%s: ns=%d, nm=%d,\n drs=%.2f,drm=%.2f" % (s.id, s.get_timeseries_length(),
+                                                            model_ts.get_size(), s.drainage_km2,
+                                                            model_ts.metadata["acc_area_km2"]))
+
+
+    lines = (line_model, line_obs)
+    labels = ("Model (CRCM5)", "Observation" )
+    fig.legend(lines, labels)
+    fig.savefig("performance.png")
+
+    pass
+
+
 def main():
     #TODO: implement
+    #compare()
     test_mean()
     pass
 
