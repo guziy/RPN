@@ -388,14 +388,13 @@ class RPN():
             self.current_grid_type = grid_type.value
         #print 'current grid type ', self.current_grid_type
 
-        result = {}
-        result['ig'] = [ig1, ig2, ig3, ig4]
-        result['ip'] = [ip1, ip2, ip3]
-        result['shape'] = [ni, nj, nk]
-        result['dateo'] = dateo
-        result['dt_seconds'] = dt_seconds
-        result['npas'] = npas
-        result['varname'] = nomvar
+        result = {'ig': [ig1, ig2, ig3, ig4],
+                  'ip': [ip1, ip2, ip3],
+                  'shape': [ni, nj, nk],
+                  'dateo': dateo,
+                  'dt_seconds': dt_seconds,
+                  'npas': npas,
+                  'varname': nomvar}
         self._current_info = result #update info from the last read record
         return result
 
@@ -575,6 +574,26 @@ class RPN():
 
         pass
 
+
+    def get_all_records_for_name(self, varname = "STFL"):
+        """
+        Created for retrieving the fields corresponding to
+        different times,
+        works as self.get_3D_field, but instead of the map
+        {level: 2d record} it returns the map {forecast_hour: 2d record}
+        """
+        result = {}
+        data1 = self.get_first_record_for_name(varname)
+        result[self.get_current_validity_date()] = data1
+
+        while data1 is not None:
+            data1 = self.get_next_record()
+            if data1 is not None:
+                result[self.get_current_validity_date()] = data1
+        return result
+
+        pass
+
 def test():
     #path = 'data/geophys_africa'
     path = 'data/pm1989010100_00000003p'
@@ -584,8 +603,23 @@ def test():
     print rpnObj.get_number_of_records()
     rpnObj.close()
 
+
+def test_get_all_records_for_name():
+    path = "data/from_guillimin/quebec_rivers_not_talk_with_lakes/Samples/quebec_220x220_198501/physics"
+    rpnObj = RPN(path=path)
+    date_to_field = rpnObj.get_all_records_for_name(varname="STFL")
+    rpnObj.close()
+
+
+    for k, v in date_to_field.iteritems():
+        v1 = np.ma.masked_where(v < 0, v)
+        print k, v1.min(), v1.mean(), v1.max()
+
+
+
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    test()
+    #test()
+    test_get_all_records_for_name()
     print "Hello World"
