@@ -38,7 +38,7 @@ def get_angle_between_vectors(n1, n2):
     return atan2(dy, dx)
 
 
-def lon_lat_to_cartesian_normalized(lon, lat):
+def lon_lat_to_cartesian(lon, lat):
     """
     calculates x,y,z coordinates of a point on a sphere with
     radius R = EARTH_RADIUS_METERS

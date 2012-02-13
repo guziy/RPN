@@ -6,7 +6,7 @@ __date__ ="$8 dec. 2010 10:38:26$"
 import re
 import os
 import codecs
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import numpy as np
 
 
@@ -40,6 +40,42 @@ class Station:
             indices = np.where(bool_vector)[0]
             result[m - 1] = np.mean(np.array(self.values)[indices])
         return result
+
+
+    def get_daily_normals(self, start_date = None, end_date = None, stamp_year = 2001):
+        """
+        :type start_date: datetime.datetime
+        :type end_date: datetime.datetime
+        """
+        the_date = date(stamp_year, 1, 1)
+        day = timedelta(days = 1)
+        year_dates = [ ]
+
+        #creat objects for each day of year
+        while the_date.year == stamp_year:
+            year_dates.append(the_date)
+            the_date += day
+
+        if start_date is None:
+            start_date = self.dates[0]
+
+        if end_date is None:
+            end_date = self.dates[-1]
+
+
+
+        daily_means = []
+        for stamp_day in year_dates:
+            bool_vector = map(lambda x: x.day == stamp_day.day and
+                                        x.month == stamp_day.month and
+                                        x >= start_date and
+                                        x <= end_date, self.dates)
+
+            indices = np.where( bool_vector )[0]
+            daily_means.append(np.array(self.values)[indices].mean())
+
+        return year_dates, daily_means
+
 
     def get_value_for_date(self, the_date):
         if len(self.date_to_value) != len(self.dates):

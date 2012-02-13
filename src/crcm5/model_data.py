@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+import itertools
+from matplotlib.dates import DateFormatter, DateLocator, MonthLocator
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import Basemap, maskoceans
 from scipy.spatial.kdtree import KDTree
@@ -20,19 +22,24 @@ class Crcm5ModelDataManager:
 
     def __init__(self, samples_folder_path = "data/gemclim/quebec/Samples",
                  var_name = "STFL", file_name_prefix = "pm"):
+        self.file_name_prefix = file_name_prefix
         self.samples_folder = samples_folder_path
         self._month_folder_prefix = None
         self.month_folder_name_format = "%s_%d%02d"
         self._read_lat_lon_fields()
         self._set_month_folder_prefix()
         self._read_static_data()
-        self._set_simulation_start_date()
         self.var_name = var_name
-        self.file_name_prefix = file_name_prefix
+
         self.date_to_field_cache = {}
+        self.read_files_cache = {}
 
         pass
 
+
+    def get_domain_average(self):
+        #TODO: implement
+        pass
 
     def get_timeseries_for_station(self, station,
                                     start_date = None, end_date = None
@@ -43,9 +50,9 @@ class Crcm5ModelDataManager:
         :rtype: data.timeseries.Timeseries
         """
         lon, lat = station.longitude, station.latitude
-        x0 = lat_lon.lon_lat_to_cartesian_normalized(lon, lat)
+        x0 = lat_lon.lon_lat_to_cartesian(lon, lat)
 
-        [distances, indices] = self.kdtree.query(x0, k = 32)
+        [distances, indices] = self.kdtree.query(x0, k = 16)
 
         acc_area_1d = self.accumulation_area_km2.flatten()
 
@@ -56,9 +63,9 @@ class Crcm5ModelDataManager:
         select_dist = np.inf
         for d, i, da_dist in zip(distances, indices, da_diff):
             if da_dist == min_da_diff:
-                #if d < select_dist:
-                select_dist = d
-                select_index = i
+                if d < select_dist:
+                    select_dist = d
+                    select_index = i
         assert select_index >= 0
         acc_area_1d[:select_index] = -1
         acc_area_1d[select_index+1:] = -1
@@ -76,8 +83,15 @@ class Crcm5ModelDataManager:
     def _get_any_file_path(self):
         for month_folder in os.listdir(self.samples_folder):
             month_folder_path = os.path.join(self.samples_folder, month_folder)
+
+            if not os.path.isdir(month_folder_path):
+                continue
+
             for the_file in os.listdir(month_folder_path):
                 if the_file.startswith("."):
+                    continue
+
+                if not the_file.startswith(self.file_name_prefix):
                     continue
                 return os.path.join(month_folder_path, the_file)
         pass
@@ -91,7 +105,7 @@ class Crcm5ModelDataManager:
 
         #create kdtree for easier and faster lookup of the corresponding points
         #model <=> obs, for comparison
-        [x, y, z] = lat_lon.lon_lat_to_cartesian_normalized(self.lons2D.flatten(), self.lats2D.flatten())
+        [x, y, z] = lat_lon.lon_lat_to_cartesian(self.lons2D.flatten(), self.lats2D.flatten())
         self.kdtree = KDTree(zip(x, y, z))
 
 
@@ -139,35 +153,33 @@ class Crcm5ModelDataManager:
         month_folder_names = os.listdir(self.samples_folder)
 
         month_folder_paths = map( lambda x: os.path.join(self.samples_folder, x), month_folder_names)
+        month_folder_paths = itertools.ifilter(lambda x: os.path.isdir(x), month_folder_paths)
 
         for month_folder_path in month_folder_paths:
             for file_name in os.listdir(month_folder_path):
                 if file_name.startswith("."): continue
-                if "_" not in file_name: continue
                 if not file_name.startswith(self.file_name_prefix): continue
 
                 file_path = os.path.join(month_folder_path, file_name)
-                rpnObj = RPN(file_path)
-                forecast_hour = rpnObj.get_current_validity_date()
-                rpnObj.close()
 
-                d = self.simulation_start_date + timedelta(hours = forecast_hour)
-                if start_date is not None:
-                    if d < start_date: continue
-
-                if end_date is not None:
-                    if d > end_date: continue
-
-                if self.date_to_field_cache.has_key(d):
-                    value = self.date_to_field_cache[d][ix, iy]
+                key = (file_path, self.var_name)
+                if self.read_files_cache.has_key(key):
+                    hour_to_field = self.read_files_cache[key]
                 else:
                     rpnObj = RPN(file_path)
-                    field = rpnObj.get_first_record_for_name(self.var_name)
+                    hour_to_field = rpnObj.get_all_time_records_for_name(varname=self.var_name)
                     rpnObj.close()
-                    self.date_to_field_cache[d] = field
-                    value = field[ix, iy]
 
-                dv.append(DateValuePair(date = d, value = value))
+
+                for time, field in hour_to_field.iteritems():
+                    if start_date is not None:
+                        if time < start_date: continue
+
+                    if end_date is not None:
+                        if time > end_date: continue
+
+                    value = field[ix, iy]
+                    dv.append(DateValuePair(date = time, value = value))
 
 
         dv.sort(key= lambda x: x.date)
@@ -239,7 +251,7 @@ class Crcm5ModelDataManager:
 
 
 
-    def _read_static_data(self):
+    def _read_static_data(self, derive_from_data = True):
         """
          get drainage area fields
 
@@ -247,6 +259,30 @@ class Crcm5ModelDataManager:
         #TODO: change the way how the drainage area is read
         #TODO: i.e. instead of taking the margins just add the drainage area as the variable in the model
 
+
+        if derive_from_data:
+            month_folders = os.listdir(self.samples_folder)
+            month_folders = sorted(month_folders)
+            month_folders = map(lambda x: os.path.join(self.samples_folder, x), month_folders)
+            month_folders = itertools.ifilter(lambda x: os.path.isdir(x), month_folders)
+
+            month_folders = list(month_folders)
+
+            files = os.listdir(month_folders[0])
+            files = itertools.ifilter(lambda x: x.startswith(self.file_name_prefix)
+                and not x.startswith("."), files
+            )
+            file = sorted(files)[0]
+            file_path = os.path.join(month_folders[0], file)
+            rpnObj = RPN(file_path)
+            self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
+            self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
+            rpnObj.close()
+            #self.slope = rpnObj.get_first_record_for_name("SLOP")
+            return
+
+
+        ##
         file_path = os.path.join(self.samples_folder, "..")
         file_path = os.path.join(file_path, "infocell.rpn")
         rpnObj = RPN(file_path)
@@ -257,13 +293,6 @@ class Crcm5ModelDataManager:
 
         pass
 
-    def _set_simulation_start_date(self):
-        """
-        Determine the starting date of the simulation
-        """
-        path = self._get_any_file_path()
-        date_str = os.path.basename(path).split("_")[0][2:]
-        self.simulation_start_date = datetime.strptime(date_str, "%Y%m%d%H")
 
 
 def test_mean():
@@ -299,38 +328,46 @@ def test_mean():
     pass
 
 def compare():
-    manager = Crcm5ModelDataManager()
+    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/quebec_rivers_not_talk_with_lakes/Samples",
+            file_name_prefix="physics"
+    )
     selected_ids = ["104001", "103715", "093806", "093801", "092715",
                     "081006", "061502", "040830", "080718"]
 
-    start_date = datetime(1985, 1, 1)
+    start_date = datetime(1986, 1, 1)
     end_date = datetime(1990, 12, 31)
 
     stations = cehq_station.read_station_data(selected_ids = selected_ids,
             start_date=start_date, end_date=end_date
     )
 
-    plot_utils.apply_plot_params(width_pt=None, height_cm =30.0, width_cm=16, font_size=12)
+    plot_utils.apply_plot_params(width_pt=None, height_cm =30.0, width_cm=16, font_size=10)
     fig = plt.figure()
     #two columns
     gs = GridSpec( len(stations) // 2 + len(stations) % 2, 2, hspace=0.4, wspace=0.4 )
     line_model, line_obs = None, None
-    #: :type s: data.cehq_station.Station
+
+    stations.sort(key=lambda x: x.latitude, reverse=True)
+
     for i, s in enumerate(stations):
         model_ts = manager.get_timeseries_for_station(s, start_date = start_date, end_date = end_date)
         ax = fig.add_subplot( gs[i // 2, i % 2] )
 
-        m_data = model_ts.get_monthly_normals()
+        [t, m_data] = model_ts.get_daily_normals()
 
-        s_data = s.get_monthly_normals()
 
-        line_model = ax.plot(xrange(1, 13), m_data, label = "Model (CRCM5)", lw = 3, color = "b")
-        line_obs = ax.plot(xrange(1, 13), s_data, label = "Observation", lw = 3, color = "r")
+        [t, s_data] = s.get_daily_normals()
 
-        ax.set_title("%s: ns=%d, nm=%d,\n drs=%.2f,drm=%.2f" % (s.id, s.get_timeseries_length(),
-                                                            model_ts.get_size(), s.drainage_km2,
-                                                            model_ts.metadata["acc_area_km2"]))
+        assert len(s_data) == len(m_data)
 
+        line_model = ax.plot(t, m_data, label = "Model (CRCM5)", lw = 3, color = "b")
+        line_obs = ax.plot(t, s_data, label = "Observation", lw = 3, color = "r")
+
+        ax.set_title("%s: drs=%.2f,drm=%.2f" % (s.id, s.drainage_km2,
+                                                      model_ts.metadata["acc_area_km2"]))
+
+        ax.xaxis.set_major_formatter(DateFormatter("%b"))
+        ax.xaxis.set_major_locator(MonthLocator(bymonthday=15, bymonth=xrange(1,13,2)))
 
     lines = (line_model, line_obs)
     labels = ("Model (CRCM5)", "Observation" )
@@ -340,10 +377,44 @@ def compare():
     pass
 
 
+
+def draw_drainage_area():
+    plot_utils.apply_plot_params(width_pt=None, height_cm =20.0, width_cm=16, font_size=10)
+    fig = plt.figure()
+
+    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/quebec_rivers_not_talk_with_lakes/Samples",
+            file_name_prefix="physics"
+    )
+
+
+    basemap = Basemap(projection="omerc", no_rot=True, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0,
+            llcrnrlon=manager.lons2D[0,0], llcrnrlat=manager.lats2D[0,0],
+            urcrnrlon=manager.lons2D[-1,-1], urcrnrlat=manager.lats2D[-1, -1],
+            resolution="l"
+    )
+
+    x, y = basemap( manager.lons2D, manager.lats2D )
+    acc_area = np.ma.masked_where(manager.flow_directions <= 0, manager.accumulation_area_km2)
+
+    dx = x[1,0] - x[0,0]
+    dy = y[0,1] - y[0,0]
+    x -= dx / 2.0
+    y -= dy / 2.0
+    basemap.pcolormesh(x, y, acc_area)
+
+    basemap.drawcoastlines()
+    basemap.drawmeridians(np.arange(-180, 180, 20), labels=[0,0,0,1])
+    basemap.drawparallels(np.arange(-90, 90, 20), labels=[1,0,0,0])
+    plt.colorbar()
+
+    plt.savefig("drainage_area.png")
+    pass
+
+
 def main():
-    #TODO: implement
+    draw_drainage_area()
     #compare()
-    test_mean()
+    #test_mean()
     pass
 
 if __name__ == "__main__":

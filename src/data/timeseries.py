@@ -39,16 +39,42 @@ class TimeSeries:
 
 
     def get_daily_normals(self, start_date = None, end_date = None, stamp_year = 2001):
-        #TODO: implement
+        """
+        :type start_date: datetime.datetime
+        :type end_date: datetime.datetime
+        :rtype : list , list
+        """
         the_date = date(stamp_year, 1, 1)
+
         day = timedelta(days = 1)
         year_dates = [ ]
 
-        if start_date is not None:
-            pass
-        sel_dates = None
+        #creat objects for each day of year
+        while the_date.year == stamp_year:
+            year_dates.append(the_date)
+            the_date += day
 
-        pass
+
+
+        if start_date is None:
+            start_date = self.time[0]
+
+        if end_date is None:
+            end_date = self.time[-1]
+
+
+
+        daily_means = []
+        for stamp_day in year_dates:
+            bool_vector = map(lambda x: x.day == stamp_day.day and
+                                        x.month == stamp_day.month and
+                                        x >= start_date and
+                                        x <= end_date, self.time)
+
+            indices = np.where( bool_vector )[0]
+            daily_means.append(np.array(self.data)[indices].mean())
+
+        return year_dates, daily_means
 
 
     def get_size(self):

@@ -42,6 +42,7 @@ class RPN():
         if not os.path.isfile(path) and mode == 'r':
             raise Exception('{0} does not exist, or is not a file'.format(path))
 
+        self.path = path
         try:
             self._dll = CDLL('rmnlib.so')
         except OSError:
@@ -129,6 +130,36 @@ class RPN():
             c_char_p, c_char_p, c_char_p, c_char_p,
             c_int, c_int, c_int, c_int, c_int, c_int
         ]
+        self._set_origin_date()
+
+    def _set_origin_date(self):
+        ni = c_int(0)
+        nj = c_int(0)
+        nk = c_int(0)
+        datev = c_int(-1)
+
+
+        ip1 = c_int(-1)
+        ip2 = c_int(-1)
+        ip3 = c_int(-1)
+
+
+        #read longitudes
+        in_nomvar = '>>'
+        in_nomvar = create_string_buffer(in_nomvar[:2])
+        etiket = create_string_buffer(' ')
+        in_typvar = create_string_buffer(' ')
+
+        hor_key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk),
+                                                    datev, etiket, ip1, ip2, ip3, in_typvar, in_nomvar)
+
+
+        info = self._get_record_info(hor_key)
+        dateo = info["dateo"].value ##int of the form MMDDYYHHR
+        dateo_s = "%09d" % dateo
+        self.dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo % 10))
+
+        pass
 
 
     def get_output_step_in_seconds(self):
@@ -170,7 +201,10 @@ class RPN():
         key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
-        
+
+        if key < 0:
+            raise Exception("key value is not valid {0}".format(key))
+
         return key
 
     def get_3D_record_for_name_and_level(self, varname = '', level = -1,
@@ -258,12 +292,15 @@ class RPN():
 
         #print 'hor_key = ', hor_key
 
+        hor_key = c_int(hor_key)
         self._get_record_info(hor_key)
 
-        hor_key = c_int(hor_key)
+
         data = np.zeros((ni.value,), dtype = np.float32)
         self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), hor_key, ni, nj, nk)
         lons = data[:]
+
+
 
         #read latitudes
         in_nomvar = '^^'
@@ -439,23 +476,7 @@ class RPN():
         """
         returns validity date in hours from the simulation start, of the last read record
         """
-
-        ##have to search for data records in order to see dt and npas
-        if self._current_info is None:
-            key = self.get_key_of_any_record()
-            self._get_record_info(key)
-
-        while self._current_info['varname'].value.strip().lower() in ['>>','^^', 'hy']:
-            [ni, nj, nk] = self._current_info['shape']
-            key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
-            self._get_record_info(key)
-
-        #print 'dateo  = ' , self._current_info['dateo']
-        #print 'dt_seconds = ', self._current_info['dt_seconds']
-        #print 'npas = ', self._current_info['npas']
-        #print 'varname = ', self._current_info['varname'].value
         return self._current_info['ip'][1].value ##ip2
-        pass
 
     def get_dateo_of_last_read_record(self):
         """
@@ -471,20 +492,43 @@ class RPN():
         """
         returns datetime object corresponding to the last read record
         """
+
+
         if self._current_info:
-            dateo = self._current_info["dateo"].value ##int of the form MMDDYYHHR
-            forecastHour = self.get_current_validity_date()
-
-            dateo_s = "%09d" % dateo
-            start_date = datetime.strptime(dateo_s, "%m%d%y%H" + "%d" % (dateo % 10))
-            return start_date + timedelta(hours = forecastHour)
-
+            try:
+                forecastHour = self.get_current_validity_date()
+                return self.dateo + timedelta(hours = forecastHour)
+            except Exception, exc:
+                 print exc.message
+                 raise Exception("problem when reading file {0}".format(self.path))
         else:
             raise Exception("No current info has been stored: please make sure you read some records first.")
 
 
 
+    def get_4d_field(self, name = "", level_kind = level_kinds.ARBITRARY):
+        """
+        returns a map
+        {t: {z: T(x, y)}}
+        """
+        result = {}
+        data1 = self.get_first_record_for_name(name)
 
+        while data1 is not None:
+            level = self.get_current_level(level_kind = level_kind)
+            time = self.get_datetime_for_the_last_read_record()
+
+            if not result.has_key(time):
+                result[time] = {}
+
+            time_slice = result[time]
+            time_slice[level] = data1
+
+            data1 = self.get_next_record()
+
+        return result
+
+        pass
 
 
   
@@ -575,21 +619,21 @@ class RPN():
         pass
 
 
-    def get_all_records_for_name(self, varname = "STFL"):
+    def get_all_time_records_for_name(self, varname = "STFL"):
         """
         Created for retrieving the fields corresponding to
         different times,
         works as self.get_3D_field, but instead of the map
-        {level: 2d record} it returns the map {forecast_hour: 2d record}
+        {level: 2d record} it returns the map {date: 2d record}
         """
         result = {}
         data1 = self.get_first_record_for_name(varname)
-        result[self.get_current_validity_date()] = data1
+        result[self.get_datetime_for_the_last_read_record()] = data1
 
         while data1 is not None:
             data1 = self.get_next_record()
             if data1 is not None:
-                result[self.get_current_validity_date()] = data1
+                result[self.get_datetime_for_the_last_read_record()] = data1
         return result
 
         pass
@@ -600,14 +644,17 @@ def test():
     rpnObj = RPN(path)
     datev = rpnObj.get_current_validity_date()
     print 'validity date = ', datev
+    print rpnObj._current_info
+    print rpnObj.dateo
     print rpnObj.get_number_of_records()
+    rpnObj.get_longitudes_and_latitudes()
     rpnObj.close()
 
 
 def test_get_all_records_for_name():
     path = "data/from_guillimin/quebec_rivers_not_talk_with_lakes/Samples/quebec_220x220_198501/physics"
     rpnObj = RPN(path=path)
-    date_to_field = rpnObj.get_all_records_for_name(varname="STFL")
+    date_to_field = rpnObj.get_all_time_records_for_name(varname="STFL")
     rpnObj.close()
 
 
@@ -620,6 +667,6 @@ def test_get_all_records_for_name():
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    #test()
-    test_get_all_records_for_name()
+    test()
+    #test_get_all_records_for_name()
     print "Hello World"
