@@ -63,8 +63,8 @@ def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
 
 def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa'):
     rpnFile = RPN(rpn_path)
-    sandField = rpnFile.get_3D_field('SAND')
-    clayField = rpnFile.get_3D_field('CLAY')
+    sandField = rpnFile.get_2D_field_on_all_levels('SAND')
+    clayField = rpnFile.get_2D_field_on_all_levels('CLAY')
     rpnFile.close()
 
     ncFile = nc.Dataset('sand_clay_3d_na.nc', 'w', format = 'NETCDF3_CLASSIC')

@@ -460,7 +460,7 @@ def test():
 
     dm = CRCMDataManager(data_folder="data/CORDEX") #needed here only for verticla levels
 
-    h = dm.get_alt_using_files_in(folder="data/CORDEX/na/means_month/era40_driven")
+    h = dm.get_alt_using_files_in(folder="data/CORDEX/na/e2")
     h = np.ma.masked_where((permafrost_mask == 0) |
                            (permafrost_mask >= 3) | (h < 0), h)
 
@@ -474,11 +474,11 @@ def test():
     cax = divider.append_axes("right", "5%", pad="3%")
     cb = fig.colorbar(img,  cax = cax)
 
-    ax.set_title("ERA40 1958-1967")
+    ax.set_title("E2 1950-1954")
 
     b.drawcoastlines(ax = ax)
     b.contour(x,y, permafrost_mask, levels = xrange(1,4), colors = "k", linewidths = 0.5, ax = ax)
-    fig.savefig("alt_ERA40.png")
+    fig.savefig("alt_E2.png")
 
 
 def main():

@@ -53,12 +53,12 @@ class RPN():
         self.ETIKET_DEFAULT  = 16 * ' '
         self.GRIDTYPE_DEFAULT = 'Z'
 
-        self._current_output_dt_seconds = -1
 
         self.FROM_LEVEL_TO_IP1_MODE = 1
         self.FROM_IP1_TO_LEVEL_MODE = -1
 
         self._current_info = None ##map containing info concerning the last read record
+        self.dateo = None
 
 
         self.current_grid_type = self.GRIDTYPE_DEFAULT
@@ -130,9 +130,13 @@ class RPN():
             c_char_p, c_char_p, c_char_p, c_char_p,
             c_int, c_int, c_int, c_int, c_int, c_int
         ]
-        self._set_origin_date()
 
-    def _set_origin_date(self):
+    def _set_origin_date(self, date_o = None):
+
+        if date_o is not None:
+            self.dateo = date_o
+            return
+
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -155,16 +159,11 @@ class RPN():
 
 
         info = self._get_record_info(hor_key)
-        dateo = info["dateo"].value ##int of the form MMDDYYHHR
-        dateo_s = "%09d" % dateo
-        print dateo
-        self.dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo % 10))
-
-        pass
+        self.dateo = info["dateo"] ##int of the form MMDDYYHHR
 
 
     def get_output_step_in_seconds(self):
-        return self._current_output_dt_seconds
+        raise Exception("Not yet implemented")
 
     def close(self):
         self._dll.fstfrm_wrapper(self._file_unit)
@@ -243,29 +242,103 @@ class RPN():
 
         if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
 
-        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float64)
+        return self._get_data_by_key(key)
 
 
+    def _get_data_by_key(self, record_key):
+        """
+        Get data record corresponding to the record_key
 
+        :type record_key: c_int
+        """
+        self._get_record_info(record_key)
+        the_type = self._get_current_data_type()
+        ni, nj, nk = self._current_info["shape"]
+        data = np.zeros((nk.value * nj.value * ni.value,), dtype = the_type)
 
-        self._current_info = self._get_record_info(key)
 
         #read the record
-        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
+        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), record_key, ni, nj, nk)
 
         data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
         return data
 
 
-
     def get_longitudes_and_latitudes_for_the_last_read_rec(self):
-        #TODO: implement
+
+        """
+        finds georeference
+        """
+        if self._current_info is None:
+            raise Exception("No records has been read yet, or its metadata has not yet been saved.")
+
+        ig = self._current_info['ig']
+
+
+        ni = c_int(0)
+        nj = c_int(0)
+        nk = c_int(0)
+        datev = c_int(-1)
+        etiket = create_string_buffer( self.ETIKET_DEFAULT )
+
+        print ig
+        ip1, ip2, ip3 = ig[:3]
+        in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
+
+
+        in_nomvar = create_string_buffer(">>")
+
+        key_hor = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
+                                         ip1, ip2, ip3, in_typvar, in_nomvar
+                                        )
+
+        in_nomvar = create_string_buffer("^^")
+        key_ver = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
+                                                 ip1, ip2, ip3, in_typvar, in_nomvar
+                                                )
+
+        if key_hor < 0 or key_ver < 0:
+            raise Exception("key value is not valid {0}".format(min(key_hor, key_ver)))
+
+
+        lons = self._get_data_by_key(key_hor)[:, 0, 0]
+        lats = self._get_data_by_key(key_ver)[0,:, 0]
+
+
+
+        ig = self._current_info["ig"]
+        n_lons = lons.shape[0]
+        n_lats = lats.shape[0]
+
+        grid_type = create_string_buffer(self.current_grid_type)
+        grid_reference = create_string_buffer(self.current_grid_reference)
+
+        ezgdef = self._dll.ezgdef_fmem_wrapper(c_int(n_lons), c_int(n_lats),
+                            grid_type, grid_reference,
+                            ig[0], ig[1], ig[2], ig[3],
+                            lons.ctypes.data_as(POINTER(c_float)),
+                            lats.ctypes.data_as(POINTER(c_float)))
+
+
+        the_type = self._get_current_data_type()
+        lons_2d = np.zeros((n_lats, n_lons), dtype = the_type)
+        lats_2d = np.zeros((n_lats, n_lons), dtype = the_type)
+
+        self._dll.gdll_wrapper(ezgdef, lats_2d.ctypes.data_as(POINTER(c_float)),
+                                                   lons_2d.ctypes.data_as(POINTER(c_float)))
+
+
+        return np.transpose(lons_2d), np.transpose(lats_2d)
+
+
         pass
 
     #get longitudes for the record
     def get_longitudes_and_latitudes(self):
         """
-        get longitudes and latitudes of the fields in the rpn file
+        get longitudes and latitudes of the fields in the rpn file,
+
+        An rpn file can contain several
         """
 
         key = self.get_key_of_any_record()
@@ -299,13 +372,7 @@ class RPN():
         #print 'hor_key = ', hor_key
 
         hor_key = c_int(hor_key)
-        self._get_record_info(hor_key)
-
-
-        data = np.zeros((ni.value,), dtype = np.float32)
-        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), hor_key, ni, nj, nk)
-        lons = data[:]
-
+        lons = self._get_data_by_key(hor_key)[:,0,0]
 
 
         #read latitudes
@@ -314,19 +381,16 @@ class RPN():
         ver_key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk),
                                             datev, etiket, ip1, ip2, ip3, in_typvar, in_nomvar)
         ver_key = c_int(ver_key)
-        data = np.zeros((nj.value, ), dtype = np.float32)
-        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), ver_key, ni, nj, nk)
-        lats = data[:]
+        lats = self._get_data_by_key(ver_key)[0,:,0]
 
 
+        ig = self._current_info["ig"]
         n_lons = lons.shape[0]
         n_lats = lats.shape[0]
 
         #print 'grid type: ', self.current_grid_type
         #print 'grid ref: ', self.current_grid_reference
 
-        info = self._get_record_info(hor_key, verbose = True)
-        ig = info['ig']
 
         #print 'grid type: ',  self.current_grid_type
         grid_type = create_string_buffer(self.current_grid_type)
@@ -424,17 +488,22 @@ class RPN():
             print 'varname: ', nomvar.value
 
         
-        self._current_output_dt_seconds = dt_seconds.value * npas.value
+
         if '>>' in nomvar.value or '^^' in nomvar.value:
             self.current_grid_reference = grid_type.value
         else:
             self.current_grid_type = grid_type.value
         #print 'current grid type ', self.current_grid_type
 
+
+        dateo_s = "%09d" % dateo.value
+        the_dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo.value % 10))
+
+
         result = {'ig': [ig1, ig2, ig3, ig4],
                   'ip': [ip1, ip2, ip3],
                   'shape': [ni, nj, nk],
-                  'dateo': dateo,
+                  'dateo': dateo.value,
                   'dt_seconds': dt_seconds,
                   'npas': npas,
                   'varname': nomvar,
@@ -443,6 +512,7 @@ class RPN():
                   "nbits" : nbits.value
                   }
         self._current_info = result #update info from the last read record
+        self._set_origin_date(date_o=the_dateo)
         return result
 
 
@@ -451,7 +521,7 @@ class RPN():
         #determine datatype of the data inside the
         data_type = self._current_info["data_type"]
         nbits = self._current_info["nbits"]
-        print data_type, nbits
+        #print data_type, nbits
         if nbits == 32:
             return np.float32
         elif nbits == 64:
@@ -474,14 +544,7 @@ class RPN():
  
         if key <= 0: return None
 
-        the_type = self._get_current_data_type()
-
-        data = np.zeros((nk.value * nj.value * ni.value,), dtype = the_type)
-        self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
-        data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
-
-        self._get_record_info(key)
-        return data[:,:,0]
+        return self._get_data_by_key(key)[:,:,0]
 
     def get_current_level(self, level_kind = level_kinds.ARBITRARY):
         """
@@ -502,7 +565,10 @@ class RPN():
     def get_current_validity_date(self):
         """
         returns validity date in hours from the simulation start, of the last read record
+        return None if no data has been read yet
         """
+        if self._current_info is None:
+            return None
         return self._current_info['ip'][1].value ##ip2
 
     def get_dateo_of_last_read_record(self):
@@ -524,6 +590,7 @@ class RPN():
         if not self._current_info is None :
             try:
                 forecastHour = self.get_current_validity_date()
+                print self.dateo
                 return self.dateo + timedelta(hours = forecastHour)
             except Exception, exc:
                  print exc.message
@@ -545,7 +612,6 @@ class RPN():
             level = self.get_current_level(level_kind = level_kind)
             time = self.get_datetime_for_the_last_read_record()
 
-            print level, time
             if not result.has_key(time):
                 result[time] = {}
 
@@ -560,7 +626,7 @@ class RPN():
 
 
   
-    def get_3D_field(self, name = 'SAND', level_kind = level_kinds.ARBITRARY):
+    def get_2D_field_on_all_levels(self, name = 'SAND', level_kind = level_kinds.ARBITRARY):
         """
         returns a map {level => 2d field}
         """
@@ -600,6 +666,9 @@ class RPN():
                               char *in_etiket, char *in_grtyp,
                               int ig1, int ig2, int ig3, int ig4,
                               int datyp, int rewrite)
+
+
+        Note: currently the datatypes of the input field is limited to the array of float32
 
         """
         theData = np.reshape(data, data.size, order = 'F')
@@ -680,15 +749,21 @@ def test():
 
 
 def test_get_all_records_for_name():
-    path = "data/from_guillimin/quebec_rivers_not_talk_with_lakes/Samples/quebec_220x220_198501/physics"
+    path = "data/CORDEX/na/e1/pmNorthAmerica_0.44deg_CanHistoE1_A1950-1954-djf"
     rpnObj = RPN(path=path)
-    date_to_field = rpnObj.get_all_time_records_for_name(varname="STFL")
+    date_to_field = rpnObj.get_4d_field(name="I0")
+
+    lons2d1, lats2d1 = rpnObj.get_longitudes_and_latitudes_for_the_last_read_rec()
+    lons2d2, lats2d2 = rpnObj.get_longitudes_and_latitudes()
+
     rpnObj.close()
 
+    print np.mean(lons2d1), np.mean(lats2d1)
+    print np.mean(lons2d2), np.mean(lats2d2)
 
-    for k, v in date_to_field.iteritems():
-        v1 = np.ma.masked_where(v < 0, v)
-        print k, v1.min(), v1.mean(), v1.max()
+    for t, v in date_to_field.iteritems():
+        for z, v1 in v.iteritems():
+            print t, z, v1.min(), v1.mean(), v1.max()
 
 
 
@@ -696,5 +771,5 @@ import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
     test()
-    #test_get_all_records_for_name()
+    test_get_all_records_for_name()
     print "Hello World"
