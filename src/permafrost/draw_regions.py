@@ -76,14 +76,25 @@ def delete_points_in_countries(points_lat_long, points, indices, countries = Non
 def get_basemap_and_coords(
         file_path = "data/CORDEX/NorthAmerica_0.44deg_CanHistoE1/Samples/NorthAmerica_0.44deg_CanHistoE1_198101/pm1950010100_00816912p",
         lon1 = -97, lat1 = 47.50,
-        lon2 = -7, lat2 = 0
+        lon2 = -7, lat2 = 0,
+        llcrnrlon = None, llcrnrlat = None,
+        urcrnrlon = None, urcrnrlat = None
         ):
     rpnObj = RPN(file_path)
     lons2D, lats2D = rpnObj.get_longitudes_and_latitudes()
     rpnObj.close()
 
+
+    the_ll_lon = lons2D[0,0] if llcrnrlon is None else llcrnrlon
+    the_ll_lat = lats2D[0,0] if llcrnrlat is None else llcrnrlat
+    the_ur_lon = lons2D[-1, -1] if urcrnrlon is None else urcrnrlon
+    the_ur_lat = lats2D[-1, -1] if urcrnrlat is None else urcrnrlat
+
     return Basemap(projection="omerc", resolution="l",
-           llcrnrlon=lons2D[0,0], llcrnrlat=lats2D[0,0], urcrnrlon=lons2D[-1,-1], urcrnrlat=lats2D[-1,-1],
+            llcrnrlon=the_ll_lon,
+            llcrnrlat=the_ll_lat,
+            urcrnrlon=the_ur_lon,
+            urcrnrlat=the_ur_lat,
             lat_1=lat1, lon_1=lon1, lat_2=lat2, lon_2=lon2, no_rot=True
     ), lons2D, lats2D
 

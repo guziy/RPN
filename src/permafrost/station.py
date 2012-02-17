@@ -108,7 +108,7 @@ def compare_alt():
 
     plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=16, font_size=12)
     fig = plt.figure()
-    gs = gridspec.GridSpec(1,2, height_ratios=[1,1], width_ratios=[1,1])
+    gs = gridspec.GridSpec(2,1)
     ax = fig.add_subplot(gs[0,0])
     ax.plot(h_obs, h_mod, 'o')
     ax.set_xlabel("Obs.")
@@ -117,14 +117,14 @@ def compare_alt():
     ax.set_xlim(0, upper_lim + 0.1 * upper_lim)
     ax.set_ylim(0, upper_lim + 0.1 * upper_lim)
 
-    ax = fig.add_subplot(gs[0,1])
+    ax = fig.add_subplot(gs[1,0])
 
 
     min_lon, max_lon = min(station_lons), max(station_lons)
     min_lat, max_lat = min(station_lats), max(station_lats)
 
-    dx = (max_lon - min_lon) * 1.8
-    dy = (max_lat - min_lat) * 4
+    dx = (max_lon - min_lon) * 0.1
+    dy = (max_lat - min_lat) * 0.6
     min_lon -= dx
     max_lon += dx
     min_lat -= dy
@@ -132,26 +132,18 @@ def compare_alt():
 
 
 
-    s_x, s_y = b(station_lons, station_lats)
-    b.scatter(s_x, s_y, c = "r", ax = ax, marker = "*", s = 30, linewidths = 0.1, zorder = 2)
-    b.drawcoastlines(ax = ax, linewidth = 0.5)
-
-    minx, miny = b(min_lon, min_lat)
-    maxx, maxy = b(max_lon, max_lat)
-    ax.set_xlim(minx, maxx)
-    ax.set_ylim(miny, maxy)
-
-    axins = inset_axes(ax, width="30%", height="40%", loc = 3)
-    b.scatter(s_x, s_y, c = "r", ax = axins, marker = "*", s = 30, linewidths = 0.1, zorder = 2)
-    b.drawcoastlines(ax = axins, linewidth = 0.5)
-
-    #minx, miny = b(minx, miny)
-    #maxx, maxy = b(maxx, maxy)
-
-    #print  ax.get_xlim(), ax.get_ylim()
-
-
-    #gs.tight_layout(fig)
+    lon1 = -97
+    lat1 = 47.50
+    lon2 = -7
+    lat2 = 0
+    b_zoom = Basemap(projection="omerc", resolution="l",
+               llcrnrlon=min_lon, llcrnrlat=min_lat,
+                urcrnrlon=max_lon, urcrnrlat=max_lat,
+                lat_1=lat1, lon_1=lon1, lat_2=lat2, lon_2=lon2, no_rot=True
+        )
+    s_x, s_y = b_zoom(station_lons, station_lats)
+    b_zoom.scatter(s_x, s_y, c = "r", ax = ax, marker = "*", s = 30, linewidths = 0.1, zorder = 2)
+    b_zoom.drawcoastlines(ax = ax, linewidth = 0.5)
     fig.savefig("pf_validate.png")
 
     pass

@@ -16,7 +16,7 @@ from matplotlib import ticker
 
 import draw_regions
 
-class DataManager:
+class CRCMDataManager:
 
     def __init__(self, data_folder = None, file_prefix = "pm"):
         """
@@ -44,10 +44,84 @@ class DataManager:
             tops.append(t)
             bottoms.append(b)
 
+        #self.level_heights = np.array(tops)
         self.level_heights = np.array( (np.array(tops) + np.array(bottoms)) * 0.5 )
-
+        self.yearmonth_to_mm_soiltemp = None
         pass
 
+
+    def get_alt_using_monthly_mean_climatology(self, year_range):
+        tc = self.get_soiltemp_climatology(year_range)
+        tc_max = np.max(tc, axis=0)
+        return self._get_alt(tc_max)
+
+    def get_soiltemp_climatology(self, year_range = None):
+
+        monthly_climatology = [[] for m in xrange(12)]
+        for the_year in year_range:
+            for the_month in xrange(1, 13):
+                the_mean = self._get_monthly_mean_soiltemp(the_year, the_month)
+                if the_mean is None:
+                    continue
+                monthly_climatology[the_month - 1].append(the_mean)
+
+        for m in xrange(12):
+            monthly_climatology[m] = np.mean(monthly_climatology[m], axis=0)
+
+        return monthly_climatology
+
+
+
+
+    def get_alt_using_files_in(self, folder = "", file_name_prefix = "pm"
+                               ):
+        all_temps = []
+        for the_file in os.listdir(folder):
+            if the_file.startswith(file_name_prefix):
+                print the_file
+                times, temps = self._read_profiles_from_file(os.path.join(folder, the_file), var_name="I0")
+
+                mt = np.mean(temps, axis = 0)
+                all_temps.append(mt)
+
+        max_temp = np.max(all_temps, axis = 0)
+
+        return self._get_alt(max_temp)
+
+
+
+
+    def _get_monthly_mean_soiltemp(self, year, month):
+        """
+        returns None if the data for the specifide year and month
+        were not found
+        """
+        key = (year, month)
+
+        cache_file = "year_month_to_monthly_mean_soiltemp.bin"
+        if self.yearmonth_to_mm_soiltemp is None:
+            if os.path.isfile(cache_file):
+                self.yearmonth_to_mm_soiltemp = pickle.load(open(cache_file))
+            else:
+                self.yearmonth_to_mm_soiltemp = {}
+
+
+        if self.yearmonth_to_mm_soiltemp.has_key(key):
+            return self.yearmonth_to_mm_soiltemp[key]
+
+        if not self.yearmonth_to_data_path.has_key(key):
+            print "Warning could not find data for month/year = {0}/{1}".format(month, year)
+            return None
+        data_path = self.yearmonth_to_data_path[key]
+
+        times, temp = self._read_profiles_from_file(data_path, var_name="I0")
+
+        mmean = np.mean(temp, axis=0)
+        self.yearmonth_to_mm_soiltemp[key] = mmean
+        pickle.dump(self.yearmonth_to_mm_soiltemp, open(cache_file, mode="w"))
+        return mmean
+
+        pass
 
 
 
@@ -116,28 +190,24 @@ class DataManager:
 
         pass
 
-    def get_active_layer_thickness(self, year):
-        """
-        return 2D field of the active layer thickness for the year
-        returns ALT(x, y)
-        """
-        #t(x,y,z) - annual maximums
-        t = self.get_Tmax_profiles_for_year(year, var_name="I0")
 
-        nx, ny, nz = t.shape
+
+
+    def _get_alt(self, soiltemp_3d):
+        nx, ny, nz = soiltemp_3d.shape
         alt = -np.ones((nx, ny))
 
         #if t_max allways < 0 then alt = 0
-        all_neg = np.all(t <= self.T0, axis=2)
+        all_neg = np.all(soiltemp_3d <= self.T0, axis=2)
         alt[all_neg] = 0.0
 
 
         #if tmax intersects 0
         for k in xrange(0, nz - 1):
-            t2 = t[:,:,k + 1]
-            t1 = t[:,:,k]
+            t2 = soiltemp_3d[:,:,k + 1]
+            t1 = soiltemp_3d[:,:,k]
             intersection = (t2 - self.T0) * (t1 - self.T0) <= 0
-            first_intersection = intersection & (alt == -1)
+            first_intersection = intersection & (alt < 0)
 
             h2 = self.level_heights[k + 1]
             h1 = self.level_heights[k]
@@ -148,13 +218,18 @@ class DataManager:
             alt[ind1] = h2 + (h1 - h2) * (self.T0 - t2[ind1]) / (t1[ind1] - t2[ind1])
             alt[first_intersection & possible_div_by_0 & (t1 <= self.T0)] = h1
 
+
         return alt
 
 
-        pass
-
-
-
+    def get_active_layer_thickness(self, year):
+        """
+        return 2D field of the active layer thickness for the year
+        returns ALT(x, y)
+        """
+        #t(x,y,z) - annual maximums
+        t = self.get_Tmax_profiles_for_year(year, var_name="I0")
+        return self._get_alt(t)
 
 
 
@@ -166,7 +241,15 @@ class DataManager:
         self.yearmonth_to_data_path = {}
 
         for folder in os.listdir(self.data_folder):
+
+            parent_i = os.path.join(self.data_folder, folder)
+
+
+            if not self._samples in os.listdir(parent_i): continue # skip parent which do not contain Samples folder
+
             samples_dir = os.path.join(self.data_folder, folder, self._samples)
+
+
 
             for month_folder in os.listdir(samples_dir):
                 d = datetime.strptime(month_folder.split("_")[-1], "%Y%m")
@@ -187,7 +270,26 @@ class DataManager:
 
         pass
 
+    def get_mean_over_months_of_2d_var(self, start_year, end_year, months = None, var_name = ""):
+        monthly_means = []
+        for the_year in xrange(start_year, end_year + 1):
+            for the_month in months:
+                path = self.yearmonth_to_data_path[(the_year, the_month)]
+                rpn_obj = RPN(path)
 
+                records = rpn_obj.get_all_time_records_for_name(varname=var_name)
+
+                monthly_means.append(np.mean(records, axis=0))
+
+                rpn_obj.close()
+
+        return np.mean(monthly_means, axis=0)
+        pass
+
+
+
+
+        pass
 
 def get_alt_for_year(year):
     cache_file = "year_to_alt.bin"
@@ -198,7 +300,7 @@ def get_alt_for_year(year):
     if year_to_alt.has_key(year):
         return year_to_alt[year]
     else:
-        dm = DataManager(data_folder="data/CORDEX")
+        dm = CRCMDataManager(data_folder="data/CORDEX")
         h = dm.get_active_layer_thickness(year)
         year_to_alt[year] = h
         pickle.dump(year_to_alt, open(cache_file, mode="w"))
@@ -259,35 +361,124 @@ def plot_means_and_stds_for_period(year_range = range(1981,2011),
 
 
 
+def plot_alt_from_monthly_climatologies():
+    plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=16, font_size=12)
+    figure = plt.figure()
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(llcrnrlat=40.0, llcrnrlon=-145, urcrnrlon=-10)
+    x, y = b(lons2d, lats2d)
+    permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
+    dm = CRCMDataManager(data_folder="data/CORDEX")
 
+    year_ranges = [range(1981, 1985), range(2041, 2045), range(2071, 2075)]
+
+    gs = gridspec.GridSpec(len(year_ranges),1)
+
+    pf_mask = (permafrost_mask == 1) | (permafrost_mask == 2)
+    pf_mask = ~pf_mask
+
+    permafrost_mask = np.ma.masked_where(permafrost_mask <= 0, permafrost_mask)
+    for i, year_range in enumerate(year_ranges):
+        ax = figure.add_subplot(gs[i, 0])
+        alt = dm.get_alt_using_monthly_mean_climatology(year_range)
+        alt = np.ma.masked_where(pf_mask, alt)
+
+        img = b.contourf(x, y, alt, levels = xrange(11), cmap = cm.get_cmap("jet", ), ax = ax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "5%", pad="3%")
+        cb = plt.colorbar(img,  cax = cax)
+
+        b.contour(x, y, permafrost_mask, levels = xrange(5), linewidth = 0.1, colors = "k", ax = ax)
+        b.drawcoastlines(ax = ax, linewidth = 0.5)
+        ax.set_title("period: {0} - {1}".format(year_range[0], year_range[-1]))
+    plt.savefig("alt_from_clim.png")
+
+
+
+def plot_alt_for_different_e_scenarios():
+
+    labels = ("E1", "E2", "E3", "E4")
+    p_format =  "pmNorthAmerica_0.44deg_CanHistoE{0}"
+    prefixes = map(lambda x: p_format.format(x), xrange(1,5))
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(llcrnrlat=40.0, llcrnrlon=-145, urcrnrlon=-10)
+    x, y = b(lons2d, lats2d)
+    permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
+
+    dm = CRCMDataManager(data_folder="data/CORDEX") #needed here only for verticla levels
+
+
+    plot_utils.apply_plot_params(width_pt=None, height_cm=12, width_cm=16, font_size=12)
+    fig = plt.figure()
+
+    gs = gridspec.GridSpec(2,2)
+
+    scen_index = 0
+    for row in xrange(2):
+        for col in xrange(2):
+            sc = labels[scen_index]
+            ax = fig.add_subplot(gs[row, col])
+            h = dm.get_alt_using_files_in(folder="data/CORDEX/na/means_month", file_name_prefix=prefixes[scen_index])
+            h = np.ma.masked_where((permafrost_mask == 0) |
+                                       (permafrost_mask >= 3) | (h < 0), h)
+
+            plot_for_scenario(sc, ax, basemap=b, x = x, y= y, alt = h, permafrost_mask=permafrost_mask,
+                start_year=1950, end_year=1954
+            )
+
+            scen_index += 1
+    gs.tight_layout(fig, h_pad = 0.9, w_pad = 16)
+    fig.savefig("alt_diff_scenarios.png")
+    pass
+
+
+def plot_for_scenario(scen_id, ax, basemap = None,
+                      x = None, y = None, alt = None,
+                      permafrost_mask = None, start_year = None, end_year = None
+                      ):
+    """
+
+    """
+    levels = np.arange(0, 11, 1)
+
+    img = basemap.contourf( x,y, alt, ax = ax, levels = levels, cmap = cm.get_cmap("jet", len(levels) - 1))
+    #img = b.pcolormesh(x,y, h, vmin = levels[0], vmax = levels[-1])
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "5%", pad="3%")
+    cb = plt.colorbar(img,  cax = cax)
+
+    ax.set_title("{0}: {1}-{2}".format(scen_id, start_year, end_year))
+    basemap.drawcoastlines(ax = ax)
+    basemap.contour(x,y, permafrost_mask, ax = ax, levels = xrange(1,4), colors = "k", linewidths = 0.5)
 
 
 
 def test():
-
-
-
-    plt.figure()
-
-    b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
+    fig = plt.figure()
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(llcrnrlat=40.0, llcrnrlon=-145, urcrnrlon=-10)
     x, y = b(lons2d, lats2d)
     permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
 
-    h = get_alt_for_year(1981)
+    dm = CRCMDataManager(data_folder="data/CORDEX") #needed here only for verticla levels
+
+    h = dm.get_alt_using_files_in(folder="data/CORDEX/na/means_month/era40_driven")
     h = np.ma.masked_where((permafrost_mask == 0) |
-                           (permafrost_mask >= 3)
+                           (permafrost_mask >= 3) | (h < 0), h)
 
-        , h)
-    dm = DataManager(data_folder="data/CORDEX") #needed here only for verticla levels
+    levels = np.arange(0, 11, 1)
+    ax = plt.gca()
+    img = b.contourf(x,y, h, levels = levels, cmap = cm.get_cmap("jet", len(levels) - 1), ax = ax)
+    #img = b.pcolormesh(x,y, h, vmin = levels[0], vmax = levels[-1])
 
-    levels = range(11)
-    img = b.contourf(x,y, h, levels = levels, cmap = cm.get_cmap("jet", len(levels) - 1))
 
-    plt.colorbar(img)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "5%", pad="3%")
+    cb = fig.colorbar(img,  cax = cax)
 
-    b.drawcoastlines()
-    b.contour(x,y, permafrost_mask, levels = xrange(1,4), colors = "k", linewidths = 0.5)
-    plt.savefig("alt.png")
+    ax.set_title("ERA40 1958-1967")
+
+    b.drawcoastlines(ax = ax)
+    b.contour(x,y, permafrost_mask, levels = xrange(1,4), colors = "k", linewidths = 0.5, ax = ax)
+    fig.savefig("alt_ERA40.png")
 
 
 def main():
@@ -314,7 +505,9 @@ def main():
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    main()
-    #test()
+    #main()
+    test()
+    #plot_alt_from_monthly_climatologies()
+    #plot_alt_for_different_e_scenarios()
     print "Hello world"
   

@@ -157,6 +157,7 @@ class RPN():
         info = self._get_record_info(hor_key)
         dateo = info["dateo"].value ##int of the form MMDDYYHHR
         dateo_s = "%09d" % dateo
+        print dateo
         self.dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo % 10))
 
         pass
@@ -242,7 +243,7 @@ class RPN():
 
         if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
 
-        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float32)
+        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float64)
 
 
 
@@ -255,6 +256,11 @@ class RPN():
         data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
         return data
 
+
+
+    def get_longitudes_and_latitudes_for_the_last_read_rec(self):
+        #TODO: implement
+        pass
 
     #get longitudes for the record
     def get_longitudes_and_latitudes(self):
@@ -333,9 +339,9 @@ class RPN():
                 lats.ctypes.data_as(POINTER(c_float)))
 
 
-
-        lons_2d = np.zeros((n_lats, n_lons), dtype = np.float32)
-        lats_2d = np.zeros((n_lats, n_lons), dtype = np.float32)
+        the_type = self._get_current_data_type()
+        lons_2d = np.zeros((n_lats, n_lons), dtype = the_type)
+        lats_2d = np.zeros((n_lats, n_lons), dtype = the_type)
         
         self._dll.gdll_wrapper(ezgdef, lats_2d.ctypes.data_as(POINTER(c_float)), 
                                        lons_2d.ctypes.data_as(POINTER(c_float)))
@@ -431,9 +437,27 @@ class RPN():
                   'dateo': dateo,
                   'dt_seconds': dt_seconds,
                   'npas': npas,
-                  'varname': nomvar}
+                  'varname': nomvar,
+                  "var_type" : typvar,
+                  "data_type" : datyp.value,
+                  "nbits" : nbits.value
+                  }
         self._current_info = result #update info from the last read record
         return result
+
+
+
+    def _get_current_data_type(self):
+        #determine datatype of the data inside the
+        data_type = self._current_info["data_type"]
+        nbits = self._current_info["nbits"]
+        print data_type, nbits
+        if nbits == 32:
+            return np.float32
+        elif nbits == 64:
+            return np.float64
+        else:
+            raise Exception("nbits ia: {0}".format(nbits))
 
 
     def get_next_record(self):
@@ -449,7 +473,10 @@ class RPN():
 
  
         if key <= 0: return None
-        data = np.zeros((nk.value * nj.value * ni.value,), dtype = np.float32)
+
+        the_type = self._get_current_data_type()
+
+        data = np.zeros((nk.value * nj.value * ni.value,), dtype = the_type)
         self._dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
         data = np.reshape(data, (ni.value, nj.value, nk.value), order = 'F')
 
@@ -494,7 +521,7 @@ class RPN():
         """
 
 
-        if self._current_info:
+        if not self._current_info is None :
             try:
                 forecastHour = self.get_current_validity_date()
                 return self.dateo + timedelta(hours = forecastHour)
@@ -518,6 +545,7 @@ class RPN():
             level = self.get_current_level(level_kind = level_kind)
             time = self.get_datetime_for_the_last_read_record()
 
+            print level, time
             if not result.has_key(time):
                 result[time] = {}
 
