@@ -35,9 +35,10 @@ class RPN():
         get_ip1_from_level(self, level, level_kind = level_kinds.ARBITRARY)
         write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY, data = None )
     """
-    def __init__(self, path = '', mode = 'r'):
+    def __init__(self, path = '', mode = 'r', start_century = 19):
         """
-
+              start_century - is used for the calculation of the origin date, because
+              of its ambiguous format DDMMYYR
         """
         if not os.path.isfile(path) and mode == 'r':
             raise Exception('{0} does not exist, or is not a file'.format(path))
@@ -58,8 +59,7 @@ class RPN():
         self.FROM_IP1_TO_LEVEL_MODE = -1
 
         self._current_info = None ##map containing info concerning the last read record
-        self.dateo = None
-
+        self.start_century = start_century
 
         self.current_grid_type = self.GRIDTYPE_DEFAULT
         self.current_grid_reference = 'E' 
@@ -130,36 +130,6 @@ class RPN():
             c_char_p, c_char_p, c_char_p, c_char_p,
             c_int, c_int, c_int, c_int, c_int, c_int
         ]
-
-    def _set_origin_date(self, date_o = None):
-
-        if date_o is not None:
-            self.dateo = date_o
-            return
-
-        ni = c_int(0)
-        nj = c_int(0)
-        nk = c_int(0)
-        datev = c_int(-1)
-
-
-        ip1 = c_int(-1)
-        ip2 = c_int(-1)
-        ip3 = c_int(-1)
-
-
-        #read longitudes
-        in_nomvar = '>>'
-        in_nomvar = create_string_buffer(in_nomvar[:2])
-        etiket = create_string_buffer(' ')
-        in_typvar = create_string_buffer(' ')
-
-        hor_key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk),
-                                                    datev, etiket, ip1, ip2, ip3, in_typvar, in_nomvar)
-
-
-        info = self._get_record_info(hor_key)
-        self.dateo = info["dateo"] ##int of the form MMDDYYHHR
 
 
     def get_output_step_in_seconds(self):
@@ -499,11 +469,14 @@ class RPN():
         dateo_s = "%09d" % dateo.value
         the_dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo.value % 10))
 
+        if the_dateo.year // 100 != self.start_century:
+            year = self.start_century * 100 + the_dateo.year % 100
+            the_dateo = datetime( year, the_dateo.month, the_dateo.day, the_dateo.hour, the_dateo.minute)
 
         result = {'ig': [ig1, ig2, ig3, ig4],
                   'ip': [ip1, ip2, ip3],
                   'shape': [ni, nj, nk],
-                  'dateo': dateo.value,
+                  'dateo': the_dateo,
                   'dt_seconds': dt_seconds,
                   'npas': npas,
                   'varname': nomvar,
@@ -512,7 +485,8 @@ class RPN():
                   "nbits" : nbits.value
                   }
         self._current_info = result #update info from the last read record
-        self._set_origin_date(date_o=the_dateo)
+
+        #self._set_origin_date(date_o=the_dateo)
         return result
 
 
@@ -521,11 +495,14 @@ class RPN():
         #determine datatype of the data inside the
         data_type = self._current_info["data_type"]
         nbits = self._current_info["nbits"]
+
         #print data_type, nbits
-        if nbits == 32:
+        if nbits == 32 or nbits == 16:
             return np.float32
         elif nbits == 64:
             return np.float64
+        elif nbits == 16:
+            return np.float16
         else:
             raise Exception("nbits ia: {0}".format(nbits))
 
@@ -590,10 +567,9 @@ class RPN():
         if not self._current_info is None :
             try:
                 forecastHour = self.get_current_validity_date()
-                print self.dateo
-                return self.dateo + timedelta(hours = forecastHour)
+                return self._current_info["dateo"] + timedelta(hours = forecastHour)
             except Exception, exc:
-                 print exc.message
+                 print exc
                  raise Exception("problem when reading file {0}".format(self.path))
         else:
             raise Exception("No current info has been stored: please make sure you read some records first.")
@@ -629,6 +605,7 @@ class RPN():
     def get_2D_field_on_all_levels(self, name = 'SAND', level_kind = level_kinds.ARBITRARY):
         """
         returns a map {level => 2d field}
+        Use this method if you are sure that the field yu want to get has only one record per level
         """
         result = {}
         data1 = self.get_first_record_for_name(name)
@@ -722,6 +699,8 @@ class RPN():
         different times,
         works as self.get_3D_field, but instead of the map
         {level: 2d record} it returns the map {date: 2d record}
+        Use this methond only in the case if you are sure that
+        the field you are trying to read containsonly one record for each time step
         """
         result = {}
         data1 = self.get_first_record_for_name(varname)
@@ -739,10 +718,24 @@ def test():
     #path = 'data/geophys_africa'
     path = 'data/pm1989010100_00000003p'
     rpnObj = RPN(path)
+    precip = rpnObj.get_first_record_for_name("PR")
+
+    import matplotlib.pyplot as plt
+
+    plt.imshow(precip.transpose())
+    plt.colorbar()
+    plt.savefig("precip.png")
+
+
+    os.system("r.diag ggstat {0}".format(path))
+
+    print "Min = {0}, Mean = {1}, Max = {2}, Var = {3}".format(np.min(precip), np.mean(precip), np.max(precip), np.var(precip))
+
+
+
     datev = rpnObj.get_current_validity_date()
     print 'validity date = ', datev
     print rpnObj._current_info
-    print rpnObj.dateo
     print rpnObj.get_number_of_records()
     rpnObj.get_longitudes_and_latitudes()
     rpnObj.close()
