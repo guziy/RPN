@@ -1,4 +1,5 @@
 from datetime import datetime
+from netCDF4 import Dataset
 import os
 import itertools
 import pickle
@@ -279,7 +280,7 @@ class CRCMDataManager:
 
                 records = rpn_obj.get_all_time_records_for_name(varname=var_name)
 
-                monthly_means.append(np.mean(records, axis=0))
+                monthly_means.append(np.mean(records.values(), axis=0))
 
                 rpn_obj.close()
 
@@ -290,6 +291,43 @@ class CRCMDataManager:
 
 
         pass
+
+    @classmethod
+    def get_mean_2d_from_climatologies(cls, path = "", file_prefixes = None,
+                                    file_suffixes = None, var_name = ""):
+        """
+        When you have a folder with climatologies, use this method
+        """
+
+        field_list = []
+
+        if file_prefixes is None:
+            file_prefixes = os.listdir(path)
+
+        if file_suffixes is None:
+            file_suffixes = os.listdir(path)
+
+        for file_name in os.listdir(path):
+            prefix_ok = False
+            suffix_ok = False
+
+            for p in file_prefixes:
+                if file_name.startswith(p):
+                    prefix_ok = True
+                    break
+
+            for s in file_suffixes:
+                if file_name.endswith(s):
+                    suffix_ok = True
+                    break
+
+            if prefix_ok and suffix_ok:
+                rpn_obj = RPN(os.path.join(path, file_name))
+                data = rpn_obj.get_first_record_for_name(var_name)
+                rpn_obj.close()
+                field_list.append(data)
+        return np.array(field_list).mean(axis = 0)
+
 
 def get_alt_for_year(year):
     cache_file = "year_to_alt.bin"
@@ -306,6 +344,34 @@ def get_alt_for_year(year):
         pickle.dump(year_to_alt, open(cache_file, mode="w"))
         return h
 
+
+def save_alts_to_netcdf_file(path = "alt.nc"):
+
+    year_range = xrange(1981, 2101)
+    ds = Dataset(path, mode = "w")
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
+    ds.createDimension('year', len(year_range))
+    ds.createDimension('lon', lons2d.shape[0])
+    ds.createDimension('lat', lons2d.shape[1])
+
+    lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+    latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+
+    altVariable = ds.createVariable("alt", "f4", ('year','lon', 'lat'))
+
+    lonVariable[:,:] = lons2d[:,:]
+    latVariable[:,:] = lats2d[:,:]
+
+    for i, the_year in enumerate(year_range):
+        altVariable[i,:,:] = get_alt_for_year(the_year)
+
+    ds.close()
+
+
+
+
+
+    pass
 
 def plot_means_and_stds_for_period(year_range = range(1981,2011),
                                    plot_grid = None,
@@ -506,7 +572,8 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
-    test()
+    #test()
+    save_alts_to_netcdf_file()
     #plot_alt_from_monthly_climatologies()
     #plot_alt_for_different_e_scenarios()
     print "Hello world"

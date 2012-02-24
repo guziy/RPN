@@ -1,8 +1,20 @@
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+
 __author__="huziy"
 __date__ ="$Aug 17, 2011 3:49:28 PM$"
 
 
 import numpy as np
+
+def draw_colorbar(fig, img, ax = None, boundaries = None, ticks = None):
+    """
+    Draw a nicely aligned colorbar to the axes ax
+    fig - containing figure
+    img - is the result returned from contourf or pcolormesh
+    """
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "5%", pad="3%")
+    cb = fig.colorbar(img,  cax = cax, boundaries = boundaries, ticks = ticks)
 
 
 def get_closest_tick_value(nticks, lower_limit):

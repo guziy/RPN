@@ -38,7 +38,7 @@ class RPN():
     def __init__(self, path = '', mode = 'r', start_century = 19):
         """
               start_century - is used for the calculation of the origin date, because
-              of its ambiguous format DDMMYYR
+              of its ambiguous format MMDDYYR
         """
         if not os.path.isfile(path) and mode == 'r':
             raise Exception('{0} does not exist, or is not a file'.format(path))
@@ -624,15 +624,18 @@ class RPN():
         lev_kind = c_int(level_kind)
         str_form = create_string_buffer('')
         ip1 = c_int(0)
-        self._dll.convip_wrapper(byref(ip1), byref(lev), byref(lev_kind),
-                            byref(c_int(self.FROM_LEVEL_TO_IP1_MODE)), str_form, byref(c_int(0)))
+#        self._dll.convip_wrapper(byref(ip1), byref(lev), byref(lev_kind),
+#                            byref(c_int(self.FROM_LEVEL_TO_IP1_MODE)), str_form, byref(c_int(0)))
 
-        return ip1.value
+        return self._dll.ip1_all_wrapper(lev, lev_kind)
+#        return int(ip1.value)
 
 
 
     def write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY,
-                             data = None, grid_type = 'Z' ):
+                             data = None, grid_type = 'Z', ig = None, typ_var = "P",
+                             date = 10160000, label = "soil temp"
+                             ):
         """
         Do not care about grid type just write data to the file
         int fstecr_wrapper(float* field, int bits_per_value, int iun,
@@ -653,24 +656,27 @@ class RPN():
 
         
         nbits = c_int(-32)
-        date = c_int(0)
+        date = c_int(date)
         deet = c_int(0)
-        npas = c_int(0)
-        nk = c_int(1)
+        npas = c_int(1)
+        nk = c_int(1) if len(data.shape) == 2 else data.shape[2]
 
         ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
         ip2 = c_int(0)
         ip3 = c_int(0)
-        [ni, nj] = data.shape
+        [ni, nj] = data.shape[:2]
         ni = c_int(ni)
         nj = c_int(nj)
-        ig1 = c_int(0)
-        ig2 = c_int(0)
-        ig3 = c_int(0)
-        ig4 = c_int(0)
-        typvar = create_string_buffer(self.VARTYPE_DEFAULT)
+        if ig is None:
+            ig1 = c_int(0)
+            ig2 = c_int(0)
+            ig3 = c_int(0)
+            ig4 = c_int(0)
+        else:
+            ig1, ig2, ig3, ig4 = map(c_int, ig)
+        typvar = create_string_buffer(typ_var)
         nomvar = create_string_buffer(name)
-        etiket = create_string_buffer(self.ETIKET_DEFAULT)
+        etiket = create_string_buffer(label)
         grtyp = create_string_buffer(grid_type)
         datyp = c_int(data_types.IEEE_floating_point)
         rewrite = c_int(1)

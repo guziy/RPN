@@ -5,7 +5,6 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.spatial.kdtree import KDTree
 import application_properties
 
-from permafrost import draw_regions
 from util.geo import lat_lon
 
 __author__ = 'huziy'
@@ -56,8 +55,10 @@ class CRUDataManager:
         months = list of month numbers over which the averaging is done
         """
 
-        sel_times = itertools.ifilter(lambda x: (start_year <= x.year) and (x.year <= end_year), self.times)
-        bool_vector = np.array(map( lambda x: x.month in months, sel_times))
+
+        bool_vector = np.where(map( lambda x: (x.month in months) and
+                                              (start_year <= x.year) and
+                                              (x.year <= end_year), self.times))[0]
         return np.mean(self.var_data[bool_vector, :, :], axis=0)
 
 

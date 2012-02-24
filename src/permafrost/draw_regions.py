@@ -1,3 +1,4 @@
+from netCDF4 import Dataset
 import os
 import pickle
 import itertools
@@ -15,8 +16,6 @@ __author__ = 'huziy'
 import numpy as np
 import application_properties
 
-from osgeo import gdal
-from osgeo import gdalconst
 
 from osgeo import ogr
 from osgeo import osr
@@ -269,9 +268,29 @@ def test_ease_basemap():
     plt.savefig("ease_region.png")
 
 
+def save_pf_mask_to_netcdf(path = "permafrost_types.nc"):
+    ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
+
+    b, lons2d, lats2d = get_basemap_and_coords()
+    pf_mask = get_permafrost_mask(lons2d, lats2d)
+    ds.createDimension('lon', lons2d.shape[0])
+    ds.createDimension('lat', lons2d.shape[1])
+
+    lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+    latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+    maskVariable = ds.createVariable("pf_type", "i4", ('lon', 'lat'))
+    maskVariable.description = "0-no data, 1-Continuous, 2-Discontinuous, 3-Sporadic, 4-Isolated"
+
+    maskVariable[:,:] = pf_mask[:,:]
+    lonVariable[:,:] = lons2d[:,:]
+    latVariable[:,:] = lats2d[:,:]
+
+    ds.close()
+
 if __name__ == "__main__":
     application_properties.set_current_directory()
     #test_ease_basemap()
-    main()
+    #main()
+    save_pf_mask_to_netcdf()
     print "Hello world"
   
