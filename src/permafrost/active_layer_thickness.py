@@ -3,9 +3,10 @@ from netCDF4 import Dataset
 import os
 import itertools
 import pickle
+import re
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import application_properties
-from rpn import RPN
+from rpn.rpn import RPN
 import matplotlib.pyplot as plt
 from util import plot_utils
 
@@ -13,8 +14,7 @@ __author__ = 'huziy'
 
 import numpy as np
 from matplotlib import cm, gridspec
-from matplotlib import ticker
-
+from multiprocessing import Pool
 import draw_regions
 
 class CRCMDataManager:
@@ -92,37 +92,22 @@ class CRCMDataManager:
 
 
 
-    def _get_monthly_mean_soiltemp(self, year, month):
+    def _get_monthly_mean_soiltemp(self, year, month, var_name = ""):
         """
         returns None if the data for the specifide year and month
         were not found
         """
         key = (year, month)
 
-        cache_file = "year_month_to_monthly_mean_soiltemp.bin"
-        if self.yearmonth_to_mm_soiltemp is None:
-            if os.path.isfile(cache_file):
-                self.yearmonth_to_mm_soiltemp = pickle.load(open(cache_file))
-            else:
-                self.yearmonth_to_mm_soiltemp = {}
-
-
-        if self.yearmonth_to_mm_soiltemp.has_key(key):
-            return self.yearmonth_to_mm_soiltemp[key]
-
         if not self.yearmonth_to_data_path.has_key(key):
             print "Warning could not find data for month/year = {0}/{1}".format(month, year)
             return None
         data_path = self.yearmonth_to_data_path[key]
 
-        times, temp = self._read_profiles_from_file(data_path, var_name="I0")
+        times, temp = self._read_profiles_from_file(data_path, var_name=var_name)
 
         mmean = np.mean(temp, axis=0)
-        self.yearmonth_to_mm_soiltemp[key] = mmean
-        pickle.dump(self.yearmonth_to_mm_soiltemp, open(cache_file, mode="w"))
         return mmean
-
-        pass
 
 
 
@@ -165,7 +150,7 @@ class CRCMDataManager:
 
         pass
 
-    def get_Tmax_profiles_for_year(self, year, var_name = ""):
+    def get_Tmax_profiles_for_year_using_daily_means(self, year, var_name = ""):
         """
         returns matrix T(x, y, z)
         Temeperature is taken as mean of the temperatures during a day
@@ -191,6 +176,23 @@ class CRCMDataManager:
 
         pass
 
+    def get_Tmax_profiles_for_year_using_monthly_means(self, year, var_name = ""):
+        """
+        returns matrix T(x, y, z)
+        Temeperature is taken as mean of the temperatures during a day
+        """
+        profiles = []
+        for month in xrange(1,13):
+            key = (year, month)
+
+            if not self.yearmonth_to_data_path.has_key(key):
+                print "Warning: could not find data for year/month = {0}/{1} ".format(year, month)
+                continue
+
+            profiles.append(self._get_monthly_mean_soiltemp(year, month, var_name=var_name))
+            pass
+
+        return np.max(np.array(profiles), axis=0)
 
 
 
@@ -223,13 +225,18 @@ class CRCMDataManager:
         return alt
 
 
-    def get_active_layer_thickness(self, year):
+    def get_active_layer_thickness(self, year, mean_temps_to_use = "monthly"):
         """
         return 2D field of the active layer thickness for the year
         returns ALT(x, y)
         """
         #t(x,y,z) - annual maximums
-        t = self.get_Tmax_profiles_for_year(year, var_name="I0")
+        if mean_temps_to_use == "daily" :
+            t = self.get_Tmax_profiles_for_year_using_daily_means(year, var_name="I0")
+        elif mean_temps_to_use == "monthly":
+            t = self.get_Tmax_profiles_for_year_using_monthly_means(year, var_name="I0")
+        else:
+            raise Exception("Unknown averaging interval: {0}".format(mean_temps_to_use))
         return self._get_alt(t)
 
 
@@ -253,7 +260,10 @@ class CRCMDataManager:
 
 
             for month_folder in os.listdir(samples_dir):
-                d = datetime.strptime(month_folder.split("_")[-1], "%Y%m")
+                suffix = month_folder.split("_")[-1]
+                if len(suffix) != len(re.findall("\d+", suffix)[0]):  #check that the suffix consists only of digits
+                    continue
+                d = datetime.strptime(suffix, "%Y%m")
                 key = (d.year, d.month)
                 month_path = os.path.join(samples_dir, month_folder)
 
@@ -345,10 +355,18 @@ def get_alt_for_year(year):
         return h
 
 
-def save_alts_to_netcdf_file(path = "alt.nc"):
+def get_alt_for_year(args):
+    """
+    """
+    year, data_manager, mean_temps_to_use = args
 
+    return data_manager.get_active_layer_thickness(year, mean_temps_to_use=mean_temps_to_use)
+
+
+def save_alts_to_netcdf_file(path = "alt.nc"):
+    data_path = "data/cordex_e1"
     year_range = xrange(1981, 2101)
-    ds = Dataset(path, mode = "w")
+    ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
     ds.createDimension('year', len(year_range))
     ds.createDimension('lon', lons2d.shape[0])
@@ -356,15 +374,21 @@ def save_alts_to_netcdf_file(path = "alt.nc"):
 
     lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
     latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+    yearVariable = ds.createVariable("year", "i4", ("year",))
 
     altVariable = ds.createVariable("alt", "f4", ('year','lon', 'lat'))
 
     lonVariable[:,:] = lons2d[:,:]
     latVariable[:,:] = lats2d[:,:]
+    yearVariable[:] = year_range
 
-    for i, the_year in enumerate(year_range):
-        altVariable[i,:,:] = get_alt_for_year(the_year)
-
+    dm = CRCMDataManager(data_folder=data_path)
+    dm_list = len(year_range) * [dm]
+    mean_types = len(year_range) * ["monthly"]
+    pool = Pool(processes=6)
+    alts = pool.map(get_alt_for_year, zip(year_range, dm_list, mean_types))
+    alts = np.array(alts)
+    altVariable[:,:,:] = alts[:,:,:]
     ds.close()
 
 

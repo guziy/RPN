@@ -20,6 +20,7 @@ def read_coordinates(coords_file = "data/1950-1960-ECHO-G-profiles/coords.txt"):
     id_to_hor_indices = {}
     ni = 0
     nj = 0
+    land_sea_mask = {}
     for line in lines:
         if line == "": continue
         fields = line.split()
@@ -29,12 +30,24 @@ def read_coordinates(coords_file = "data/1950-1960-ECHO-G-profiles/coords.txt"):
         j -= 1
         i -= 1
         id_to_hor_indices[id] = (i, j)
+        if line.endswith("land"):
+            land_sea_mask[(i,j)] = 1
+        else:
+            land_sea_mask[(i,j)] = 0
 
-    return ni, nj, id_to_hor_indices
+
+    land_sea = np.zeros((ni, nj))
+    for i in xrange(ni):
+        for j in xrange(nj):
+            land_sea[i,j] = land_sea_mask[(i,j)]
+
+
+
+    return ni, nj, id_to_hor_indices, land_sea
     pass
 
 def read_data(folder = "data/1950-1960-ECHO-G-profiles"):
-    ni, nj, id_to_hor_indices = read_coordinates()
+    ni, nj, id_to_hor_indices, land_sea_mask = read_coordinates()
     nz = -1
     all_data = []
     for year_folder in os.listdir(folder):
@@ -62,7 +75,7 @@ def read_data(folder = "data/1950-1960-ECHO-G-profiles"):
     mean_data = np.mean(all_data, axis = 0)
     rpn_obj = RPN("data/soil_profiles/{0}.rpn".format("profile_200"), mode="w")
 
-
+    rpn_obj.write_2D_field(grid_type="A", ig = [0, 0, 0, 0],data=np.fliplr(land_sea_mask), name = "MASK")
 
     for level in xrange(nz):
         #longitudinal grid length is 360/NI. For such a grid,

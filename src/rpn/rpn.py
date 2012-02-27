@@ -1,3 +1,4 @@
+from rpn import data_types
 
 __author__="huziy"
 __date__ ="$Apr 5, 2011 12:26:05 PM$"
@@ -8,7 +9,6 @@ import numpy as np
 import os
 
 import level_kinds
-import data_types
 
 from datetime import datetime
 from datetime import timedelta
@@ -465,9 +465,12 @@ class RPN():
             self.current_grid_type = grid_type.value
         #print 'current grid type ', self.current_grid_type
 
-
-        dateo_s = "%09d" % dateo.value
-        the_dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo.value % 10))
+        try:
+            dateo_s = "%09d" % dateo.value
+            the_dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo.value % 10))
+        except Exception:
+            print "dateo is corrupted using default: 010100000"
+            the_dateo = datetime.strptime("01010000", "%m%d%y%H")
 
         if the_dateo.year // 100 != self.start_century:
             year = self.start_century * 100 + the_dateo.year % 100
@@ -504,7 +507,7 @@ class RPN():
         elif nbits == 16:
             return np.float16
         else:
-            raise Exception("nbits ia: {0}".format(nbits))
+            raise Exception("nbits is: {0}".format(nbits))
 
 
     def get_next_record(self):
