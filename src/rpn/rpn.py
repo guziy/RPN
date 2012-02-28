@@ -1,4 +1,4 @@
-from rpn import data_types
+import data_types
 
 __author__="huziy"
 __date__ ="$Apr 5, 2011 12:26:05 PM$"
@@ -130,6 +130,22 @@ class RPN():
             c_char_p, c_char_p, c_char_p, c_char_p,
             c_int, c_int, c_int, c_int, c_int, c_int
         ]
+
+        #cxgaig
+        self._dll.cig_to_xg_wrapper.argtypes = [
+            c_char_p,
+            POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float),
+            POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int)
+        ]
+
+        #cigaxg
+        self._dll.cxg_to_ig_wrapper.argtypes = [
+            c_char_p,
+            POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int),
+            POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float),
+        ]
+
+        self._dateo_format = "%m%d%y%H"
 
 
     def get_output_step_in_seconds(self):
@@ -467,10 +483,10 @@ class RPN():
 
         try:
             dateo_s = "%09d" % dateo.value
-            the_dateo = datetime.strptime(dateo_s, "%m%d%y%H" + "{0}".format(dateo.value % 10))
+            the_dateo = datetime.strptime(dateo_s, self._dateo_format + "{0}".format(dateo.value % 10))
         except Exception:
             print "dateo is corrupted using default: 010100000"
-            the_dateo = datetime.strptime("01010000", "%m%d%y%H")
+            the_dateo = datetime.strptime("01010000", self._dateo_format)
 
         if the_dateo.year // 100 != self.start_century:
             year = self.start_century * 100 + the_dateo.year % 100
@@ -636,8 +652,10 @@ class RPN():
 
 
     def write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY,
-                             data = None, grid_type = 'Z', ig = None, typ_var = "P",
-                             date = 10160000, label = "soil temp"
+                             data = None, grid_type = 'Z', ig = None, ip = None, typ_var = "P",
+                             date = 10160000, label = "soil temp",
+                             lon1 = None, lat1 = None,
+                             lon2 = None, lat2 = None
                              ):
         """
         Do not care about grid type just write data to the file
@@ -650,7 +668,7 @@ class RPN():
                               int ig1, int ig2, int ig3, int ig4,
                               int datyp, int rewrite)
 
-
+        lon1, lat1, lon2, lat2 -are the parameters of the rotated lat lon (used only if grid_type = Z)
         Note: currently the datatypes of the input field is limited to the array of float32
 
         """
@@ -659,24 +677,36 @@ class RPN():
 
         
         nbits = c_int(-32)
-        date = c_int(date)
+        date_c = c_int(date)
         deet = c_int(0)
         npas = c_int(1)
         nk = c_int(1) if len(data.shape) == 2 else data.shape[2]
 
-        ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
-        ip2 = c_int(0)
-        ip3 = c_int(0)
+        if ip is None:
+            ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
+            ip2 = c_int(0)
+            ip3 = c_int(0)
+        else:
+            ip1, ip2, ip3 = map(c_int, ip)
+
         [ni, nj] = data.shape[:2]
         ni = c_int(ni)
         nj = c_int(nj)
-        if ig is None:
-            ig1 = c_int(0)
-            ig2 = c_int(0)
-            ig3 = c_int(0)
-            ig4 = c_int(0)
-        else:
+
+        #figure out the ig values
+        if None not in [lon1, lat1, lon2, lat2]:
+            c_lon1, c_lat1, c_lon2, c_lat2 = map(c_float, [lon1, lat1, lon2, lat2])
+            ig1, ig2, ig3, ig4 = map(c_int, [0, 0, 0, 0])
+            self._dll.cxg_to_ig_wrapper(c_char_p(grid_type),
+                byref(ig1), byref(ig2), byref(ig3), byref(ig4),
+                byref(c_lat1), byref(c_lon1), byref(c_lat2), byref(c_lon2)
+            )
+            print ig1, ig2, ig3, ig4
+        elif ig is not None:
             ig1, ig2, ig3, ig4 = map(c_int, ig)
+        else:
+            ig1, ig2, ig3, ig4 = map(c_int, [0, 0, 0, 0])
+
         typvar = create_string_buffer(typ_var)
         nomvar = create_string_buffer(name)
         etiket = create_string_buffer(label)
@@ -688,13 +718,29 @@ class RPN():
 
 
         status = self._dll.fstecr_wrapper( theData.ctypes.data_as(POINTER(c_float)),
-                                  nbits, self._file_unit, date, deet, npas,
+                                  nbits, self._file_unit, date_c, deet, npas,
                                   ni, nj, nk,
                                   ip1, ip2, ip3, typvar, nomvar,
                                   etiket, grtyp,
                                   ig1, ig2, ig3, ig4,
                                   datyp, rewrite
                                   )
+
+        #set current info
+
+
+        the_dateo = datetime.strptime("%08d" % (date // 10), self._dateo_format  )
+        self._current_info = {'ig': [ig1, ig2, ig3, ig4],
+                  'ip': [ip1, ip2, ip3],
+                  'shape': [ni, nj, nk],
+                  'dateo': the_dateo,
+                  'dt_seconds': deet,
+                  'npas': npas,
+                  'varname': nomvar,
+                  "var_type" : typvar,
+                  "data_type" : datyp.value,
+                  "nbits" : nbits.value
+                  }
 
         #print 'write status: {0}'.format(status)
 
@@ -722,6 +768,13 @@ class RPN():
         return result
 
         pass
+
+    def get_current_info(self):
+        """
+        return current info of just read record
+        """
+        return self._current_info
+
 
 def test():
     #path = 'data/geophys_africa'

@@ -210,6 +210,7 @@ class CRCMDataManager:
             t2 = soiltemp_3d[:,:,k + 1]
             t1 = soiltemp_3d[:,:,k]
             intersection = (t2 - self.T0) * (t1 - self.T0) <= 0
+            #intersection = (t2 >= self.T0) & (t1 <= self.T0)
             first_intersection = intersection & (alt < 0)
 
             h2 = self.level_heights[k + 1]

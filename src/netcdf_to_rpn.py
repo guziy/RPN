@@ -4,24 +4,69 @@ __author__="huziy"
 __date__ ="$Aug 20, 2011 1:45:02 PM$"
 
 import netCDF4 as nc
-from rpn import RPN
+from rpn.rpn import RPN
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+#LAM projection specification
+# 1st point - center of the grid
+# 2nd point - 90 degrees to the East along the new equator?
+
+
+
 def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
+
     ds = nc.Dataset(nc_path)
 
     ncNameToRpnName = {'flow_direction_value': 'fldr', 'slope': 'slop', 
-                        'channel_length':'leng', 'accumulation_area':'facc',
-                        'lon': '>>', 'lat' : '^^'
+                        'channel_length':'leng', 'accumulation_area':'facc'
                       }
     rObj = RPN('infocell.rpn' , mode = 'w')
+
+    #
+    ig = []
+
+    #params
+    dx = 0.1
+    dy = 0.1
+    iref = 100
+    jref = 100
+    xref = 180 #rotated longitude
+    yref = 0   #rotated latitude
+
+    #projection parameters
+    lon1 = -68.0
+    lat1 = 52.0
+
+    lon2 = 16.65
+    lat2 = 0.0
+
+    ni = 220
+    nj = 220
+    x = np.zeros((ni, 1))
+    x[:,0] = [xref + (i - iref + 1) * dx for i in xrange(ni)]
+
+    y = np.zeros((1, nj))
+    y[0, :] = [yref + (j - jref + 1) * dy for j in xrange(nj)]
+
+    #write coordinates
+    rObj.write_2D_field(name="^^", grid_type="E", data=y, typ_var="X", level = 0, ip = range(3),
+        lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2)
+
+    rObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level = 0, ip = range(3),
+            lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2)
+
+    info = rObj.get_current_info()
+    ip_xy = map(lambda x: x.value, info["ip"])
+    ig = ip_xy + [0]
+
+
     for ncName, rpnName in ncNameToRpnName.iteritems():
         data = ds.variables[ncName][:]
-        print ncName, data.min(), data.max(), data.mean()
-        grid_type = 'E' if rpnName in ['>>', '^^'] else 'Z'
-        rObj.write_2D_field(name = rpnName, level = 1, data = data, grid_type = grid_type)
+        grid_type = 'Z'
+        rObj.write_2D_field(name = rpnName, level = 1, data = data,
+            grid_type = grid_type, ig=ig)
     rObj.close()
 
 
@@ -104,10 +149,6 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
 
     print len(fldr[fldr == 0])
 
-
-
-
-
     ds.close()
     pass
 
@@ -115,5 +156,5 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    convert()
+    convert(nc_path="directions_qc_dx0.1deg.nc")
     print "Hello World"
