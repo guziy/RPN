@@ -1,7 +1,6 @@
 from datetime import datetime
 from netCDF4 import Dataset
 import os
-import itertools
 import pickle
 import re
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
@@ -551,7 +550,7 @@ def test():
 
     dm = CRCMDataManager(data_folder="data/CORDEX") #needed here only for verticla levels
 
-    h = dm.get_alt_using_files_in(folder="data/CORDEX/na/e2")
+    h = dm.get_alt_using_files_in(folder="data/CORDEX/na/era40_2")
     h = np.ma.masked_where((permafrost_mask == 0) |
                            (permafrost_mask >= 3) | (h < 0), h)
 
@@ -565,11 +564,11 @@ def test():
     cax = divider.append_axes("right", "5%", pad="3%")
     cb = fig.colorbar(img,  cax = cax)
 
-    ax.set_title("E2 1950-1954")
+    ax.set_title("ERA40-2 1958-1961")
 
     b.drawcoastlines(ax = ax)
     b.contour(x,y, permafrost_mask, levels = xrange(1,4), colors = "k", linewidths = 0.5, ax = ax)
-    fig.savefig("alt_E2.png")
+    fig.savefig("alt_ERA40-2.png")
 
 
 def main():
@@ -597,8 +596,8 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
-    #test()
-    save_alts_to_netcdf_file()
+    test()
+    #save_alts_to_netcdf_file()
     #plot_alt_from_monthly_climatologies()
     #plot_alt_for_different_e_scenarios()
     print "Hello world"

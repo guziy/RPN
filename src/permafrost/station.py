@@ -1,7 +1,6 @@
 import itertools
 import re
 from matplotlib import gridspec
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, inset_axes
 from mpl_toolkits.basemap import Basemap
 from scipy.spatial.kdtree import KDTree
 import application_properties

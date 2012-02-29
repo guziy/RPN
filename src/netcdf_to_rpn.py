@@ -20,7 +20,8 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
     ds = nc.Dataset(nc_path)
 
     ncNameToRpnName = {'flow_direction_value': 'fldr', 'slope': 'slop', 
-                        'channel_length':'leng', 'accumulation_area':'facc'
+                        'channel_length':'leng', 'accumulation_area':'facc',
+                        "lake_fraction": "lkfr", "lake_outlet":"lkou"
                       }
     rObj = RPN('infocell.rpn' , mode = 'w')
 

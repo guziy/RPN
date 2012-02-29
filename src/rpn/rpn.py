@@ -226,7 +226,7 @@ class RPN():
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
 
-        if key < 0: raise Exception('varname = {0}, at level {1} is not found.'.format(varname, level))
+        if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
 
         return self._get_data_by_key(key)
 
@@ -756,6 +756,8 @@ class RPN():
         {level: 2d record} it returns the map {date: 2d record}
         Use this methond only in the case if you are sure that
         the field you are trying to read containsonly one record for each time step
+
+        :return type: dict
         """
         result = {}
         data1 = self.get_first_record_for_name(varname)

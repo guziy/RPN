@@ -1,23 +1,14 @@
-from matplotlib.ticker import LinearLocator
-
 __author__ = 'huziy'
 
 
 from ccc.ccc import champ_ccc
 
-import matplotlib.pyplot as plt
-
 import application_properties
 import numpy as np
 import os
-from util import plot_utils
 #from matplotlib.patches import Polygon
-from shapely.geometry import Polygon
 from shapely.geometry import Point
 from osgeo import ogr
-from osgeo import gdal
-import matplotlib as mpl
-
 
 
 name_to_abbr = {

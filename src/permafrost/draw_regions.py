@@ -3,13 +3,9 @@ import os
 import pickle
 import itertools
 from matplotlib.colors import ListedColormap
-from matplotlib.ticker import LinearLocator, MultipleLocator, FuncFormatter
+from matplotlib.ticker import  MultipleLocator
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-from shapely.geometry import Polygon, Point
 from mpl_toolkits.basemap import Basemap, maskoceans
-from osgeo.osr import CoordinateTransformation
-from shapely import wkb
-import matplotlib as mpl
 
 __author__ = 'huziy'
 
@@ -20,7 +16,7 @@ import application_properties
 from osgeo import ogr
 from osgeo import osr
 
-from rpn import RPN
+from rpn.rpn import RPN
 import matplotlib.pyplot as plt
 
 #from descartes.patch import PolygonPatch
