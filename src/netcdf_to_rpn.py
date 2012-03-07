@@ -63,13 +63,22 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
     ig = ip_xy + [0]
 
 
+    slope_data = None
+    flowdir_data = None
     for ncName, rpnName in ncNameToRpnName.iteritems():
         data = ds.variables[ncName][:]
         grid_type = 'Z'
         rObj.write_2D_field(name = rpnName, level = 1, data = data,
             grid_type = grid_type, ig=ig)
+        if ncName == "slope":
+            slope_data = data
+        if ncName == "flow_direction_value":
+            flowdir_data = data
     rObj.close()
 
+    ind = (flowdir_data > 0) & (slope_data < 0)
+    print flowdir_data[ind], slope_data[ind]
+    assert np.all(~ind)
 
 
     channel_length = ds.variables['channel_length'][:]

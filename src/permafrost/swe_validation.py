@@ -103,7 +103,7 @@ def main():
     swe_obs = swe_obs_manager.get_mean(start_year, end_year, months=the_months)
     print "Calculated obs swe"
 
-    swe_obs_interp = swe_obs_manager.interpolate_data_to(swe_obs, lons2d, lats2d)
+    swe_obs_interp = swe_obs_manager.interpolate_data_to(swe_obs, lons2d, lats2d, nneighbours=1)
 
     gs = gridspec.GridSpec(2,3)
     plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=30, font_size=12)

@@ -784,10 +784,13 @@ def test():
     rpnObj = RPN(path)
     precip = rpnObj.get_first_record_for_name("PR")
 
+
     import matplotlib.pyplot as plt
+
 
     plt.imshow(precip.transpose())
     plt.colorbar()
+    plt.show()
     plt.savefig("precip.png")
 
 

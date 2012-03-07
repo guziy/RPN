@@ -27,17 +27,24 @@ class Station:
         self.values = []
         
         self.date_to_value = {}
-        
+
+
+    def get_mean_value(self):
+        return np.mean(self.values)
 
     def get_monthly_normals(self):
         """
         returns the list of 12 monthly normals corresponding
         to the 12 months [0->Jan, ..., 11->Dec]
+        return None if there is even a single month for which there is no data
         """
         result = np.zeros((12,))
         for m in xrange(1, 13):
             bool_vector = map(lambda x : x.month == m, self.dates)
             indices = np.where(bool_vector)[0]
+
+            if not len(indices): return None
+
             result[m - 1] = np.mean(np.array(self.values)[indices])
         return result
 
@@ -72,6 +79,7 @@ class Station:
                                         x <= end_date, self.dates)
 
             indices = np.where( bool_vector )[0]
+            if not len(indices): return None, None
             daily_means.append(np.array(self.values)[indices].mean())
 
         return year_dates, daily_means
@@ -236,7 +244,12 @@ class Station:
                 if len(fields) < 3:
                     continue
 
-                fields = line.split(None, 3)
+
+                try:
+                    float(fields[2])
+                except ValueError:
+                    continue
+
                 dates.append(fields[1])
                 values.append(fields[2])
 
@@ -345,7 +358,7 @@ def read_station_data(folder = 'data/cehq_measure_data',
                       selected_ids = None
                       ):
     """
-    :rtype: list of data.cehq_station.Station
+    :return type: list of data.cehq_station.Station
     if start_date is not None then delete values for t < start_date
     if end_date is not None then delete values for t > end_date
 

@@ -52,7 +52,7 @@ def plot_mean(data_path = "", file_prefix = "pm"):
     )
 
     plt.figure()
-    _plot_depth(mean_level, lons2d, lats2d, basemap=b)
+    _plot_depth(mean_level, lons2d, lats2d, basemap=b, clevels=xrange(0,310, 10))
     plt.savefig("lake_levels.png")
 
     plt.figure()

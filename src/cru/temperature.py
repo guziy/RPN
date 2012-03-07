@@ -4,6 +4,7 @@ from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.spatial.kdtree import KDTree
 import application_properties
+from permafrost import draw_regions
 
 from util.geo import lat_lon
 
@@ -127,6 +128,7 @@ def main():
     b.drawcoastlines(ax = ax)
     ax.set_title("CRU ( interp.), \n JJA period: {0} - {1}".format(1981, 2009))
 
+    plt.show()
     plt.savefig("t_cru_jja.png")
 
 
