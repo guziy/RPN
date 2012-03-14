@@ -44,7 +44,7 @@ def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p'):
     ncFile.close()
 
     rpnObj.close()
-    os.remove(filePath)
+    #os.remove(filePath)
 
 
 def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
