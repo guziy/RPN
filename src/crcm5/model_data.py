@@ -13,7 +13,7 @@ from util.geo import lat_lon
 __author__ = 'huziy'
 
 import numpy as np
-from rpn import RPN
+from rpn.rpn import RPN
 import os
 
 import matplotlib.pyplot as plt

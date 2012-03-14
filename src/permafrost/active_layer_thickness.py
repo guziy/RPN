@@ -240,6 +240,25 @@ class CRCMDataManager:
         return self._get_alt(t)
 
 
+    def _init_year_month_to_data_path_imp(self, samples_dir):
+        for month_folder in os.listdir(samples_dir):
+            suffix = month_folder.split("_")[-1]
+            if len(suffix) != len(re.findall("\d+", suffix)[0]):  #check that the suffix consists only of digits
+                continue
+            d = datetime.strptime(suffix, "%Y%m")
+            key = (d.year, d.month)
+            month_path = os.path.join(samples_dir, month_folder)
+
+
+            data_path = None
+            if not os.path.isdir(month_path):
+                continue
+
+            for data_file in os.listdir(month_path):
+                if data_file.startswith(self.file_prefix):
+                    data_path = os.path.join(month_path, data_file)
+
+            self.yearmonth_to_data_path[key] = data_path
 
 
     def _init_yearmonth_to_data_path(self):
@@ -248,35 +267,22 @@ class CRCMDataManager:
         """
         self.yearmonth_to_data_path = {}
 
+
+        #if using a single experiment
+        if self._samples in os.listdir(self.data_folder):
+            samples_dir = os.path.join(self.data_folder, self._samples)
+            self._init_year_month_to_data_path_imp(samples_dir)
+            return
+
+
+
+        #if need to merge several experiments
         for folder in os.listdir(self.data_folder):
-
             parent_i = os.path.join(self.data_folder, folder)
-
-
             if not self._samples in os.listdir(parent_i): continue # skip parent which do not contain Samples folder
-
             samples_dir = os.path.join(self.data_folder, folder, self._samples)
+            self._init_year_month_to_data_path_imp(samples_dir)
 
-
-
-            for month_folder in os.listdir(samples_dir):
-                suffix = month_folder.split("_")[-1]
-                if len(suffix) != len(re.findall("\d+", suffix)[0]):  #check that the suffix consists only of digits
-                    continue
-                d = datetime.strptime(suffix, "%Y%m")
-                key = (d.year, d.month)
-                month_path = os.path.join(samples_dir, month_folder)
-
-
-                data_path = None
-                if not os.path.isdir(month_path):
-                    continue
-
-                for data_file in os.listdir(month_path):
-                    if data_file.startswith(self.file_prefix):
-                        data_path = os.path.join(month_path, data_file)
-
-                self.yearmonth_to_data_path[key] = data_path
 
 
         pass
@@ -298,9 +304,28 @@ class CRCMDataManager:
         pass
 
 
+    def get_seasonal_mean_for_year_of_2d_var(self, the_year, months = None, var_name = ""):
+        """
+        Return mean over months of a given 2d field
+        returns numpy array of dimensions (x, y)
+        """
+        monthly_means = []
+        for the_month in months:
+
+            key = (the_year, the_month)
+            if not self.yearmonth_to_data_path.has_key(key):
+                print("Warning donot have data for {0}/{1}".format(the_year, the_month))
+                continue
+
+            path = self.yearmonth_to_data_path[key]
+            rpn_obj = RPN(path)
+            records = rpn_obj.get_all_time_records_for_name(varname=var_name)
+            monthly_means.append(np.mean(records.values(), axis=0))
+            rpn_obj.close()
+
+        return np.mean(monthly_means, axis=0)
 
 
-        pass
 
     @classmethod
     def get_mean_2d_from_climatologies(cls, path = "", file_prefixes = None,

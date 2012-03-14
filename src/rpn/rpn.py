@@ -769,7 +769,8 @@ class RPN():
                 result[self.get_datetime_for_the_last_read_record()] = data1
         return result
 
-        pass
+
+
 
     def get_current_info(self):
         """

@@ -11,7 +11,8 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
                                        kml_file_name = "mon.kml",
                                        title = "Water levels in meters",
                                        icon_color = "ffffccee",
-                                       icon_link = "http://dl.dropbox.com/u/4629759/blue-L.png"
+                                       icon_link = "http://dl.dropbox.com/u/4629759/blue-L.png",
+                                       data_url_format = ""
                                        ):
     stations = cehq_station.read_station_data(folder=data_path)
 

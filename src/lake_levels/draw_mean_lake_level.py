@@ -27,9 +27,13 @@ def _plot_depth(data, lons2d, lats2d, basemap = None, clevels = None):
 def plot_initial_lake_depth(path = "data/from_guillimin/vary_lake_level1/pm1985010100_00000000p",
                             var_name = "CLDP", lons2d = None, lats2d = None, basemap = None
                             ):
+    """
+    returns initial lake depth field
+    """
     r = RPN(path)
     field = r.get_first_record_for_name(var_name)
     _plot_depth(field, lons2d, lats2d, basemap = basemap, clevels=xrange(0,310, 10))
+    return field
 
 
 
