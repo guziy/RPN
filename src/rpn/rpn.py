@@ -145,7 +145,143 @@ class RPN():
             POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float),
         ]
 
-        self._dateo_format = "%m%d%y%H"
+        #newdate
+#        *
+#        *AUTHOR   - E. BEAUCHESNE  -  JUN 96
+#        *
+#        *REVISION 001   M. Lepine, B.dugas - automne 2009/janvier 2010 -
+#        *               Ajouter le support des dates etendues (annees 0
+#        *               a 10000) via les nouveaux modes +- 5, 6 et 7.
+#        *REVISION 002   B.dugas - novembre 2010 - Correction au mode -7.
+#        *
+#        *LANGUAGE - fortran
+#        *
+#        *OBJECT(NEWDATE)
+#        *         - CONVERTS A DATE BETWEEN TWO OF THE FOLLOWING FORMATS:
+#        *           PRINTABLE DATE, CMC DATE-TIME STAMP(OLD OR NEW), TRUE DATE
+#        *
+#        *USAGE    - CALL NEWDATE(DAT1,DAT2,DAT3,MODE)
+#        *
+#        *ARGUMENTS
+#        * MODE CAN TAKE THE FOLLOWING VALUES:-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7
+#        * MODE=1 : STAMP TO (TRUE_DATE AND RUN_NUMBER)
+#        *     OUT - DAT1 - THE TRUEDATE CORRESPONDING TO DAT2
+#        *      IN - DAT2 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *     OUT - DAT3 - RUN NUMBER OF THE DATE-TIME STAMP
+#        *      IN - MODE - SET TO 1
+#        * MODE=-1 : (TRUE_DATE AND RUN_NUMBER) TO STAMP
+#        *      IN - DAT1 - TRUEDATE TO BE CONVERTED
+#        *     OUT - DAT2 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *      IN - DAT3 - RUN NUMBER OF THE DATE-TIME STAMP
+#        *      IN - MODE - SET TO -1
+#        * MODE=2 : PRINTABLE TO TRUE_DATE
+#        *     OUT - DAT1 - TRUE_DATE
+#        *      IN - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *      IN - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO 2
+#        * MODE=-2 : TRUE_DATE TO PRINTABLE
+#        *      IN - DAT1 - TRUE_DATE
+#        *     OUT - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *     OUT - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO -2
+#        * MODE=3 : PRINTABLE TO STAMP
+#        *     OUT - DAT1 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *      IN - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *      IN - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO 3
+#        * MODE=-3 : STAMP TO PRINTABLE
+#        *      IN - DAT1 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *     OUT - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *     OUT - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO -3
+#        * MODE=4 : 14 word old style DATE array TO STAMP and array(14)
+#        *     OUT - DAT1 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *      IN - DAT2 - 14 word old style DATE array
+#        *      IN - DAT3 - UNUSED
+#        *      IN - MODE - SET TO 4
+#        * MODE=-4 : STAMP TO 14 word old style DATE array
+#        *      IN - DAT1 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *     OUT - DAT2 - 14 word old style DATE array
+#        *      IN - DAT3 - UNUSED
+#        *      IN - MODE - SET TO -4
+#        * MODE=5    PRINTABLE TO EXTENDED STAMP (year 0 to 10,000)
+#        *     OUT - DAT1 - EXTENDED DATE-TIME STAMP (NEW STYLE only)
+#        *      IN - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *      IN - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO 5
+#        * MODE=-5   EXTENDED STAMP (year 0 to 10,000) TO PRINTABLE
+#        *      IN - DAT1 - EXTENDED DATE-TIME STAMP (NEW STYLE only)
+#        *     OUT - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *     OUT - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO -5
+#        * MODE=6 :  EXTENDED STAMP TO EXTENDED TRUE_DATE (in hours)
+#        *     OUT - DAT1 - THE TRUEDATE CORRESPONDING TO DAT2
+#        *      IN - DAT2 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *     OUT - DAT3 - RUN NUMBER, UNUSED (0)
+#        *      IN - MODE - SET TO 6
+#        * MODE=-6 : EXTENDED TRUE_DATE (in hours) TO EXTENDED STAMP
+#        *      IN - DAT1 - TRUEDATE TO BE CONVERTED
+#        *     OUT - DAT2 - CMC DATE-TIME STAMP (OLD OR NEW STYLE)
+#        *      IN - DAT3 - RUN NUMBER, UNUSED
+#        *      IN - MODE - SET TO -6
+#        * MODE=7  - PRINTABLE TO EXTENDED TRUE_DATE (in hours)
+#        *     OUT - DAT1 - EXTENDED TRUE_DATE
+#        *      IN - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *      IN - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO 7
+#        * MODE=-7 : EXTENDED TRUE_DATE (in hours) TO PRINTABLE
+#        *      IN - DAT1 - EXTENDED TRUE_DATE
+#        *     OUT - DAT2 - DATE OF THE PRINTABLE DATE (YYYYMMDD)
+#        *     OUT - DAT3 - TIME OF THE PRINTABLE DATE (HHMMSSHH)
+#        *      IN - MODE - SET TO -7
+#        *NOTES    - IT IS RECOMMENDED TO ALWAYS USE THIS FUNCTION TO
+#        *           MANIPULATE DATES
+#        *         - IF MODE ISN'T IN THESE VALUES(-7,..,-2,-1,1,2,...,7) OR IF
+#        *           ARGUMENTS AREN'T VALID, NEWDATE HAS A RETURN VALUE OF 1
+#        *         - A TRUE DATE IS AN INTEGER (POSSIBLY NEGATIVE) THAT
+#        *           CONTAINS THE NUMBER OF 5 SECONDS INTERVALS SINCE
+#        *           1980/01/01 00H00. NEGATIVE VALUES ARISE AS
+#        *           THIS CONCEPT APPLIES FROM 1900/01/01.
+#        *         - AN EXTENDED TRUE DATE IS AN INTEGER THAT CONTAINS
+#        *           THE NUMBER OF HOURS SINCE YEAR 00/01/01
+#        *         - SEE INCDATR FOR DETAIL ON CMC DATE-TIME STAMP
+#        *
+#        *         useful constants
+#        *         17280 = nb of 5 sec intervals in a day
+#        *         288   = nb of 5 min intervals in a day
+#        *         jd1900 = julian day for jan 1, 1900       (2415021)
+#        *         jd1980 = julian day for jan 1, 1980       (2444240)
+#        *         jd2236 = julian day for jan 1, 2236       (2537742)
+#        *         jd0    = julian day for jan 1, 0          (1721060)
+#        *         jd10k  = julian day for jan 1, 10,000     (5373485)
+#        *         td1900 = truedate  for  jan 1, 1900 , 00Z (-504904320)
+#        *         td2000 = truedate  for  jan 1, 2000 , 00Z (+126230400)
+#        *         tdstart = base for newdates ( jan 1, 1980, 00Z)
+#        *         max_offset = (((jd10k-jd0)*24)/8)*10      (109572750)
+#        *         exception = extended truedate for jan 1, 1901, 01Z
+#        *         troisg = 3 000 000 000
+#        *WARNING  - IF NEWDATE RETURNS 1, OUTPUTS CAN TAKE ANY VALUE
+#        *
+
+        self._dll.newdate_wrapper.argtypes = [
+            POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int)
+        ]
+
+        self._dateo_format = "%Y%m%d%H%M%S"
+
+
+    def _dateo_to_string(self, dateo_int):
+        """
+        return date forat
+        """
+        res_date = c_int()
+        res_time = c_int()
+        mode = c_int(-3)
+        self._dll.newdate_wrapper(byref(c_int(dateo_int)), byref(res_date), byref(res_time), byref(mode))
+
+        s_date = "{0:08d}{1:08d}".format(res_date.value, res_time.value)
+        return s_date[:-2]
+
 
 
     def get_output_step_in_seconds(self):
@@ -482,15 +618,17 @@ class RPN():
         #print 'current grid type ', self.current_grid_type
 
         try:
-            dateo_s = "%09d" % dateo.value
-            the_dateo = datetime.strptime(dateo_s, self._dateo_format + "{0}".format(dateo.value % 10))
-        except Exception:
+            dateo_s = self._dateo_to_string(dateo.value)
+            the_dateo = datetime.strptime(dateo_s, self._dateo_format)
+        except Exception,e:
+            print e
+            print( dateo.value )
             print "dateo is corrupted using default: 010100000"
             the_dateo = datetime.strptime("01010000", self._dateo_format)
 
-        if the_dateo.year // 100 != self.start_century:
-            year = self.start_century * 100 + the_dateo.year % 100
-            the_dateo = datetime( year, the_dateo.month, the_dateo.day, the_dateo.hour, the_dateo.minute)
+#        if the_dateo.year // 100 != self.start_century:
+#            year = self.start_century * 100 + the_dateo.year % 100
+#            the_dateo = datetime( year, the_dateo.month, the_dateo.day, the_dateo.hour, the_dateo.minute)
 
         result = {'ig': [ig1, ig2, ig3, ig4],
                   'ip': [ip1, ip2, ip3],
@@ -827,10 +965,21 @@ def test_get_all_records_for_name():
             print t, z, v1.min(), v1.mean(), v1.max()
 
 
+def test_dateo():
+    path = "/home/huziy/skynet3_rech1/test/snw_LImon_NA_CRCM5_CanESM2_historical_r1i1p1_185001-200512.rpn"
+
+    rObj = RPN(path)
+    field = rObj.get_first_record_for_name("I5")
+
+    print(field.min(), field.max())
+    print(rObj.get_dateo_of_last_read_record())
+    print(rObj._dateo_to_string(-1274695862))
+
 
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    test()
-    test_get_all_records_for_name()
+    test_dateo()
+    #test()
+   # test_get_all_records_for_name()
     print "Hello World"

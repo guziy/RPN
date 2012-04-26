@@ -268,6 +268,23 @@ class CRCMDataManager:
         self.yearmonth_to_data_path = {}
 
 
+        #if given path to the folder with all files directly
+        is_not_dir_bool = map(lambda x: not os.path.isdir(x), os.listdir(self.data_folder))
+        if np.all(is_not_dir_bool):
+            for f_name in os.listdir(self.data_folder):
+                f_path = os.path.join(self.data_folder, f_name)
+                num_groups = re.findall("\d+", f_name)
+
+                if not len(num_groups): continue
+
+                last_group = num_groups[-1]
+                month = int(last_group[-2:])
+                year = int(last_group[:-2])
+                key = (year, month)
+                self.yearmonth_to_data_path[key] = f_path
+            return
+
+
         #if using a single experiment
         if self._samples in os.listdir(self.data_folder):
             samples_dir = os.path.join(self.data_folder, self._samples)
@@ -323,6 +340,7 @@ class CRCMDataManager:
             monthly_means.append(np.mean(records.values(), axis=0))
             rpn_obj.close()
 
+        print(the_year, np.min(np.mean(monthly_means, axis=0)), np.max(np.mean(monthly_means, axis=0)))
         return np.mean(monthly_means, axis=0)
 
 
@@ -389,10 +407,11 @@ def get_alt_for_year(args):
 
 
 def save_alts_to_netcdf_file(path = "alt.nc"):
-    data_path = "data/cordex_e1"
-    year_range = xrange(1981, 2101)
+    data_path = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era-interim"
+    year_range = xrange(1984, 1991)
     ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
-    b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
+    coord_file = os.path.join( data_path, "pmNorthAmerica_0.11deg_ERAInterim_199003_moyenne")
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(file_path= coord_file)
     ds.createDimension('year', len(year_range))
     ds.createDimension('lon', lons2d.shape[0])
     ds.createDimension('lat', lons2d.shape[1])
@@ -621,8 +640,8 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
-    test()
-    #save_alts_to_netcdf_file()
+    #test()
+    save_alts_to_netcdf_file()
     #plot_alt_from_monthly_climatologies()
     #plot_alt_for_different_e_scenarios()
     print "Hello world"

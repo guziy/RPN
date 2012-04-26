@@ -365,7 +365,7 @@ def read_station_data(folder = 'data/cehq_measure_data',
     """
     stations = []
     for file in os.listdir(folder):
-        if not '.txt' in file:
+        if not file.endswith(".txt"):
             continue
         path = os.path.join(folder, file)
         s = Station()

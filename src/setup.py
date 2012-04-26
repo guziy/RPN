@@ -9,14 +9,14 @@ setup (
   packages = find_packages(),
 
   # Declare your packages' dependencies here, for eg:
-  install_requires=['foo>=3'],
+  install_requires=["matplotlib", "numpy",],
 
   # Fill in these to make your Egg ready for upload to
   # PyPI
   author = 'huziy',
   author_email = '',
 
-  summary = 'Just another Python package for the cheese shop',
+  summary = 'rpn',
   url = '',
   license = '',
   long_description= 'Long description of the package',

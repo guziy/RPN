@@ -17,13 +17,14 @@ def _get_average(x):
     dm, year, var_name, months = x
     return dm.get_seasonal_mean_for_year_of_2d_var(year, months=months, var_name=var_name)
 
-def main(nc_path = "swe_e1.nc"):
+def main(nc_path = "swe_era40-interim.nc"):
     var_name = "I5"
     nc_var_name = "swe"
-    data_folder = "/skynet1_rech3/huziy/cordex/CRCM5_output/North_America/NorthAmerica_0.44deg_CanRCP45E1"
+    #data_folder = "/skynet1_rech3/huziy/cordex/CRCM5_output/North_America/NorthAmerica_0.44deg_CanRCP45E1"
+    data_folder = "/home/huziy/skynet1_rech3/cordex/for_Sheena/era40_era-interim_driven"
     dm = CRCMDataManager(data_folder=data_folder)
 
-    year_range = range(1981, 2101)
+    year_range = range(1958, 2009)
 
     pool = Pool(processes=10)
     n_years = len(year_range)
@@ -32,8 +33,8 @@ def main(nc_path = "swe_e1.nc"):
     data = pool.map(_get_average, input)
     data = np.array(data)
 
-    coord_file = "/skynet1_rech3/huziy/cordex/CRCM5_output/North_America/NorthAmerica_0.44deg_CanRCP45E1/Samples/NorthAmerica_0.44deg_CanRCP45E1_198001/"
-    coord_file = os.path.join(coord_file, "pm1950010100_00790632p")
+    #coord_file = "/skynet1_rech3/huziy/cordex/CRCM5_output/North_America/NorthAmerica_0.44deg_CanRCP45E1/Samples/NorthAmerica_0.44deg_CanRCP45E1_198001/"
+    coord_file = os.path.join(data_folder, "pmNorthAmerica_0.44deg_ERA40-Int2_195801_moyenne")
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords(file_path=coord_file)
 
 

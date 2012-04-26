@@ -21,27 +21,32 @@ import matplotlib.pyplot as plt
 class Crcm5ModelDataManager:
 
     def __init__(self, samples_folder_path = "data/gemclim/quebec/Samples",
-                 var_name = "STFL", file_name_prefix = "pm"):
+                 var_name = "STFL", file_name_prefix = "pm",
+                 all_files_in_samples_folder = False):
         self.file_name_prefix = file_name_prefix
         self.samples_folder = samples_folder_path
-        self._month_folder_prefix = None
-        self.month_folder_name_format = "%s_%d%02d"
+        self.all_files_in_one_folder = all_files_in_samples_folder
         self._read_lat_lon_fields()
-        self._set_month_folder_prefix()
+
+
+        if not all_files_in_samples_folder:
+            self._month_folder_prefix = None
+            self.month_folder_name_format = "%s_%d%02d"
+            self._set_month_folder_prefix()
+
         self._read_static_data()
         self.var_name = var_name
 
-        self.date_to_field_cache = {}
-        self.read_files_cache = {}
+        self._file_paths = None
 
+        self.date_to_field = {}
         pass
 
 
-    def get_domain_average(self):
-        #TODO: implement
-        pass
 
-    def get_timeseries_for_station(self, station,
+
+
+    def get_streamflow_timeseries_for_station(self, station,
                                     start_date = None, end_date = None
                                           ):
         """
@@ -52,35 +57,43 @@ class Crcm5ModelDataManager:
         lon, lat = station.longitude, station.latitude
         x0 = lat_lon.lon_lat_to_cartesian(lon, lat)
 
-        [distances, indices] = self.kdtree.query(x0, k = 16)
+        [distances, indices] = self.kdtree.query(x0, k = 8)
 
         acc_area_1d = self.accumulation_area_km2.flatten()
 
-        da_diff = np.abs( acc_area_1d[indices] - station.drainage_km2)
-        min_da_diff = min(da_diff)
+        da_diff = np.abs( acc_area_1d[indices] - station.drainage_km2) / station.drainage_km2
 
-        select_index = -1
-        select_dist = np.inf
-        for d, i, da_dist in zip(distances, indices, da_diff):
-            if da_dist == min_da_diff:
-                if d < select_dist:
-                    select_dist = d
-                    select_index = i
-        assert select_index >= 0
+        max_dist = np.max(distances)
+        obj_func = da_diff + distances / max_dist
+
+        min_obj_func = np.min(obj_func)
+        index_of_sel_index = np.where(min_obj_func == obj_func)
+        select_index = indices[index_of_sel_index]
+
+        #assert np.all(acc_area_1d >= 0)
         acc_area_1d[:select_index] = -1
         acc_area_1d[select_index+1:] = -1
 
         restored = np.reshape(acc_area_1d, self.accumulation_area_km2.shape)
-        [i, j] = np.where(restored > 0)
+        [i, j] = np.where(restored >= 0)
 
         ts = self._get_timeseries_for_point(i,j, start_date = start_date,
                         end_date = end_date)
 
         ts.metadata["acc_area_km2"] = acc_area_1d[select_index]
         return ts
-        pass
+
+
+
 
     def _get_any_file_path(self):
+        """
+        TODO: modify
+        """
+
+        if self.all_files_in_one_folder:
+            return os.path.join(self.samples_folder, os.listdir(self.samples_folder)[0])
+
         for month_folder in os.listdir(self.samples_folder):
             month_folder_path = os.path.join(self.samples_folder, month_folder)
 
@@ -149,38 +162,33 @@ class Crcm5ModelDataManager:
 
         dv = []
 
+        if not len(self.date_to_field):
+            paths = map(lambda x: os.path.join(self.samples_folder, x), os.listdir(self.samples_folder))
+            if not self.all_files_in_one_folder:
+                second_level = []
+                for the_path in paths:
+                    if os.path.isdir(the_path):
+                        second_level.extend(os.listdir(the_path))
+                paths = second_level
 
-        month_folder_names = os.listdir(self.samples_folder)
-
-        month_folder_paths = map( lambda x: os.path.join(self.samples_folder, x), month_folder_names)
-        month_folder_paths = itertools.ifilter(lambda x: os.path.isdir(x), month_folder_paths)
-
-        for month_folder_path in month_folder_paths:
-            for file_name in os.listdir(month_folder_path):
-                if file_name.startswith("."): continue
-                if not file_name.startswith(self.file_name_prefix): continue
-
-                file_path = os.path.join(month_folder_path, file_name)
-
-                key = (file_path, self.var_name)
-                if self.read_files_cache.has_key(key):
-                    hour_to_field = self.read_files_cache[key]
-                else:
-                    rpnObj = RPN(file_path)
+            for the_path in paths:
+                fName = os.path.basename(the_path)
+                if fName.startswith(self.file_name_prefix) and os.path.isfile(the_path):
+                    rpnObj = RPN(the_path)
                     hour_to_field = rpnObj.get_all_time_records_for_name(varname=self.var_name)
                     rpnObj.close()
+                    print( hour_to_field.items()[0][0] , "for file {0}".format(the_path))
+                    self.date_to_field.update(hour_to_field)
 
 
-                for time, field in hour_to_field.iteritems():
-                    if start_date is not None:
-                        if time < start_date: continue
+        for time, field in self.date_to_field.iteritems():
+            if start_date is not None:
+                if time < start_date: continue
+            if end_date is not None:
+                if time > end_date: continue
 
-                    if end_date is not None:
-                        if time > end_date: continue
-
-                    value = field[ix, iy]
-                    dv.append(DateValuePair(date = time, value = value))
-
+            value = field[ix, iy]
+            dv.append(DateValuePair(date = time, value = value))
 
         dv.sort(key= lambda x: x.date)
         return TimeSeries(data = map(lambda x: x.value, dv),
@@ -228,7 +236,7 @@ class Crcm5ModelDataManager:
                     if file_name.startswith("."): continue
                     if not file_name.startswith(file_name_prefix): continue
                     file_path = os.path.join(folder_path, file_name)
-                    field_list.append( self._get_field_from_file(path_to_file=file_path, field_name=var_name) )
+                    field_list.append( self._get_2d_field_from_file(path_to_file=file_path, field_name=var_name) )
 
                 #store mean field for the given month and year
                 result[the_month].append(np.mean(field_list, axis=0))
@@ -239,7 +247,7 @@ class Crcm5ModelDataManager:
         return result
         pass
 
-    def _get_field_from_file(self, path_to_file = "",
+    def _get_2d_field_from_file(self, path_to_file = "",
                              field_name = "STFL"):
         """
         Read 2D data field from a file
@@ -259,8 +267,22 @@ class Crcm5ModelDataManager:
         #TODO: change the way how the drainage area is read
         #TODO: i.e. instead of taking the margins just add the drainage area as the variable in the model
 
+        if derive_from_data and self.all_files_in_one_folder:
+            files = os.listdir(self.samples_folder)
+            files = itertools.ifilter(lambda x: x.startswith(self.file_name_prefix)
+                and not x.startswith("."), files
+            )
+            file = sorted(files)[0]
+            file_path = os.path.join(self.samples_folder, file)
+            rpnObj = RPN(file_path)
+            self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
+            self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
+            rpnObj.close()
+            #self.slope = rpnObj.get_first_record_for_name("SLOP")
+            return
 
-        if derive_from_data:
+
+        if derive_from_data and not self.all_files_in_one_folder:
             month_folders = os.listdir(self.samples_folder)
             month_folders = sorted(month_folders)
             month_folders = map(lambda x: os.path.join(self.samples_folder, x), month_folders)
@@ -293,6 +315,15 @@ class Crcm5ModelDataManager:
 
         pass
 
+    def get_timeseries_for_station(self, var_name = "", station = None):
+        lon, lat = station.longitude, station.latitude
+        x0 = lat_lon.lon_lat_to_cartesian(lon, lat)
+
+        [distances, indices] = self.kdtree.query(x0, k = 1)
+
+        self._get_timeseries_for_point()
+
+        pass
 
 
 def test_mean():
@@ -327,14 +358,37 @@ def test_mean():
     plt.savefig("mean.png")
     pass
 
-def compare():
-    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/quebec_rivers_not_talk_with_lakes/Samples",
-            file_name_prefix="physics"
+
+def compare_lake_levels():
+    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/vary_lake_level1",
+            file_name_prefix="pm", all_files_in_samples_folder=True
+    )
+
+    start_date = datetime(1985, 1, 1)
+    end_date = datetime(1990, 12, 31)
+
+    stations = cehq_station.read_station_data( folder="data/cehq_levels",
+            start_date=start_date, end_date=end_date
+    )
+
+    plot_utils.apply_plot_params(width_pt=None, height_cm =30.0, width_cm=16, font_size=10)
+
+
+    for s in stations:
+        manager.get_timeseries_for_station(var_name = "")
+
+
+
+
+
+def compare_streamflow():
+    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/vary_lake_level1",
+            file_name_prefix="pm", all_files_in_samples_folder=True
     )
     selected_ids = ["104001", "103715", "093806", "093801", "092715",
                     "081006", "061502", "040830", "080718"]
 
-    start_date = datetime(1986, 1, 1)
+    start_date = datetime(1985, 1, 1)
     end_date = datetime(1990, 12, 31)
 
     stations = cehq_station.read_station_data(selected_ids = selected_ids,
@@ -350,7 +404,7 @@ def compare():
     stations.sort(key=lambda x: x.latitude, reverse=True)
 
     for i, s in enumerate(stations):
-        model_ts = manager.get_timeseries_for_station(s, start_date = start_date, end_date = end_date)
+        model_ts = manager.get_streamflow_timeseries_for_station(s, start_date = start_date, end_date = end_date)
         ax = fig.add_subplot( gs[i // 2, i % 2] )
 
         [t, m_data] = model_ts.get_daily_normals()
@@ -412,8 +466,8 @@ def draw_drainage_area():
 
 
 def main():
-    draw_drainage_area()
-    #compare()
+    #draw_drainage_area()
+    compare_streamflow()
     #test_mean()
     pass
 

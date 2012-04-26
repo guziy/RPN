@@ -10,10 +10,11 @@
 #$ -m b
 #$ -q q_skynet3
 ## 6 shared memory processes????
-#$ -pe shm 10
+#$ -pe shm 6
 ##Use my current environment variables
 #$ -V
 which python
 export PYTHONPATH=$PYTHONPATH:./src
 export OMP_NUM_THREADS=$NSLOTS
-python src/permafrost/save_field_from_rpn_to_netcdf.py 
+#python src/permafrost/save_field_from_rpn_to_netcdf.py 
+python src/permafrost/active_layer_thickness.py
