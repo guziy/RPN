@@ -9,7 +9,7 @@ setup (
   packages = find_packages(),
 
   # Declare your packages' dependencies here, for eg:
-  install_requires=["matplotlib", "numpy",],
+  install_requires=["matplotlib", "numpy", "netCDF4", "mpl_toolkits",],
 
   # Fill in these to make your Egg ready for upload to
   # PyPI

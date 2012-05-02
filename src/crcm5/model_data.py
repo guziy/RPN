@@ -1,12 +1,19 @@
 from datetime import datetime, timedelta
 import itertools
+from matplotlib import gridspec
+from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, DateLocator, MonthLocator
+from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import LinearLocator
 from mpl_toolkits.basemap import Basemap, maskoceans
+from numpy.lib.function_base import meshgrid
 from scipy.spatial.kdtree import KDTree
 import application_properties
 from data import cehq_station
+from data.cehq_station import Station
 from data.timeseries import DateValuePair, TimeSeries
+from permafrost import draw_regions
 from util import plot_utils
 from util.geo import lat_lon
 
@@ -40,9 +47,19 @@ class Crcm5ModelDataManager:
         self._file_paths = None
 
         self.date_to_field = {}
+        self._flat_index_to_2d_cache = {}
         pass
 
 
+    def _flat_index_to_2d(self, flat_index):
+        if not len(self._flat_index_to_2d_cache):
+            nx, ny = self.lons2D.shape
+            j2d, i2d = meshgrid(xrange(ny), xrange(nx))
+            i_flat = i2d.flatten()
+            j_flat = j2d.flatten()
+            self._flat_index_to_2d_cache = dict(zip(xrange(len(i_flat)), zip(i_flat,j_flat)))
+
+        return self._flat_index_to_2d_cache[flat_index]
 
 
 
@@ -154,11 +171,17 @@ class Crcm5ModelDataManager:
 
 
     def _get_timeseries_for_point(self, ix, iy,
-                            start_date = None, end_date = None):
+                            start_date = None, end_date = None,
+                            var_name = None, weight = 1):
         """
         returns timeseries object for data: data[:, ix, iy]
         Note: uses caching in order to decrease IO operations
+        :rtype: TimeSeries
         """
+
+
+        if var_name is None:
+            var_name = self.var_name
 
         dv = []
 
@@ -175,7 +198,7 @@ class Crcm5ModelDataManager:
                 fName = os.path.basename(the_path)
                 if fName.startswith(self.file_name_prefix) and os.path.isfile(the_path):
                     rpnObj = RPN(the_path)
-                    hour_to_field = rpnObj.get_all_time_records_for_name(varname=self.var_name)
+                    hour_to_field = rpnObj.get_all_time_records_for_name(varname=var_name)
                     rpnObj.close()
                     print( hour_to_field.items()[0][0] , "for file {0}".format(the_path))
                     self.date_to_field.update(hour_to_field)
@@ -187,7 +210,7 @@ class Crcm5ModelDataManager:
             if end_date is not None:
                 if time > end_date: continue
 
-            value = field[ix, iy]
+            value = field[ix, iy] * weight
             dv.append(DateValuePair(date = time, value = value))
 
         dv.sort(key= lambda x: x.date)
@@ -277,6 +300,7 @@ class Crcm5ModelDataManager:
             rpnObj = RPN(file_path)
             self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
             self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
+            self.lake_fraction = rpnObj.get_first_record_for_name("LF1")
             rpnObj.close()
             #self.slope = rpnObj.get_first_record_for_name("SLOP")
             return
@@ -315,15 +339,34 @@ class Crcm5ModelDataManager:
 
         pass
 
-    def get_timeseries_for_station(self, var_name = "", station = None):
+    def get_timeseries_for_station(self, var_name = "", station = None, nneighbours = 1):
+        """
+        :rtype:  TimeSeries
+        """
         lon, lat = station.longitude, station.latitude
         x0 = lat_lon.lon_lat_to_cartesian(lon, lat)
 
-        [distances, indices] = self.kdtree.query(x0, k = 1)
+        [distances, indices] = self.kdtree.query(x0, k = nneighbours)
 
-        self._get_timeseries_for_point()
+        print indices, distances
 
-        pass
+        all_ts = []
+
+        lf_norm = 0.0
+        for the_index in indices:
+            ix, jy = self._flat_index_to_2d(the_index)
+            if self.lake_fraction[ix, jy] <= 0.01: continue
+            lf_norm += self.lake_fraction[ix, jy]
+
+        if lf_norm <= 0.01: return None
+        for the_index in indices:
+            ix, jy = self._flat_index_to_2d(the_index)
+            if self.lake_fraction[ix, jy] <= 0.01: continue
+            ts = self._get_timeseries_for_point(ix, jy, var_name=var_name,
+                weight=self.lake_fraction[ix, jy] / lf_norm)
+            all_ts.append(ts)
+
+        return all_ts if nneighbours > 1 else all_ts[0]
 
 
 def test_mean():
@@ -361,7 +404,7 @@ def test_mean():
 
 def compare_lake_levels():
     manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/vary_lake_level1",
-            file_name_prefix="pm", all_files_in_samples_folder=True
+            file_name_prefix="pm", all_files_in_samples_folder=True, var_name="CLDP"
     )
 
     start_date = datetime(1985, 1, 1)
@@ -374,9 +417,83 @@ def compare_lake_levels():
     plot_utils.apply_plot_params(width_pt=None, height_cm =30.0, width_cm=16, font_size=10)
 
 
-    for s in stations:
-        manager.get_timeseries_for_station(var_name = "")
+    ns = len(stations)
+    ncols = 2
+    nrows = ns // ncols + 1
+    plot_utils.apply_plot_params(width_pt=None, font_size=10)
+    gs = gridspec.GridSpec(nrows, ncols)
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+    sub_p = 0
+    h_m = None
+    h_s = None
+    r = 0
+    c = 0
+    selected_stations = []
+    for i, s in enumerate(sorted(stations, key=lambda x: x.latitude, reverse=True)):
 
+
+        assert isinstance(s, Station)
+        mod_ts_all = manager.get_timeseries_for_station(var_name = "CLDP", station=s, nneighbours=2)
+        if mod_ts_all is None: #means model does not see lakes in the vicinity
+            continue
+        print(s.id,":",s.get_timeseries_length())
+
+        mod_normals_all = []
+
+        for mod_ts in mod_ts_all:
+            mod_day_dates, mod_normals = mod_ts.get_daily_normals(start_date=start_date, end_date=end_date, stamp_year=2001)
+            mod_normals_all.append(mod_normals)
+        mod_normals = np.mean(mod_normals_all, axis = 0)
+
+        if np.max(mod_normals) < 0.1: continue
+
+        sta_day_dates, sta_normals = s.get_daily_normals(start_date=start_date, end_date=end_date, stamp_year=2001)
+
+        if None in [ sta_day_dates, sta_normals ]:
+            continue
+
+        r = sub_p // ncols
+        c = sub_p % ncols
+        sub_p += 1
+        ax = fig.add_subplot(gs[r, c])
+        assert isinstance(ax, Axes)
+        print len(mod_normals), len(sta_day_dates)
+        h_m = ax.plot(sta_day_dates, mod_normals, "b", label = "model", lw = 3)
+        h_s = ax.plot(sta_day_dates, sta_normals, "r", label = "station", lw = 3)
+        ax.set_title(s.id + "({0:.3f}, {1:.3f})".format(s.longitude, s.latitude))
+        ax.xaxis.set_major_formatter(DateFormatter("%b"))
+        ax.xaxis.set_major_locator(MonthLocator(bymonthday=15, interval=2))
+
+
+        ax.yaxis.set_major_locator(LinearLocator(numticks=5))
+
+        selected_stations.append(s)
+        #ax.legend()
+
+    ax = fig.add_subplot(gs[(r+1):,:])
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(
+        file_path="data/from_guillimin/vary_lake_level1/pm1985010100_00000000p",
+        lon1=-68, lat1=52, lon2=16.65, lat2=0
+    )
+    b.drawcoastlines()
+    y1 = 0.8
+    dy = y1 / float( len(selected_stations) )
+
+    x1 = [0.05, 0.85]
+    for i, s in enumerate(selected_stations):
+        x, y = b(s.longitude, s.latitude)
+        b.scatter(x,y,c="r",marker="^", zorder = 5, s = 100)
+        xy_text = x1[i%2], y1
+        y1 -= dy
+        ax.annotate(s.id, xy=(x, y), xytext = xy_text, textcoords = "axes fraction",
+             bbox = dict(facecolor = 'white'), weight = "bold",
+            arrowprops=dict(facecolor='black', arrowstyle="->")
+        )
+
+    fig.legend([h_m, h_s], ["Model", "Obs."], "lower right")
+    fig.tight_layout(h_pad=2)
+    fig.savefig("lake_level_comp_mean_anomalies.png")
 
 
 
@@ -467,7 +584,8 @@ def draw_drainage_area():
 
 def main():
     #draw_drainage_area()
-    compare_streamflow()
+    #compare_streamflow()
+    compare_lake_levels()
     #test_mean()
     pass
 

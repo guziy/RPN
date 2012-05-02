@@ -14,6 +14,8 @@ class TimeSeries:
         self.data = data
         self.time = time
         self.metadata = {}
+
+        self.stamp_day_dates = None
         pass
 
     def get_mean(self, months = xrange(1,13)):
@@ -54,7 +56,7 @@ class TimeSeries:
             year_dates.append(the_date)
             the_date += day
 
-
+        self.stamp_day_dates = year_dates
 
         if start_date is None:
             start_date = self.time[0]

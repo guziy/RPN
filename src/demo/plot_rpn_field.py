@@ -89,12 +89,27 @@ def read_directions():
     dj_list = np.array([0,-1,-1,-1,0,1,1,1])
 
 
-    dirs_m = np.ma.masked_where(dirs <= 0, dirs)
+
     delta_indices = np.log2(dirs[dirs > 0])
+    delta_indices = delta_indices.astype(int)
+
+    di = di_list[delta_indices].astype(float)
+    dj = dj_list[delta_indices].astype(float)
+
+    du = di / (di ** 2 + dj ** 2)
+    dv = dj / (di ** 2 + dj ** 2)
+
+
+    du_2d = np.ma.masked_all(dirs.shape)
+    dv_2d = np.ma.masked_all(dirs.shape)
+
+    du_2d[dirs > 0] = du
+    dv_2d[dirs > 0] = dv
+
 
     assert isinstance(delta_indices, np.ndarray)
     print delta_indices.shape
-    delta_indices = delta_indices.astype(int)
+
 
 
     di_field = np.ma.masked_all(dirs.shape)
@@ -170,11 +185,12 @@ def read_directions():
 
 
 
-    du = lons2d[i_n, j_n] - lons2d[i_p, j_p]
-    dv = lats2d[i_n, j_n] - lats2d[i_p, j_p]
 
-    plt.quiver(lons2d,lats2d, du, dj_field.transpose(), scale = 1,
-        units = "xy", pivot = "middle")
+    plt.quiver(i_p,j_p, du_2d, dv_2d , scale = 0.5, width = 0.1 ,
+        units = "xy", pivot = "middle", zorder = 5)
+
+    plt.pcolormesh(i_p, j_p, dirs)
+    plt.colorbar()
 
     print map( lambda x, p: x ** p, [2]*8, range(8))
     #plt.colorbar()
