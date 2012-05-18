@@ -272,7 +272,7 @@ class RPN():
 
     def _dateo_to_string(self, dateo_int):
         """
-        return date forat
+        return dateo as string
         """
         res_date = c_int()
         res_time = c_int()
@@ -281,6 +281,18 @@ class RPN():
 
         s_date = "{0:08d}{1:08d}".format(res_date.value, res_time.value)
         return s_date[:-2]
+
+    def _string_to_dateo(self, dateo_str):
+        """
+        return dateo as int code
+        """
+        mode = c_int(3)
+        date = datetime.strptime(dateo_str, self._dateo_format)
+        res_date = c_int(int(date.strftime("%Y%m%d")))
+        res_time = c_int(int(date.strftime("%H%M%S%H")))
+        dateo_int = c_int()
+        self._dll.newdate_wrapper(byref(dateo_int), byref(res_date), byref(res_time), byref(mode))
+        return dateo_int.value
 
 
 
@@ -362,6 +374,8 @@ class RPN():
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
 
+        print in_typvar.value
+
         if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
 
         return self._get_data_by_key(key)
@@ -374,6 +388,7 @@ class RPN():
         :type record_key: c_int
         """
         self._get_record_info(record_key)
+        print self._current_info['varname'].value
         the_type = self._get_current_data_type()
         ni, nj, nk = self._current_info["shape"]
         data = np.zeros((nk.value * nj.value * ni.value,), dtype = the_type)
@@ -623,8 +638,8 @@ class RPN():
         except Exception,e:
             print e
             print( dateo.value )
-            print "dateo is corrupted using default: 010100000"
-            the_dateo = datetime.strptime("01010000", self._dateo_format)
+            print "dateo is corrupted using default: 20010101000000"
+            the_dateo = datetime.strptime("20010101000000", self._dateo_format)
 
 #        if the_dateo.year // 100 != self.start_century:
 #            year = self.start_century * 100 + the_dateo.year % 100
@@ -653,12 +668,20 @@ class RPN():
         data_type = self._current_info["data_type"]
         nbits = self._current_info["nbits"]
 
+        print("data_type = ", data_type)
+        print(nbits)
+
         #print data_type, nbits
-        if nbits == 32 or nbits == 16:
-            return np.float32
+        if nbits == 32:
+            if data_type == data_types.IEEE_floating_point:
+                return np.float32
+            else:
+                return np.int32
         elif nbits == 64:
             return np.float64
         elif nbits == 16:
+            if data_type == data_types.compressed_floating_point:
+                return np.dtype("f4")
             return np.float16
         else:
             raise Exception("nbits is: {0}".format(nbits))
@@ -791,7 +814,7 @@ class RPN():
 
     def write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY,
                              data = None, grid_type = 'Z', ig = None, ip = None, typ_var = "P",
-                             date = 10160000, label = "soil temp",
+                             dateo = "20120101000000", label = "soil temp",
                              lon1 = None, lat1 = None,
                              lon2 = None, lat2 = None
                              ):
@@ -815,7 +838,7 @@ class RPN():
 
         
         nbits = c_int(-32)
-        date_c = c_int(date)
+        date_c = c_int(self._string_to_dateo(dateo))
         deet = c_int(0)
         npas = c_int(1)
         nk = c_int(1) if len(data.shape) == 2 else data.shape[2]
@@ -867,11 +890,10 @@ class RPN():
         #set current info
 
 
-        the_dateo = datetime.strptime("%08d" % (date // 10), self._dateo_format  )
         self._current_info = {'ig': [ig1, ig2, ig3, ig4],
                   'ip': [ip1, ip2, ip3],
                   'shape': [ni, nj, nk],
-                  'dateo': the_dateo,
+                  'dateo': datetime.strptime(dateo, self._dateo_format),
                   'dt_seconds': deet,
                   'npas': npas,
                   'varname': nomvar,
@@ -907,7 +929,27 @@ class RPN():
                 result[self.get_datetime_for_the_last_read_record()] = data1
         return result
 
+    def get_all_time_records_for_name_and_level(self, varname = "STFL", level = -1,
+                                                level_kind = level_kinds.ARBITRARY):
+        """
+        Created for retrieving the fields corresponding to
+        different times,
+        works as self.get_3D_field, but instead of the map
+        {level: 2d record} it returns the map {date: 2d record}
+        Use this methond only in the case if you are sure that
+        the field you are trying to read containsonly one record for each time step
 
+        :return type: dict
+        """
+        result = {}
+        data1 = self.get_first_record_for_name_and_level(varname, level=level, level_kind=level_kind)
+        result[self.get_datetime_for_the_last_read_record()] = data1
+
+        while data1 is not None:
+            data1 = self.get_next_record()
+            if data1 is not None:
+                result[self.get_datetime_for_the_last_read_record()] = data1
+        return result
 
 
     def get_current_info(self):
