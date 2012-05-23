@@ -3,6 +3,7 @@ from netCDF4 import Dataset
 import os
 import pickle
 import re
+from matplotlib.axes import Axes
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import application_properties
 from rpn.rpn import RPN
@@ -50,17 +51,22 @@ class CRCMDataManager:
         pass
 
 
-    def get_alt_using_monthly_mean_climatology(self, year_range):
-        tc = self.get_soiltemp_climatology(year_range)
+    def get_alt_using_monthly_mean_climatology(self, year_range, temp_var_name = "I0"):
+        tc = self.get_soiltemp_climatology(year_range, temp_var_name = temp_var_name)
         tc_max = np.max(tc, axis=0)
+
+        print tc_max.min(), tc_max.max()
         return self._get_alt(tc_max)
 
-    def get_soiltemp_climatology(self, year_range = None):
-
+    def get_soiltemp_climatology(self, year_range = None, temp_var_name = "I0"):
+        """
+                returns 12 3d fields of mean soil temperatures for each month during the
+                year_range
+        """
         monthly_climatology = [[] for m in xrange(12)]
         for the_year in year_range:
             for the_month in xrange(1, 13):
-                the_mean = self._get_monthly_mean_soiltemp(the_year, the_month)
+                the_mean = self._get_monthly_mean_soiltemp(the_year, the_month, var_name=temp_var_name)
                 if the_mean is None:
                     continue
                 monthly_climatology[the_month - 1].append(the_mean)
@@ -89,9 +95,27 @@ class CRCMDataManager:
         return self._get_alt(max_temp)
 
 
+    def get_annual_mean_3d_field(self, var_name = "I0", year = None):
 
+        """
+        returns the mean 3d field for the year T(x,y,z)
+        """
+        all_data = []
+        for month in xrange(1,13):
+            key = (year, month)
 
-    def _get_monthly_mean_soiltemp(self, year, month, var_name = ""):
+            if not self.yearmonth_to_data_path.has_key(key):
+                print "Warning could not find data for month/year = {0}/{1}".format(month, year)
+                return None
+            data_path = self.yearmonth_to_data_path[key]
+            times, temp = self._read_profiles_from_file(data_path, var_name=var_name)
+            all_data.extend(temp)
+        print np.array(all_data).shape
+        return np.mean(all_data, axis=0)
+
+        pass
+
+    def _get_monthly_mean_soiltemp(self, year, month, var_name = "I0"):
         """
         returns None if the data for the specifide year and month
         were not found
@@ -199,7 +223,7 @@ class CRCMDataManager:
         nx, ny, nz = soiltemp_3d.shape
         alt = -np.ones((nx, ny))
 
-        #if t_max allways < 0 then alt = 0
+        #if t_max < 0 at the surface then alt = 0
         all_neg = np.all(soiltemp_3d <= self.T0, axis=2)
         alt[all_neg] = 0.0
 
@@ -225,6 +249,10 @@ class CRCMDataManager:
         return alt
 
 
+    def get_alt_using_nyear_rule(self, nyear = 2, path_to_folder_with_files = ""):
+        pass
+
+
     def get_active_layer_thickness(self, year, mean_temps_to_use = "monthly"):
         """
         return 2D field of the active layer thickness for the year
@@ -237,7 +265,31 @@ class CRCMDataManager:
             t = self.get_Tmax_profiles_for_year_using_monthly_means(year, var_name="I0")
         else:
             raise Exception("Unknown averaging interval: {0}".format(mean_temps_to_use))
-        return self._get_alt(t)
+        h = self._get_alt(t)
+
+###DEBUG only for testing, comment for real calculations
+#        i_sel = 17
+#        j_sel = 142
+#
+#        print 10* "---"
+#        print self.level_heights
+#        print(t[i_sel,j_sel,:],"h = {0} m".format(h[i_sel,j_sel]))
+#
+#        plt.figure()
+#        plt.plot(t[i_sel,j_sel,:], self.level_heights)
+#        ho = self.level_heights[0]
+#        hf = self.level_heights[-1]
+#        plt.plot([273.15, 273.15] ,[ho, hf], "k" )
+#
+#        plt.title("h = {0} m, year = {1}".format(h[i_sel,j_sel], year))
+#        ax = plt.gca()
+#        assert isinstance(ax, Axes)
+#        ax.invert_yaxis()
+#
+#        plt.show()
+###DEBUG - end
+
+        return h
 
 
     def _init_year_month_to_data_path_imp(self, samples_dir):
@@ -304,14 +356,20 @@ class CRCMDataManager:
 
         pass
 
-    def get_mean_over_months_of_2d_var(self, start_year, end_year, months = None, var_name = ""):
+    def get_mean_over_months_of_2d_var(self, start_year, end_year, months = None,
+                                       var_name = "", level = -1, level_kind = -1):
+        """
+        level =-1 means any level
+        """
         monthly_means = []
         for the_year in xrange(start_year, end_year + 1):
             for the_month in months:
                 path = self.yearmonth_to_data_path[(the_year, the_month)]
+                print "{0}/{1} -> {2}".format(the_year, the_month, path)
                 rpn_obj = RPN(path)
 
-                records = rpn_obj.get_all_time_records_for_name(varname=var_name)
+                records = rpn_obj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
+                    level_kind=level_kind)
 
                 monthly_means.append(np.mean(records.values(), axis=0))
 
@@ -385,16 +443,16 @@ class CRCMDataManager:
 def get_alt_for_year(year):
     cache_file = "year_to_alt.bin"
     year_to_alt = {}
-    if os.path.isfile(cache_file):
-        year_to_alt = pickle.load(open(cache_file))
+    #if os.path.isfile(cache_file):
+    #    year_to_alt = pickle.load(open(cache_file))
 
     if year_to_alt.has_key(year):
         return year_to_alt[year]
     else:
         dm = CRCMDataManager(data_folder="data/CORDEX")
         h = dm.get_active_layer_thickness(year)
-        year_to_alt[year] = h
-        pickle.dump(year_to_alt, open(cache_file, mode="w"))
+        #year_to_alt[year] = h
+        #pickle.dump(year_to_alt, open(cache_file, mode="w"))
         return h
 
 
@@ -407,10 +465,10 @@ def get_alt_for_year(args):
 
 
 def save_alts_to_netcdf_file(path = "alt.nc"):
-    data_path = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era-interim"
-    year_range = xrange(1984, 1991)
+    data_path = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1"
+    year_range = xrange(1950, 2101)
     ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
-    coord_file = os.path.join( data_path, "pmNorthAmerica_0.11deg_ERAInterim_199003_moyenne")
+    coord_file = os.path.join( data_path, "pmNorthAmerica_0.44deg_MPIHisto_B1_200009_moyenne")
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords(file_path= coord_file)
     ds.createDimension('year', len(year_range))
     ds.createDimension('lon', lons2d.shape[0])
@@ -641,7 +699,7 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
     #test()
-    save_alts_to_netcdf_file()
+    save_alts_to_netcdf_file(path="alt_mpi_b1_yearly.nc")
     #plot_alt_from_monthly_climatologies()
     #plot_alt_for_different_e_scenarios()
     print "Hello world"

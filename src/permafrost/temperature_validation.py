@@ -1,7 +1,15 @@
+from netCDF4 import Dataset
 import os
 from matplotlib import gridspec
-from mpl_toolkits.basemap import maskoceans
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.ticker import FuncFormatter
+from matplotlib.transforms import Bbox
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from mpl_toolkits.basemap import maskoceans, Basemap
 import application_properties
+import my_colormaps
+from active_layer_thickness import CRCMDataManager
 from rpn import level_kinds
 from rpn.rpn import RPN
 from util import plot_utils
@@ -12,6 +20,7 @@ import numpy as np
 from cru.temperature import CRUDataManager
 import matplotlib.pyplot as plt
 import draw_regions
+import matplotlib as mpl
 
 
 def compare_all_seasons():
@@ -50,7 +59,7 @@ def compare_for_season(   start_year = 1958,
     temp_levels = np.arange(-40, 40, 5)
     diff_levels = np.arange(-10, 12, 2)
     gs = gridspec.GridSpec(3,2)
-    plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=20, font_size=12)
+    #plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=20, font_size=12)
     fig = plt.figure()
     coast_line_width = 0.25
     axes_list = []
@@ -152,8 +161,237 @@ def compare_for_season(   start_year = 1958,
 
     pass
 
+def _get_thawing_index(daily_temp):
+    """
+    daily temp float air(time, level, rlat, rlon) ;
+     air:units = "Celsius" ;
+    """
+
+
+def validate_thawing_index():
+    start_year = 1980
+    end_year = 1996
+
+    sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1"
+
+    sim_names = ["ERA40","MPI","CanESM"]
+    fold = "/home/samira/skynet/DailyTempData"
+    simname_to_path = {
+        "ERA40": os.path.join(fold, "TempERA40_b1_1981-2008.nc"),
+        "MPI": os.path.join(fold, "TempMPI1981-2010.nc"),
+        "CanESM":os.path.join(fold, "TempCanESM1981-2010.nc"),
+    }
+
+
+    coord_file = os.path.join(sim_data_folder, "pmNorthAmerica_0.44deg_ERA40-Int_B1_200812_moyenne")
+    basemap, lons2d, lats2d = draw_regions.get_basemap_and_coords(resolution="c",
+        file_path = coord_file, llcrnrlat=40.0, llcrnrlon=-145, urcrnrlon=-20, urcrnrlat=74
+    )
+    assert isinstance(basemap, Basemap)
+
+    lons2d[lons2d > 180] -= 360
+
+    om = CRUDataManager()
+    clim = om.get_daily_climatology(start_year, end_year)
+    obs = om.get_thawing_index_from_climatology(clim)
+    obs = om.interpolate_data_to(obs, lons2d, lats2d, nneighbours=1) #interpolatee to the model grid
+
+
+
+
+    x, y = basemap(lons2d, lats2d)
+    #x = (x[1:,1:] + x[:-1, :-1]) /2.0
+
+
+    permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
+    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 3)
+
+    #plot_utils.apply_plot_params(width_pt=None, width_cm=35,height_cm=55, font_size=35)
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+
+
+    cmap = my_colormaps.get_red_blue_colormap(ncolors=10, reversed=True)
+    gs = gridspec.GridSpec(3,1)
+
+    all_axes = []
+    all_img = []
+
+
+    i = 0
+    for name in sim_names:
+        path = simname_to_path[name]
+
+        ds = Dataset(path)
+        data_mod = ds.variables["air"][:]
+        mod = _get_thawing_index()
+
+
+
+        delta = mod - obs
+        ax = fig.add_subplot(gs[i,0])
+        assert isinstance(ax, Axes)
+        delta = np.ma.masked_where(mask_cond, delta)
+        img = basemap.pcolormesh(x, y, delta, cmap = cmap, vmin=None, vmax = None)
+        if not i:
+            ax.set_title("Thawing index, Mod - Obs, ({0} - {1}) \n".format(start_year, end_year))
+        i += 1
+        ax.set_ylabel(name)
+        all_axes.append(ax)
+        all_img.append(img)
+
+
+
+    i = 0
+    axs_to_hide = []
+    #zones and coastlines
+    for the_ax, the_img in zip(all_axes, all_img):
+        divider = make_axes_locatable(the_ax)
+        cax = divider.append_axes("right", "5%", pad="3%")
+        cb = fig.colorbar(the_img,  cax = cax, extend = "both")
+        cax.set_title("$^{\\circ} {\\rm C}$\n")
+        #cax.set_title("%\n")
+        assert isinstance(the_ax, Axes)
+        basemap.drawcoastlines(ax = the_ax, linewidth=1.5)
+        basemap.readshapefile("data/pf_4/permafrost8_wgs84/permaice", name="zone",
+                ax=the_ax, linewidth=3)
+
+        if i != 1:
+            axs_to_hide.append(cax)
+        i += 1
+
+    fig.tight_layout()
+
+    for the_ax in axs_to_hide:
+        the_ax.set_visible(False)
+
+    fig.savefig("tmp_validation_era_mpi_canesm.png")
+
+    pass
+
+
+def validate_using_monthly_diagnostics():
+    start_year = 1980
+    end_year = 1996
+
+
+
+
+    sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1"
+
+    sim_names = ["ERA40","MPI","CanESM"]
+    simname_to_path = {
+        "ERA40": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1_dm",
+        "MPI": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1_dm",
+        "CanESM": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_CanESM_B1_dm"
+    }
+
+
+    coord_file = os.path.join(sim_data_folder, "pmNorthAmerica_0.44deg_ERA40-Int_B1_200812_moyenne")
+    basemap, lons2d, lats2d = draw_regions.get_basemap_and_coords(resolution="c",
+        file_path = coord_file, llcrnrlat=45.0, llcrnrlon=-145, urcrnrlon=-20, urcrnrlat=74,
+        anchor = "W"
+    )
+    assert isinstance(basemap, Basemap)
+
+    lons2d[lons2d > 180] -= 360
+
+    obs_manager = CRUDataManager()
+    obs = obs_manager.get_mean(start_year, end_year, months=[6,7,8])
+    obs = obs_manager.interpolate_data_to(obs, lons2d, lats2d, nneighbours=1)
+
+
+
+    x, y = basemap(lons2d, lats2d)
+
+    #x = (x[1:,1:] + x[:-1, :-1]) /2.0
+
+
+    permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
+    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 2)
+
+    #plot_utils.apply_plot_params(width_pt=None, width_cm=35,height_cm=55, font_size=35)
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+
+
+    cmap = my_colormaps.get_red_blue_colormap(ncolors=10, reversed=True)
+    gs = gridspec.GridSpec(3,2, width_ratios=[1,0.1], hspace=0, wspace=0,
+        left=0.05, bottom = 0.01, top=0.95)
+
+    all_axes = []
+    all_img = []
+
+
+    i = 0
+    for name in sim_names:
+        path = simname_to_path[name]
+        dm = CRCMDataManager(data_folder=path)
+        mod = dm.get_mean_over_months_of_2d_var(start_year, end_year, months = [6,7,8],
+            var_name="TT", level=1, level_kind=level_kinds.HYBRID)
+
+        delta = mod - obs
+        ax = fig.add_subplot(gs[i,0])
+        assert isinstance(ax, Axes)
+        delta = np.ma.masked_where(mask_cond, delta)
+        img = basemap.pcolormesh(x, y, delta, cmap = cmap, vmin=-5.0, vmax = 5.0)
+        if not i:
+            ax.set_title("T2m, Mod - Obs, ({0} - {1}), JJA \n".format(start_year, end_year))
+        i += 1
+        #ax.set_ylabel(name)
+        all_axes.append(ax)
+        all_img.append(img)
+
+
+
+    i = 0
+    axs_to_hide = []
+    #zones and coastlines
+    for the_ax, the_img in zip(all_axes, all_img):
+#        divider = make_axes_locatable(the_ax)
+#        cax = divider.append_axes("right", "5%", pad="3%")
+        #cax.set_title("%\n")
+        assert isinstance(the_ax, Axes)
+        basemap.drawcoastlines(ax = the_ax, linewidth=0.5)
+        basemap.readshapefile("data/pf_4/permafrost8_wgs84/permaice", name="zone",
+                ax=the_ax, linewidth=1.5, drawbounds=False)
+
+        for nshape,seg in enumerate(basemap.zone):
+            if basemap.zone_info[nshape]["EXTENT"] != "C": continue
+            poly = mpl.patches.Polygon(seg,edgecolor = "k", facecolor="none", zorder = 10, lw = 1.5)
+            the_ax.add_patch(poly)
+
+        i += 1
+
+
+
+    cax = fig.add_subplot(gs[:,1])
+    cax.set_anchor("W")
+    cax.set_aspect(30)
+    formatter = FuncFormatter(
+        lambda x, pos: "{0: <6}".format(str(x))
+    )
+    cb = fig.colorbar(all_img[0], ax = cax, cax = cax,
+        extend = "both", format = formatter)
+    cax.set_title("$^{\\circ} {\\rm C}$")
+
+    #fig.tight_layout(h_pad=0)
+
+
+
+#    for the_ax in axs_to_hide:
+#        the_ax.set_visible(False)
+
+    fig.savefig("tmp_validation_era_mpi_canesm.png")
+
+
+
+
+
 if __name__ == "__main__":
+    plot_utils.apply_plot_params(width_pt=None, width_cm=28, height_cm=40, font_size=25)
     application_properties.set_current_directory()
-    compare_all_seasons()
+    #compare_all_seasons()
+    validate_using_monthly_diagnostics()
     print "Hello world"
   

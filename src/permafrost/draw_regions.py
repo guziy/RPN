@@ -70,10 +70,11 @@ def delete_points_in_countries(points_lat_long, points, indices, countries = Non
 
 def get_basemap_and_coords(
         file_path = "data/CORDEX/NorthAmerica_0.44deg_CanHistoE1/Samples/NorthAmerica_0.44deg_CanHistoE1_198101/pm1950010100_00816912p",
-        lon1 = -97, lat1 = 47.50,
+        lon1 = -97.0, lat1 = 47.50,
         lon2 = -7, lat2 = 0,
         llcrnrlon = None, llcrnrlat = None,
-        urcrnrlon = None, urcrnrlat = None, resolution = "l"
+        urcrnrlon = None, urcrnrlat = None, resolution = "l", anchor = "W"
+
         ):
     rpnObj = RPN(file_path)
     lons2D, lats2D = rpnObj.get_longitudes_and_latitudes()
@@ -90,7 +91,11 @@ def get_basemap_and_coords(
             llcrnrlat=the_ll_lat,
             urcrnrlon=the_ur_lon,
             urcrnrlat=the_ur_lat,
-            lat_1=lat1, lon_1=lon1, lat_2=lat2, lon_2=lon2, no_rot=True
+            lat_1= lat1,
+            lon_1= lon1,
+            lat_2= lat2,
+            lon_2=lon2,
+            no_rot=True, anchor=anchor
     ), lons2D, lats2D
 
     pass
@@ -118,8 +123,6 @@ def create_points_envelope_gdal(points):
     pass
 
 def get_permafrost_mask(lons2d, lats2d, zones_path = "data/permafrost/permaice.shp"
-
-
                         ):
 
     cache_file = "permafrost_types.bin"

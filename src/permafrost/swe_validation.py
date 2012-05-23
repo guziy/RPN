@@ -1,10 +1,15 @@
 import os
 from matplotlib import gridspec
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.ticker import FuncFormatter
+from matplotlib.transforms import Affine2D, Bbox
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-from mpl_toolkits.basemap import maskoceans
+from mpl_toolkits.basemap import maskoceans, Basemap, cm
 from active_layer_thickness import CRCMDataManager
 import matplotlib.pyplot as plt
 import application_properties
+import my_colormaps
 from util import plot_utils
 
 __author__ = 'huziy'
@@ -106,7 +111,7 @@ def main():
     swe_obs_interp = swe_obs_manager.interpolate_data_to(swe_obs, lons2d, lats2d, nneighbours=1)
 
     gs = gridspec.GridSpec(2,3)
-    plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=30, font_size=12)
+    #plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=30, font_size=12)
     fig = plt.figure()
     coast_line_width = 0.25
     axes_list = []
@@ -188,12 +193,134 @@ def main():
     gs.tight_layout(fig, h_pad = 0.9, w_pad = 18)
     fig.savefig("swe_validation.png")
 
+
+
+def validate_using_monthly_diagnostics():
+    start_year = 1980
+    end_year = 1996
+
+
+
+
+    sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1"
+
+    sim_names = ["ERA40","MPI","CanESM"]
+    simname_to_path = {
+        "ERA40": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1",
+        "MPI": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1",
+        "CanESM": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_CanESM_B1"
+    }
+
+
+    coord_file = os.path.join(sim_data_folder, "pmNorthAmerica_0.44deg_ERA40-Int_B1_200812_moyenne")
+    basemap, lons2d, lats2d = draw_regions.get_basemap_and_coords(resolution="c",
+        file_path = coord_file, llcrnrlat=45.0, llcrnrlon=-145, urcrnrlon=-20, urcrnrlat=74,
+        anchor="W"
+    )
+    assert isinstance(basemap, Basemap)
+
+    lons2d[lons2d > 180] -= 360
+
+    swe_obs_manager = SweDataManager(var_name="SWE")
+    swe_obs = swe_obs_manager.get_mean(start_year, end_year, months=[12,1,2])
+    swe_obs = swe_obs_manager.interpolate_data_to(swe_obs, lons2d, lats2d, nneighbours=1)
+
+
+
+    x, y = basemap(lons2d, lats2d)
+    #x = (x[1:,1:] + x[:-1, :-1]) /2.0
+
+
+    permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
+    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 2)
+
+    #plot_utils.apply_plot_params(width_pt=None, width_cm=35,height_cm=55, font_size=35)
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+
+
+    cmap = my_colormaps.get_red_blue_colormap(ncolors=10)
+    gs = gridspec.GridSpec(3,2, width_ratios=[1,0.1], hspace=0, wspace=0,
+        left=0.05, bottom = 0.01, top=0.95)
+
+
+    all_axes = []
+    all_img = []
+
+
+    i = 0
+    for name in sim_names:
+        path = simname_to_path[name]
+        dm = CRCMDataManager(data_folder=path)
+        swe_mod = dm.get_mean_over_months_of_2d_var(start_year, end_year, months = [12,1,2], var_name="I5")
+
+        delta = swe_mod - swe_obs
+        ax = fig.add_subplot(gs[i,0])
+        assert isinstance(ax, Axes)
+        delta = np.ma.masked_where(mask_cond, delta)
+        img = basemap.pcolormesh(x, y, delta, cmap = cmap, vmin=-100, vmax = 100)
+        if not i:
+            ax.set_title("SWE, Mod - Obs, ({0} - {1}), DJF\n".format(start_year, end_year))
+        i += 1
+        #ax.set_ylabel(name)
+        all_axes.append(ax)
+        all_img.append(img)
+
+
+
+    i = 0
+    axs_to_hide = []
+    #zones and coastlines
+    for the_ax, the_img in zip(all_axes, all_img):
+        #divider = make_axes_locatable(the_ax)
+        #cax = divider.append_axes("bottom", "5%", pad="3%")
+
+        assert isinstance(the_ax, Axes)
+        basemap.drawcoastlines(ax = the_ax, linewidth=0.5)
+        basemap.readshapefile("data/pf_4/permafrost8_wgs84/permaice", name="zone",
+                ax=the_ax, linewidth=1.5, drawbounds=False)
+
+        for nshape,seg in enumerate(basemap.zone):
+            if basemap.zone_info[nshape]["EXTENT"] != "C": continue
+            poly = mpl.patches.Polygon(seg,edgecolor = "k", facecolor="none", zorder = 10, lw = 1.5)
+            the_ax.add_patch(poly)
+
+        i += 1
+
+    cax = fig.add_subplot(gs[:,1])
+    assert isinstance(cax, Axes)
+    cax.set_anchor("W")
+    cax.set_aspect(30)
+
+    formatter = FuncFormatter(
+        lambda x, pos: "{0: <6}".format(str(x))
+    )
+    cb = fig.colorbar(all_img[0], ax = cax, cax = cax, extend = "both", format = formatter)
+
+    cax.set_title("mm")
+    print "aspect = ", cax.get_aspect()
+
+    #fig.tight_layout(h_pad=0)
+
+#    for the_ax in axs_to_hide:
+#        the_ax.set_visible(False)
+
+    fig.savefig("swe_validation_era_mpi_canesm_djf.png")
+
+
+
+
+
+    #swe_obs = swe_obs_manager.get_mean(start_year, end_year, months=the_months)
+
     pass
 
 
 if __name__ == "__main__":
+    plot_utils.apply_plot_params(width_pt=None, width_cm=28, height_cm=40, font_size=25)
     application_properties.set_current_directory()
     #main()
-    compare_swe_diff_for_era40_driven()
+    #compare_swe_diff_for_era40_driven()
+    validate_using_monthly_diagnostics()
     print "Hello world"
   
