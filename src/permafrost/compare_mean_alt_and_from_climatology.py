@@ -15,6 +15,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.polygon import Polygon
 import draw_regions
 import my_colormaps
+from cross_plotter import CrossPlotter
 from rpn.rpn import RPN
 from util import plot_utils
 import matplotlib as mpl
@@ -608,7 +609,13 @@ def plot_future_alts():
 
 
 
+
+
+
 def plot_current_alts():
+
+    import plot_dpth_to_bdrck
+    bdrck_field = plot_dpth_to_bdrck.get_depth_to_bedrock()
     start_year = 1980
     end_year = 1996
 
@@ -640,7 +647,7 @@ def plot_current_alts():
 
 
     permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
-    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 2)
+    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 3)
 
 #    plot_utils.apply_plot_params(width_pt=None, width_cm=20, height_cm=40, font_size=16)
     fig = plt.figure()
@@ -648,13 +655,13 @@ def plot_current_alts():
 
 
     h_max = 10
-    cmap = my_colormaps.get_lighter_jet_cmap(ncolors=10) #cm.get_cmap("jet",10)
-    bounds = [0,0.1,0.5,1,2,3,5,8,9,10]
+    bounds = [0,0.1,0.5,1,2,3,4,5,6]
+    cmap = my_colormaps.get_lighter_jet_cmap(ncolors=len(bounds) - 1) #cm.get_cmap("jet",10)
     norm = BoundaryNorm(boundaries=bounds,ncolors=len(bounds), clip=True)
     cmap.set_over(cmap(1.0))
     clevels = np.arange(0,h_max+1,1)
-    gs = gridspec.GridSpec(3,2, width_ratios=[1,0.1], hspace=0, wspace=0,
-        left=0.05, bottom = 0.01, top=0.95)
+    gs = gridspec.GridSpec(1,2, width_ratios=[1,0.1], hspace=0, wspace=0.1,
+        left=0.05, bottom = 0.02, top=0.95)
 
     all_axes = []
     all_img = []
@@ -666,11 +673,14 @@ def plot_current_alts():
     for name in sim_names:
         path = simname_to_path[name]
         dm = CRCMDataManager(data_folder=path)
-        hc = dm.get_alt_using_monthly_mean_climatology(xrange(start_year,end_year+1))
-        hc_list.append(hc)
+        hc0, t3d_min, t3d_max = dm.get_alt_using_monthly_mean_climatology(xrange(start_year,end_year+1))
+
+        hc_list.append(hc0)
         ax = fig.add_subplot(gs[i,0])
+        cp = CrossPlotter(ax, basemap, t3d_min, t3d_max, lons2d, lats2d, levelheights=dm.level_heights)
+
         assert isinstance(ax, Axes)
-        hc = np.ma.masked_where(mask_cond, hc)
+        hc = np.ma.masked_where(mask_cond | (hc0 < 0), hc0)
         img = basemap.pcolormesh(x, y, hc, cmap = cmap, vmax = h_max, norm=norm)
         if not i:
             ax.set_title("ALT ({0} - {1}) \n".format(start_year, end_year))
@@ -678,6 +688,48 @@ def plot_current_alts():
         ax.set_ylabel("CRCM ({0})".format(name))
         all_axes.append(ax)
         all_img.append(img)
+        print np.ma.min(hc), np.ma.max(hc)
+        hc5 = np.ma.masked_where((hc0 <= 15) | hc.mask, hc)
+        print "Number of cells with alt > 5 is {0}, and the range is {1} ... {2}".format(hc5.count(), hc5.min(), hc5.max())
+        bdrck_field5 = np.ma.masked_where(hc5.mask, bdrck_field)
+        print "Bedrock ranges for those points: {0} ... {1}".format(bdrck_field5.min(), bdrck_field5.max())
+
+
+        ind = np.where(~hc5.mask)
+        xs = ind[0]
+        ys = ind[1]
+
+
+        i = 0
+        for the_i, the_j in zip(xs,ys):
+            #plot profile
+            plt.figure()
+            plt.plot(t3d_max[the_i, the_j, :] - dm.T0, dm.level_heights, color = "r")
+            plt.plot(t3d_min[the_i, the_j, :] - dm.T0, dm.level_heights, color = "b")
+            plt.plot([0 , 0], [dm.level_heights[0], dm.level_heights[-1]], color = "k")
+
+            x1, x2 = plt.xlim()
+            plt.plot( [x1, x2], [bdrck_field[the_i, the_j], bdrck_field[the_i, the_j]], color = "k", lw = 3 )
+            plt.title(str(i))
+            plt.gca().invert_yaxis()
+            plt.savefig("prof{0}.png".format(i))
+            ax.annotate(str(i), (x[the_i, the_j], y[the_i, the_j]), font_properties =
+                            FontProperties(size=10))
+
+            i += 1
+
+        plt.figure()
+        alt_ranges = xrange(0,18)
+        numbers = []
+        for the_alt in alt_ranges:
+            hci = np.ma.masked_where( (hc0 < the_alt) | (hc0 > the_alt + 1) | hc.mask ,hc)
+            numbers.append(hci.count())
+        plt.bar(alt_ranges, numbers, width=1)
+        plt.xlabel("ALT (m)")
+        plt.ylabel("Number of cells")
+        plt.savefig("numbers_in_range.png")
+
+        break
 
 
 
@@ -693,7 +745,7 @@ def plot_current_alts():
                 ax=the_ax, linewidth=1.5, drawbounds=False)
 
         for nshape,seg in enumerate(basemap.zone):
-            if basemap.zone_info[nshape]["EXTENT"] != "C": continue
+            if basemap.zone_info[nshape]["EXTENT"] not in  ["C","D"]: continue
             poly = mpl.patches.Polygon(seg,edgecolor = "k", facecolor="none", zorder = 10, lw = 1.5)
             the_ax.add_patch(poly)
 
@@ -743,13 +795,13 @@ def plot_current_alts():
 
 if __name__ == "__main__":
     import application_properties
-    plot_utils.apply_plot_params(width_pt=None, width_cm=28, height_cm=40, font_size=25)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=28, height_cm=20, font_size=20)
     application_properties.set_current_directory()
     #plot_future_alts()
 #    plot_current_alts_nyear_rule()
     plot_current_alts()
 #    plot_mean_alt_from_jpp_results()
-    plt.show()
+    #plt.show()
     #main()
     print "Hello world"
   

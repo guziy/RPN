@@ -22,7 +22,7 @@ import numpy as np
 
 
 def get_delta(varname, start_year_c, end_year_c, start_year_f, end_year_f, data_folder = "",
-              level = -1, level_kind = -1, months = None):
+              level = -1, level_kind = -1, months = None, percentage = False):
     """
     varname = I5 - > SWE
     varname = TT - > 2m temperature
@@ -32,6 +32,8 @@ def get_delta(varname, start_year_c, end_year_c, start_year_f, end_year_f, data_
         level=level, level_kind = level_kind)
     data_f = dm.get_mean_over_months_of_2d_var(start_year_f, end_year_f, months = months, var_name=varname,
         level=level, level_kind = level_kind)
+    if percentage:
+        return (data_f - data_c)/data_c * 100
     return data_f - data_c
 
 
@@ -97,10 +99,10 @@ def plot_climate_change():
     start_year_current = 1981
     end_year_current = 2010
 
-    start_year_future = 2041
-    end_year_future = 2070
+    start_year_future = 2071
+    end_year_future = 2100
 
-    periods = "F1 - C"
+    periods = "F2 - C"
 
     #plot changes
     sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1"
@@ -187,11 +189,12 @@ def plot_climate_change():
     name_to_delta = {}
     for name in sim_names:
         path = simname_to_path[name]
-        name_to_delta[name] = get_delta("I5", start_year_current, end_year_current,
-            start_year_future, end_year_future, data_folder = path, months=[12,1,2])
+        name_to_delta[name] = get_delta("PR", start_year_current, end_year_current,
+            start_year_future, end_year_future, data_folder = path, months=[6,7,8], percentage=True)
 
-    plot_column(names=sim_names, name_to_data=name_to_delta,title="SWE, {0}, DJF".format(periods), x = x, y = y, basemap=basemap,
-        img_file="swe_b1_cc1.png", cmap=cmap_swe, vminmax=(-20, 20), mask=mask_cond, units="mm", extend = "both"
+    plot_column(names=sim_names, name_to_data=name_to_delta,title="PREC, {0}, JJA".format(periods), x = x, y = y, basemap=basemap,
+        img_file="pr_b1_cc1.png", cmap=cmap_swe, vminmax=(-100, 100), mask=mask_cond,
+        units="%", extend = "both"
     )
 
 

@@ -51,12 +51,19 @@ class CRCMDataManager:
         pass
 
 
+
+
     def get_alt_using_monthly_mean_climatology(self, year_range, temp_var_name = "I0"):
+        """
+        returns alt, as well as 3d fields of soiltemp_min and soiltemp_max
+        """
         tc = self.get_soiltemp_climatology(year_range, temp_var_name = temp_var_name)
-        tc_max = np.max(tc, axis=0)
+        tc_max = np.max(tc, axis = 0)
+        tc_min = np.min(tc, axis = 0)
 
         print tc_max.min(), tc_max.max()
-        return self._get_alt(tc_max)
+        #return self._get_alt(tc_max)
+        return self._get_alt_considering_min_temp(tc_max, tc_min) , tc_min, tc_max
 
     def get_soiltemp_climatology(self, year_range = None, temp_var_name = "I0"):
         """
@@ -219,21 +226,75 @@ class CRCMDataManager:
 
 
 
-    def _get_alt(self, soiltemp_3d):
-        nx, ny, nz = soiltemp_3d.shape
+
+    def _get_alt_considering_min_temp(self, soiltemp_3d_max, soiltemp_3d_min):
+        nx, ny, nz = soiltemp_3d_max.shape
         alt = -np.ones((nx, ny))
 
         #if t_max < 0 at the surface then alt = 0
-        all_neg = np.all(soiltemp_3d <= self.T0, axis=2)
+        all_neg = soiltemp_3d_max[:,:,0] <= self.T0
+        alt[all_neg] = 0.0
+
+
+
+        #if tmax intersects 0
+        for k in xrange(0, nz - 1):
+            t2_max = soiltemp_3d_max[:,:,k + 1]
+            t2_min = soiltemp_3d_min[:,:,k + 1]
+            t1_max = soiltemp_3d_max[:,:,k]
+            t1_min = soiltemp_3d_min[:,:,k]
+            intersection_2 = (t2_max - self.T0) * (t2_min - self.T0) >= 0
+            intersection_1 = (t1_min - self.T0) * (t1_max - self.T0) <= 0
+
+
+            intersection_max = (t2_max - self.T0) * (t1_max - self.T0) <= 0
+            intersection_min = (t2_min - self.T0) * (t1_min - self.T0) <= 0
+
+            intersection = intersection_1 & intersection_2
+            first_intersection = intersection & (alt < 0)
+
+            h2 = self.level_heights[k + 1]
+            h1 = self.level_heights[k]
+
+            cond = None
+            if np.any(intersection_max & first_intersection):
+                cond = intersection_max & first_intersection
+                if cond is not None:
+                    t2 = t2_max[cond]
+                    t1 = t1_max[cond]
+                    alt[cond] = h2 + (h1 - h2) * (self.T0 - t2) / (t1 - t2)
+
+            if np.any(intersection_min & first_intersection):
+                cond = intersection_min & first_intersection
+                if cond is not None:
+                    t2 = t2_min[cond]
+                    t1 = t1_min[cond]
+                    alt[cond] = h2 + (h1 - h2) * (self.T0 - t2) / (t1 - t2)
+
+                pass
+
+
+
+        return alt
+
+
+
+
+    def _get_alt(self, soiltemp_3d_max):
+        nx, ny, nz = soiltemp_3d_max.shape
+        alt = -np.ones((nx, ny))
+
+        #if t_max < 0 at the surface then alt = 0
+        all_neg = soiltemp_3d_max[:,:,0] <= self.T0
         alt[all_neg] = 0.0
 
 
         #if tmax intersects 0
         for k in xrange(0, nz - 1):
-            t2 = soiltemp_3d[:,:,k + 1]
-            t1 = soiltemp_3d[:,:,k]
+            t2 = soiltemp_3d_max[:,:,k + 1]
+            t1 = soiltemp_3d_max[:,:,k]
             intersection = (t2 - self.T0) * (t1 - self.T0) <= 0
-            #intersection = (t2 >= self.T0) & (t1 <= self.T0)
+
             first_intersection = intersection & (alt < 0)
 
             h2 = self.level_heights[k + 1]

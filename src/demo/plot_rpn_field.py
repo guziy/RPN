@@ -1,5 +1,7 @@
+from matplotlib.ticker import MultipleLocator, LinearLocator
 from numpy.lib.function_base import meshgrid
 import application_properties
+from permafrost import draw_regions
 
 __author__ = 'huziy'
 
@@ -17,7 +19,7 @@ class Cell:
         self.next = None
         self.previous = []
         self.lakefr = None
-        self.lake_limit = 0.95
+        self.lake_limit = 0.6
 
 
         pass
@@ -55,22 +57,137 @@ class Cell:
             the_cell.previous.append(self)
 
 def main():
-    path = "/home/huziy/skynet3_rech1/test/cell_area.rpn"
+    path = "/home/huziy/skynet3_exec1/from_guillimin/cell_area.rpn"
     r = RPN(path)
-    field = r.get_first_record_for_name("AREA")
+    tile = r.get_first_record_for_name("TILE")
+    lkid = r.get_first_record_for_name("LKID")
+    larea = r.get_first_record_for_name("AREA")
     r.close()
 
+
+
+    #path = "/home/huziy/skynet3_exec1/from_guillimin/infocell.rpn"
+    path = "infocell_260x260.rpn"
+    rObj = RPN(path)
+    dirs = rObj.get_first_record_for_name("FLDR")
+    facc = rObj.get_first_record_for_name("FACC")
+    lkfr = rObj.get_first_record_for_name("LKFR")
+    lkou = rObj.get_first_record_for_name("LKOU")
+    lons2d, lats2d = rObj.get_longitudes_and_latitudes()
+    rObj.close()
+
+
+    di_list = np.array([1,1,0,-1,-1,-1,0,1])
+    dj_list = np.array([0,-1,-1,-1,0,1,1,1])
+
+    delta_indices = np.log2(dirs[dirs > 0])
+    delta_indices = delta_indices.astype(int)
+
+    di = di_list[delta_indices].astype(float)
+    dj = dj_list[delta_indices].astype(float)
+
+    du = di / np.sqrt(di ** 2 + dj ** 2)
+    dv = dj / np.sqrt(di ** 2 + dj ** 2)
+
+
+    for i in xrange(100):
+        print du[i], dv[i], np.log2(dirs[dirs > 0][i])
+
+    du2d = np.ma.masked_all(dirs.shape)
+    dv2d = np.ma.masked_all(dirs.shape)
+
+    du2d[dirs>0] = du
+    dv2d[dirs>0] = dv
+
+    print du2d[161,145],dv2d[161,145],dirs[161,145]
+
+    iv = xrange(dirs.shape[0])
+    jv = xrange(dirs.shape[1])
+
+    jv, iv = meshgrid(jv, iv)
+
+
+    iv = iv.astype(float)
+    jv = jv.astype(float)
+
+    iv -= 0.5
+    jv -= 0.5
+
+    print iv.min(), iv.max()
+
     plt.figure()
-    field = np.ma.masked_where((field > 1e10) | (field < 1e7) , field)
-    plt.pcolormesh(field.transpose(),cmap = cm.get_cmap("jet", 100))
+    #field = np.ma.masked_where((field > 1e10) | (field < 1e7) , field)
+    #tile1 = np.ma.masked_where((tile != 25) & (tile != 26), tile)
+    plt.pcolormesh(iv,jv,tile,cmap = cm.get_cmap("jet", 36))
     plt.colorbar()
+    plt.xlim(75, 100)
+    plt.ylim(130,142)
+
+
+    
+    plt.figure()
+    lkid = lkid.astype(int)
+    print lkid[161,146], lkid[161,145],lkid[160,145:148]
+
+    
+    for i in xrange(1,121):
+        x = np.ma.masked_where(lkid != i, lkid)
+        if x.count() == 1 or x.count() == 0:
+            print i, x.count()
+    #lkid = np.ma.masked_where(~((lkid == 27)|(lkid == 28)) , lkid)
+
+    lkid = np.ma.masked_where(lkid <= 0, lkid)
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(
+        file_path=path,
+        lon1=-68, lat1=52, lon2=16.65, lat2=0
+    )
+    x,y = b(lons2d, lats2d)
+    img = b.pcolormesh(x,y,lkid,cmap = cm.get_cmap("jet", 100))
+    plt.colorbar(img, ticks = MultipleLocator(base = 10))
+    b.contour(x, y,tile, levels = xrange(48), colors = "k", linewidth = 0.5)
+    b.drawcoastlines(linewidth=0.5)
+
+    #plt.quiver(iv+0.5, jv+0.5, du2d, dv2d, scale = 30, width = 0.005, color="k", pivot="middle")
+    #plt.xlim(30, 70)
+    #plt.ylim(10,35)
+
+    plt.figure()
+    plt.pcolormesh(iv,jv,lkfr,cmap = cm.get_cmap("jet", 11))
+    plt.colorbar()
+    plt.xlim(155, 165)
+    plt.ylim(140,150)
+
+
+    
+
+    plt.figure()
+    d = np.ma.masked_all(dirs.shape)
+    d[dirs > 0] = np.log2(dirs[dirs > 0]) 
+    plt.pcolormesh(iv, jv, d,cmap = cm.get_cmap("jet", 8))
+    plt.xlim(155, 165)
+    plt.ylim(140,150)
+    plt.colorbar(ticks = MultipleLocator(base = 1))
+    plt.quiver(iv+0.5, jv+0.5, du2d, dv2d, scale = 4.5, width = 0.035, color="k", pivot="middle", units="inches")
+
+
+    plt.figure()
+    plt.title("Lake area")
+    plt.pcolormesh(iv, jv, np.ma.masked_where( larea < 1.0e8, np.log(larea) ),cmap = cm.get_cmap("jet", 8))
+    #plt.xlim(155, 165)
+    #plt.ylim(140,150)
+    print larea.min(), larea.max()
+    plt.colorbar(ticks = LinearLocator(numticks = 10))
+    #plt.quiver(iv+0.5, jv+0.5, du2d, dv2d, scale = 4.5, width = 0.035, color="k", pivot="middle", units="inches")
+
+
+
     plt.show()
 
     pass
 
 def read_directions():
-    path = "/home/huziy/skynet3_rech1/test/infocell.rpn"
-
+    #path = "/home/huziy/skynet3_exec1/from_guillimin/infocell.rpn"
+    path = "infocell_260x260.rpn"
 
     i_start = 20
     j_start = 20
@@ -205,7 +322,7 @@ def read_directions():
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    #main()
-    read_directions()
+    main()
+    #read_directions()
     print "Hello world"
   

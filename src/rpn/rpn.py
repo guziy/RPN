@@ -668,8 +668,8 @@ class RPN():
         data_type = self._current_info["data_type"]
         nbits = self._current_info["nbits"]
 
-        print("data_type = ", data_type)
-        print(nbits)
+        #print("data_type = ", data_type)
+        #print(nbits)
 
         #print data_type, nbits
         if nbits == 32:

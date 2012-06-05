@@ -1,5 +1,4 @@
-from datetime import timedelta
-from datetime import datetime
+from netCDF4 import num2date, Dataset
 from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import application_properties
@@ -8,6 +7,8 @@ from cru.temperature import CRUDataManager
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import colors
+import numpy as np
+from permafrost import draw_regions
 
 __author__ = 'huziy'
 
@@ -29,24 +30,74 @@ class SweDataManager(CRUDataManager):
         self.lons2d, self.lats2d = lons, lats
 
 
-
-
         time_units_s = nc_vars["time"].units
-
-        step_s, start_date_s = map(lambda x: x.strip(), time_units_s.split("since"))
-        print step_s, start_date_s
-
-        start_date = datetime.strptime(start_date_s, "%Y-%m-%d %H:%M:%S")
-        if step_s == "hours":
-            self.times = map(lambda x: start_date + timedelta(minutes = int( x * 60) ), times )
-        elif step_s == "days":
-            self.times = map(lambda x: start_date + timedelta(minutes = int(x * 60 * 24)), times )
-
-        print self.times[0]
-        print self.times[-1]
+        self.times = num2date(times, time_units_s)
         self.var_data = nc_vars[self.var_name][:]
 
+        print "SWE obs time limits: ", self.times[0], self.times[-1]
         pass
+
+    def get_mean_for_year_and_months(self, year, months = None):
+        bool_vector = np.array( map( lambda x: (x.year == year) and (x.month in months), self.times) )
+        return np.mean(self.var_data[bool_vector,:,:], axis = 0)
+
+
+    def save_period_means_to_file(self, months = None, year_range = xrange(1980,1997),
+                                  path="djf_swe_ross_brown.nc"):
+        ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
+        ds.createDimension('year', len(year_range))
+        ds.createDimension('lon', self.lons2d.shape[0])
+        ds.createDimension('lat', self.lons2d.shape[1])
+
+        lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+        latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+        yearVariable = ds.createVariable("year", "i4", ("year",))
+
+        altVariable = ds.createVariable("SWE", "f4", ('year','lon', 'lat'))
+        altVariable.units = "mm"
+
+
+        for i, the_year in enumerate(year_range):
+            altVariable[i,:,:] = self.get_mean_for_year_and_months(the_year, months=months)
+
+        lonVariable[:,:] = self.lons2d[:,:]
+        latVariable[:,:] = self.lats2d[:,:]
+        yearVariable[:] = year_range
+
+        ds.close()
+
+
+    def save_projected_means_to_file(self, months = None, year_range = xrange(1980,1997),
+                                      path="djf_swe_ross_brown_on_cordex.nc",
+                                      dest_lons2d = None, dest_lats2d = None):
+
+        ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
+        ds.createDimension('year', len(year_range))
+        ds.createDimension('lon', dest_lons2d.shape[0])
+        ds.createDimension('lat', dest_lons2d.shape[1])
+
+        lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+        latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+        yearVariable = ds.createVariable("year", "i4", ("year",))
+
+        altVariable = ds.createVariable("SWE", "f4", ('year','lon', 'lat'))
+        altVariable.units = "mm"
+
+
+        for i, the_year in enumerate(year_range):
+            data = self.get_mean_for_year_and_months(the_year, months=months)
+            altVariable[i,:,:] = self.interpolate_data_to(data, dest_lons2d, dest_lats2d, nneighbours=1)
+
+        lonVariable[:,:] = dest_lons2d[:,:]
+        latVariable[:,:] = dest_lats2d[:,:]
+        yearVariable[:] = year_range
+
+        ds.close()
+
+
+        pass
+
+
 
 def main():
     from permafrost import draw_regions
@@ -97,11 +148,15 @@ def main():
 
     pass
 
-
+def test1():
+    dm = SweDataManager(var_name="SWE")
+    b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
+    dm.save_projected_means_to_file(months=[12,1,2], dest_lons2d=lons2d, dest_lats2d=lats2d)
 
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    main()
+    #main()
+    test1()
     print "Hello world"
   

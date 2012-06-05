@@ -4,14 +4,14 @@ from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.spatial.kdtree import KDTree
 import application_properties
-from permafrost import draw_regions
+
 
 from util.geo import lat_lon
 
 __author__ = 'huziy'
 
 import numpy as np
-from netCDF4 import Dataset
+from netCDF4 import Dataset, num2date
 import matplotlib.pyplot as plt
 
 
@@ -33,18 +33,8 @@ class CRUDataManager:
 
         self.lons2d, self.lats2d = lons2d, lats2d
 
-        times = nc_vars["time"][:]
-        time_units_s = nc_vars["time"].units
-
-        step_s, start_date_s = map(lambda x: x.strip(), time_units_s.split("since"))
-
-        start_date = datetime.strptime(start_date_s, "%Y-%m-%d")
-        if step_s == "hours":
-            self.times = map(lambda x: start_date + timedelta(minutes = x * 60), times )
-        elif step_s == "days":
-            self.times = map(lambda x: start_date + timedelta(minutes = x * 60 * 24), times )
-
-
+        times = nc_vars["time"]
+        self.times = num2date(times[:], times.units, times.calendar)
         self.var_data = np.transpose( nc_vars[self.var_name][:], axes=(0,2,1))
 
 
@@ -63,6 +53,62 @@ class CRUDataManager:
         return np.mean(self.var_data[bool_vector, :, :], axis=0)
 
 
+    def get_daily_climatology(self, start_year, end_year, stamp_year = 2001):
+        """
+        returns a numpy array of shape (365, nx, ny) with daily climatological means
+        """
+        day = timedelta(days = 1)
+        the_date = datetime(stamp_year,1,1)
+        stamp_days = [the_date + i * day for i in xrange(365)]
+        result = []
+        for the_date in stamp_days:
+            bool_vector = np.array(map(lambda x: (x.day == the_date.day) and
+                                                 (x.month == the_date.month) and
+                                                 (x.year <= end_year) and (x.year >= start_year), self.times))
+            result.append(np.mean( self.var_data[bool_vector,:,:], axis=0))
+        return np.array(result)
+        pass
+
+    def get_thawing_index_from_climatology(self, daily_temps_clim, t0 = 0.0 ):
+
+        nt, nx, ny = daily_temps_clim.shape
+        result = np.zeros((nx, ny))
+
+        for t in xrange(nt):
+            tfield = daily_temps_clim[t,:,:]
+            result += tfield * np.array(tfield >= t0).astype(int)
+        return result
+
+
+        pass
+
+
+
+    def create_monthly_means_file(self, start_year, end_year):
+        fname = "{0}_monthly_means.nc".format(self.var_name)
+        year_range = range(start_year, end_year+1)
+        dsm = Dataset(fname, "w", format="NETCDF3_CLASSIC")
+        dsm.createDimension('year', len(year_range))
+        dsm.createDimension("month", 12)
+        dsm.createDimension('lon', self.lons2d.shape[0])
+        dsm.createDimension('lat', self.lons2d.shape[1])
+
+        lonVariable = dsm.createVariable('longitude', 'f4', ('lon', 'lat'))
+        latVariable = dsm.createVariable('latitude', 'f4', ('lon', 'lat'))
+        yearVariable = dsm.createVariable("year", "i4", ("year",))
+
+        variable = dsm.createVariable(self.var_name, "f4", ('year', "month" ,'lon', 'lat'))
+        for i, the_year in enumerate(year_range):
+            print the_year
+            for j, the_month in enumerate(xrange(1,13)):
+                variable[i,j,:,:] = self.get_mean(the_year, the_year, months=[the_month])
+
+        lonVariable[:] = self.lons2d
+        latVariable[:] = self.lats2d
+        yearVariable[:] = np.array(year_range)
+        dsm.close()
+
+        pass
 
     def interpolate_data_to(self, data_in, lons2d, lats2d, nneighbours = 4):
         """
@@ -95,6 +141,7 @@ class CRUDataManager:
 
 
 def main():
+    from permafrost import draw_regions
     dm = CRUDataManager()
 
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
@@ -134,8 +181,32 @@ def main():
 
     pass
 
+def create_monthly_means():
+    #tmp
+    #dm = CRUDataManager()
+    #dm.create_monthly_means_file(1901, 2009)
+
+    #pre
+    dm = CRUDataManager(path="data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.pre.dat.nc", var_name="pre")
+    dm.create_monthly_means_file(1901, 2009)
+
+
+
+def plot_thawing_index():
+    dm = CRUDataManager()
+    clim = dm.get_daily_climatology(1981, 2010)
+    thi = dm.get_thawing_index_from_climatology(clim)
+
+    plt.pcolormesh(thi.transpose())
+    plt.colorbar()
+    plt.show()
+
+
+
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    main()
+    plot_thawing_index()
+    #create_monthly_means()
+    #main()
     print "Hello world"
   

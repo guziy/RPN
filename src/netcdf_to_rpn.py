@@ -23,7 +23,7 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
                         'channel_length':'leng', 'accumulation_area':'facc',
                         "lake_fraction": "lkfr", "lake_outlet":"lkou"
                       }
-    rObj = RPN('infocell.rpn' , mode = 'w')
+    rObj = RPN('infocell_260x260.rpn' , mode = 'w')
 
     #
     ig = []
@@ -31,8 +31,8 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
     #params
     dx = 0.1
     dy = 0.1
-    iref = 100
-    jref = 100
+    iref = 142
+    jref = 122
     xref = 180 #rotated longitude
     yref = 0   #rotated latitude
 
@@ -43,8 +43,8 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
     lon2 = 16.65
     lat2 = 0.0
 
-    ni = 220
-    nj = 220
+    ni = 260
+    nj = 260
     x = np.zeros((ni, 1))
     x[:,0] = [xref + (i - iref + 1) * dx for i in xrange(ni)]
 
@@ -166,5 +166,5 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    convert(nc_path="directions_qc_dx0.1deg.nc")
+    convert(nc_path="directions_qc_dx0.1deg260x260.nc")
     print "Hello World"

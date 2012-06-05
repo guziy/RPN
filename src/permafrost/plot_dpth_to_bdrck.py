@@ -11,6 +11,16 @@ __author__ = 'huziy'
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+def get_depth_to_bedrock(path = "/home/huziy/skynet1_rech3/cordex/NorthAmerica_0.44deg_ERA40-Int_195801_static_data.rpn"):
+    #read depth to bedrock field
+    rObj = RPN(path)
+    dpth_to_bdrck = rObj.get_first_record_for_name("8L")
+    rObj.close()
+    return dpth_to_bdrck
+
+
 def main():
     path = "/home/huziy/skynet1_rech3/cordex/NorthAmerica_0.44deg_ERA40-Int_195801_static_data.rpn"
     sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1" #for coordinates
