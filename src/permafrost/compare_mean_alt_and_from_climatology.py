@@ -2,7 +2,9 @@ from netCDF4 import Dataset
 from descartes.patch import PolygonPatch
 from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
+from matplotlib.axis import Axis
 from matplotlib.colors import BoundaryNorm
+from matplotlib.dates import date2num, num2date
 from matplotlib.figure import Figure
 from matplotlib.font_manager import FontProperties
 from matplotlib.ticker import FuncFormatter
@@ -620,17 +622,20 @@ def plot_current_alts():
     end_year = 1996
 
     sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1"
+    coord_file = os.path.join(sim_data_folder, "pmNorthAmerica_0.44deg_ERA40-Int_B1_200812_moyenne")
+    #coord_file = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NA_1.0deg_soil_spinup2/pmNA_1.0deg_soil_spinup2_228006_moyenne"
 
     sim_names = ["ERA40", "MPI","CanESM"]
     simname_to_path = {
         #"ERA40": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/era40_driven_b1",
         "ERA40": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_ERA40-Int_old_snow_cond",
+        #"ERA40" : "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NA_1.0deg_soil_spinup2",
         "MPI": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1",
         "CanESM": "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_CanESM_B1"
 
     }
 
-    coord_file = os.path.join(sim_data_folder, "pmNorthAmerica_0.44deg_ERA40-Int_B1_200812_moyenne")
+
     basemap, lons2d, lats2d = draw_regions.get_basemap_and_coords(resolution="c",
         file_path = coord_file, llcrnrlat=45.0, llcrnrlon=-145, urcrnrlon=-20, urcrnrlat=74,
         anchor="W"
@@ -681,6 +686,8 @@ def plot_current_alts():
 
         assert isinstance(ax, Axes)
         hc = np.ma.masked_where(mask_cond | (hc0 < 0), hc0)
+        #hc = np.ma.masked_where( (hc0 < 0), hc0)
+        hc5 = np.ma.masked_where((hc0 <= 15) | hc.mask, hc)
         img = basemap.pcolormesh(x, y, hc, cmap = cmap, vmax = h_max, norm=norm)
         if not i:
             ax.set_title("ALT ({0} - {1}) \n".format(start_year, end_year))
@@ -689,18 +696,21 @@ def plot_current_alts():
         all_axes.append(ax)
         all_img.append(img)
         print np.ma.min(hc), np.ma.max(hc)
-        hc5 = np.ma.masked_where((hc0 <= 15) | hc.mask, hc)
-        print "Number of cells with alt > 5 is {0}, and the range is {1} ... {2}".format(hc5.count(), hc5.min(), hc5.max())
-        bdrck_field5 = np.ma.masked_where(hc5.mask, bdrck_field)
-        print "Bedrock ranges for those points: {0} ... {1}".format(bdrck_field5.min(), bdrck_field5.max())
+        #hc5 = np.ma.masked_where((hc0 <= 6) | hc.mask, hc)
+        #print "Number of cells with alt > 5 is {0}, and the range is {1} ... {2}".format(hc5.count(), hc5.min(), hc5.max())
+        #bdrck_field5 = np.ma.masked_where(hc5.mask, bdrck_field)
+        #print "Bedrock ranges for those points: {0} ... {1}".format(bdrck_field5.min(), bdrck_field5.max())
 
 
         ind = np.where(~hc5.mask)
         xs = ind[0]
         ys = ind[1]
 
-
+        all_months, all_temps = dm.get_monthly_mean_soiltemps(year_range=xrange(start_year,end_year+1))
+        all_months_ord = date2num(all_months)
         i = 0
+        mpl.rcParams['contour.negative_linestyle'] = 'solid'
+
         for the_i, the_j in zip(xs,ys):
             #plot profile
             plt.figure()
@@ -709,14 +719,46 @@ def plot_current_alts():
             plt.plot([0 , 0], [dm.level_heights[0], dm.level_heights[-1]], color = "k")
 
             x1, x2 = plt.xlim()
-            plt.plot( [x1, x2], [bdrck_field[the_i, the_j], bdrck_field[the_i, the_j]], color = "k", lw = 3 )
+            #plt.plot( [x1, x2], [bdrck_field[the_i, the_j], bdrck_field[the_i, the_j]], color = "k", lw = 3 )
+            #plt.title(str(i) + ", dpth_to_bedrock = {0} m".format(bdrck_field[the_i, the_j]))
             plt.title(str(i))
             plt.gca().invert_yaxis()
             plt.savefig("prof{0}.png".format(i))
             ax.annotate(str(i), (x[the_i, the_j], y[the_i, the_j]), font_properties =
                             FontProperties(size=10))
 
+
+            #plot vertical temp cross-section
+            plt.figure()
+            plt.title(str(i) + ", ({0} - {1})".format(start_year, end_year))
+
+            levs2d, times2d = np.meshgrid(dm.level_heights, all_months_ord)
+            clevs = [-25,-20,-10,-5,-1,0,1,5,10,20,25]
+            norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
+            cmap = cm.get_cmap("jet", len(clevs) - 1)
+
+            img = plt.contourf(times2d, levs2d, all_temps[:,the_i, the_j, :] - dm.T0, levels = clevs, cmap = cmap, norm = norm)
+            #plt.contour(times2d, levs2d, all_temps[:,the_i, the_j, :] - dm.T0, levels = clevs, colors = "k", linewidth = 1)
+            the_ax = plt.gca()
+            assert isinstance(the_ax, Axes)
+            the_ax.invert_yaxis()
+            the_ax.xaxis.set_major_formatter(FuncFormatter(
+                lambda x, pos: num2date(float(x)).strftime("%Y")
+            ))
+
+            print "i = {0}; lon, lat = {1}, {2}".format(i, lons2d[the_i, the_j], lats2d[the_i, the_j])
+
+            plt.colorbar(img, ticks = clevs)
+
+            plt.savefig("temp_section_{0}.png".format(i))
+
             i += 1
+
+        print  "lons = [{0}]".format(",".join(map( lambda x: str(x), lons2d[np.array(xs), np.array(ys)])))
+        print  "lats = [{0}]".format(",".join(map( lambda x: str(x), lats2d[np.array(xs), np.array(ys)])))
+
+
+
 
         plt.figure()
         alt_ranges = xrange(0,18)

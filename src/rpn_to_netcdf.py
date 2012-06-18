@@ -7,7 +7,7 @@ __date__ ="$Jul 25, 2011 4:56:03 PM$"
 import netCDF4 as nc
 import application_properties
 
-from rpn import RPN
+from rpn.rpn import RPN
 
 import os
 import numpy as np
@@ -61,13 +61,14 @@ def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
             extract_runoff_to_netcdf_file(filePath)
 
 
-def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa'):
+def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = ""):
     rpnFile = RPN(rpn_path)
     sandField = rpnFile.get_2D_field_on_all_levels('SAND')
     clayField = rpnFile.get_2D_field_on_all_levels('CLAY')
+    dpthField = rpnFile.get_first_record_for_name("8L")
     rpnFile.close()
 
-    ncFile = nc.Dataset('sand_clay_3d_na.nc', 'w', format = 'NETCDF3_CLASSIC')
+    ncFile = nc.Dataset(outpath, 'w', format = 'NETCDF3_CLASSIC')
 
     
     nx, ny = sandField[1].shape
@@ -78,6 +79,7 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa'):
 
     sand = np.zeros((nx, ny, nz))
     clay = np.zeros((nx, ny, nz))
+
 
     for i in xrange(nz):
         print i
@@ -93,9 +95,11 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa'):
 
     sandVar = ncFile.createVariable('SAND', 'f', ('lon','lat','level'))
     clayVar = ncFile.createVariable('CLAY', 'f', ('lon','lat','level'))
+    dpthVar = ncFile.createVariable('DPTH_TO_BEDROCK', 'f', ('lon','lat'))
 
     sandVar[:] = sand
     clayVar[:] = clay
+    dpthVar[:] = dpthField
     ncFile.close()
 
 
@@ -125,6 +129,9 @@ def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_rec
 if __name__ == "__main__":
     application_properties.set_current_directory()
 #    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
+    extract_sand_and_clay_from_rpn(rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
+        outpath="africa_0.44deg_sand_clay_dpth.nc"
+    )
 #    delete_files_with_nrecords()
-    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
+#    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
     print "Hello World"

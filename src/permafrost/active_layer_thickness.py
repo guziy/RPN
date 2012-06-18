@@ -30,6 +30,8 @@ class CRCMDataManager:
         self.file_prefix = file_prefix
         self._init_yearmonth_to_data_path()
         self.T0 = 273.15
+        #seasonally frozen ground depth limit for the point to be considered in permafrost region
+        self.sfg_depth_limit = 2.5
 
 
         layer_widths = [ 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
@@ -53,6 +55,7 @@ class CRCMDataManager:
 
 
 
+
     def get_alt_using_monthly_mean_climatology(self, year_range, temp_var_name = "I0"):
         """
         returns alt, as well as 3d fields of soiltemp_min and soiltemp_max
@@ -61,9 +64,31 @@ class CRCMDataManager:
         tc_max = np.max(tc, axis = 0)
         tc_min = np.min(tc, axis = 0)
 
+        year_range = list(year_range)
         print tc_max.min(), tc_max.max()
         #return self._get_alt(tc_max)
-        return self._get_alt_considering_min_temp(tc_max, tc_min) , tc_min, tc_max
+
+        alt = self._get_alt_considering_min_temp(tc_max, tc_min)
+        # reject SFG (seasonally frozen ground) regions
+        pf = -np.ones(alt.shape)
+        tmax_1 = self.get_Tmax_profiles_for_year_using_monthly_means(year_range[0], var_name="I0")
+        nz = tmax_1.shape[-1]
+        for y in year_range[1:]:
+            tmax_2 = self.get_Tmax_profiles_for_year_using_monthly_means(y, var_name="I0")
+            for z in xrange(nz):
+                if self.level_heights[z] > self.sfg_depth_limit:
+                    break
+
+                cond = (tmax_1[:,:,z] <= self.T0) & (tmax_2[:,:,z] <= self.T0)
+                if np.any(cond):
+                    pf[cond] = 1
+
+            tmax_1 = tmax_2
+
+        alt[ pf != 1 ] = -1
+
+
+        return  alt, tc_min, tc_max
 
     def get_soiltemp_climatology(self, year_range = None, temp_var_name = "I0"):
         """
@@ -121,6 +146,31 @@ class CRCMDataManager:
         return np.mean(all_data, axis=0)
 
         pass
+
+
+    def get_monthly_mean_soiltemps(self, year_range = xrange(1980,1997)):
+        """
+        returns a 2 lists with the first dimension of the same size: all_times[nt], all_data[nt, nx,ny,nz]
+         len(all_times) == all_data.shape[0]
+        """
+
+        all_data = []
+        all_times = []
+        for year in year_range:
+            for month in xrange(1,13):
+                key = (year, month)
+                if not self.yearmonth_to_data_path.has_key(key):
+                    print "Warning could not find data for month/year = {0}/{1}".format(month, year)
+                    return None, None
+                data_path = self.yearmonth_to_data_path[key]
+                times, temp = self._read_profiles_from_file(data_path, var_name="I0")
+                all_data.append(np.mean(temp, axis = 0))
+                all_times.append(datetime(year, month,1))
+        return all_times, np.array(all_data)
+
+
+        pass
+
 
     def _get_monthly_mean_soiltemp(self, year, month, var_name = "I0"):
         """

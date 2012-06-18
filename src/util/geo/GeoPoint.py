@@ -7,9 +7,9 @@ from math import *
 
 
 class GeoPoint(object):
-    '''
+    """
     Represents geographical point of (lon, lat)
-    '''
+    """
     def __init__(self, longitude = 0.0, latitude = 0.0):
         self.longitude = float( longitude )
         self.latitude = float( latitude )

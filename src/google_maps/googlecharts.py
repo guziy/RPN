@@ -12,7 +12,7 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
                                        title = "Water levels in meters",
                                        icon_color = "ffffccee",
                                        icon_link = "http://dl.dropbox.com/u/4629759/blue-L.png",
-                                       data_url_format = ""
+                                       data_url_format = "", plot_daily_normals = False, plot_monthly_normals = False
                                        ):
     stations = cehq_station.read_station_data(folder=data_path)
 
@@ -22,34 +22,40 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
 
     for s in stations:
         assert isinstance(s, cehq_station.Station)
-
-        values_monthly = s.get_monthly_normals()
-        times, values_daily = s.get_daily_normals()
-        if values_monthly is None: continue # skip stations with incomplete data
-        if values_daily is None: continue
+        print s.id
 
 
         ##Monthly normals
-        low = min(values_monthly)
-        up = max(values_monthly)
-        xy_monthly = Line((values_monthly - low) / (up - low) * 100.0)
-        xy_monthly.axes.type("xyx")
-        xy_monthly.size(width, height)
+        if plot_monthly_normals:
+            values_monthly = s.get_monthly_normals()
+            if values_monthly is None:
+                print "Skipping {0} since the data series is not continuous enough".format(s.id)
+                continue # skip stations with incomplete data
+            low = min(values_monthly)
+            up = max(values_monthly)
+            xy_monthly = Line((values_monthly - low) / (up - low) * 100.0)
+            xy_monthly.axes.type("xyx")
+            xy_monthly.size(width, height)
 
-        xy_monthly.axes.range(0, 1,12)
-        xy_monthly.axes.range(1, low, up)
-        xy_monthly.axes.label(2, None, "Month")
+            xy_monthly.axes.range(0, 1,12)
+            xy_monthly.axes.range(1, low, up)
+            xy_monthly.axes.label(2, None, "Month")
 
         #Daily normals
-        low = min(values_daily)
-        up = max(values_daily)
-        xy_daily = Line((values_daily - low) / (up - low) * 100.0)
-        xy_daily.axes.type("xyx")
-        xy_daily.size(width, height)
+        if plot_daily_normals:
+            times, values_daily = s.get_daily_normals()
+            if values_daily is None:
+                print "Skipping {0} since the data series is not continuous enough".format(s.id)
+                continue
+            low = min(values_daily)
+            up = max(values_daily)
+            xy_daily = Line((values_daily - low) / (up - low) * 100.0)
+            xy_daily.axes.type("xyx")
+            xy_daily.size(width, height)
 
-        xy_daily.axes.range(0, 1,365)
-        xy_daily.axes.range(1, low, up)
-        xy_daily.axes.label(2, None, "Day")
+            xy_daily.axes.range(0, 1,365)
+            xy_daily.axes.range(1, low, up)
+            xy_daily.axes.label(2, None, "Day")
 
 
 
@@ -73,8 +79,6 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
             <![CDATA[\n
             <p> <b> %s </b>  </p>
             <p> Flow acc. area is %.1f km<sup>2<sup> </p>
-            <p><img src="%s" width=%d height=%d/> </p>
-            <p><img src="%s" width=%d height=%d/> </p>
             ]]>\n
             </description>\n
 
@@ -83,8 +87,7 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
             </Point>\n
             </Placemark>\n"""
         ) % ( s.id, icon_color, icon_link, title, s.drainage_km2,
-              xy_monthly.url, width, height,
-              xy_daily.url, width, height, s.longitude, s.latitude)
+               s.longitude, s.latitude)
 
         kmlBody += kml
 

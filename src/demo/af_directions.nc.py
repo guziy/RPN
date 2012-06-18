@@ -19,8 +19,8 @@ def main():
     s_lats = [16.26,11.88,14.9,13.91,10.57,6.2,15.61,19.18,-14.02,-21.13,-4.26,4.97,-28.71,-28.69]
 
     assert len(s_lons) == len(s_lats)
-    path = "data/directions_Africa_Bessam_0.44/infocell_Africa.nc"
-
+    #path = "data/directions_Africa_Bessam_0.44/infocell_Africa.nc"
+    path = "/home/huziy/skynet3_exec1/for_offline_routing/infocell_af_0.44deg.nc"
     ds = Dataset(path)
 
     dirs = ds.variables["flow_direction_value"][:]

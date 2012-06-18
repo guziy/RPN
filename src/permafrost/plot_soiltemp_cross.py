@@ -1,5 +1,6 @@
 import os
 from matplotlib.colors import BoundaryNorm
+from matplotlib.dates import date2num, num2date
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 from mpl_toolkits.basemap import Basemap
 from scipy.spatial.kdtree import KDTree
@@ -25,8 +26,8 @@ def get_flat_index(lon, lat, the_kd_tree ):
 def main_for_spinup():
         #dm = CRCMDataManager(data_folder="/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_ERA40-Int_old_snow_cond")
     dm = CRCMDataManager(data_folder="/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NA_1.0deg_soil_spinup2")
-    start_year = 1981
-    end_year = 2256
+    start_year = 2056
+    end_year = 2156
     T0 = 273.15
 
     sim_data_folder = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NA_1.0deg_soil_spinup2" #for coordinates
@@ -53,64 +54,71 @@ def main_for_spinup():
     the_kd_tree = KDTree(zip(x, y, z))
     lon_p = -107-13.0/60.0 #-96.65
     lat_p = 26.0 + 10.0/60.0#29.75
-    flat_idx = get_flat_index(lon_p, lat_p, the_kd_tree = the_kd_tree)
+
 
 
 
     levels = dm.level_heights
 
     years = xrange(start_year, end_year + 1)
-    dt1 = np.zeros((len(years), len(levels)))
-    t1 = np.zeros((len(years), len(levels)))
-    t3d_prev = None
-    for iy, y in enumerate(years):
-        print y
-        t3d = dm.get_annual_mean_3d_field(var_name="I0", year=y)
-        if t3d_prev is None:
-            dt1[iy, :] = 0.0
-        else:
-            dt3d_cur = t3d - t3d_prev
-            for ilev, lev in enumerate(levels):
-                dt1[iy, ilev] = np.abs(dt3d_cur[:,:,ilev].flatten()[flat_idx])
 
-        for ilev, lev in enumerate(levels):
-            t1[iy, ilev] =t3d[:,:,ilev].flatten()[flat_idx] - T0
+    all_months, t4d = dm.get_monthly_mean_soiltemps(year_range=years)
+    t4d -= T0
+    levs2d, all_months_2d = np.meshgrid(levels, date2num(all_months))
 
-        t3d_prev = t3d[:,:,:]
+    dt4d = np.zeros(t4d.shape)
+    dt4d[1:,:,:,:] = np.abs( t4d[1:,:,:,:] - t4d[:-1,:,:,:] )
 
 
-    #t1 = np.mean( np.mean(t3ds, axis = 1), axis = 1 )
 
-    print t1.min(), t1.max()
-    levs2d, y2d = np.meshgrid(levels, years)
 
-    plt.figure()
-    clevs = [0, 0.001, 0.01,0.02,0.03,0.1,0.2,0.3,0.4,0.8,1,2,3]
-    norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
-    cmap = cm.get_cmap("jet", len(clevs) - 1)
-    plt.contourf(y2d, levs2d, dt1, levels = clevs, cmap = cmap, norm = norm)
-    plt.colorbar(ticks = clevs, norm = norm)
-    #plt.xticks(years)
-    #plt.yticks(levels)
-    ax = plt.gca()
-    ax.invert_yaxis()
-    ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
-    ax.set_title("Differences")
-    plt.savefig("cross_spinup_diffs.png")
+    ids = xrange(10)
+    lons_p = [-124.306,-116.205,-112.291,-110.215,-87.881,-87.7899,-87.6967,-86.2741,-86.1661,-85.5195]
+    lats_p = [60.2532,61.9556,61.483,60.7783,54.8701,55.307,55.7438,55.1947,55.6304,55.1322]
 
-    plt.figure()
-    clevs = [15,16,17,18, 19,20, 21, 22, 25]
-    norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
-    cmap = cm.get_cmap("jet", len(clevs) - 1)
-    plt.contourf(y2d, levs2d, t1, levels = clevs, cmap = cmap, norm = norm)
-    plt.colorbar(ticks = clevs, norm = norm)
-    #plt.xticks(years)
-    #plt.yticks(levels)
-    ax = plt.gca()
-    ax.invert_yaxis()
-    ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
-    ax.set_title("Values")
-    plt.savefig("cross_spinup_vals.png")
+    for the_i, lon_p, lat_p in zip(ids, lons_p, lats_p):
+        flat_idx = get_flat_index(lon_p, lat_p, the_kd_tree = the_kd_tree)
+
+        ind = np.where( (lons2d == lons2d.flatten()[flat_idx]) & (lats2d == lats2d.flatten()[flat_idx]))
+
+        ix = ind[0][0]
+        jy = ind[1][0]
+
+        t1 = t4d[:,ix, jy,:]
+        dt1 = dt4d[:,ix, jy, :]
+
+
+        plt.figure()
+        clevs = [0, 0.001, 0.01,0.02,0.03,0.1,0.2,0.3,0.4,0.8,1,2,3,4,5,6,7,8, 10, 15]
+        norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
+        cmap = cm.get_cmap("jet", len(clevs) - 1)
+        plt.contourf(all_months_2d, levs2d, dt1, levels = clevs, cmap = cmap, norm = norm)
+        plt.colorbar(ticks = clevs, norm = norm)
+        #plt.xticks(years)
+        #plt.yticks(levels)
+        ax = plt.gca()
+        ax.invert_yaxis()
+        ax.xaxis.set_major_formatter(FuncFormatter(
+            lambda x, pos: num2date(float(x)).strftime("%Y")
+        ))
+        ax.set_title("Differences, {0}, {1}-{2}".format(the_i, start_year, end_year))
+        plt.savefig("cross_spinup_diffs_{0}.png".format(the_i))
+
+        plt.figure()
+        clevs = [-25,-20,-10,-5,-1,0,1,5,10,20,25]
+        norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
+        cmap = cm.get_cmap("jet", len(clevs) - 1)
+        plt.contourf(all_months_2d, levs2d, t1, levels = clevs, cmap = cmap, norm = norm)
+        plt.colorbar(ticks = clevs, norm = norm)
+        #plt.xticks(years)
+        #plt.yticks(levels)
+        ax = plt.gca()
+        ax.invert_yaxis()
+        ax.xaxis.set_major_formatter(FuncFormatter(
+            lambda x, pos: num2date(float(x)).strftime("%Y")
+        ))
+        ax.set_title("Values, {0}, {1}-{2}".format(the_i, start_year, end_year))
+        plt.savefig("cross_spinup_vals_{0}.png".format(the_i))
 
 
     #show point pos
@@ -208,7 +216,7 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
 
 
-    main()
-    #main_for_spinup()
+    #main()
+    main_for_spinup()
     print "Hello world"
   

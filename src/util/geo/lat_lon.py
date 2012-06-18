@@ -18,14 +18,15 @@ def get_distance_in_meters(*arg):
     arg = point1, point2
     arg = lon1, lat1, lon2, lat2
     """
-    if len(arg) == 2: #if we have 2 geoppoints as an argument
+    if len(arg) == 2: #if we have 2 geopoints as an argument
         [p1, p2] = arg
         n1 = p1.get_nvector()
         n2 = p2.get_nvector()
     elif len(arg) == 4: #if we have the coordinates of two points in degrees
-        [lon1, lat1, lon2, lat2] = np.radians(arg)
-        n1 = get_nvector(lon1, lat1)
-        n2 = get_nvector(lon2, lat2)
+        print arg
+        x = np.radians(arg)
+        n1 = get_nvector(x[0], x[1])
+        n2 = get_nvector(x[2], x[3])
     else:
         raise Exception("get_distance_in_meters should be 2 or 4 parameters.")
     return EARTH_RADIUS_METERS * get_angle_between_vectors(n1, n2)

@@ -18,6 +18,15 @@ class TimeSeries:
         self.stamp_day_dates = None
         pass
 
+    def get_data_for_dates(self, the_dates):
+        """
+        Used to select data for the same dates as for obsevations
+        """
+        the_dict = dict(zip(self.time, self.data))
+        return map(lambda x: the_dict[x], the_dates)
+
+
+
     def get_mean(self, months = xrange(1,13)):
         """
         returns mean over the months speciifed in the
@@ -70,8 +79,7 @@ class TimeSeries:
         for stamp_day in year_dates:
             bool_vector = map(lambda x: x.day == stamp_day.day and
                                         x.month == stamp_day.month and
-                                        x >= start_date and
-                                        x <= end_date, self.time)
+                                        start_date <= x <= end_date, self.time)
 
             indices = np.where( bool_vector )[0]
             daily_means.append(np.array(self.data)[indices].mean())

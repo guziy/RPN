@@ -1,12 +1,13 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import itertools
-from matplotlib import gridspec
+from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
-from matplotlib.dates import DateFormatter, DateLocator, MonthLocator
+from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import LinearLocator
-from mpl_toolkits.basemap import Basemap, maskoceans
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from mpl_toolkits.basemap import Basemap
 from numpy.lib.function_base import meshgrid
 from scipy.spatial.kdtree import KDTree
 import application_properties
@@ -63,6 +64,18 @@ class Crcm5ModelDataManager:
 
 
 
+    def get_streamflow_timeseries_for_station(self, station, start_date = None, end_date = None, d_max_km = 20.0):
+        """
+        get timeseries but find model point for comparison using the following objectie function
+        :type station: data.cehq_station.Station
+        :rtype: data.timeseries.Timeseries
+        """
+
+
+
+        pass
+
+
     def get_streamflow_timeseries_for_station(self, station,
                                     start_date = None, end_date = None
                                           ):
@@ -74,14 +87,14 @@ class Crcm5ModelDataManager:
         lon, lat = station.longitude, station.latitude
         x0 = lat_lon.lon_lat_to_cartesian(lon, lat)
 
-        [distances, indices] = self.kdtree.query(x0, k = 8)
+        [distances, indices] = self.kdtree.query(x0, k = 20)
 
         acc_area_1d = self.accumulation_area_km2.flatten()
 
         da_diff = np.abs( acc_area_1d[indices] - station.drainage_km2) / station.drainage_km2
 
         max_dist = np.max(distances)
-        obj_func = da_diff + distances / max_dist
+        obj_func = 8 * da_diff / np.max(da_diff) + distances / max_dist
 
         min_obj_func = np.min(obj_func)
         index_of_sel_index = np.where(min_obj_func == obj_func)
@@ -94,7 +107,7 @@ class Crcm5ModelDataManager:
         restored = np.reshape(acc_area_1d, self.accumulation_area_km2.shape)
         [i, j] = np.where(restored >= 0)
 
-        ts = self._get_timeseries_for_point(i,j, start_date = start_date,
+        ts = self.get_timeseries_for_point(i,j, start_date = start_date,
                         end_date = end_date)
 
         ts.metadata["acc_area_km2"] = acc_area_1d[select_index]
@@ -170,7 +183,7 @@ class Crcm5ModelDataManager:
         return min(all_years), max(all_years)
 
 
-    def _get_timeseries_for_point(self, ix, iy,
+    def get_timeseries_for_point(self, ix, iy,
                             start_date = None, end_date = None,
                             var_name = None, weight = 1):
         """
@@ -214,6 +227,7 @@ class Crcm5ModelDataManager:
             dv.append(DateValuePair(date = time, value = value))
 
         dv.sort(key= lambda x: x.date)
+        print "datei = {0}, datef = {1}".format(dv[0].date, dv[-1].date)
         return TimeSeries(data = map(lambda x: x.value, dv),
                           time = map(lambda x: x.date, dv) )
 
@@ -251,6 +265,13 @@ class Crcm5ModelDataManager:
             result[m] = []
 
 
+
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                fPath = os.path.join(self.samples_folder, fName)
+                pass
+
+
         for the_year in xrange(start_year, end_year + 1):
             for the_month in months:
                 folder_name = self.month_folder_name_format % (self._month_folder_prefix, the_year, the_month)
@@ -282,6 +303,34 @@ class Crcm5ModelDataManager:
 
 
 
+    def get_monthly_climatology(self, varname =  "STFL"):
+        time_series = {}
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                fPath = os.path.join(self.samples_folder, fName)
+                rpnObj = RPN(fPath)
+                date_to_field = rpnObj.get_all_time_records_for_name(varname=varname)
+                time_series.update(date_to_field)
+
+        result = []
+        for month in xrange(1,13):
+            sel_dates = itertools.ifilter(lambda x: x.month == month, time_series.keys())
+            sel_values = map(lambda x: time_series[x], sel_dates)
+            result.append(np.array(sel_values).mean(axis = 0))
+
+        return result
+
+
+    def get_mean_in_time(self, var_name = "STFL"):
+        all_fields = []
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                fPath = os.path.join(self.samples_folder, fName)
+                rpnObj = RPN(fPath)
+                all_fields.extend( rpnObj.get_all_time_records_for_name(varname = var_name).values())
+        return np.mean(all_fields, axis=0)
+
+
     def _read_static_data(self, derive_from_data = True):
         """
          get drainage area fields
@@ -301,6 +350,8 @@ class Crcm5ModelDataManager:
             self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
             self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
             self.lake_fraction = rpnObj.get_first_record_for_name("LF1")
+
+            #self.cbf = rpnObj.get_first_record_for_name("CBF")
             rpnObj.close()
             #self.slope = rpnObj.get_first_record_for_name("SLOP")
             return
@@ -323,6 +374,7 @@ class Crcm5ModelDataManager:
             rpnObj = RPN(file_path)
             self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
             self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
+            self.slope = rpnObj.get_first_record_for_name("SLOP")
             rpnObj.close()
             #self.slope = rpnObj.get_first_record_for_name("SLOP")
             return
@@ -339,7 +391,7 @@ class Crcm5ModelDataManager:
 
         pass
 
-    def get_timeseries_for_station(self, var_name = "", station = None, nneighbours = 1):
+    def get_timeseries_for_station(self, var_name = "", station = None, nneighbours = 1, start_date = None, end_date = None):
         """
         :rtype:  TimeSeries
         """
@@ -352,6 +404,9 @@ class Crcm5ModelDataManager:
 
         all_ts = []
 
+        if nneighbours == 1:
+            indices = [indices]
+
         lf_norm = 0.0
         for the_index in indices:
             ix, jy = self._flat_index_to_2d(the_index)
@@ -362,16 +417,84 @@ class Crcm5ModelDataManager:
         for the_index in indices:
             ix, jy = self._flat_index_to_2d(the_index)
             if self.lake_fraction[ix, jy] <= 0.01: continue
-            ts = self._get_timeseries_for_point(ix, jy, var_name=var_name,
-                weight=self.lake_fraction[ix, jy] / lf_norm)
+            ts = self.get_timeseries_for_point(ix, jy, var_name=var_name,
+                weight=self.lake_fraction[ix, jy] / lf_norm, start_date=start_date,
+                end_date=end_date
+            )
             all_ts.append(ts)
 
-        return all_ts if nneighbours > 1 else all_ts[0]
+        return all_ts
+
+
+
+def test_seasonal_mean():
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
+    manager = Crcm5ModelDataManager(samples_folder_path=data_path, all_files_in_samples_folder=True
+
+    )
+
+
+    gs = gridspec.GridSpec(4,3)
+
+    basemap = Basemap(projection="omerc", no_rot=True, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0,
+        llcrnrlon=manager.lons2D[0, 0], llcrnrlat=manager.lats2D[0, 0],
+        urcrnrlon=manager.lons2D[-1, -1], urcrnrlat=manager.lats2D[-1, -1],
+        resolution="l"
+    )
+
+    [x, y] = basemap(manager.lons2D, manager.lats2D)
+
+    colormap = cm.get_cmap("Blues") #my_colormaps.get_red_blue_colormap(10)
+
+    month_clim = manager.get_monthly_climatology(varname="STFL")
+    the_mean = np.mean(month_clim, axis=0)
+    cond = the_mean > 25
+    for i, field in enumerate(month_clim):
+        #ax = fig.add_subplot(gs[i // 3, i % 3])
+        fig = plt.figure()
+        ax = fig.gca()
+        d = datetime(2000,i+1,1)
+        ax.set_title(d.strftime("%B"))
+
+        data = np.ma.masked_all(the_mean.shape)
+        data[cond] = (field[cond] - the_mean[cond]) / the_mean[cond] * 100.0
+        #data = np.ma.masked_where( ~cond, data )
+        print np.ma.min(data), np.ma.max(data)
+        #data = np.ma.log(data)
+        img = basemap.pcolormesh(x, y, data, ax = ax,
+                    vmax = 100.0, vmin = -100, cmap = colormap)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", "5%", pad="3%")
+        plt.colorbar(img, ax = ax, cax = cax, extend = "both")
+        basemap.drawcoastlines(linewidth=0.5, ax = ax)
+        plt.savefig("season_{0:02d}.png".format(d.month))
+        pass
+
+
+    #plt.pcolormesh(manager.get_monthly_mean_fields(months = [6])[6].transpose())
+
+
+    #get ocean mask
+    #lons2D = manager.lons2D[:,:]
+    #lons2D[lons2D >= 180] -= 360.0
+    #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
+
+
+    #data = np.ma.masked_where(data < 0.1, data)
+
+
+    plt.savefig("mean_clim.png")
+    pass
 
 
 def test_mean():
     plt.figure()
-    manager = Crcm5ModelDataManager()
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
+    manager = Crcm5ModelDataManager(samples_folder_path=data_path,all_files_in_samples_folder=True
+
+    )
 
 
     #plt.pcolormesh(manager.get_monthly_mean_fields(months = [6])[6].transpose())
@@ -383,15 +506,14 @@ def test_mean():
     )
 
     [x, y] = basemap(manager.lons2D, manager.lats2D)
-    #data = manager.get_monthly_mean_fields(months=[6])[6]
-    data = np.log( manager.accumulation_area_km2 )
+    data = manager.get_mean_in_time(var_name="STFL")
 
     #get ocean mask
     #lons2D = manager.lons2D[:,:]
     #lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
-    data = np.ma.masked_where(manager.slope == -1, data)
+    data = np.ma.masked_where( (data < 50), data)
 
     #data = np.ma.masked_where(data < 0.1, data)
     basemap.pcolormesh(x, y, data)
@@ -403,15 +525,28 @@ def test_mean():
 
 
 def compare_lake_levels():
-    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/vary_lake_level1",
+    #lake level controlled only with evaporation and precipitation
+    data_path = "data/from_guillimin/vary_lake_level1"
+
+    #lake level controlled only by routing
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
+
+    selected_ids = [
+        "093807", "011508", "061303", "061304", "040408", "030247"
+    ]
+
+    coord_file = os.path.join(data_path, "pm1985010100_00000000p")
+
+
+    manager = Crcm5ModelDataManager(samples_folder_path=data_path,
             file_name_prefix="pm", all_files_in_samples_folder=True, var_name="CLDP"
     )
 
-    start_date = datetime(1985, 1, 1)
-    end_date = datetime(1990, 12, 31)
+    start_date = datetime(1987, 1, 1)
+    end_date = datetime(1987, 12, 31)
 
     stations = cehq_station.read_station_data( folder="data/cehq_levels",
-            start_date=start_date, end_date=end_date
+            start_date=start_date, end_date=end_date, selected_ids=selected_ids
     )
 
     plot_utils.apply_plot_params(width_pt=None, height_cm =30.0, width_cm=16, font_size=10)
@@ -434,12 +569,16 @@ def compare_lake_levels():
 
 
         assert isinstance(s, Station)
-        mod_ts_all = manager.get_timeseries_for_station(var_name = "CLDP", station=s, nneighbours=2)
+        mod_ts_all = manager.get_timeseries_for_station(var_name = "CLDP", station=s, nneighbours=1,
+            start_date = start_date, end_date= end_date
+        )
         if mod_ts_all is None: #means model does not see lakes in the vicinity
             continue
         print(s.id,":",s.get_timeseries_length())
 
         mod_normals_all = []
+
+
 
         for mod_ts in mod_ts_all:
             mod_day_dates, mod_normals = mod_ts.get_daily_normals(start_date=start_date, end_date=end_date, stamp_year=2001)
@@ -459,8 +598,16 @@ def compare_lake_levels():
         ax = fig.add_subplot(gs[r, c])
         assert isinstance(ax, Axes)
         print len(mod_normals), len(sta_day_dates)
-        h_m = ax.plot(sta_day_dates, mod_normals, "b", label = "model", lw = 3)
-        h_s = ax.plot(sta_day_dates, sta_normals, "r", label = "station", lw = 3)
+        #normals
+        #h_m = ax.plot(sta_day_dates, mod_normals - np.mean(mod_normals) , "b", label = "model", lw = 3)
+        #h_s = ax.plot(sta_day_dates, sta_normals - np.mean(sta_normals), "r", label = "station", lw = 3)
+
+        #instantaneous values
+        h_m = ax.plot(mod_ts_all[0].time, mod_ts_all[0].data - np.mean(mod_ts_all[0].data) , "b", label = "model", lw = 3)
+        h_s = ax.plot(s.dates, s.values - np.mean(s.values), "r", label = "station", lw = 1)
+
+
+
         ax.set_title(s.id + "({0:.3f}, {1:.3f})".format(s.longitude, s.latitude))
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
         ax.xaxis.set_major_locator(MonthLocator(bymonthday=15, interval=2))
@@ -473,7 +620,7 @@ def compare_lake_levels():
 
     ax = fig.add_subplot(gs[(r+1):,:])
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords(
-        file_path="data/from_guillimin/vary_lake_level1/pm1985010100_00000000p",
+        file_path=coord_file,
         lon1=-68, lat1=52, lon2=16.65, lat2=0
     )
     b.drawcoastlines()
@@ -499,14 +646,18 @@ def compare_lake_levels():
 
 
 def compare_streamflow():
-    manager = Crcm5ModelDataManager(samples_folder_path="data/from_guillimin/vary_lake_level1",
+    #lake level controlled only by routing
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off"
+    coord_file = os.path.join(data_path, "pm1985050100_00000000p")
+
+    manager = Crcm5ModelDataManager(samples_folder_path=data_path,
             file_name_prefix="pm", all_files_in_samples_folder=True
     )
     selected_ids = ["104001", "103715", "093806", "093801", "092715",
                     "081006", "061502", "040830", "080718"]
 
-    start_date = datetime(1985, 1, 1)
-    end_date = datetime(1990, 12, 31)
+    start_date = datetime(1986, 1, 1)
+    end_date = datetime(1989, 12, 31)
 
     stations = cehq_station.read_station_data(selected_ids = selected_ids,
             start_date=start_date, end_date=end_date
@@ -520,30 +671,47 @@ def compare_streamflow():
 
     stations.sort(key=lambda x: x.latitude, reverse=True)
 
+
     for i, s in enumerate(stations):
         model_ts = manager.get_streamflow_timeseries_for_station(s, start_date = start_date, end_date = end_date)
         ax = fig.add_subplot( gs[i // 2, i % 2] )
 
-        [t, m_data] = model_ts.get_daily_normals()
 
 
-        [t, s_data] = s.get_daily_normals()
+        assert isinstance(model_ts, TimeSeries)
 
-        assert len(s_data) == len(m_data)
 
-        line_model = ax.plot(t, m_data, label = "Model (CRCM5)", lw = 3, color = "b")
-        line_obs = ax.plot(t, s_data, label = "Observation", lw = 3, color = "r")
 
-        ax.set_title("%s: drs=%.2f,drm=%.2f" % (s.id, s.drainage_km2,
-                                                      model_ts.metadata["acc_area_km2"]))
 
-        ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonthday=15, bymonth=xrange(1,13,2)))
+
+
+        #[t, m_data] = model_ts.get_daily_normals()
+        #[t, s_data] = s.get_daily_normals()
+
+        assert isinstance(s, Station)
+
+        #climatologies
+        #line_model = ax.plot(t, m_data, label = "Model (CRCM5)", lw = 3, color = "b")
+        #line_obs = ax.plot(t, s_data, label = "Observation", lw = 3, color = "r")
+
+
+        mod_vals = model_ts.get_data_for_dates(s.dates)
+        line_model = ax.plot(s.dates, mod_vals, label = "Model (CRCM5)", lw = 1, color = "b")
+        line_obs = ax.plot(s.dates, s.values, label = "Observation", lw = 3, color = "r", alpha = 0.5)
+
+        ax.annotate( "r = {0:.2f}".format( float( np.corrcoef([mod_vals, s.values])[0,1] )), xy = (0.7,0.8), xycoords= "axes fraction")
+
+
+        ax.set_title("%s: da_diff=%.2f %%" % (s.id, (-s.drainage_km2+
+                                                      model_ts.metadata["acc_area_km2"]) / s.drainage_km2 * 100.0))
+
+        ax.xaxis.set_major_formatter(DateFormatter("%Y"))
+        ax.xaxis.set_major_locator(YearLocator())
 
     lines = (line_model, line_obs)
     labels = ("Model (CRCM5)", "Observation" )
     fig.legend(lines, labels)
-    fig.savefig("performance.png")
+    fig.savefig("performance_without_lakes.png")
 
     pass
 
@@ -583,13 +751,21 @@ def draw_drainage_area():
 
 
 def main():
+    plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=30)
     #draw_drainage_area()
-    #compare_streamflow()
-    compare_lake_levels()
-    #test_mean()
+    compare_streamflow()
+    #compare_lake_levels()
+    #
+    # test_mean()
+    plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=20)
+    #plot_utils.apply_plot_params(width_pt=None, height_cm=50, width_cm=50)
+    #test_seasonal_mean()
     pass
 
 if __name__ == "__main__":
+    import locale
+    locale.setlocale(locale.LC_ALL, '')
+
     application_properties.set_current_directory()
     main()
     print "Hello world"

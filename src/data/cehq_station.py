@@ -350,6 +350,8 @@ def print_info_of(station_ids):
         s.parse_from_cehq(path)
         print s.info()
     
+def _get_station_for_id(the_id, st_list):
+    return itertools.ifilter(lambda x: x.id == the_id, st_list).next()
 
 def read_station_data(folder = 'data/cehq_measure_data',
                       only_natural = True,
@@ -395,6 +397,8 @@ def read_station_data(folder = 'data/cehq_measure_data',
                 stations.append(s)
 
 
+    if selected_ids is not None:
+        stations = map(lambda x: _get_station_for_id(x, stations), selected_ids)
     return stations
 
 
