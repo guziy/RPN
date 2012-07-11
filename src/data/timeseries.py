@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 __author__ = 'huziy'
 
@@ -26,6 +26,39 @@ class TimeSeries:
         return map(lambda x: the_dict[x], the_dates)
 
 
+    def get_ts_of_dt_means(self, dt = timedelta(days = 1)):
+        #TODO: implement
+        pass
+
+    def get_ts_of_daily_means(self):
+        """
+        returns Timeseries obt containing daily means
+        """
+        day = timedelta(days = 1)
+
+        new_times = []
+        new_data = []
+        t0 = self.time[0]
+        t0 = datetime(t0.year, t0.month, t0.day)
+
+        self.data = np.array(self.data)
+        while t0 <= self.time[-1]:
+            bool_vector = np.array( map(lambda x: (x.day == t0.day) and
+                                                  (x.month == t0.month) and
+                                                  (x.year == t0.year), self.time) )
+
+
+            assert np.any(bool_vector), t0
+            new_times.append(t0)
+            new_data.append(np.mean(self.data[bool_vector]))
+            t0 += day
+
+        print "initial data = from {0} to {1}".format(min(self.data), max(self.data))
+        print "daily means = from {0} to {1}".format(min(new_data), max(new_data))
+        ts = TimeSeries(data=np.array(new_data), time=new_times)
+        ts.metadata = self.metadata
+        return ts
+        pass
 
     def get_mean(self, months = xrange(1,13)):
         """

@@ -1,4 +1,5 @@
 from netCDF4 import Dataset
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 import application_properties
 
@@ -24,6 +25,8 @@ def main():
     ds = Dataset(path)
 
     dirs = ds.variables["flow_direction_value"][:]
+    acc_area = ds.variables["accumulation_area"][:]
+
     lons2d = ds.variables["lon"][:]
     lats2d = ds.variables["lat"][:]
 
@@ -71,20 +74,30 @@ def main():
     du_2d[dirs > 0] = du
     dv_2d[dirs > 0] = dv
 
+    acc_area = np.ma.masked_where(acc_area < 0, acc_area)
+    img = b.pcolormesh(x, y, np.ma.log(acc_area))
+
+    ax = plt.gca()
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "5%", pad="3%")
+
+    plt.colorbar(img, cax = cax)
     b.quiver(x, y, du_2d, dv_2d , scale = 25,
         width = 0.004,
-         pivot = "middle", zorder = 5, units="inches")
+         pivot = "middle", units="inches", zorder = 5, ax= ax)
 
 
     x1, y1 = b(s_lons, s_lats)
-    b.scatter(x1, y1, c="r", linewidth=0)
-    b.drawrivers(linewidth=1.0, color="b")
+    b.scatter(x1, y1, c="r", linewidth=0, zorder = 7, ax = ax)
+    b.drawrivers(linewidth=0.5, color="#0cf5f8", zorder=8, ax=ax)
     #b.drawmeridians(np.arange(-10, 90,30))
     #b.drawparallels(np.arange(-50, 40, 5), labels=[1,1,1,1], linewidth=0.1)
     plt.tight_layout()
     #plt.show()
 
-    b.readshapefile("data/directions_Africa_Bessam_0.44/wri_basins_merged/wribasin", "basin")
+    b.readshapefile("/home/huziy/skynet3_exec1/other_shape/af_major_basins/af_basins", "basin",
+        linewidth=3, zorder=9, ax=ax
+    )
     plt.savefig("with_station_riv_af_dirs_basin_1.0.pdf")
 
 

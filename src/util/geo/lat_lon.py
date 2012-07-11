@@ -1,3 +1,5 @@
+import math
+
 __author__="huziy"
 __date__ ="$13 juil. 2010 13:34:52$"
 
@@ -39,7 +41,7 @@ def get_angle_between_vectors(n1, n2):
     return atan2(dy, dx)
 
 
-def lon_lat_to_cartesian(lon, lat):
+def lon_lat_to_cartesian(lon, lat, R = EARTH_RADIUS_METERS):
     """
     calculates x,y,z coordinates of a point on a sphere with
     radius R = EARTH_RADIUS_METERS
@@ -47,10 +49,24 @@ def lon_lat_to_cartesian(lon, lat):
     lon_r = np.radians(lon)
     lat_r = np.radians(lat)
 
-    x =  EARTH_RADIUS_METERS * np.cos(lat_r) * np.cos(lon_r)
-    y = EARTH_RADIUS_METERS * np.cos(lat_r) * np.sin(lon_r)
-    z = EARTH_RADIUS_METERS * np.sin(lat_r)
+    x =  R * np.cos(lat_r) * np.cos(lon_r)
+    y = R * np.cos(lat_r) * np.sin(lon_r)
+    z = R * np.sin(lat_r)
     return x,y,z
+
+
+def cartesian_to_lon_lat(x):
+    """
+     x - vector with coordinates [x1, y1, z1]
+     returns [lon, lat]
+    """
+
+    lon = math.atan2(x[1], x[0])
+    lon = math.degrees(lon)
+    lat = math.asin(x[2] / np.sqrt( np.dot(x, x) ))
+    lat = np.degrees(lat)
+    return lon, lat
+
 
 
 
