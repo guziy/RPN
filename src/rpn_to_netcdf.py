@@ -18,7 +18,7 @@ def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p'):
     surface_runoff_name = 'TRAF'
     subsurface_runoff_name = 'TDRA'
     level_tdra = 5
-    level_traf = 1
+    level_traf = 5
 
 
     print filePath

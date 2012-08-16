@@ -21,6 +21,8 @@ class RotatedLatLon():
         self.lat1 = lat1
         self.lat2 = lat2
 
+        self.mean_earth_radius_m_crcm5 = 0.637122e7 # mean earth radius used in the CRCM5 model for area calculation
+
         p1 = lat_lon.lon_lat_to_cartesian(lon1, lat1, R = 1.0)
         p2 = lat_lon.lon_lat_to_cartesian(lon2, lat2, R = 1.0)
 
@@ -57,6 +59,30 @@ class RotatedLatLon():
         p = self.rot_matrix.T * np.mat( p ).T
 
         return lat_lon.cartesian_to_lon_lat(p.A1)
+
+        pass
+
+    def get_areas_of_gridcells(self, dlon, dlat, nx, ny, latref, jref):
+
+        """
+        dlon, dlat, lonref, latref - are in degrees
+        iref and jref are counted starting from 1, put here direct values grom gemclim_settings.nml
+        """
+        dx = np.radians(dlon)
+        dy = np.radians(dlat)
+
+        latref_rad = np.radians(latref)
+
+        lats2d = np.zeros((nx, ny))
+        for j in range(ny):
+            lat = latref_rad + (j - jref + 1) * dy
+            lats2d[:,j] = lat
+
+        return self.mean_earth_radius_m_crcm5 ** 2 * np.cos(lats2d) * dx * dy
+
+
+
+
 
         pass
 

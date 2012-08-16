@@ -1,4 +1,5 @@
 from netCDF4 import Dataset
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 import application_properties
@@ -21,7 +22,7 @@ def main():
 
     assert len(s_lons) == len(s_lats)
     #path = "data/directions_Africa_Bessam_0.44/infocell_Africa.nc"
-    path = "/home/huziy/skynet3_exec1/for_offline_routing/infocell_af_0.44deg.nc"
+    path = "/home/huziy/skynet3_exec1/for_offline_routing/directions_africa_dx0.44deg_2.nc"
     ds = Dataset(path)
 
     dirs = ds.variables["flow_direction_value"][:]
@@ -61,30 +62,38 @@ def main():
     delta_indices = np.log2(dirs[dirs > 0])
     delta_indices = delta_indices.astype(int)
 
-    di = di_list[delta_indices].astype(float)
-    dj = dj_list[delta_indices].astype(float)
+    di = di_list[delta_indices]
+    dj = dj_list[delta_indices]
 
-    du = di / (di ** 2 + dj ** 2)
-    dv = dj / (di ** 2 + dj ** 2)
-
-
-    du_2d = np.ma.masked_all(dirs.shape)
-    dv_2d = np.ma.masked_all(dirs.shape)
-
-    du_2d[dirs > 0] = du
-    dv_2d[dirs > 0] = dv
 
     acc_area = np.ma.masked_where(acc_area < 0, acc_area)
-    img = b.pcolormesh(x, y, np.ma.log(acc_area))
+    #img = b.pcolormesh(x, y, np.ma.log(acc_area))
 
     ax = plt.gca()
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", "5%", pad="3%")
+    #divider = make_axes_locatable(ax)
+    #cax = divider.append_axes("right", "5%", pad="3%")
 
-    plt.colorbar(img, cax = cax)
-    b.quiver(x, y, du_2d, dv_2d , scale = 25,
-        width = 0.004,
-         pivot = "middle", units="inches", zorder = 5, ax= ax)
+    #plt.colorbar(img, cax = cax)
+
+
+
+    i_indices_1d = range(dirs.shape[0])
+    j_indices_1d = range(dirs.shape[1])
+
+    j_indices_2d, i_indices_2d = np.meshgrid(j_indices_1d, i_indices_1d)
+
+    i_indices_2d_next = np.zeros_like(i_indices_2d)
+    j_indices_2d_next = np.zeros_like(i_indices_2d)
+
+
+    i_indices_2d_next[dirs > 0] = i_indices_2d[dirs > 0] + di
+    j_indices_2d_next[dirs > 0] = j_indices_2d[dirs > 0] + dj
+
+    for i,j,i_next,j_next in zip(i_indices_2d[dirs>0], j_indices_2d[dirs>0],
+        i_indices_2d_next[dirs > 0], j_indices_2d_next[dirs > 0]):
+        ax.add_line(Line2D([x[i,j], x[i_next, j_next]], [y[i,j], y[i_next, j_next]], linewidth=0.5))
+
+
 
 
     x1, y1 = b(s_lons, s_lats)

@@ -1,4 +1,5 @@
 from datetime import date, timedelta, datetime
+import itertools
 
 __author__ = 'huziy'
 
@@ -15,6 +16,8 @@ class TimeSeries:
         self.time = time
         self.metadata = {}
 
+
+
         self.stamp_day_dates = None
         pass
 
@@ -29,6 +32,93 @@ class TimeSeries:
     def get_ts_of_dt_means(self, dt = timedelta(days = 1)):
         #TODO: implement
         pass
+
+    def time_slice(self, start_date, end_date):
+        bool_vector = np.array( map(lambda t: start_date <= t <= end_date, self.time) )
+
+        new_times =  list( itertools.ifilter( lambda t: start_date <= t <= end_date, self.time))
+        #print bool_vector
+        new_data = np.array(self.data)[bool_vector]
+        ts = TimeSeries(time=new_times, data=new_data)
+        ts.metadata = self.metadata
+        return ts
+
+
+    def get_ts_of_monthly_means(self):
+        """
+        returns Timeseries obt containing daily means
+        """
+        new_times = []
+        new_data = []
+        t0 = self.time[0]
+        t0 = datetime(t0.year, t0.month, 1)
+
+        end_date = self.time[-1]
+        end_date = datetime(end_date.year, end_date.month, end_date.day)
+        if end_date.day != 1:
+            if end_date.month + 1 <= 12:
+                end_date = end_date.replace(month=end_date.month + 1, day=1)
+            else:
+                end_date = end_date.replace(year=end_date.year + 1, month=1, day=1)
+
+        self.data = np.array(self.data)
+        print end_date
+        while t0 < end_date:
+            bool_vector = np.array( map(lambda x: (x.month == t0.month) and
+                                                  (x.year == t0.year), self.time) )
+
+            assert np.any(bool_vector), t0
+            new_times.append(t0)
+            new_data.append(np.mean(self.data[bool_vector]))
+
+            if t0.month + 1 <= 12:
+                t0 = t0.replace(month=t0.month + 1)
+            else:
+                t0 = t0.replace(year=t0.year + 1,month=1)
+
+        print "initial data = from {0} to {1}".format(min(self.data), max(self.data))
+        print "monthly means = from {0} to {1}".format(min(new_data), max(new_data))
+        ts = TimeSeries(data=np.array(new_data), time=new_times)
+        ts.metadata = self.metadata
+        return ts
+
+    def get_ts_of_monthly_integrals_in_time(self):
+        """
+        returns Timeseries obt containing daily means,
+        Note: the result is not multiplied by timestep
+        """
+        new_times = []
+        new_data = []
+        t0 = self.time[0]
+        t0 = datetime(t0.year, t0.month, 1)
+
+        end_date = self.time[-1]
+        if end_date.day != 1:
+            if end_date.month + 1 <= 12:
+                end_date = end_date.replace(month=end_date.month + 1, day=1)
+            else:
+                end_date = end_date.replace(year=end_date.year + 1, month=1, day=1)
+
+        self.data = np.array(self.data)
+        print end_date
+        while t0 < end_date:
+            bool_vector = np.array( map(lambda x: (x.month == t0.month) and
+                                                  (x.year == t0.year), self.time) )
+
+            assert np.any(bool_vector), t0
+            new_times.append(t0)
+            new_data.append(np.sum(self.data[bool_vector]))
+
+            if t0.month + 1 <= 12:
+                t0 = t0.replace(month=t0.month + 1)
+            else:
+                t0 = t0.replace(year=t0.year + 1,month=1)
+
+        ts = TimeSeries(data=np.array(new_data), time=new_times)
+        ts.metadata = self.metadata
+        return ts
+
+
 
     def get_ts_of_daily_means(self):
         """

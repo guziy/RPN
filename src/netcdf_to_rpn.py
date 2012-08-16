@@ -33,10 +33,10 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
     ig = []
 
     #params
-    dx = 0.5
-    dy = 0.5
-    iref = 46 #no need to do -1, doing it later in the formulas
-    jref = 42
+    dx = 0.1
+    dy = 0.1
+    iref = 142 #no need to do -1, doing it later in the formulas
+    jref = 122
     xref = 180 #rotated longitude
     yref = 0   #rotated latitude
 
@@ -47,8 +47,8 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
     lon2 = 16.65
     lat2 = 0.0
 
-    ni = 86
-    nj = 86
+    ni = 260
+    nj = 260
     x = np.zeros((ni, 1))
     x[:,0] = [xref + (i - iref + 1) * dx for i in xrange(ni)]
 
@@ -57,14 +57,15 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
 
     #write coordinates
     rObj.write_2D_field(name="^^", grid_type="E", data=y, typ_var="X", level = 0, ip = range(100,103),
-        lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2)
+        lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2, label="Routing")
 
     rObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level = 0, ip = range(100, 103),
-            lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2)
+            lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2, label = "Routing")
 
     info = rObj.get_current_info()
     ip_xy = map(lambda x: x.value, info["ip"])
     ig = ip_xy + [0]
+    print "ig = ", ig
 
 
     slope_data = None
@@ -73,7 +74,7 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
         data = ds.variables[ncName][:]
         grid_type = 'Z'
         rObj.write_2D_field(name = rpnName, level = 1, data = data,
-            grid_type = grid_type, ig=ig)
+            grid_type = grid_type, ig=ig, label="Routing")
         if ncName == "slope":
             slope_data = data
         if ncName == "flow_direction_value":
@@ -171,5 +172,6 @@ if __name__ == "__main__":
     #convert(nc_path="directions_qc_dx0.1deg260x260.nc")
     #convert(nc_path="/home/huziy/skynet3_exec1/hydrosheds/directions_qc_dx0.1deg_2.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_2.nc")
-    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.nc")
+    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v3.nc")
+    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_3.nc")
     print "Hello World"

@@ -43,6 +43,7 @@ class RPN():
         if not os.path.isfile(path) and mode == 'r':
             raise Exception('{0} does not exist, or is not a file'.format(path))
 
+
         self.path = path
         try:
             self._dll = CDLL('rmnlib.so')

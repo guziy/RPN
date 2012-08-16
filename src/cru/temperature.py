@@ -4,7 +4,7 @@ from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.spatial.kdtree import KDTree
 import application_properties
-
+from data.timeseries import TimeSeries
 
 from util.geo import lat_lon
 
@@ -37,6 +37,8 @@ class CRUDataManager:
         self.times = num2date(times[:], times.units, times.calendar)
         self.var_data = np.transpose( nc_vars[self.var_name][:], axes=(0,2,1))
 
+        x_in,y_in,z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
+        self.kdtree = KDTree(zip(x_in, y_in, z_in))
 
 
     def get_mean(self, start_year, end_year, months = None):
@@ -110,6 +112,90 @@ class CRUDataManager:
 
         pass
 
+
+
+    def _interp_and_sum(self, data1d, mults_1d, x, y, z, nneighbors = 1):
+        data_interp = self.interpolate_data_to_cartesian(data1d, x, y,z, nneighbours=nneighbors)
+        return np.sum(mults_1d * data_interp)
+
+    def get_monthly_timeseries_using_mask(self, mask, lons2d_target, lats2d_target, multipliers_2d, start_date = None, end_date = None):
+        """
+        multipliers_2d used to multiply the values when aggregating into a single timeseries
+        sum(mi * vi) - in space
+        """
+
+
+        bool_vect = np.array( map( lambda t: start_date <= t <= end_date, self.times) )
+
+        new_times = list(itertools.ifilter(lambda t: start_date <= t <= end_date, self.times))
+        new_vals = self.var_data[bool_vect, :, :]
+        x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
+
+        print len(new_times)
+        flat_mask = mask.flatten()
+        x_out = x_out[flat_mask == 1]
+        y_out = y_out[flat_mask == 1]
+        z_out = z_out[flat_mask == 1]
+        mults = multipliers_2d.flatten()[flat_mask == 1]
+
+        data_interp = map(lambda t: self._interp_and_sum(new_vals[t,:,:].flatten(), mults, x_out, y_out, z_out), range( len(new_times)))
+
+        print "Interpolated data", data_interp
+
+        print "Interpolated all"
+        return TimeSeries(time=new_times, data=data_interp).get_ts_of_monthly_means()
+
+
+    def get_daily_timeseries_using_mask(self, mask, lons2d_target, lats2d_target, multipliers_2d, start_date = None, end_date = None):
+        """
+        multipliers_2d used to multiply the values when aggregating into a single timeseries
+        sum(mi * vi) - in space
+        """
+
+
+        bool_vect = np.array( map( lambda t: start_date <= t <= end_date, self.times) )
+
+        new_times = list(itertools.ifilter(lambda t: start_date <= t <= end_date, self.times))
+        new_vals = self.var_data[bool_vect, :, :]
+        x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
+
+        print len(new_times)
+
+        flat_mask = mask.flatten()
+        x_out = x_out[flat_mask == 1]
+        y_out = y_out[flat_mask == 1]
+        z_out = z_out[flat_mask == 1]
+        mults = multipliers_2d.flatten()[flat_mask == 1]
+        data_interp = map(lambda t: self._interp_and_sum(new_vals[t,:,:].flatten(), flat_mask, x_out, y_out, z_out), range( len(new_times)))
+
+        print "Interpolated all"
+        return TimeSeries(time=new_times, data=data_interp).get_ts_of_daily_means()
+
+
+    def interpolate_data_to_cartesian(self, data_in_flat, x, y, z, nneighbours = 4):
+        """
+        len(data_in_flat) , len(x) == len(y) == len(z) == len(data_out_flat) - all 1D
+        """
+        print "start query"
+        dst, ind = self.kdtree.query(zip(x, y, z), k=nneighbours)
+        print "end query"
+
+        inverse_square = 1.0 / dst ** 2
+        if len(dst.shape) > 1:
+            norm = np.sum(inverse_square, axis=1)
+            norm = np.array( [norm] * dst.shape[1] ).transpose()
+            coefs = inverse_square / norm
+
+            data_out_flat = np.sum( coefs * data_in_flat[ind], axis= 1)
+        elif len(dst.shape) == 1:
+            data_out_flat = data_in_flat[ind]
+        else:
+            raise Exception("Could not find neighbor points")
+        return data_out_flat
+
+
+
+
     def interpolate_data_to(self, data_in, lons2d, lats2d, nneighbours = 4):
         """
         Interpolates data_in to the grid defined by (lons2d, lats2d)
@@ -117,12 +203,9 @@ class CRUDataManager:
 
         interpolate using 4 nearest neighbors and inverse of squared distance
         """
-        x_in,y_in,z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-        kdtree = KDTree(zip(x_in, y_in, z_in))
 
         x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-
-        dst, ind = kdtree.query(zip(x_out, y_out, z_out), k=nneighbours)
+        dst, ind = self.kdtree.query(zip(x_out, y_out, z_out), k=nneighbours)
 
         data_in_flat = data_in.flatten()
 

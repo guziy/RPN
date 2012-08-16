@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import itertools
 from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
@@ -13,8 +13,11 @@ from scipy.spatial.kdtree import KDTree
 import application_properties
 from data import cehq_station
 from data.cehq_station import Station
+from data.cell_manager import CellManager
 from data.timeseries import DateValuePair, TimeSeries
+from domains.rotated_lat_lon import RotatedLatLon
 from permafrost import draw_regions
+from rpn import level_kinds
 from util import plot_utils
 from util.geo import lat_lon
 
@@ -30,10 +33,11 @@ class Crcm5ModelDataManager:
 
     def __init__(self, samples_folder_path = "data/gemclim/quebec/Samples",
                  var_name = "STFL", file_name_prefix = "pm",
-                 all_files_in_samples_folder = False):
+                 all_files_in_samples_folder = False, need_cell_manager = False):
         self.file_name_prefix = file_name_prefix
         self.samples_folder = samples_folder_path
         self.all_files_in_one_folder = all_files_in_samples_folder
+        self.need_cell_manager = need_cell_manager
         self._read_lat_lon_fields()
 
 
@@ -47,9 +51,85 @@ class Crcm5ModelDataManager:
 
         self._file_paths = None
 
-        self.date_to_field = {}
+        self.name_to_date_to_field = {}
         self._flat_index_to_2d_cache = {}
+
+        self.lon2D_rot = None
+        self.lat2D_rot = None
         pass
+
+    def get_lon_lat_in_rotated_coords(self, rot_lat_lon_proj):
+        """
+        Lame method uses loops for converting, though uses memorization in order to not repeat
+        """
+        assert isinstance(rot_lat_lon_proj, RotatedLatLon)
+
+        in_shape = self.lons2D.shape
+
+        if None not in [self.lon2D_rot, self.lat2D_rot]:
+            return self.lon2D_rot, self.lat2D_rot
+
+        self.lon2D_rot = np.zeros_like(self.lons2D)
+        self.lat2D_rot = np.zeros_like(self.lons2D)
+
+
+        for i in range(in_shape[0]):
+            for j in range(in_shape[1]):
+                self.lon2D_rot[i,j], self.lat2D_rot[i,j] = rot_lat_lon_proj.toProjectionXY(self.lons2D[i,j], self.lats2D[i,j])
+
+        return self.lon2D_rot, self.lat2D_rot
+
+    def get_spatial_integral_over_mask_of_dyn_field(self, mask, weights_2d, path_to_folder = "", var_name = "",
+                                         level = -1, level_kind = level_kinds.ARBITRARY, file_prefix = "dm"):
+
+
+        """
+        returns a timeseries object
+        """
+        weights_1d = weights_2d[mask == 1]
+        data = {}
+        for fName in os.listdir(path_to_folder):
+            if not fName.startswith(file_prefix): continue
+            fPath = os.path.join(path_to_folder, fName)
+            rObj = RPN(fPath)
+            t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level, level_kind=level_kind)
+            for t, field in t_to_field.iteritems():
+                data[t] = sum( field[mask == 1] * weights_1d )
+            rObj.close()
+
+        times = sorted(data.keys())
+        vals = np.array( map(lambda t: data[t], times) )
+        return TimeSeries(time=times, data=vals)
+
+
+
+    def get_dynamic_field_for_point(self,ix,jy, path_to_folder = "", var_name = "",
+                                     level = -1, level_kind = level_kinds.ARBITRARY, file_prefix = "dm"):
+
+        """
+        returns a timeseries object
+        """
+        data = {}
+        for fName in os.listdir(path_to_folder):
+            if not fName.endswith(file_prefix): continue
+            fPath = os.path.join(path_to_folder, fName)
+            rObj = RPN(fPath)
+            t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level, level_kind=level_kind)
+            for t, field in t_to_field.iteritems():
+                data[t] = field[ix, jy]
+            rObj.close()
+
+        times = sorted(data.keys())
+        vals = map(lambda t: data[t], times)
+        return TimeSeries(time=times, data=vals)
+
+
+
+    def set_projection(self, proj_obj):
+        """
+        set the object that can calculate areas
+        """
+        self.pojection = proj_obj
 
 
     def _flat_index_to_2d(self, flat_index):
@@ -65,10 +145,113 @@ class Crcm5ModelDataManager:
 
 
 
+    def get_monthly_sums_over_points(self, mask, var_name, level = -1 , level_kind = level_kinds.ARBITRARY,
+         areas2d = None, start_date = None, end_date = None):
+        """
+        return Timeseries object with values = sum_i( sum(data[ti][mask == 1] * Area[mask == 1])) and time step
+        of the initial data, which could be useful when taking temporal integral
+        Note: the result is not multiplied by timestep
+        """
+        areas1d = areas2d[mask == 1]
+
+        #read in the fields
+        data = {}
+        if self.all_files_in_one_folder:
+            for fPath in map(lambda x: os.path.join(self.samples_folder, x), os.listdir(self.samples_folder)):
+                if not os.path.basename(fPath).startswith( self.file_name_prefix): continue
+                rObj = RPN(fPath)
+                t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level, level_kind=level_kind)
+                for the_key in t_to_field.keys():
+                    the_field = t_to_field[the_key]
+                    data[the_key] = np.sum(the_field[mask == 1] * areas1d)
+                rObj.close()
+                pass
+
+
+        dates = sorted(data.keys())
+        dates = list( itertools.ifilter(lambda t: start_date <= t <= end_date, dates ) )
+        dt = dates[1] - dates[0]
+        return TimeSeries(data=map(lambda t: data[t], dates), time=dates).get_ts_of_monthly_integrals_in_time(), dt
+
+
+
+    
+
+    def get_monthly_means_over_points(self, mask, var_name, level = -1 , level_kind = level_kinds.ARBITRARY,
+         areas2d = None, start_date = None, end_date = None):
+        """
+        return Timeseries object with values = sum(data[ti][mask == 1] * Area[mask == 1])
+        """
+        areas1d = areas2d[mask == 1]
+
+        #read in the fields
+        data = {}
+        if self.all_files_in_one_folder:
+            fNames = os.listdir(self.samples_folder)
+            for fName in fNames:
+                if not fName.startswith(self.file_name_prefix): continue
+                fPath = os.path.join(self.samples_folder, fName)
+                rObj = RPN(fPath)
+                t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level, level_kind=level_kind)
+                for the_key in t_to_field.keys():
+                    the_field = t_to_field[the_key]
+                    data[the_key] = np.sum(the_field[mask == 1] * areas1d)
+                rObj.close()
+                pass
+
+
+        dates = sorted(data.keys())
+        dates = list( itertools.ifilter(lambda t: start_date <= t <= end_date, dates ) )
+        return TimeSeries(data=map(lambda t: data[t], dates), time=dates).get_ts_of_monthly_means()
+
+
+
+
+    def get_daily_means_over_points(self, mask, var_name, level = -1 , level_kind = level_kinds.ARBITRARY,
+         areas2d = None, start_date = None, end_date = None):
+        """
+        return Timeseries object with values = sum(data[ti][mask == 1] * Area[mask == 1]) / sum(Area[mask == 1])
+        """
+        day = timedelta(days = 1)
+        the_day = datetime(start_date.year, start_date.month, start_date.day)
+
+        areas1d = areas2d[mask == 1]
+        areas_sum = np.sum(areas1d)
+
+        #read in the fields
+        data = {}
+        if self.all_files_in_one_folder:
+            for fPath in map(lambda x: os.path.join(self.samples_folder, x), os.listdir(self.samples_folder)):
+                fName = os.path.basename(fPath)
+                if not fName.startswith(self.file_name_prefix): continue
+
+                rObj = RPN(fPath)
+                t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level, level_kind=level_kind)
+                for the_key in t_to_field.keys():
+                    the_field = t_to_field[the_key]
+                    data[the_key] = np.sum(the_field[mask == 1] * areas1d)
+                rObj.close()
+                pass
+
+
+        all_dates = data.keys()
+        times = []
+        values = []
+        while the_day <= end_date:
+            times.append(the_day)
+            sel_times = itertools.ifilter(lambda x: the_day.year == x.year and the_day.month == x.month and
+                            the_day.day == x.day, all_dates)
+            sel_values = map(lambda key: data[key], sel_times)
+            values.append(np.mean(sel_values))
+            the_day += day
+
+        return TimeSeries(data=values, time=times)
+
+
 
     def get_streamflow_timeseries_for_station(self, station,
                                     start_date = None, end_date = None,
-                                    var_name = None
+                                    var_name = None, nneighbours = 4
                                           ):
         """
         get model data for the gridcell corresponding to the station
@@ -78,7 +261,7 @@ class Crcm5ModelDataManager:
         lon, lat = station.longitude, station.latitude
         x0 = lat_lon.lon_lat_to_cartesian(lon, lat)
 
-        [distances, indices] = self.kdtree.query(x0, k = 20)
+        [distances, indices] = self.kdtree.query(x0, k = nneighbours)
 
         acc_area_1d = self.accumulation_area_km2.flatten()
         lake_fraction_1d = self.lake_fraction.flatten()
@@ -91,7 +274,7 @@ class Crcm5ModelDataManager:
         max_dist = np.max(distances)
         obj_func = da_diff + 0.5 * distances / max_dist
 
-        min_obj_func = np.min(obj_func[(acc_area_1d[indices] > 0) & (da_diff < 0.4 )])
+        min_obj_func = np.min(obj_func[(acc_area_1d[indices] > 0)])
         index_of_sel_index = np.where(min_obj_func == obj_func)
         select_index = indices[index_of_sel_index[0][0]]
 
@@ -112,7 +295,7 @@ class Crcm5ModelDataManager:
         ts.metadata["acc_area_km2"] = acc_area_1d[select_index]
         ts.metadata["grd_lon"] =  self.lons2D[i, j]
         ts.metadata["grd_lat"] = self.lats2D[i, j]
-        ts.metadata["distance_to_obs"] = distances[index_of_sel_index[0][0]]
+        ts.metadata["distance_to_obs_km"] = distances[index_of_sel_index[0][0]] / 1000.0
         ts.metadata["ix"] = i
         ts.metadata["jy"] = j
         ts.metadata["bankfull_store_m3"] = self.bankfull_storage_m3[i, j]
@@ -203,7 +386,8 @@ class Crcm5ModelDataManager:
 
         dv = []
 
-        if not len(self.date_to_field):
+        if not self.name_to_date_to_field.has_key(var_name):
+            self.name_to_date_to_field[var_name] = {}
             paths = map(lambda x: os.path.join(self.samples_folder, x), os.listdir(self.samples_folder))
             if not self.all_files_in_one_folder:
                 second_level = []
@@ -219,10 +403,10 @@ class Crcm5ModelDataManager:
                     hour_to_field = rpnObj.get_all_time_records_for_name(varname=var_name)
                     rpnObj.close()
                     print( hour_to_field.items()[0][0] , "for file {0}".format(the_path))
-                    self.date_to_field.update(hour_to_field)
+                    self.name_to_date_to_field[var_name].update(hour_to_field)
 
 
-        for time, field in self.date_to_field.iteritems():
+        for time, field in self.name_to_date_to_field[var_name].iteritems():
             if start_date is not None:
                 if time < start_date: continue
             if end_date is not None:
@@ -357,6 +541,14 @@ class Crcm5ModelDataManager:
             self.lake_fraction = rpnObj.get_first_record_for_name("LF1")
             self.bankfull_storage_m3 = rpnObj.get_first_record_for_name("STBM")
 
+
+
+            if self.need_cell_manager:
+                nx, ny = self.flow_directions.shape
+                self.cell_manager = CellManager(nx, ny, self.flow_directions)
+
+
+
             #self.cbf = rpnObj.get_first_record_for_name("CBF")
             rpnObj.close()
             #self.slope = rpnObj.get_first_record_for_name("SLOP")
@@ -404,7 +596,8 @@ class Crcm5ModelDataManager:
 
 
 
-    def get_timeseries_for_station(self, var_name = "", station = None, nneighbours = 1, start_date = None, end_date = None):
+    def get_timeseries_for_station(self, var_name = "", station = None,
+                                   nneighbours = 1, start_date = None, end_date = None):
         """
         :rtype: list of  TimeSeries  or None
         """
@@ -438,6 +631,13 @@ class Crcm5ModelDataManager:
 
         return all_ts
 
+    def get_mask_for_cells_upstream(self, i_model0, j_model0):
+        if self.cell_manager is not None:
+            aCell = self.cell_manager.cells[i_model0][j_model0]
+            return self.cell_manager.get_mask_of_cells_connected_with(aCell)
+        else:
+            print "CellManager should be supplied for this operation."
+            raise Exception("Cellmanager should be created via option need_cell_manager = True in the constructor.")
 
 
 def test_seasonal_mean():
@@ -674,8 +874,11 @@ def compare_streamflow():
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
-    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
 
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
     coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
@@ -700,7 +903,7 @@ def compare_streamflow():
     stations.sort(key=lambda x: x.latitude, reverse=True)
 
     for i, s in enumerate(stations):
-        model_ts = manager.get_streamflow_timeseries_for_station(s, start_date = start_date, end_date = end_date)
+        model_ts = manager.get_streamflow_timeseries_for_station(s,nneighbours=4, start_date = start_date, end_date = end_date)
         ax = fig.add_subplot( gs[i // 2, i % 2] )
 
         assert isinstance(model_ts, TimeSeries)
@@ -733,7 +936,7 @@ def compare_streamflow():
 
         ax.set_title("%s: da_diff=%.1f%%, d = %.1f" % (s.id, (-s.drainage_km2+
                         model_ts.metadata["acc_area_km2"]) / s.drainage_km2 * 100.0,
-                        model_ts.metadata["distance_to_obs"] / 1000.0))
+                        model_ts.metadata["distance_to_obs_km"] ))
 
         ax.xaxis.set_major_formatter(DateFormatter("%m/%y"))
         ax.xaxis.set_major_locator(MonthLocator(bymonth=[1,5,10]))
@@ -741,7 +944,7 @@ def compare_streamflow():
     lines = (line_model, line_obs)
     labels = ("Model (CRCM5)", "Observation" )
     fig.legend(lines, labels)
-    fig.savefig("performance_without_lakes_0.1deg_1year.png")
+    fig.savefig("performance_without_lakes_0.5deg_1year_flake.png")
 
 
     pass
@@ -796,11 +999,28 @@ def main():
     #test_seasonal_mean()
     pass
 
+
+def testStuff():
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
+    manager = Crcm5ModelDataManager(samples_folder_path=data_path,
+                file_name_prefix="pm", all_files_in_samples_folder=True)
+
+    lf = manager.lake_fraction.transpose()
+    lf = np.ma.masked_where(lf < 0.1, lf)
+
+
+    plt.imshow(lf, origin="lower")
+    plt.colorbar()
+    plt.show()
+
 if __name__ == "__main__":
     import locale
     locale.setlocale(locale.LC_ALL, '')
 
     application_properties.set_current_directory()
-    main()
+
+    testStuff()
+
+    #main()
     print "Hello world"
   

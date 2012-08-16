@@ -1,6 +1,7 @@
 from netCDF4 import num2date, Dataset
 from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from scipy.spatial.kdtree import KDTree
 import application_properties
 from cru.temperature import CRUDataManager
 
@@ -9,6 +10,7 @@ import matplotlib as mpl
 from matplotlib import colors
 import numpy as np
 from permafrost import draw_regions
+from util.geo import lat_lon
 
 __author__ = 'huziy'
 
@@ -33,6 +35,11 @@ class SweDataManager(CRUDataManager):
         time_units_s = nc_vars["time"].units
         self.times = num2date(times, time_units_s)
         self.var_data = nc_vars[self.var_name][:]
+
+
+        x_in,y_in,z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
+        self.kdtree = KDTree(zip(x_in, y_in, z_in))
+
 
         print "SWE obs time limits: ", self.times[0], self.times[-1]
         pass
@@ -150,8 +157,9 @@ def main():
 
 def test1():
     dm = SweDataManager(var_name="SWE")
-    b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
-    dm.save_projected_means_to_file(months=[12,1,2], dest_lons2d=lons2d, dest_lats2d=lats2d)
+    #b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
+    #dm.save_projected_means_to_file(months=[12,1,2], dest_lons2d=lons2d, dest_lats2d=lats2d)
+    print dm.kdtree
 
 
 if __name__ == "__main__":

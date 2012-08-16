@@ -64,17 +64,17 @@ def main():
 
     dt0 = 300.0
 
-    s_bf = 5.6973312E+07
-    k_bf = 1.6833053E-07
+    s_bf = 4784876.
+    k_bf = 2.2364750E-07
     k_ob = k_bf / 2.0
-    s0 =  12.20368
-    lk_area = 1.5088924E+07
+    s0 =  3.5869912E+07
+    lk_area = 1.4348829E+07
     is_lake = True
 
 
-    acc = 1e-10
+    acc = 1e-5
 
-    inflow =  1723.797082901001 / dt0
+    inflow =  0.3228560
 
     dt = dt0
     nsteps = 1
@@ -115,8 +115,8 @@ def main():
 
   #  print "dt_a = ", dt_a
     print dt, s1,s2, curr_acc
-    print "store = ", s2
-    print "max store = ", s0 + inflow * dt0
+    print "store(next) = ", s2
+    print "max possible store = ", s0 + inflow * dt0
     print "streamflow = ", (inflow * dt0 - s2 + s0) / dt0
     pass
 

@@ -1,6 +1,7 @@
 from datetime import datetime
 import itertools
 from matplotlib import gridspec
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.ticker import MultipleLocator
 from data.cehq_station import Station
@@ -35,18 +36,29 @@ def get_streamflows_from_active_stores(stores, area_km2, kd = 0.01 / (24.0*60.0*
     pass
 
 
-def plot_for_different_months():
-    lake_names = ["Matagami", "Mistassini", "Nemiscau"]
-    lake_areas_km2 = [370.7,  2162.7, 148.3]
+def get_ice_factor(q, s, qb, sb):
+    return (q/qb) / (s/sb) ** 2.5
+
+
+
+def plot_for_different_months(start_date = None, end_date = None):
+    lake_names = [
+        #"Matagami",
+        "Mistassini", "Nemiscau"]
+    lake_areas_km2 = [
+        #370.7,
+        2162.7, 148.3]
 
     level_st_ids = [
-        "080716", "081003",  "081001"
+        #"080716",
+        "081003",  "081001"
     ]
     level_stations = cehq.read_station_data(folder="data/cehq_levels",
                         selected_ids=level_st_ids)
 
     stfl_st_ids = [
-        "080707", "081007", "081002"
+        #"080707",
+        "081007", "081002"
     ]
     stfl_stations = cehq.read_station_data(folder="data/cehq_measure_data",
             selected_ids=stfl_st_ids)
@@ -65,8 +77,7 @@ def plot_for_different_months():
         all_b = []
 
 
-        count_intersection = sum( map(lambda d: int(d in stfl_station.dates), lev_station.dates) )
-        intersection_dates = list( itertools.ifilter( lambda d: d in stfl_station.dates, lev_station.dates) )
+        intersection_dates = list( sorted( itertools.ifilter( lambda d: d in stfl_station.dates, lev_station.dates) ) )
 
         q_vals = map( lambda d: stfl_station.get_value_for_date(d), intersection_dates )
         h_vals = map( lambda d: lev_station.get_value_for_date(d), intersection_dates )
@@ -80,14 +91,38 @@ def plot_for_different_months():
         fig = plt.figure()
         gs = gridspec.GridSpec(3,4,wspace=0.5, hspace=0.5)
 
+        if start_date is None:
+            start_date = intersection_dates[0]
+
+        if end_date is None:
+            end_date = intersection_dates[-1]
+        print "lake name: {0}".format(lake_name)
+        print "data are from " + str( intersection_dates[0] ) + " to " + str( intersection_dates[-1] )
+
+
+        ##As a base month we are using August (assuming that we don't have ice in August)
+        base_month = 8
+        the_dates = list( itertools.ifilter( lambda d: (start_date <= d <= end_date) and
+                                                        d.month == base_month, intersection_dates) )
+        q_base = np.mean(map( lambda d: stfl_station.get_value_for_date(d), the_dates ))
+        h_vals = map( lambda d: lev_station.get_value_for_date(d), the_dates )
+        store_base = np.mean(get_active_storages(h_vals,lake_area_km2))
+
+        ice_factors = []
         for month in xrange(1, 13):
             ax = fig.add_subplot(gs[(month - 1)//4, (month - 1) % 4])
 
-            intersection_dates = list( itertools.ifilter( lambda d: d in stfl_station.dates and  d.month == month, lev_station.dates) )
+            the_dates = list( itertools.ifilter( lambda d: (start_date <= d <= end_date) and
+                                                           d.month == month, intersection_dates) )
 
-            q_vals = map( lambda d: stfl_station.get_value_for_date(d), intersection_dates )
-            h_vals = map( lambda d: lev_station.get_value_for_date(d), intersection_dates )
-            q_calc = get_streamflows_from_active_stores(get_active_storages(h_vals,lake_area_km2), lake_area_km2)
+            q_vals = map( lambda d: stfl_station.get_value_for_date(d), the_dates )
+            h_vals = map( lambda d: lev_station.get_value_for_date(d), the_dates )
+            s_vals = get_active_storages(h_vals,lake_area_km2)
+            print len(h_vals)
+            q_calc = get_streamflows_from_active_stores(s_vals, lake_area_km2)
+
+
+            ice_factors.append(get_ice_factor(np.mean(q_vals), np.mean(s_vals), q_base, store_base))
 
 
             all_q_obs.extend(q_vals)
@@ -123,6 +158,31 @@ def plot_for_different_months():
         fig.suptitle(lake_name)
         fig.savefig("{0}.png".format(lake_name))
         assert isinstance(fig, Figure)
+
+
+        plot_utils.apply_plot_params(width_pt=None, width_cm=30, height_cm=20, font_size=25)
+        #plot k and b as a function of month
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        assert isinstance(ax, Axes)
+        ax.set_title("Correction coefficients applied \n q'=(1/k)*q-b/k")
+        ax.plot(range(1,13), 1.0 / np.array(all_k), lw = 3, label = "1/k")
+        ax.legend()
+        fig.savefig("{0}_coefs_1_k.png".format(lake_name))
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        assert isinstance(ax, Axes)
+        ax.set_title("Correction coefficients applied \n q'=(1/k)*q-b/k")
+        ax.plot(range(1,13), -np.array(all_b) / np.array(all_k), lw = 3, label = "-b/k")
+        ax.legend()
+        fig.savefig("{0}_coefs_b_k.png".format(lake_name))
+
+
+        plt.figure()
+        plt.plot(range(1,13), ice_factors, lw = 3)
+        plt.title("Ice factor for {0}".format(lake_name))
+        plt.savefig("{0}_ice_factors.png".format(lake_name))
 
 
         ###plot q-q for all season in the same plot
