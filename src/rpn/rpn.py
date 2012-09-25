@@ -296,6 +296,49 @@ class RPN():
         return dateo_int.value
 
 
+    def get_records_for_foreacst_hour(self, var_name = "", forecast_hour = None, level_kind = level_kinds.ARBITRARY):
+
+        """
+        datev - forecast hour starting from the simulation start
+        #TODO: make sure it works, read on datev and ip2 parameters
+        """
+        ip1 = c_int(-1)
+        ip2 = c_int(forecast_hour)
+        ip3 = c_int(-1)
+
+        ni = c_int(-1)
+        nj = c_int(-1)
+        nk = c_int(-1)
+
+        etiket = create_string_buffer( self.ETIKET_DEFAULT )
+        in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
+
+        in_nomvar = create_string_buffer(var_name)
+
+        res = {}
+
+
+
+
+        key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), c_int(-1), etiket,
+                                  ip1, ip2, ip3, in_typvar, in_nomvar
+                                 )
+
+        while key >= 0:
+            data = self._get_data_by_key(key)
+            lev = self.get_current_level(level_kind=level_kind)
+            res[lev] = data
+            key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), c_int(-1), etiket,
+                                      ip1, ip2, ip3, in_typvar, in_nomvar
+                                     )
+
+
+
+        print in_typvar.value
+
+        #if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
+
+        return res
 
     def get_output_step_in_seconds(self):
         raise Exception("Not yet implemented")
@@ -748,14 +791,54 @@ class RPN():
         if not self._current_info is None :
             try:
                 forecastHour = self.get_current_validity_date()
-                return self._current_info["dateo"] + timedelta(hours = forecastHour)
+                assert forecastHour >= 0
+
+                if not hasattr(self, "dateo_fallback"):
+                    self.dateo_fallback = self._current_info["dateo"]
+
+                d = self._current_info["dateo"] + timedelta(hours = forecastHour)
+
+                if d < self.dateo_fallback:
+                    print "sim date appears to be earlier than the start date"
+                    print "falling back to the previous date of origin"
+                    print self._current_info["dt_seconds"].value / 60.0 / 60.0
+                    print self.dateo_fallback, self._current_info["dateo"]
+                    print forecastHour
+                    raise Exception()
+
+                return d
             except Exception, exc:
-                 print exc
-                 raise Exception("problem when reading file {0}".format(self.path))
+                print exc
+                raise Exception("problem when reading file {0}".format(self.path))
         else:
             raise Exception("No current info has been stored: please make sure you read some records first.")
 
 
+
+
+    def get_4d_field_fc_hour_as_time(self, name = "", level_kind = level_kinds.ARBITRARY):
+
+        """
+        Returns a map {forecast hour: {z: T(x,y)}}
+        """
+        result = {}
+        data1 = self.get_first_record_for_name(name)
+
+        while data1 is not None:
+            level = self.get_current_level(level_kind = level_kind)
+            time = self.get_current_validity_date()
+
+            if not result.has_key(time):
+                result[time] = {}
+
+            time_slice = result[time]
+            time_slice[level] = data1
+
+            data1 = self.get_next_record()
+
+        return result
+
+        pass
 
     def get_4d_field(self, name = "", level_kind = level_kinds.ARBITRARY):
         """
@@ -1018,11 +1101,22 @@ def test_dateo():
     print(rObj.get_dateo_of_last_read_record())
     print(rObj._dateo_to_string(-1274695862))
 
+def test_select_by_date():
+    path = "/home/huziy/skynet3_rech1/test/snw_LImon_NA_CRCM5_CanESM2_historical_r1i1p1_185001-200512.rpn"
+
+    rObj = RPN(path)
+    res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour= 0)
+    rObj.close()
+
+    print res.keys()
+
+
 
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    test_dateo()
+    test_select_by_date()
+    #test_dateo()
     #test()
    # test_get_all_records_for_name()
     print "Hello World"

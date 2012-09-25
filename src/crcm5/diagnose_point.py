@@ -15,8 +15,9 @@ import matplotlib.pyplot as plt
 from domains.rotated_lat_lon import RotatedLatLon
 from gldas.gldas_manager import GldasManager
 from rpn import level_kinds
+from shape import get_rivers_from_shape
 from swe import SweDataManager
-from util import plot_utils
+from util import plot_utils, scores
 
 __author__ = 'huziy'
 
@@ -266,6 +267,12 @@ def plot_total_precip_and_temp_re_1d(ax_pr, ax_temp, crcm5_manager,
 
     ax_pr.annotate( "r = {0:.2f}".format( float( np.corrcoef([mod, sta])[0,1] )),
             xy = (0.7,0.8), xycoords= "axes fraction")
+
+    ax_pr.annotate( "ns = {0:.2f}".format( scores.nash_sutcliffe(mod, sta)),
+            xy = (0.7,0.9), xycoords= "axes fraction")
+
+
+
     ax_pr.plot(ts_prec_mod.time, (mod - sta) / sta, color = "k", linewidth = 2)
 
     ax_pr.xaxis.set_major_formatter(DateFormatter("%y/%m"))
@@ -300,6 +307,10 @@ def plot_total_precip_and_temp_re_1d(ax_pr, ax_temp, crcm5_manager,
 
     ax_temp.annotate( "r = {0:.2f}".format( float( np.corrcoef([mod, sta])[0,1] )),
             xy = (0.7,0.8), xycoords= "axes fraction")
+
+    ax_temp.annotate( "ns = {0:.2f}".format( scores.nash_sutcliffe(mod, sta)),
+            xy = (0.7,0.9), xycoords= "axes fraction")
+
     ax_temp.plot(ts_prec_mod.time, (mod - sta), color = "k", linewidth = 2)
 
     ax_temp.xaxis.set_major_formatter(DateFormatter("%y/%m"))
@@ -363,7 +374,7 @@ def plot_directions_and_positions(ax, station, model_data,
     #ax.annotate("m", xy = (mx, my), va = "bottom", ha = "left", color = "g")
 
     basemap.drawcoastlines(linewidth=0.2)
-    basemap.drawrivers()
+    #basemap.drawrivers()
 
 
     for i,j in zip(i_interest, j_interest):
@@ -378,6 +389,14 @@ def plot_directions_and_positions(ax, station, model_data,
 
         print start, end
         ax.add_line(Line2D([start[0], end[0]], [start[1], end[1]], linewidth=0.5))
+
+
+
+    #plot river network from HydroSheds
+    basemap.readshapefile("data/shp/rivers_qc_latlon/qc_rivs_latlon", "river")
+    #rivers = get_rivers_from_shape.get_qc_rivers()
+
+
 
 
     pass
@@ -458,15 +477,11 @@ def plot_streamflow_re(ax, station, model_data):
 
 
 
-def diagnose(station_ids = None):
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes"
-    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
-    coord_file = os.path.join(data_path, "pm1985050100_00000000p")
+def diagnose(station_ids = None, model_data_path = None):
 
 
 
-    manager = Crcm5ModelDataManager(samples_folder_path=data_path,
+    manager = Crcm5ModelDataManager(samples_folder_path=model_data_path,
             file_name_prefix="pm", all_files_in_samples_folder=True, need_cell_manager=True
     )
 
@@ -501,7 +516,7 @@ def diagnose(station_ids = None):
         gs = GridSpec( 5, 3, hspace=0.2, wspace=0.2, right=0.98, left=0.1, top=0.98 )
 
         model_ts = manager.get_streamflow_timeseries_for_station(s, start_date = start_date,
-            end_date = end_date, nneighbours=10)
+            end_date = end_date, nneighbours=9)
 
         print model_ts.time[0], model_ts.time[-1]
 
@@ -525,7 +540,7 @@ def diagnose(station_ids = None):
 
         #runoff from gldas
         ax = fig.add_subplot(gs[2,1])
-        plot_gldas_runoff(ax, manager, areas, model_ts, mask = mask)
+        #plot_gldas_runoff(ax, manager, areas, model_ts, mask = mask)
 
 
         #temperature
@@ -551,8 +566,18 @@ def main():
     selected_ids = ["104001", "103715", "093806", "093801", "092715",
                         "081006", "061502", "040830", "080718"]
 
-    #selected_ids = [selected_ids[0], ]
-    diagnose(station_ids=selected_ids)
+    selected_ids = ["090613"]#[selected_ids[0], ]
+
+
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_sturm_snc"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_old_snc"
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions"
+    coord_file = os.path.join(data_path, "pm1985050100_00000000p")
+
+    diagnose(station_ids=selected_ids, model_data_path=data_path)
 
     pass
 

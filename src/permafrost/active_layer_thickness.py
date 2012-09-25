@@ -25,10 +25,14 @@ class CRCMDataManager:
         looks for the Samples directory, then it assumes that month directories
         are in those Samples directories
         """
-        self.data_folder = data_folder
-        self._samples = "Samples"
+
         self.file_prefix = file_prefix
-        self._init_yearmonth_to_data_path()
+        if data_folder is not None:
+            self.data_folder = data_folder
+            self._samples = "Samples"
+            self._init_yearmonth_to_data_path()
+
+
         self.T0 = 273.15
         #seasonally frozen ground depth limit for the point to be considered in permafrost region
         self.sfg_depth_limit = 2.5
@@ -55,10 +59,27 @@ class CRCMDataManager:
 
 
 
+    def get_alt_using_monthly_climatology_reject_SFG(self, year_to_Tmax_profiles):
+
+        """
+        reject points where Tmax does not exceede 0 for two years in a row
+        this is called seasonally frozen ground
+        This method is similar to   "get_alt_using_monthly_mean_climatology", but it uses
+        prepared data, so it does not depend on the form of the model data, so hopefully when the form of the
+        model data storage changes this method will not require changes
+        """
+
+
+
+        pass
+
+
 
     def get_alt_using_monthly_mean_climatology(self, year_range, temp_var_name = "I0"):
         """
         returns alt, as well as 3d fields of soiltemp_min and soiltemp_max
+
+        Regects seasonally frozen ground regions
         """
         tc = self.get_soiltemp_climatology(year_range, temp_var_name = temp_var_name)
         tc_max = np.max(tc, axis = 0)
@@ -68,7 +89,7 @@ class CRCMDataManager:
         print tc_max.min(), tc_max.max()
         #return self._get_alt(tc_max)
 
-        alt = self._get_alt_considering_min_temp(tc_max, tc_min)
+        alt = self.get_alt_considering_min_temp(tc_max, tc_min)
         # reject SFG (seasonally frozen ground) regions
         pf = -np.ones(alt.shape)
         tmax_1 = self.get_Tmax_profiles_for_year_using_monthly_means(year_range[0], var_name="I0")
@@ -85,6 +106,7 @@ class CRCMDataManager:
 
             tmax_1 = tmax_2
 
+        #reject SFG
         alt[ pf != 1 ] = -1
 
 
@@ -124,7 +146,7 @@ class CRCMDataManager:
 
         max_temp = np.max(all_temps, axis = 0)
 
-        return self._get_alt(max_temp)
+        return self.get_alt(max_temp)
 
 
     def get_annual_mean_3d_field(self, var_name = "I0", year = None):
@@ -277,7 +299,7 @@ class CRCMDataManager:
 
 
 
-    def _get_alt_considering_min_temp(self, soiltemp_3d_max, soiltemp_3d_min):
+    def get_alt_considering_min_temp(self, soiltemp_3d_max, soiltemp_3d_min):
         nx, ny, nz = soiltemp_3d_max.shape
         alt = -np.ones((nx, ny))
 
@@ -306,7 +328,6 @@ class CRCMDataManager:
             h2 = self.level_heights[k + 1]
             h1 = self.level_heights[k]
 
-            cond = None
             if np.any(intersection_max & first_intersection):
                 cond = intersection_max & first_intersection
                 if cond is not None:
@@ -330,7 +351,7 @@ class CRCMDataManager:
 
 
 
-    def _get_alt(self, soiltemp_3d_max):
+    def get_alt(self, soiltemp_3d_max):
         nx, ny, nz = soiltemp_3d_max.shape
         alt = -np.ones((nx, ny))
 
@@ -376,7 +397,7 @@ class CRCMDataManager:
             t = self.get_Tmax_profiles_for_year_using_monthly_means(year, var_name="I0")
         else:
             raise Exception("Unknown averaging interval: {0}".format(mean_temps_to_use))
-        h = self._get_alt(t)
+        h = self.get_alt(t)
 
 ###DEBUG only for testing, comment for real calculations
 #        i_sel = 17

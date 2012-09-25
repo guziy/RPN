@@ -13,6 +13,37 @@ import os
 import numpy as np
 
 
+def extract_field(name = "VF", level = 3, in_file = "", out_file = None):
+    if out_file is None:
+        out_file = in_file + "_lf.nc"
+
+    rObj = RPN(in_file)
+    field = rObj.get_first_record_for_name_and_level(varname=name, level=level)
+    lons2d, lats2d = rObj.get_longitudes_and_latitudes_for_the_last_read_rec()
+    rObj.close()
+
+
+    lons2d[lons2d > 180] -= 360.0
+
+
+    ds = nc.Dataset(out_file, "w", format="NETCDF3_CLASSIC")
+
+    nx, ny = field.shape
+
+    ds.createDimension("lon", nx - 2)
+    ds.createDimension("lat", ny - 2)
+
+    var = ds.createVariable(name, "f4", dimensions=("lon", "lat"))
+    lonVar = ds.createVariable("longitude", "f4", dimensions=("lon", "lat"))
+    latVar = ds.createVariable("latitude", "f4", dimensions=("lon", "lat"))
+
+    var[:] = field[:-2, :-2]
+    lonVar[:] = lons2d[:-2, :-2]
+    latVar[:] = lats2d[:-2,:-2]
+    ds.close()
+
+
+    pass
 
 def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p'):
     surface_runoff_name = 'TRAF'
@@ -129,9 +160,13 @@ def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_rec
 if __name__ == "__main__":
     application_properties.set_current_directory()
 #    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
-    extract_sand_and_clay_from_rpn(rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
-        outpath="africa_0.44deg_sand_clay_dpth.nc"
-    )
+#    extract_sand_and_clay_from_rpn(rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
+#        outpath="africa_0.44deg_sand_clay_dpth.nc"
+#    )
 #    delete_files_with_nrecords()
 #    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
+
+
+    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_86x86_0.5deg.v3")
+
     print "Hello World"

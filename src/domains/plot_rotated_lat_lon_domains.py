@@ -207,7 +207,7 @@ def plot_domain_using_coords_from_file(path = ""):
 
 
     x, y = basemap(lons2d, lats2d)
-    basemap.scatter(x, y, c = "r", linewidths = 0, s = 1.5)
+    basemap.scatter(x, y, c = "r", linewidths = 0, s = 1.0)
     print x.shape
 
     xll_big, yll_big = g_params.get_ll_point(marginx=20, marginy=20)
@@ -226,6 +226,15 @@ def plot_domain_using_coords_from_file(path = ""):
 
 
     margin = 20
+
+    #plot 0.25 degree grid
+    g_params = GridParams(lonr=180, latr=0, iref=71, jref=63, dx = 0.25, dy = 0.25, nx=133, ny=133)
+    lons2d_2, lats2d_2 = get_lons_lats_using_grid_params(g_params, rot_lat_lon_proj)
+    x2, y2 = basemap(lons2d_2[margin:-margin,margin:-margin], lats2d_2[margin:-margin,margin:-margin])
+    basemap.scatter(x2, y2, c = "g", linewidth = 0, marker = "s", s = 7.5)
+
+
+    #plot 0.5 degree grid using the output file
     #debug
     rObj1 = RPN("/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes/pm1985010100_00000000p")
     lons2d_1, lats2d_1 = rObj1.get_longitudes_and_latitudes()
@@ -237,6 +246,10 @@ def plot_domain_using_coords_from_file(path = ""):
 
 
     basemap.scatter(x1, y1, c = "b", linewidths = 0, s = 10)
+
+
+
+
 
 
     dx1 = (x1[1,0] - x1[0,0]) / 2.0
@@ -262,6 +275,7 @@ def plot_domain_using_coords_from_file(path = ""):
     basemap.drawcoastlines(ax=axins)
     basemap.drawrivers(ax = axins)
     basemap.scatter(x, y, c = "r", linewidths = 0, s = 5, ax = axins)
+    basemap.scatter(x2, y2, c = "g", marker = "s", linewidth = 0, s = 15, ax = axins)
     basemap.scatter(x1, y1, c = "b", linewidths = 0, s = 25, ax = axins)
 
 

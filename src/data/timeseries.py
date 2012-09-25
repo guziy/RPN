@@ -26,7 +26,7 @@ class TimeSeries:
         Used to select data for the same dates as for obsevations
         """
         the_dict = dict(zip(self.time, self.data))
-        return map(lambda x: the_dict[x], the_dates)
+        return np.array(map(lambda x: the_dict[x], the_dates))
 
 
     def get_ts_of_dt_means(self, dt = timedelta(days = 1)):

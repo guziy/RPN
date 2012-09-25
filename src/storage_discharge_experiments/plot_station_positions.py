@@ -8,6 +8,9 @@ from data.cehq_station import Station
 from util import plot_utils
 from util.geo import lat_lon
 
+
+
+
 __author__ = 'huziy'
 
 import numpy as np
@@ -20,7 +23,7 @@ def get_active_storages(h_list, area_km2):
     returns the list of active storages in m**3
     Si = (Hi - min(Hi)) * area_km2
     """
-    h_min =  0.8 * min(h_list)
+    h_min = max( min(h_list) - 5, 0)
     if h_min == 0.1:
         print h_min
     return map(lambda x: (x - h_min) * area_km2 * 1e6, h_list)
@@ -34,6 +37,19 @@ def get_streamflows_from_active_stores(stores, area_km2, kd = 0.01 / (24.0*60.0*
     s0 = h0 * area_km2 * 1.0e6
     return map(lambda x: x * (x / s0) ** 1.5 * kd, stores )
     pass
+
+
+def get_streamflows_from_active_stores_bowling(stores, area_km2):
+    """
+    See Bowling et al 2009 for the formula explanation
+    """
+    cd = 0.94
+    f = 0.015
+    g = 9.81
+
+    area_m2 = area_km2 * 1.0e6
+    return map( lambda s: ( 4.0 / 3.0 ) * cd * f * (g * np.pi) ** 0.5 * s ** 1.5 / area_m2, stores)
+
 
 
 def get_ice_factor(q, s, qb, sb):
@@ -81,7 +97,8 @@ def plot_for_different_months(start_date = None, end_date = None):
 
         q_vals = map( lambda d: stfl_station.get_value_for_date(d), intersection_dates )
         h_vals = map( lambda d: lev_station.get_value_for_date(d), intersection_dates )
-        q_calc = get_streamflows_from_active_stores(get_active_storages(h_vals,lake_area_km2), lake_area_km2)
+        #change the way streamflow calculated here
+        q_calc = get_streamflows_from_active_stores_bowling(get_active_storages(h_vals,lake_area_km2), lake_area_km2)
 
 
         q_min = min( min(q_vals), min(q_calc) )
@@ -119,7 +136,7 @@ def plot_for_different_months(start_date = None, end_date = None):
             h_vals = map( lambda d: lev_station.get_value_for_date(d), the_dates )
             s_vals = get_active_storages(h_vals,lake_area_km2)
             print len(h_vals)
-            q_calc = get_streamflows_from_active_stores(s_vals, lake_area_km2)
+            q_calc = get_streamflows_from_active_stores_bowling(s_vals, lake_area_km2)
 
 
             ice_factors.append(get_ice_factor(np.mean(q_vals), np.mean(s_vals), q_base, store_base))
@@ -151,7 +168,7 @@ def plot_for_different_months(start_date = None, end_date = None):
             #)
             ax.plot([q_min, q_max], [q_min, q_max], "k-",lw = 3, zorder = 5)
             d = datetime(2000, month, 1)
-            ax.set_title(d.strftime("%b") + "( k={0:.2f}; b={1:d})".format(k, int(b)))
+            ax.set_title(d.strftime("%b") + "( k={0:.7f}; b={1:.2f})".format(k, b))
             ax.xaxis.set_major_locator(MultipleLocator(base = np.round((q_max - q_min )/ 10) * 10 / 2  ))
             ax.yaxis.set_major_locator(MultipleLocator(base = np.round((q_max - q_min ) / 10) * 10 / 2))
 
@@ -199,7 +216,7 @@ def plot_for_different_months(start_date = None, end_date = None):
 
         ax.scatter(all_q_obs, map( lambda x:  (x - b) / k, all_q_calc), c ="r",
             linewidth = 0, zorder = 6)
-        ax.annotate("k={0:.2f}; \nb={1:d}".format(k, int(b)), xy = (0.6, 0.05),
+        ax.annotate("k={0:.2f}; \nb={1:.2f}".format(k, b), xy = (0.6, 0.05),
                         xycoords = "axes fraction", zorder = 7
                     )
 
@@ -267,7 +284,7 @@ def main():
 
 
         q_obs.append(q_vals)
-        q_calc.append(get_streamflows_from_active_stores(get_active_storages(h_vals,lake_area_km2), lake_area_km2))
+        q_calc.append(get_streamflows_from_active_stores_bowling(get_active_storages(h_vals,lake_area_km2), lake_area_km2))
 
         #Calculate correlation between Q and H
         print 10 * "-" + lake_name

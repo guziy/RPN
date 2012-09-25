@@ -75,8 +75,7 @@ class Station:
         for stamp_day in year_dates:
             bool_vector = map(lambda x: x.day == stamp_day.day and
                                         x.month == stamp_day.month and
-                                        x >= start_date and
-                                        x <= end_date, self.dates)
+                                        start_date <= x <= end_date, self.dates)
 
             indices = np.where( bool_vector )[0]
             if not len(indices): return None, None
@@ -341,6 +340,11 @@ class Station:
         del self.dates[:index], self.values[:index]
 
         pass
+
+    def passes_rough_continuity_test(self, start_date, end_date):
+        nyears = end_date.year - start_date.year + 1
+        nentries = sum( map(lambda t: int( start_date <= t <= end_date), self.dates) )
+        return nentries >= 365 * nyears
 
 
 def print_info_of(station_ids):

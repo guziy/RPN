@@ -17,7 +17,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.polygon import Polygon
 import draw_regions
 import my_colormaps
-from cross_plotter import CrossPlotter
+from cross_plotter import SoundingPlotter
 from rpn.rpn import RPN
 from util import plot_utils
 import matplotlib as mpl
@@ -682,7 +682,7 @@ def plot_current_alts():
 
         hc_list.append(hc0)
         ax = fig.add_subplot(gs[i,0])
-        cp = CrossPlotter(ax, basemap, t3d_min, t3d_max, lons2d, lats2d, levelheights=dm.level_heights)
+        cp = SoundingPlotter(ax, basemap, t3d_min, t3d_max, lons2d, lats2d, levelheights=dm.level_heights)
 
         assert isinstance(ax, Axes)
         hc = np.ma.masked_where(mask_cond | (hc0 < 0), hc0)
