@@ -377,18 +377,22 @@ def plot_directions_and_positions(ax, station, model_data,
     #basemap.drawrivers()
 
 
-    for i,j in zip(i_interest, j_interest):
-        next_cell = crcm5_manager.cell_manager.cells[i][j].next
-        start = basemap(lons2d[i,j], lats2d[i,j])
-        #ax.annotate("({0}, {1})".format(i,j), xy = start,font_properties = FontProperties(size = 2))
-        if next_cell is None: continue
-        next_i, next_j = next_cell.get_ij()
+#    for i,j in zip(i_interest, j_interest):
+    for i in range(i_min, i_max + 1):
+        for j in range(j_min, j_max + 1):
+            next_cell = crcm5_manager.cell_manager.cells[i][j].next
+            if next_cell is None:
+                continue
+            start = basemap(lons2d[i,j], lats2d[i,j])
+            #ax.annotate("({0}, {1})".format(i,j), xy = start,font_properties = FontProperties(size = 2))
+            if next_cell is None: continue
+            next_i, next_j = next_cell.get_ij()
 
-        end = basemap(lons2d[next_i, next_j], lats2d[next_i, next_j])
+            end = basemap(lons2d[next_i, next_j], lats2d[next_i, next_j])
 
 
-        print start, end
-        ax.add_line(Line2D([start[0], end[0]], [start[1], end[1]], linewidth=0.5))
+            print start, end
+            ax.add_line(Line2D([start[0], end[0]], [start[1], end[1]], linewidth=0.5))
 
 
 
@@ -574,7 +578,8 @@ def main():
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_sturm_snc"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_old_snc"
-    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions"
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice_1yrspnp_const_manning"
     coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
     diagnose(station_ids=selected_ids, model_data_path=data_path)

@@ -81,7 +81,7 @@ class Station:
             if not len(indices): return None, None
             daily_means.append(np.array(self.values)[indices].mean())
 
-        return year_dates, daily_means
+        return year_dates, np.array(daily_means)
 
 
     def get_value_for_date(self, the_date):

@@ -13,7 +13,7 @@ import os
 import numpy as np
 
 
-def extract_field(name = "VF", level = 3, in_file = "", out_file = None):
+def extract_field(name = "VF", level = 3, in_file = "", out_file = None, margin = 0):
     if out_file is None:
         out_file = in_file + "_lf.nc"
 
@@ -30,16 +30,17 @@ def extract_field(name = "VF", level = 3, in_file = "", out_file = None):
 
     nx, ny = field.shape
 
-    ds.createDimension("lon", nx - 2)
-    ds.createDimension("lat", ny - 2)
+    ds.createDimension("lon", nx - margin)
+    ds.createDimension("lat", ny - margin)
 
     var = ds.createVariable(name, "f4", dimensions=("lon", "lat"))
     lonVar = ds.createVariable("longitude", "f4", dimensions=("lon", "lat"))
     latVar = ds.createVariable("latitude", "f4", dimensions=("lon", "lat"))
 
-    var[:] = field[:-2, :-2]
-    lonVar[:] = lons2d[:-2, :-2]
-    latVar[:] = lats2d[:-2,:-2]
+    var[:] = field[:nx - margin, :ny - margin]
+    var[:] = field[:nx - margin, :ny - margin]
+    lonVar[:] = lons2d[:nx - margin, :ny - margin]
+    latVar[:] = lats2d[:nx - margin,:ny - margin]
     ds.close()
 
 
@@ -166,7 +167,9 @@ if __name__ == "__main__":
 #    delete_files_with_nrecords()
 #    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
 
+#
+#    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_86x86_0.5deg.v3")
+    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_260x260_3")
 
-    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_86x86_0.5deg.v3")
 
     print "Hello World"

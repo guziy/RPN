@@ -173,6 +173,7 @@ if __name__ == "__main__":
     #convert(nc_path="/home/huziy/skynet3_exec1/hydrosheds/directions_qc_dx0.1deg_2.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_2.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v3.nc")
-    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v4.nc")
+    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v4.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_3.nc")
+    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_4.nc")
     print "Hello World"

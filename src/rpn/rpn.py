@@ -925,7 +925,7 @@ class RPN():
         date_c = c_int(self._string_to_dateo(dateo))
         deet = c_int(0)
         npas = c_int(1)
-        nk = c_int(1) if len(data.shape) == 2 else data.shape[2]
+        nk = c_int(1) if len(data.shape) <= 2 else data.shape[2]
 
         if ip is None:
             ip1 = c_int(self.get_ip1_from_level(level, level_kind = level_kind))
@@ -933,7 +933,8 @@ class RPN():
             ip3 = c_int(0)
         else:
             ip1, ip2, ip3 = map(c_int, ip)
-
+        
+        
         [ni, nj] = data.shape[:2]
         ni = c_int(ni)
         nj = c_int(nj)

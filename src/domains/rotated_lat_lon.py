@@ -41,6 +41,28 @@ class RotatedLatLon():
         pass
 
 
+    def write_coords_to_rpn(self, rpnObj, x, y):
+        """
+        x, y - 1d coordinates in rotated system
+        """
+	x = np.array(x)
+        x.shape = (len(x),1)
+        y = np.array(y)
+        y.shape = (1, len(y)) 
+
+        rpnObj.write_2D_field(name="^^", grid_type="E", data=y, typ_var="X", level = 0, ip = range(100,103),
+            lon1=self.lon1, lat1 = self.lat1, lon2 = self.lon2, lat2 = self.lat2, label="")
+
+        rpnObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level = 0, ip = range(100, 103),
+            lon1=self.lon1, lat1 = self.lat1, lon2 = self.lon2, lat2 = self.lat2, label = "")
+
+        info = rpnObj.get_current_info()
+        ip_xy = map(lambda x: x.value, info["ip"])
+        ig = ip_xy + [0]
+        return ig
+
+
+
     def toProjectionXY(self, lon, lat):
         """
         Convert geographic lon/lat coordinates to the rotated lat lon coordinates

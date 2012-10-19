@@ -371,7 +371,7 @@ class Crcm5ModelDataManager:
         i, j = self._get_model_indices_for_stfl_station(station, nneighbours=nneighbours)
         if i < 0: return None
         print "retrieving ts for point ({0}, {1})".format(i, j)
-        ts = self.get_timeseries_for_point(i[0],j[0], start_date = start_date,
+        ts = self.get_timeseries_for_point(i,j, start_date = start_date,
                         end_date = end_date, var_name=var_name)
 
         ts.metadata = self._set_metadata(i, j)
@@ -484,7 +484,7 @@ class Crcm5ModelDataManager:
             jy_list.append(j)
 
             metadata = self._set_metadata(i, j)
-            metadata["distance_to_obs_km"] = lat_lon.get_distance_in_meters(self.lons2D[i, j], self.lats2D[i,j],
+            metadata["distance_to_obs_km"] = 1.0e-3 * lat_lon.get_distance_in_meters(self.lons2D[i, j], self.lats2D[i,j],
                         s.longitude, s.latitude
             )
             station_to_cell_props[s.id] = metadata
@@ -627,6 +627,7 @@ class Crcm5ModelDataManager:
                     if start_year <= t.year <= end_year:
                         if t.month in months:
                             fields_list.append(field)
+                rObj.close()
             return np.mean(fields_list, axis=0)
         else:
             raise NotImplementedError("Need to implement the case of this data organization, or put all the data files to the same folder.")
@@ -1070,6 +1071,14 @@ def compare_lake_levels():
     fig.savefig("lake_level_comp_mean_anomalies.png")
 
 
+
+def _get_cache_file_name(i, j, var_name ):
+
+
+    pass
+
+
+
 def get_timeseries_from_crcm4_for_station(station):
 
     pass
@@ -1094,10 +1103,13 @@ def compare_streamflow_normals():
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_sturm_snc"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_and_lakerof"
-    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_old_snc"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3_old_snc"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_260x260_wo_lakes_and_with_lakeroff"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions"
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice_1yrspnp_const_manning"
     coord_file = os.path.join(data_path, "pm1985050100_00000000p")
+
 
 
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,
@@ -1218,7 +1230,7 @@ def compare_streamflow_normals():
     lines = (line_model, line_obs)
     labels = ("Model (CRCM5)", "Observation" )
     fig.legend(lines, labels)
-    fig.savefig("performance_clim_without_lakes.png")
+    fig.savefig("performance_86x86_0.5deg_river_ice_1yrspnp_const_manning.png")
 
 
 def compare_streamflow():

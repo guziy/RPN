@@ -100,7 +100,7 @@ def main():
         temp_arr_derivs.temp_arr_last = temp_arr
 
 
-        nyears = 150 #len(sorted_times) // 12
+        nyears = 200 #len(sorted_times) // 12
         nx, ny = temp0.shape[0], temp0.shape[1]
         nz = len(levels)
         temp_arr_derivs.annual_means = -np.ones((nyears, nx , ny, nz))
