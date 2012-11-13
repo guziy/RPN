@@ -270,6 +270,12 @@ class RPN():
 
         self._dateo_format = "%Y%m%d%H%M%S"
 
+        #fstopc
+        self._dll.fstopc_wrapper.argtypes = [
+            c_char_p, c_char_p, c_int
+        ] 
+        
+        self._dll.fstopc_wrapper.restype = c_int
 
     def _dateo_to_string(self, dateo_int):
         """
@@ -342,6 +348,13 @@ class RPN():
 
     def get_output_step_in_seconds(self):
         raise Exception("Not yet implemented")
+
+
+
+    def suppress_log_messages(self):
+        self._dll.fstopc_wrapper("MSGLVL","SYSTEM",0)
+
+
 
     def close(self):
         self._dll.fstfrm_wrapper(self._file_unit)
@@ -1106,6 +1119,7 @@ def test_select_by_date():
     path = "/home/huziy/skynet3_rech1/test/snw_LImon_NA_CRCM5_CanESM2_historical_r1i1p1_185001-200512.rpn"
 
     rObj = RPN(path)
+    rObj.suppress_log_messages()
     res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour= 0)
     rObj.close()
 
