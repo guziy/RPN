@@ -46,6 +46,7 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
         ix, jy = self._get_closest_ij(event)
 
         fig = plt.figure()
+        assert isinstance(fig, Figure)
         gs = gridspec.GridSpec(1,2)
         #sounding
         sounding_ax = fig.add_subplot(gs[0,0])
@@ -57,11 +58,14 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
 
         self.ax.annotate(str(self.counter), (event.xdata, event.ydata), font_properties =
                 FontProperties(size=10),  bbox=dict(boxstyle="round", fc="w"))
-        self.ax.redraw_in_frame()
 
-        self.counter += 1
         assert isinstance(fig, Figure)
-        plt.show()
+        fig.savefig("pf_images/image_cross_and_profile_{0}.png".format(self.counter))
+        self.counter += 1
+
+        self.ax.figure.show()
+        fig.show()
+        #self.ax.figure.canvas.draw()
 
 
 def main():

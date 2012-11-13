@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 import itertools
-from matplotlib import gridspec
+from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm
 from matplotlib.dates import DateFormatter
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import LogFormatter, MultipleLocator
+from mpl_toolkits.axes_grid1.axes_grid import ImageGrid
 import pandas
 from crcm5.model_data import Crcm5ModelDataManager
 from data import cehq_station
@@ -37,7 +38,7 @@ def compare_means_2d(manager_list, start_date = None, end_date = None, months = 
     ncols = 2
     nrows = len(manager_list) // ncols + 1
 
-    gs = gridspec.GridSpec(nrows, ncols, top=0.985, right=0.985, hspace=0.2, left = 0.01)
+    #gs = gridspec.GridSpec(nrows, ncols, top=0.985, right=0.985, hspace=0.2, left = 0.01)
 
     fig = plt.figure()
 
@@ -84,9 +85,12 @@ def compare_means_2d(manager_list, start_date = None, end_date = None, months = 
 
     norm = BoundaryNorm( bounds, len(bounds) )
 
+    imgGrid = ImageGrid(fig, 111, nrows_ncols=(nrows, ncols), axes_pad=0.5, cbar_size="5%",
+        cbar_pad="5%", share_all=True)
+
     i = 0
     for theId, data_field in run_id_to_field.iteritems():
-        ax = fig.add_subplot(gs[i // ncols, i % ncols])
+        ax = imgGrid[i] #fig.add_subplot(gs[i // ncols, i % ncols])
         ax.set_title(theId)
         b = run_id_to_basemap[theId]
         x = run_id_to_x[theId]
@@ -98,17 +102,24 @@ def compare_means_2d(manager_list, start_date = None, end_date = None, months = 
             data_field = np.ma.masked_where( theManager.slope < 0, data_field )
 
         quadMesh = b.pcolormesh(x, y, data_field, vmin=vmin, vmax = vmax, cmap=cmap, ax = ax, norm=norm)
-        b.drawcoastlines()
+        b.drawcoastlines(ax = ax)
         i += 1
 
     assert isinstance(fig, Figure)
-    ax = fig.add_subplot(gs[i // ncols, i % ncols])
-    assert isinstance(ax, Axes)
-    ax.set_aspect(20)
-    ax.set_anchor("W")
 
 
-    fig.colorbar(quadMesh, cax = ax, ticks = bounds, format = "%.2g")
+
+
+
+    #ax = fig.add_subplot(gs[i // ncols, i % ncols])
+    #assert isinstance(ax, Axes)
+    #ax.set_aspect(20)
+    #ax.set_anchor("W")
+
+    cax = imgGrid.cbar_axes[len(run_id_to_field) - 1]
+    cax.colorbar(quadMesh, ticks = bounds, format = "%.3g")
+
+    #fig.colorbar(quadMesh, cax = ax, ticks = bounds, format = "%.2g")
     if out_img is None:
         fig.savefig("_".join(map(str, months))+"_2d_means.png")
     else:
@@ -237,7 +248,7 @@ def compare_hydrographs_at_stations(manager_list, start_date = None, end_date = 
 
         for run_id, color, color_index in zip( run_id_list, colors, range(len(colors)) ):
             df = run_id_to_dataframe[run_id]
-            the_line = ax.plot(year_dates, df[s.id], color, label = run_id, lw = 1)
+            the_line = ax.plot(year_dates, df[s.id], color= color, label = run_id, lw = 1)
             ax.annotate("{0:.3g}".format( sum(df[s.id]) * one_day_sec ),
                 (0.1,0.9 - color_index * 0.05), xycoords= "axes fraction", color = color
             ) #integral flow since those values are daily normals
@@ -293,29 +304,34 @@ def show_lake_effect():
 def show_lake_and_lakeroff_effect():
     path_list = [
                  "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff",
-                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions",
-                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice",
-                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_quebec_river_ice_gwrestime0",
-                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off",
-                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_260x260_wo_lakes_and_with_lakeroff",
-                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice_1yrspnp_const_manning",
+        #         "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions",
+        #         "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice",
+        #         "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_quebec_river_ice_gwrestime0",
+
+                # "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off",
+                # "/home/huziy/skynet3_exec1/from_guillimin/quebec_260x260_wo_lakes_and_with_lakeroff",
+               #  "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice_1yrspnp_const_manning",
 		 "/home/huziy/skynet3_exec1/from_guillimin/quebec_260x260_wo_lakes_and_with_lakeroff_nogw"
 
     ]
 
     run_id_list = [
         "w/o lakes, w/o lake roff.",
-        "with lakes, with lake roff.",
-        "with ice",
-        "with ice, no ground water",
-        "high res. lakes off",
-        "high res wo lakes with lake rof",
-        "low res, const manning, riv ice",
+     #   "with lakes, with lake roff.",
+     #   "with ice",
+     #   "with ice, no ground water",
+
+      #  "high res. lakes off",
+      #  "high res wo lakes with lake rof",
+      #  "low res, const manning, riv ice",
+
 	"high res., nogw, wo lakes, with lakerof"
 
     ]
 
-    colors = ["r", "k", "c", "y", "#B8860B", "#660033", "#FFE000"]
+    cmap = cm.get_cmap("jet", len(run_id_list))
+    #colors = [cmap(i / float(len(run_id_list))) for i in range(len(run_id_list)) ]
+    colors = ["r", "k", "g", "y", "m"]
 
     data_managers = []
     for the_path, the_id in zip(path_list, run_id_list):
@@ -323,9 +339,9 @@ def show_lake_and_lakeroff_effect():
         theManager.run_id = the_id
         data_managers.append(theManager)
 
-    compare_hydrographs_at_stations(data_managers, start_date=datetime(1986,1,1), end_date=datetime(1990,12, 31),
-        img_path="hydrograph_lake_and_lakeroff_effect_test_df.png", colors = colors
-    )
+#    compare_hydrographs_at_stations(data_managers, start_date=datetime(1986,1,1), end_date=datetime(1990,12, 31),
+#        img_path="hydrograph_lake_and_lakeroff_effect_test_df.png", colors = colors
+#    )
     stfl_bounds = [0, 1, 10, 100, 250, 500, 850, 900, 950, 1000,1200,1500,1800, 2000, 3000, 4000, 10000, 20000]
     compare_means_2d(data_managers, start_date=datetime(1986,1,1), end_date=datetime(1990,12, 31),
         out_img="lake_roff_and_lake_rout_effect_stfl.png", var_name="STFL", level=-1, bounds=stfl_bounds)
