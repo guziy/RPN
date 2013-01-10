@@ -107,7 +107,7 @@ class CRCMDataManager:
             tmax_1 = tmax_2
 
         #reject SFG
-        alt[ pf != 1 ] = -1
+        #alt[ pf != 1 ] = -1
 
 
         return  alt, tc_min, tc_max
@@ -218,7 +218,7 @@ class CRCMDataManager:
         returns [times(t), T(t,x, y, z)]
         """
         rpn_obj = RPN(file_path)
-
+        rpn_obj.suppress_log_messages()
         data = rpn_obj.get_4d_field(name = var_name)
         times = sorted( data.keys() )
         nt = len(times)

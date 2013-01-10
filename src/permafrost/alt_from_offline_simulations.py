@@ -70,13 +70,16 @@ def main():
 
     cache_file = "temp_arr.bin"
     #path = "/home/huziy/skynet1_rech3/cordex/Offline_CLASS_simulations/CLASSoff_300yrs_LAM_NA_ERA40_CORDEX_clim_I0.rpn"
-    path = "/home/huziy/skynet1_rech3/cordex/Offline_CLASS_simulations/CLASSoff_300yrs_LAM_NA_ERA40_CORDEX_clim2_19610115_monthly_I0_all.rpn"
+    #path = "/home/huziy/skynet1_rech3/cordex/Offline_CLASS_simulations/CLASSoff_300yrs_LAM_NA_ERA40_CORDEX_clim2_19610115_monthly_I0_all.rpn"
+    path = "/home/huziy/skynet1_rech3/cordex/Offline_CLASS_simulations/spinup_with10yr_data/CLASSoff_300yrs_LAM_NA_ERA40_CORDEX2_19610115_monthly_I0_all.rpn"
     if not os.path.isfile(cache_file):
 
         temp_arr_derivs = TempArrDerivs()
         rpnObj = RPN(path)
+        rpnObj.suppress_log_messages()
 
         temp = rpnObj.get_4d_field_fc_hour_as_time(name="I0")
+        #temp = rpnObj.get_4d_field(name="I0")
         times = temp.keys()
 
 
@@ -116,7 +119,7 @@ def main():
 
 
         print temp_arr.shape
-        pickle.dump(temp_arr_derivs, open(cache_file, mode="w"))
+        #pickle.dump(temp_arr_derivs, open(cache_file, mode="w"))
     else:
         temp_arr_derivs = pickle.load(open(cache_file))
 

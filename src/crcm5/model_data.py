@@ -84,6 +84,54 @@ class Crcm5ModelDataManager:
 
 
 
+    def _get_relevant_file_paths(self):
+        paths = []
+        if self.all_files_in_one_folder:
+            files = os.listdir(self.samples_folder)
+            for fName in files:
+                if not fName.startswith(self.file_name_prefix): continue
+                fPath = os.path.join(self.samples_folder, fName)
+                paths.append(fPath)
+        else:
+            raise Exception("If you are using distributed storage, you need to implement option")
+        return paths
+
+    def get_annual_mean_fields(self, start_year = -np.Inf, end_year = np.Inf, varname = None, level = -1, level_kind = level_kinds.ARBITRARY):
+        """
+        returns pandas.Series withe year as an index, and 2d fields of annual means as values
+        {year:mean_field}
+        """
+        if varname is None: varname = self.var_name
+
+        result = pandas.TimeSeries()
+        paths = self._get_relevant_file_paths()
+
+
+        for aPath in paths:
+            r = RPN(aPath)
+            r.suppress_log_messages()
+            data = r.get_all_time_records_for_name_and_level(varname=varname, level = level, level_kind=level_kind)
+            ts = pandas.TimeSeries(data)
+            assert isinstance(ts,pandas.Series)
+
+            result = result.append(ts)
+            r.close()
+
+        keys_and_groups = result.groupby(by = lambda t: t.year)
+        data_dict = {}
+        for kg in keys_and_groups:
+            key = kg[0]
+            if not ( start_year <= key <= end_year): continue
+            the_group = kg[1]
+            data_dict[key] = the_group.mean()
+
+
+
+        return pandas.Series(data_dict)
+
+
+
+
 
     def get_date_to_field_dict(self, var_name = None):
         """
@@ -413,6 +461,8 @@ class Crcm5ModelDataManager:
         [self.lons2D, self.lats2D] = rpnObj.get_longitudes_and_latitudes()
         rpnObj.close()
 
+        self.lons2D[self.lons2D > 180] -= 360
+
         #create kdtree for easier and faster lookup of the corresponding points
         #model <=> obs, for comparison
         [x, y, z] = lat_lon.lon_lat_to_cartesian(self.lons2D.flatten(), self.lats2D.flatten())
@@ -524,6 +574,7 @@ class Crcm5ModelDataManager:
                 if os.path.isfile(the_path):
                     print "Opening the file {0} ...".format(the_path)
                     rpnObj = RPN(the_path)
+                    rpnObj.suppress_log_messages()
                     hour_to_field = rpnObj.get_all_time_records_for_name(varname=var_name)
 
 
@@ -622,6 +673,7 @@ class Crcm5ModelDataManager:
             fields_list = []
             for fPath in fPaths:
                 rObj = RPN(fPath)
+                rObj.suppress_log_messages()
                 data = rObj.get_all_time_records_for_name_and_level(varname = var_name, level=level, level_kind=level_kind)
                 for t, field in data.iteritems():
                     if start_year <= t.year <= end_year:

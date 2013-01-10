@@ -150,7 +150,11 @@ def plot_station_positions(manager, station_list):
     fig.savefig("station_pos{0}.png".format("_".join(map(lambda s: s.id, station_list))))
     pass
 
-def compare_hydrographs_at_stations(manager_list, start_date = None, end_date = None, img_path = "hydrographs.png", colors = None):
+def compare_hydrographs_at_stations(manager_list,
+                                    start_date = None,
+                                    end_date = None, img_path = "hydrographs.png", colors = None,
+                                    fig = None
+                                    ):
     selected_ids = None
     stations = cehq_station.read_station_data(selected_ids = selected_ids,
             start_date=start_date, end_date=end_date
@@ -184,6 +188,10 @@ def compare_hydrographs_at_stations(manager_list, start_date = None, end_date = 
 
     stations = filtered_stations
 
+
+    print len(filtered_stations)
+#    if True: raise Exception()
+
     #save all run ids
     plot_utils.apply_plot_params(width_pt=None, height_cm =40.0, width_cm=30.0, font_size=10)
     run_id_to_dataframe = {}
@@ -207,8 +215,8 @@ def compare_hydrographs_at_stations(manager_list, start_date = None, end_date = 
         run_id_to_dataframe[manager.run_id] = df
 
 
-
-    fig = plt.figure()
+    if fig is None:
+        fig = plt.figure()
     #two columns
     ncols = 2
     nrows = len(stations) / ncols
@@ -276,7 +284,8 @@ def compare_hydrographs_at_stations(manager_list, start_date = None, end_date = 
     lines = lines_model + [line_obs,]
     labels = run_id_list + ["Observation",]
     fig.legend(lines, labels, ncol = 5)
-    fig.savefig(img_path)
+    if img_path is not None:
+        fig.savefig(img_path)
 
 def show_lake_effect():
     path_list = [
@@ -352,6 +361,54 @@ def show_lake_and_lakeroff_effect():
 #            var_name="TRUN", level=5, bounds=None, months=[month,])
 
 
+
+def compare_sim_with_obs():
+
+    start_year = 1979
+    end_year = 1986
+
+    path_list = [
+                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_003",
+                 ]
+    run_id_list = [
+        "003, 10 soil layers [{0}-{1}]".format(start_year, end_year)
+    ]
+
+    colors = ["m"] #"b" is reserved for observations
+    data_managers = []
+    for the_path, the_id in zip(path_list, run_id_list):
+        theManager = Crcm5ModelDataManager(samples_folder_path=the_path, all_files_in_samples_folder=True)
+        theManager.run_id = the_id
+        data_managers.append(theManager)
+
+    compare_hydrographs_at_stations(data_managers, start_date=datetime(start_year,1,1),
+            end_date=datetime(end_year,12, 31), img_path="hydrographs_003.png", colors =colors)
+
+
+
+def compare_level_num_influence():
+    path_list = [
+                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_001",
+                 "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_002",
+                 ]
+    run_id_list = [
+        "001, 10 soil layers",
+        "002, 3 soil layers",
+    ]
+
+    colors = ["r", "k", "m"] #"b" is reserved for observations
+    data_managers = []
+    for the_path, the_id in zip(path_list, run_id_list):
+        theManager = Crcm5ModelDataManager(samples_folder_path=the_path, all_files_in_samples_folder=True)
+        theManager.run_id = the_id
+        data_managers.append(theManager)
+
+    compare_hydrographs_at_stations(data_managers, start_date=datetime(1986,1,1),
+        end_date=datetime(1988,12, 31), img_path=None, colors =colors[:2])
+
+
+
+
 def main():
 
     path_list = [
@@ -417,9 +474,10 @@ if __name__ == "__main__":
     #main()
     #show_lake_and_lakeroff_effect()
     plot_utils.apply_plot_params(width_pt=None, font_size=14)
-    show_lake_and_lakeroff_effect()
+    #show_lake_and_lakeroff_effect()
     #show_lake_effect()
     #plot_mean_2d_fields()
-    
+    #compare_level_num_influence()
+    compare_sim_with_obs()
     print "Hello world"
   

@@ -7,6 +7,94 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
+
+def get_cmap_from_ncl_spec_file(path = "", ncolors = None):
+    """
+    if ncolors is ommited, the value is taken from the file
+    """
+    f = open(path)
+    Nmax = 256.0
+    all_numbers = []
+    for line in f:
+        line = line.strip()
+        if line == "": continue
+        if line.lower().startswith("ncolors") and ncolors is None:
+            ncolors = int( line.split("=")[1].strip() )
+            continue
+        if not line.startswith("#") and not line.lower().startswith("ncolors"):
+            vals = map( lambda x: float(x.strip())/Nmax, line.split())
+            all_numbers.append(vals)
+
+    all_numbers = np.array(all_numbers)
+    red_numbers = all_numbers[:,0]
+    green_numbers = all_numbers[:, 1]
+    blue_numbers = all_numbers[:, 2]
+    dx = 1.0 / float(len(red_numbers) - 1)
+    reds = []
+    greens = []
+    blues = []
+    x = 0
+    for i in range(len(red_numbers)):
+
+        if i == len(red_numbers) - 1:
+            x = 1
+        reds.append((x,red_numbers[i], red_numbers[i]))
+        greens.append((x, green_numbers[i], green_numbers[i]))
+        blues.append((x, blue_numbers[i], blue_numbers[i]))
+        x += dx
+
+
+    cdict = {
+        'blue':  blues,
+        'green': greens,
+        'red':  reds
+    }
+
+    return mpl.colors.LinearSegmentedColormap('sig_colormap', cdict, ncolors)
+
+
+
+    pass
+
+
+def get_cmap_wo_red(ncolors = 1024):
+    all_numbers = [
+                    [0,    0.3,    1],
+                    [0,    1,      1],
+                    [0.5,  1,    0.5],
+                    [0.6,    1,      0],
+                    [0.8,    0.8,    0.1],
+                    [1,    1,    0.0],
+
+    ]
+
+    all_numbers = np.array(all_numbers)
+    red_numbers = all_numbers[:,0]
+    green_numbers = all_numbers[:, 1]
+    blue_numbers = all_numbers[:, 2]
+    dx = 1.0 / float(len(red_numbers) - 1)
+    reds = []
+    greens = []
+    blues = []
+    x = 0
+    for i in range(len(red_numbers)):
+
+        if i == len(red_numbers) - 1:
+            x = 1
+        reds.append((x,red_numbers[i], red_numbers[i]))
+        greens.append((x, green_numbers[i], green_numbers[i]))
+        blues.append((x, blue_numbers[i], blue_numbers[i]))
+        x += dx
+
+
+    cdict = {
+        'blue':  blues,
+        'green': greens,
+        'red':  reds
+    }
+
+    return mpl.colors.LinearSegmentedColormap('sig_colormap', cdict, ncolors)
+
 def get_blue_colormap(ncolors = 1024):
 
     """
@@ -515,14 +603,31 @@ def cmap_map(function,cmap):
 
     return mpl.colors.LinearSegmentedColormap('colormap',cdict,1024)
 
+
+def test_ncl_map():
+
+    import application_properties
+    application_properties.set_current_directory()
+
+    # Make a figure and axes with dimensions as desired.
+    fig = plt.figure(figsize=(8,3))
+    ax1 = fig.add_axes([0.05, 0.65, 0.9, 0.15])
+
+    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap = get_cmap_from_ncl_spec_file(path="colormap_files/topo_15lev.rgb",
+                                            ncolors=  None),
+                                   orientation='horizontal')
+    plt.show()
+
+
 def test():
     # Make a figure and axes with dimensions as desired.
     fig = plt.figure(figsize=(8,3))
     ax1 = fig.add_axes([0.05, 0.65, 0.9, 0.15])
 
-    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap = get_lighter_jet_cmap(ncolors = 10),
+    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap = get_cmap_wo_red(ncolors = 10),
                                    orientation='horizontal')
     plt.show()
 if __name__ == "__main__":
-    test()
+    #test()
+    test_ncl_map()
     print "Hello World"

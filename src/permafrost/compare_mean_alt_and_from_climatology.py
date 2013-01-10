@@ -17,7 +17,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.polygon import Polygon
 import draw_regions
 import my_colormaps
-from cross_plotter import SoundingPlotter
+from sounding_plotter import SoundingPlotter
 from rpn.rpn import RPN
 from util import plot_utils
 import matplotlib as mpl
@@ -652,7 +652,7 @@ def plot_current_alts():
 
 
     permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
-    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 3)
+    mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 2)
 
 #    plot_utils.apply_plot_params(width_pt=None, width_cm=20, height_cm=40, font_size=16)
     fig = plt.figure()
@@ -660,12 +660,13 @@ def plot_current_alts():
 
 
     h_max = 10
-    bounds = [0,0.1,0.5,1,2,3,4,5,6]
+    bounds = [0,0.1,0.5,1,2,3,4,5]
     cmap = my_colormaps.get_lighter_jet_cmap(ncolors=len(bounds) - 1) #cm.get_cmap("jet",10)
+    #cmap = my_colormaps.get_cmap_wo_red(ncolors=len(bounds) - 1)
     norm = BoundaryNorm(boundaries=bounds,ncolors=len(bounds), clip=True)
     cmap.set_over(cmap(1.0))
     clevels = np.arange(0,h_max+1,1)
-    gs = gridspec.GridSpec(1,2, width_ratios=[1,0.1], hspace=0, wspace=0.1,
+    gs = gridspec.GridSpec(3,2, width_ratios=[1,0.06], hspace=0, wspace=0.0,
         left=0.05, bottom = 0.02, top=0.95)
 
     all_axes = []
@@ -678,11 +679,11 @@ def plot_current_alts():
     for name in sim_names:
         path = simname_to_path[name]
         dm = CRCMDataManager(data_folder=path)
-        hc0, t3d_min, t3d_max = dm.get_alt_using_monthly_mean_climatology(xrange(start_year,end_year+1))
+        hc0, t3d_min, t3d_max = dm.get_alt_using_monthly_mean_climatology(range(start_year,end_year+1))
 
         hc_list.append(hc0)
         ax = fig.add_subplot(gs[i,0])
-        cp = SoundingPlotter(ax, basemap, t3d_min, t3d_max, lons2d, lats2d, levelheights=dm.level_heights)
+        #cp = SoundingPlotter(ax, basemap, t3d_min, t3d_max, lons2d, lats2d, levelheights=dm.level_heights)
 
         assert isinstance(ax, Axes)
         hc = np.ma.masked_where(mask_cond | (hc0 < 0), hc0)
@@ -708,70 +709,69 @@ def plot_current_alts():
 
         all_months, all_temps = dm.get_monthly_mean_soiltemps(year_range=xrange(start_year,end_year+1))
         all_months_ord = date2num(all_months)
-        i = 0
-        mpl.rcParams['contour.negative_linestyle'] = 'solid'
-
-        for the_i, the_j in zip(xs,ys):
-            #plot profile
-            plt.figure()
-            plt.plot(t3d_max[the_i, the_j, :] - dm.T0, dm.level_heights, color = "r")
-            plt.plot(t3d_min[the_i, the_j, :] - dm.T0, dm.level_heights, color = "b")
-            plt.plot([0 , 0], [dm.level_heights[0], dm.level_heights[-1]], color = "k")
-
-            x1, x2 = plt.xlim()
-            #plt.plot( [x1, x2], [bdrck_field[the_i, the_j], bdrck_field[the_i, the_j]], color = "k", lw = 3 )
-            #plt.title(str(i) + ", dpth_to_bedrock = {0} m".format(bdrck_field[the_i, the_j]))
-            plt.title(str(i))
-            plt.gca().invert_yaxis()
-            plt.savefig("prof{0}.png".format(i))
-            ax.annotate(str(i), (x[the_i, the_j], y[the_i, the_j]), font_properties =
-                            FontProperties(size=10))
-
-
-            #plot vertical temp cross-section
-            plt.figure()
-            plt.title(str(i) + ", ({0} - {1})".format(start_year, end_year))
-
-            levs2d, times2d = np.meshgrid(dm.level_heights, all_months_ord)
-            clevs = [-25,-20,-10,-5,-1,0,1,5,10,20,25]
-            norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
-            cmap = cm.get_cmap("jet", len(clevs) - 1)
-
-            img = plt.contourf(times2d, levs2d, all_temps[:,the_i, the_j, :] - dm.T0, levels = clevs, cmap = cmap, norm = norm)
-            #plt.contour(times2d, levs2d, all_temps[:,the_i, the_j, :] - dm.T0, levels = clevs, colors = "k", linewidth = 1)
-            the_ax = plt.gca()
-            assert isinstance(the_ax, Axes)
-            the_ax.invert_yaxis()
-            the_ax.xaxis.set_major_formatter(FuncFormatter(
-                lambda x, pos: num2date(float(x)).strftime("%Y")
-            ))
-
-            print "i = {0}; lon, lat = {1}, {2}".format(i, lons2d[the_i, the_j], lats2d[the_i, the_j])
-
-            plt.colorbar(img, ticks = clevs)
-
-            plt.savefig("temp_section_{0}.png".format(i))
-
-            i += 1
+#        mpl.rcParams['contour.negative_linestyle'] = 'solid'
+#
+#        for the_i, the_j in zip(xs,ys):
+#            #plot profile
+#            plt.figure()
+#            plt.plot(t3d_max[the_i, the_j, :] - dm.T0, dm.level_heights, color = "r")
+#            plt.plot(t3d_min[the_i, the_j, :] - dm.T0, dm.level_heights, color = "b")
+#            plt.plot([0 , 0], [dm.level_heights[0], dm.level_heights[-1]], color = "k")
+#
+#            x1, x2 = plt.xlim()
+#            #plt.plot( [x1, x2], [bdrck_field[the_i, the_j], bdrck_field[the_i, the_j]], color = "k", lw = 3 )
+#            #plt.title(str(i) + ", dpth_to_bedrock = {0} m".format(bdrck_field[the_i, the_j]))
+#            plt.title(str(i))
+#            plt.gca().invert_yaxis()
+#            plt.savefig("prof{0}.png".format(i))
+#            ax.annotate(str(i), (x[the_i, the_j], y[the_i, the_j]), font_properties =
+#                            FontProperties(size=10))
+#
+#
+#            #plot vertical temp cross-section
+#            plt.figure()
+#            plt.title(str(i) + ", ({0} - {1})".format(start_year, end_year))
+#
+#            levs2d, times2d = np.meshgrid(dm.level_heights, all_months_ord)
+#            clevs = [-25,-20,-10,-5,-1,0,1,5,10,20,25]
+#            norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
+#            cmap = cm.get_cmap("jet", len(clevs) - 1)
+#
+#            img = plt.contourf(times2d, levs2d, all_temps[:,the_i, the_j, :] - dm.T0, levels = clevs, cmap = cmap, norm = norm)
+#            #plt.contour(times2d, levs2d, all_temps[:,the_i, the_j, :] - dm.T0, levels = clevs, colors = "k", linewidth = 1)
+#            the_ax = plt.gca()
+#            assert isinstance(the_ax, Axes)
+#            the_ax.invert_yaxis()
+#            the_ax.xaxis.set_major_formatter(FuncFormatter(
+#                lambda x, pos: num2date(float(x)).strftime("%Y")
+#            ))
+#
+#            print "i = {0}; lon, lat = {1}, {2}".format(i, lons2d[the_i, the_j], lats2d[the_i, the_j])
+#
+#            plt.colorbar(img, ticks = clevs)
+#
+#            plt.savefig("temp_section_{0}.png".format(i))
+#
+#            i += 1
 
         print  "lons = [{0}]".format(",".join(map( lambda x: str(x), lons2d[np.array(xs), np.array(ys)])))
         print  "lats = [{0}]".format(",".join(map( lambda x: str(x), lats2d[np.array(xs), np.array(ys)])))
 
 
 
+# draw barplot with numbers of alt in given ranges
+#        plt.figure()
+#        alt_ranges = xrange(0,18)
+#        numbers = []
+#        for the_alt in alt_ranges:
+#            hci = np.ma.masked_where( (hc0 < the_alt) | (hc0 > the_alt + 1) | hc.mask ,hc)
+#            numbers.append(hci.count())
+#        plt.bar(alt_ranges, numbers, width=1)
+#        plt.xlabel("ALT (m)")
+#        plt.ylabel("Number of cells")
+#        plt.savefig("numbers_in_range.png")
 
-        plt.figure()
-        alt_ranges = xrange(0,18)
-        numbers = []
-        for the_alt in alt_ranges:
-            hci = np.ma.masked_where( (hc0 < the_alt) | (hc0 > the_alt + 1) | hc.mask ,hc)
-            numbers.append(hci.count())
-        plt.bar(alt_ranges, numbers, width=1)
-        plt.xlabel("ALT (m)")
-        plt.ylabel("Number of cells")
-        plt.savefig("numbers_in_range.png")
 
-        break
 
 
 
@@ -787,7 +787,7 @@ def plot_current_alts():
                 ax=the_ax, linewidth=1.5, drawbounds=False)
 
         for nshape,seg in enumerate(basemap.zone):
-            if basemap.zone_info[nshape]["EXTENT"] not in  ["C","D"]: continue
+            if basemap.zone_info[nshape]["EXTENT"] not in  ["C"]: continue
             poly = mpl.patches.Polygon(seg,edgecolor = "k", facecolor="none", zorder = 10, lw = 1.5)
             the_ax.add_patch(poly)
 
@@ -798,7 +798,7 @@ def plot_current_alts():
 
     cax = fig.add_subplot(gs[:,1])
     cax.set_anchor("W")
-    cax.set_aspect(30)
+    cax.set_aspect(35)
     formatter = FuncFormatter(
         lambda x, pos: "{0: <6}".format(x)
     )
@@ -837,7 +837,7 @@ def plot_current_alts():
 
 if __name__ == "__main__":
     import application_properties
-    plot_utils.apply_plot_params(width_pt=None, width_cm=28, height_cm=20, font_size=20)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=25, height_cm=35, font_size=20)
     application_properties.set_current_directory()
     #plot_future_alts()
 #    plot_current_alts_nyear_rule()

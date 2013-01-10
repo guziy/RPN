@@ -836,7 +836,6 @@ class RPN():
         """
         result = {}
         data1 = self.get_first_record_for_name(name)
-
         while data1 is not None:
             level = self.get_current_level(level_kind = level_kind)
             time = self.get_current_validity_date()

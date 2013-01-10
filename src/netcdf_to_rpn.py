@@ -1,5 +1,6 @@
 import os
 from mpl_toolkits.basemap import Basemap
+from domains.grid_config import GridConfig
 
 __author__="huziy"
 __date__ ="$Aug 20, 2011 1:45:02 PM$"
@@ -16,39 +17,48 @@ import numpy as np
 
 
 
-def convert(nc_path = 'directions_africa_dx0.44deg.nc'):
+def convert(nc_path = 'directions_africa_dx0.44deg.nc', out_path = None, gc = None):
 
     """
     :type nc_path: string
+    :type gc: GridConfig
+    gc - holds grid parameters
     """
     ds = nc.Dataset(nc_path)
 
     ncNameToRpnName = {'flow_direction_value': 'fldr', 'slope': 'slop', 
                         'channel_length':'leng', 'accumulation_area':'facc',
-                        "lake_fraction": "lkfr", "lake_outlet":"lkou"
+                        "lake_fraction": "lkfr", "lake_outlet":"lkou",
+                        "drainage_density":"dd"
                       }
-    rObj = RPN(os.path.basename (nc_path)[:-2] + "rpn" , mode = 'w')
+    if out_path is None:
+        rObj = RPN(os.path.basename (nc_path)[:-2] + "rpn" , mode = 'w')
+    else:
+        rObj = RPN(out_path , mode = 'w')
 
     #
     ig = []
 
+
+
+
     #params
-    dx = 0.1
-    dy = 0.1
-    iref = 142 #no need to do -1, doing it later in the formulas
-    jref = 122
-    xref = 180 #rotated longitude
-    yref = 0   #rotated latitude
+    dx = gc.dx
+    dy = gc.dy
+    iref = gc.iref #no need to do -1, doing it later in the formulas
+    jref = gc.jref
+    xref = gc.xref #rotated longitude
+    yref = gc.yref   #rotated latitude
 
     #projection parameters
-    lon1 = -68.0
-    lat1 = 52.0
+    lon1 = gc.lon1
+    lat1 = gc.lat1
 
-    lon2 = 16.65
-    lat2 = 0.0
+    lon2 = gc.lon2
+    lat2 = gc.lat2
 
-    ni = 260
-    nj = 260
+    ni = gc.ni
+    nj = gc.nj
     x = np.zeros((ni, 1))
     x[:,0] = [xref + (i - iref + 1) * dx for i in xrange(ni)]
 
@@ -175,5 +185,8 @@ if __name__ == "__main__":
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v3.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v4.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_3.nc")
-    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_4.nc")
+    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_4.nc")
+    gcLow = GridConfig.get_default_for_resolution(res = 0.5)
+    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_with_drainage_density/directions_qc_dx0.5deg_86x86.nc",
+        gc=gcLow, out_path="directions_0.5deg_with_dd.rpn")
     print "Hello World"
