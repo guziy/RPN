@@ -1,3 +1,6 @@
+import Ngl
+
+
 __author__ = 'huziy'
 
 import numpy as np
@@ -45,7 +48,7 @@ class RotatedLatLon():
         """
         x, y - 1d coordinates in rotated system
         """
-	x = np.array(x)
+        x = np.array(x)
         x.shape = (len(x),1)
         y = np.array(y)
         y.shape = (1, len(y)) 
@@ -103,13 +106,80 @@ class RotatedLatLon():
         return self.mean_earth_radius_m_crcm5 ** 2 * np.cos(lats2d) * dx * dy
 
 
-
-
-
+    def get_south_pol_coords(self):
+        rot_pole = self.rot_matrix * np.mat([0,0,-1]).T
+        return lat_lon.cartesian_to_lon_lat(rot_pole.A1)
         pass
 
 
 
+def south_pole_coords_test():
+    import  application_properties
+    application_properties.set_current_directory()
+    rot_lat_lon = RotatedLatLon(lon1=-68, lat1=52, lon2=16.65, lat2=0.0)
+    splon, splat = rot_lat_lon.get_south_pol_coords()
+
+    #get some data
+    from crcm5.model_data import Crcm5ModelDataManager
+    base_data_path =  "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff"
+    base_data_manager = Crcm5ModelDataManager(samples_folder_path=base_data_path,
+        all_files_in_samples_folder=True, need_cell_manager=True)
+
+    lons2d = base_data_manager.lons2D
+    lats2d = base_data_manager.lats2D
+
+    acc = base_data_manager.accumulation_area_km2
+
+    #
+    #  Open a workstation.
+    #
+    wks_type = "ps"
+    wks = Ngl.open_wks(wks_type,"ngl05p")
+
+
+
+
+
+    resources = Ngl.Resources()
+
+    resources.tiXAxisString = "~F25~longitude"
+    resources.tiYAxisString = "~F25~latitude"
+
+    resources.cnFillOn              = True     # Turn on contour fill.
+    resources.cnLineLabelsOn        = False    # Turn off line labels.
+    resources.cnInfoLabelOn         = False    # Turn off info label.
+
+    resources.nglSpreadColorEnd     = -2       # Don't include gray in contours.
+
+    #resources.sfXCStartV = float(min(pf_lon))   # Define where contour plot
+    #resources.sfXCEndV   = float(max(pf_lon))   # should lie on the map plot.
+    #resources.sfYCStartV = float(min(pf_lat))
+    #resources.sfYCEndV   = float(max(pf_lat))
+
+    #resources.mpProjection = "LambertEqualArea"  # Change the map projection.
+    #resources.mpCenterLonF = (pf_lon[pf_nlon-1] + pf_lon[0])/2
+    #resources.mpCenterLatF = (pf_lat[pf_nlat-1] + pf_lat[0])/2
+
+    resources.pmTickMarkDisplayMode = "Never"  # Turn off map tickmarks.
+
+    resources.tiMainString = "~F26~January 1996 storm" # Set a title.
+
+    resources.vpXF      = 0.1    # Change the size and location of the
+    resources.vpYF      = 0.9    # plot on the viewport.
+    resources.vpWidthF  = 0.7
+    resources.vpHeightF = 0.7
+
+    resources.nglFrame = False # Don't advance frame.
+
+    resources.mpCenterLonF           = splon
+    resources.mpCenterLatF           = splat
+
+    resources.tfDoNDCOverlay = True
+    #resources.sfXArray          = lons2d
+    #resources.sfYArray          = lats2d
+
+    #TODO: it seems somewhat complicated to define the plot coordinates...
+    map = Ngl.contour_map(wks,acc,resources)
 
 
 def main():
@@ -120,10 +190,13 @@ def main():
     prj = rll.toProjectionXY(0,0)
     print prj
     print rll.toGeographicLonLat(prj[0], prj[1])
+
+    print south_pole_coords_test()
+
     #TODO: implement
     pass
 
 if __name__ == "__main__":
     main()
     print "Hello world"
-  
+

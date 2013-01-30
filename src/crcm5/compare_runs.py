@@ -364,17 +364,19 @@ def show_lake_and_lakeroff_effect():
 
 def compare_sim_with_obs():
 
-    start_year = 1979
+    start_year = 1990
     end_year = 1986
 
     path_list = [
                  "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_003",
+                 "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff"
                  ]
     run_id_list = [
-        "003, 10 soil layers [{0}-{1}]".format(start_year, end_year)
+        "003, 10 soil layers [{0}-{1}]".format(start_year, end_year),
+        "wo lakes and wo lakeroff"
     ]
 
-    colors = ["m"] #"b" is reserved for observations
+    colors = ["m", "k"] #"b" is reserved for observations
     data_managers = []
     for the_path, the_id in zip(path_list, run_id_list):
         theManager = Crcm5ModelDataManager(samples_folder_path=the_path, all_files_in_samples_folder=True)
@@ -382,7 +384,7 @@ def compare_sim_with_obs():
         data_managers.append(theManager)
 
     compare_hydrographs_at_stations(data_managers, start_date=datetime(start_year,1,1),
-            end_date=datetime(end_year,12, 31), img_path="hydrographs_003.png", colors =colors)
+            end_date=datetime(end_year,12, 31), img_path="hydrographs_003_and_wo_lakes_and_wo_lakeroff.png", colors =colors)
 
 
 
@@ -390,10 +392,12 @@ def compare_level_num_influence():
     path_list = [
                  "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_001",
                  "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_002",
+                 "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_lowres_004"
                  ]
     run_id_list = [
         "001, 10 soil layers",
         "002, 3 soil layers",
+        "004, interflow"
     ]
 
     colors = ["r", "k", "m"] #"b" is reserved for observations
@@ -404,7 +408,7 @@ def compare_level_num_influence():
         data_managers.append(theManager)
 
     compare_hydrographs_at_stations(data_managers, start_date=datetime(1986,1,1),
-        end_date=datetime(1988,12, 31), img_path=None, colors =colors[:2])
+        end_date=datetime(1990,12, 31), img_path="cmp_001_002_004.png", colors =colors)
 
 
 
@@ -478,6 +482,7 @@ if __name__ == "__main__":
     #show_lake_effect()
     #plot_mean_2d_fields()
     #compare_level_num_influence()
-    compare_sim_with_obs()
+    #compare_sim_with_obs()
+    compare_level_num_influence()
     print "Hello world"
   

@@ -9,6 +9,7 @@ from matplotlib.ticker import LinearLocator
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 from numpy.lib.function_base import meshgrid
+from pandas.core.groupby import GroupBy
 from scipy.spatial.kdtree import KDTree
 import application_properties
 from data import cehq_station
@@ -96,6 +97,14 @@ class Crcm5ModelDataManager:
             raise Exception("If you are using distributed storage, you need to implement option")
         return paths
 
+
+
+    def _zero_negatives(self, arr):
+        x = arr.copy()
+        x[x< 0] = 0
+        return x
+
+
     def get_annual_mean_fields(self, start_year = -np.Inf, end_year = np.Inf, varname = None, level = -1, level_kind = level_kinds.ARBITRARY):
         """
         returns pandas.Series withe year as an index, and 2d fields of annual means as values
@@ -106,6 +115,13 @@ class Crcm5ModelDataManager:
         result = pandas.TimeSeries()
         paths = self._get_relevant_file_paths()
 
+        start_date = None
+        end_date = None
+        if start_year != np.Inf:
+           start_date = datetime(start_year, 1,1)
+
+        if end_year != np.Inf:
+            end_date = datetime(end_year+1, 1, 1,0,0)
 
         for aPath in paths:
             r = RPN(aPath)
@@ -113,6 +129,9 @@ class Crcm5ModelDataManager:
             data = r.get_all_time_records_for_name_and_level(varname=varname, level = level, level_kind=level_kind)
             ts = pandas.TimeSeries(data)
             assert isinstance(ts,pandas.Series)
+
+
+            ts = ts.truncate(before=start_date, after=end_date)
 
             result = result.append(ts)
             r.close()
@@ -123,7 +142,11 @@ class Crcm5ModelDataManager:
             key = kg[0]
             if not ( start_year <= key <= end_year): continue
             the_group = kg[1]
-            data_dict[key] = the_group.mean()
+
+            print type(the_group)
+            print dir(the_group)
+            the_group1 = the_group.apply(self._zero_negatives)
+            data_dict[key] = the_group1.mean()
 
 
 
@@ -690,7 +713,9 @@ class Crcm5ModelDataManager:
                                       end_date = None,
                                       months = xrange(1,13),
                                       var_name = "STFL",
-                                      file_name_prefix = "pm"
+                                      file_name_prefix = "pm",
+                                      level = -1,
+                                      level_kind = level_kinds.ARBITRARY
                                       ):
         """
         get list of monthly means over data
@@ -732,7 +757,8 @@ class Crcm5ModelDataManager:
                     if file_name.startswith("."): continue
                     if not file_name.startswith(file_name_prefix): continue
                     file_path = os.path.join(folder_path, file_name)
-                    field_list.append( self._get_2d_field_from_file(path_to_file=file_path, field_name=var_name) )
+                    field_list.append( self._get_2d_field_from_file(path_to_file=file_path,
+                        field_name=var_name, level=level, level_kind=level_kind) )
 
                 #store mean field for the given month and year
                 result[the_month].append(np.mean(field_list, axis=0))
@@ -744,31 +770,42 @@ class Crcm5ModelDataManager:
         pass
 
     def _get_2d_field_from_file(self, path_to_file = "",
-                             field_name = "STFL"):
+                             field_name = "STFL", level = -1, level_kind = level_kinds.ARBITRARY):
         """
         Read 2D data field from a file
         """
         rpnObj = RPN(path=path_to_file)
-        data = rpnObj.get_first_record_for_name(field_name)
+        data = rpnObj.get_first_record_for_name_and_level(varname=field_name, level=level, level_kind=level_kind)
         rpnObj.close()
         return data
 
 
 
-    def get_monthly_climatology(self, varname =  "STFL"):
+    def get_monthly_climatology(self, varname =  "STFL", months = range(1,13), level = -1,
+                                          level_kind = level_kinds.ARBITRARY, start_date = None, end_date = None):
         time_series = {}
         if self.all_files_in_one_folder:
             for fName in os.listdir(self.samples_folder):
                 fPath = os.path.join(self.samples_folder, fName)
                 rpnObj = RPN(fPath)
-                date_to_field = rpnObj.get_all_time_records_for_name(varname=varname)
+                rpnObj.suppress_log_messages()
+                date_to_field = rpnObj.get_all_time_records_for_name_and_level(varname=varname, level=level, level_kind=level_kind)
                 time_series.update(date_to_field)
 
         result = []
-        for month in xrange(1,13):
-            sel_dates = itertools.ifilter(lambda x: x.month == month, time_series.keys())
+
+        if start_date is None:
+            start_date = min(time_series.keys())
+
+        if end_date is None:
+            end_date = max(time_series.keys())
+
+
+        for month in months:
+            sel_dates = itertools.ifilter(lambda x: x.month == month and start_date <= x <= end_date, time_series.keys())
             sel_values = map(lambda x: time_series[x], sel_dates)
-            result.append(np.array(sel_values).mean(axis = 0))
+            the_mean = np.array(sel_values).mean(axis = 0)
+            result.append(the_mean)
 
         return result
 
@@ -788,8 +825,6 @@ class Crcm5ModelDataManager:
          get drainage area fields
 
         """
-        #TODO: change the way how the drainage area is read
-        #TODO: i.e. instead of taking the margins just add the drainage area as the variable in the model
 
         if derive_from_data and self.all_files_in_one_folder:
             files = os.listdir(self.samples_folder)
@@ -803,12 +838,25 @@ class Crcm5ModelDataManager:
             self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
             self.lake_fraction = rpnObj.get_first_record_for_name("LF1")
             self.bankfull_storage_m3 = rpnObj.get_first_record_for_name("STBM")
+            self.cbf = rpnObj.get_first_record_for_name("CBF")
 
+
+
+            #try to read cell areas from the input file
             try:
-                self.cell_area = rpnObj.get_first_record_for_name("DX")
+                self.cell_area = rpnObj.get_first_record_for_name("DX") #in m**2
             except Exception, e:
                 print e.message
                 print "Could not find cell area in the output: ", file_path
+
+
+            try:
+                self.land_sea_mask = (rpnObj.get_first_record_for_name("MG") > 0.6).astype(int) #0/1
+            except Exception, e:
+                print e.message
+                print "Could not find land/sea mask in the output: ", file_path
+
+
 
             if self.need_cell_manager:
                 nx, ny = self.flow_directions.shape
@@ -906,8 +954,28 @@ class Crcm5ModelDataManager:
             print "CellManager should be supplied for this operation."
             raise Exception("Cellmanager should be created via option need_cell_manager = True in the constructor.")
 
+    def get_2d_field_for_date(self, date, dateo, varname, level = -1, level_kind = level_kinds.ARBITRARY):
+        if self.all_files_in_one_folder:
+            fNames = os.listdir(self.samples_folder)
+            paths = map(lambda x,y: os.path.join(x,y), [self.samples_folder] * len(fNames), fNames )
+            for thePath in paths:
+                rObj = RPN(thePath)
+                rObj.suppress_log_messages()
 
-def test_seasonal_mean():
+                #data = rObj.get_all_time_records_for_name_and_level(varname=varname, level = level, level_kind= level_kind)
+                data = rObj.get_record_for_date_and_level(var_name=varname, level=level, date=date, date_o=dateo, level_kind=level_kind)
+
+                rObj.close()
+
+                #if the field for date is found
+                if data != None:
+                    return data
+        else:
+            raise NotImplementedError("You need to implement this method for the given positions of files")
+
+
+
+def do_test_seasonal_mean():
     fig = plt.figure()
     assert isinstance(fig, Figure)
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
@@ -969,7 +1037,7 @@ def test_seasonal_mean():
     pass
 
 
-def test_mean():
+def do_test_mean():
     plt.figure()
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,all_files_in_samples_folder=True
@@ -1159,7 +1227,8 @@ def compare_streamflow_normals():
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_260x260_wo_lakes_and_with_lakeroff"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_diff_lk_types_crcm_lk_fractions"
-    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice_1yrspnp_const_manning"
+    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_river_ice_1yrspnp_const_manning"
+    data_path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff"
     coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
@@ -1472,7 +1541,7 @@ def main():
     pass
 
 
-def testStuff():
+def doTestStuff():
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,
                 file_name_prefix="pm", all_files_in_samples_folder=True)

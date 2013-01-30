@@ -29,7 +29,6 @@ class Cell:
         res = [self]
         for p in self.previous:
             res.extend(p.get_upstream_cells())
-            res.append(p)
         return res
 
     def get_ij(self):

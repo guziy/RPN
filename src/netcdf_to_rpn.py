@@ -186,7 +186,7 @@ if __name__ == "__main__":
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v4.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_3.nc")
     #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_4.nc")
-    gcLow = GridConfig.get_default_for_resolution(res = 0.5)
-    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_with_drainage_density/directions_qc_dx0.5deg_86x86.nc",
-        gc=gcLow, out_path="directions_0.5deg_with_dd.rpn")
+    gc = GridConfig.get_default_for_resolution(res = 0.1)
+    convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_with_drainage_density/directions_qc_dx0.1deg_4.nc",
+        gc=gc, out_path="directions_0.1deg_with_dd.rpn")
     print "Hello World"

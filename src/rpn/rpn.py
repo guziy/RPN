@@ -302,6 +302,51 @@ class RPN():
         return dateo_int.value
 
 
+
+
+    def get_record_for_date_and_level(self, var_name = "", date = None, date_o = None, level = -1, level_kind = level_kinds.ARBITRARY):
+        """
+
+        """
+
+
+        if date_o is None:
+            raise Exception("You have to specify origin date")
+
+        dt = date - date_o
+
+        forecast_hour = int( dt.seconds / 3600.0 + dt.days * 24 )
+
+        ip1 = c_int(-1)
+        ip2 = c_int(forecast_hour)
+        ip3 = c_int(-1)
+
+        if level > -1:
+            ip1 = c_int(self._dll.ip1_all_wrapper(c_float(level), c_int(level_kind)))
+
+
+        ni = c_int(-1)
+        nj = c_int(-1)
+        nk = c_int(-1)
+
+        etiket = create_string_buffer( self.ETIKET_DEFAULT )
+        in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
+
+        in_nomvar = create_string_buffer(var_name)
+
+        res = {}
+
+        key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), c_int(-1), etiket,
+                                   ip1, ip2, ip3, in_typvar, in_nomvar
+                                  )
+
+        if key < 0:
+            return None
+        else:
+            return self._get_data_by_key(key)
+        pass
+
+
     def get_records_for_foreacst_hour(self, var_name = "", forecast_hour = None, level_kind = level_kinds.ARBITRARY):
 
         """
@@ -711,7 +756,8 @@ class RPN():
                   'varname': nomvar,
                   "var_type" : typvar,
                   "data_type" : datyp.value,
-                  "nbits" : nbits.value
+                  "nbits" : nbits.value,
+                  "grid_type" : grid_type
                   }
         self._current_info = result #update info from the last read record
 
@@ -751,6 +797,7 @@ class RPN():
         if self._current_info is None:
             key = self.get_key_of_any_record()
             self._get_record_info(key)
+            return self._get_data_by_key(key)[:,:,0]
         
         [ni, nj, nk] = self._current_info['shape']
         key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
@@ -912,7 +959,7 @@ class RPN():
                              data = None, grid_type = 'Z', ig = None, ip = None, typ_var = "P",
                              dateo = "20120101000000", label = "soil temp",
                              lon1 = None, lat1 = None,
-                             lon2 = None, lat2 = None
+                             lon2 = None, lat2 = None, npas = None, deet = None
                              ):
         """
         Do not care about grid type just write data to the file
@@ -935,8 +982,8 @@ class RPN():
         
         nbits = c_int(-32)
         date_c = c_int(self._string_to_dateo(dateo))
-        deet = c_int(0)
-        npas = c_int(1)
+        deet = c_int(0) if deet is None else c_int(deet)
+        npas = c_int(1) if npas is None else c_int(npas)
         nk = c_int(1) if len(data.shape) <= 2 else data.shape[2]
 
         if ip is None:
@@ -996,7 +1043,8 @@ class RPN():
                   'varname': nomvar,
                   "var_type" : typvar,
                   "data_type" : datyp.value,
-                  "nbits" : nbits.value
+                  "nbits" : nbits.value,
+                  "grid_type" : grtyp.value
                   }
 
         #print 'write status: {0}'.format(status)
