@@ -35,7 +35,7 @@ class RPN():
         get_ip1_from_level(self, level, level_kind = level_kinds.ARBITRARY)
         write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY, data = None )
     """
-    def __init__(self, path = '', mode = 'r', start_century = 19):
+    def __init__(self, path = '', mode = 'r', start_century = 19, ip_new_style = True):
         """
               start_century - is used for the calculation of the origin date, because
               of its ambiguous format MMDDYYR
@@ -55,8 +55,11 @@ class RPN():
         self.ETIKET_DEFAULT  = 16 * ' '
         self.GRIDTYPE_DEFAULT = 'Z'
 
+        if ip_new_style:
+            self.FROM_LEVEL_TO_IP1_MODE = 2
+        else:
+            self.FROM_LEVEL_TO_IP1_MODE = 1
 
-        self.FROM_LEVEL_TO_IP1_MODE = 1
         self.FROM_IP1_TO_LEVEL_MODE = -1
 
         self._current_info = None ##map containing info concerning the last read record
@@ -477,6 +480,7 @@ class RPN():
                                 )
 
         print in_typvar.value
+        print "key({0}) = {1}".format(varname, key)
 
         if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
 
@@ -947,11 +951,12 @@ class RPN():
         lev_kind = c_int(level_kind)
         str_form = create_string_buffer('')
         ip1 = c_int(0)
-#        self._dll.convip_wrapper(byref(ip1), byref(lev), byref(lev_kind),
-#                            byref(c_int(self.FROM_LEVEL_TO_IP1_MODE)), str_form, byref(c_int(0)))
+        self._dll.convip_wrapper(byref(ip1), byref(lev), byref(lev_kind),
+                            byref(c_int(self.FROM_LEVEL_TO_IP1_MODE)), str_form, byref(c_int(0)))
 
-        return self._dll.ip1_all_wrapper(lev, lev_kind)
-#        return int(ip1.value)
+        #x1 = self._dll.ip1_all_wrapper(lev, lev_kind)
+        #assert x1 == ip1.value, "x1 = {0}, ip1.value = {1}".format(x1, ip1.value)
+        return int(ip1.value)
 
 
 
