@@ -5,7 +5,7 @@ __author__ = 'huziy'
 
 
 def main():
-    dateo = "19850101000000"
+    dateo = "19580101000000"
     npas = 552240
     deet = 1200
     ip2 = 184080
@@ -37,7 +37,7 @@ def main():
             data = data, ip = ips,
             ig = map(lambda x: x.value, info["ig"]),
             npas = npas, deet=deet, label="IC, lake infl. exp.", dateo = dateo,
-            grid_type=info["grid_type"].value
+            grid_type=info["grid_type"].value, typ_var=info["var_type"].value
         )
         i += 1
 
