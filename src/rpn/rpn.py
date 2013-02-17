@@ -35,6 +35,7 @@ class RPN():
         get_ip1_from_level(self, level, level_kind = level_kinds.ARBITRARY)
         write_2D_field(self, name = '', level = 1, level_kind = level_kinds.ARBITRARY, data = None )
     """
+    GRID_TYPE = "grid_type"
     def __init__(self, path = '', mode = 'r', start_century = 19, ip_new_style = True):
         """
               start_century - is used for the calculation of the origin date, because
@@ -280,6 +281,12 @@ class RPN():
         
         self._dll.fstopc_wrapper.restype = c_int
 
+
+
+
+
+
+
     def _dateo_to_string(self, dateo_int):
         """
         return dateo as string
@@ -517,6 +524,41 @@ class RPN():
 
         ig = self._current_info['ig']
 
+        grid_type = self._current_info[self.GRID_TYPE]
+
+
+        if grid_type.value.strip().upper() == "L":
+            ll_lat = c_float(-1)
+            ll_lon = c_float(-1)
+            dlon = c_float(-1)
+            dlat = c_float(-1)
+            self._dll.cig_to_xg_wrapper(grid_type,
+                byref(ll_lat), byref(ll_lon), byref(dlat), byref(dlon),
+                ig[0], ig[1], ig[2], ig[3]
+            )
+
+
+            ni, nj, nk = map( lambda x: x.value, self._current_info["shape"] )
+
+            ll_latv = ll_lat.value
+            ll_lonv = ll_lon.value
+            dlonv = dlon.value
+            dlatv = dlat.value
+
+            lons1d = dlonv * np.arange(ni) + ll_lonv
+            lats1d = dlatv * np.arange(nj) + ll_latv
+
+            return np.meshgrid(lats1d, lons1d)
+
+
+
+
+
+
+
+
+
+
 
         ni = c_int(0)
         nj = c_int(0)
@@ -553,7 +595,7 @@ class RPN():
         n_lons = lons.shape[0]
         n_lats = lats.shape[0]
 
-        grid_type = create_string_buffer(self.current_grid_type)
+        grid_type = self._current_info[RPN.GRID_TYPE]
         grid_reference = create_string_buffer(self.current_grid_reference)
 
         ezgdef = self._dll.ezgdef_fmem_wrapper(c_int(n_lons), c_int(n_lats),
@@ -567,10 +609,12 @@ class RPN():
         lons_2d = np.zeros((n_lats, n_lons), dtype = the_type)
         lats_2d = np.zeros((n_lats, n_lons), dtype = the_type)
 
+
+
         self._dll.gdll_wrapper(ezgdef, lats_2d.ctypes.data_as(POINTER(c_float)),
                                                    lons_2d.ctypes.data_as(POINTER(c_float)))
 
-
+        print "lon params = ", lons_2d.shape, np.min(lons_2d), np.max(lons_2d)
         return np.transpose(lons_2d), np.transpose(lats_2d)
 
 
@@ -655,7 +699,10 @@ class RPN():
 
         
         return np.transpose(lons_2d), np.transpose(lats_2d)
-        
+
+
+    def reset_current_info(self):
+        self._current_info = None
 
     def get_first_record_for_name(self, varname):
         """
@@ -759,35 +806,37 @@ class RPN():
                   'npas': npas,
                   'varname': nomvar,
                   "var_type" : typvar,
-                  "data_type" : datyp.value,
-                  "nbits" : nbits.value,
-                  "grid_type" : grid_type
+                  "data_type" : datyp,
+                  "nbits" : nbits,
+                  "grid_type" : grid_type,
+                  "dateo_rpn_format": dateo
                   }
         self._current_info = result #update info from the last read record
 
         #self._set_origin_date(date_o=the_dateo)
         return result
 
-
+    
 
     def _get_current_data_type(self):
         #determine datatype of the data inside the
-        data_type = self._current_info["data_type"]
-        nbits = self._current_info["nbits"]
+        data_type = self._current_info["data_type"].value
+        nbits = self._current_info["nbits"].value
 
-        #print("data_type = ", data_type)
+        print("data_type = ", data_type)
         #print(nbits)
 
         #print data_type, nbits
         if nbits == 32:
-            if data_type == data_types.IEEE_floating_point:
+            if data_type in [data_types.IEEE_floating_point, data_types.compressed_IEEE]:
                 return np.float32
             else:
+                print "data_type = ", data_type
                 return np.int32
         elif nbits == 64:
             return np.float64
         elif nbits == 16:
-            if data_type == data_types.compressed_floating_point:
+            if data_type in [data_types.compressed_floating_point, data_types.floating_point]:
                 return np.dtype("f4")
             return np.float16
         else:
@@ -964,7 +1013,9 @@ class RPN():
                              data = None, grid_type = 'Z', ig = None, ip = None, typ_var = "P",
                              dateo = "20120101000000", label = "soil temp",
                              lon1 = None, lat1 = None,
-                             lon2 = None, lat2 = None, npas = None, deet = None
+                             lon2 = None, lat2 = None, npas = None, deet = None,
+                             data_type = data_types.IEEE_floating_point,
+                             nbits = -32
                              ):
         """
         Do not care about grid type just write data to the file
@@ -979,14 +1030,29 @@ class RPN():
 
         lon1, lat1, lon2, lat2 -are the parameters of the rotated lat lon (used only if grid_type = Z)
         Note: currently the datatypes of the input field is limited to the array of float32
-
+        dateo could be passed as string and as int (in rpn format)
         """
         theData = np.reshape(data, data.size, order = 'F')
-        theData = np.array(theData, dtype = np.float32)
+#        if data_type == data_types.IEEE_floating_point and nbits == -32:
+#            theData = np.array(theData, dtype = np.float32)
+#        elif nbits == -16 and data_type == data_types.compressed_floating_point:
+#            theData = np.array(theData, dtype = np.dtype("f2"))
+#        elif nbits == -16:
+#            theData = np.array(theData, dtype = np.float16 )
+             
+        nbits_c = c_int(nbits)
 
-        
-        nbits = c_int(-32)
-        date_c = c_int(self._string_to_dateo(dateo))
+        if type(dateo) == int:
+            date_c = c_int(dateo)
+            if dateo:
+                dateo_datetime = datetime.strptime( self._dateo_to_string(dateo), self._dateo_format )
+            else:
+                dateo_datetime = None
+        else:
+            date_c = c_int(self._string_to_dateo(dateo))
+            dateo_datetime = datetime.strptime(dateo, self._dateo_format)
+
+
         deet = c_int(0) if deet is None else c_int(deet)
         npas = c_int(1) if npas is None else c_int(npas)
         nk = c_int(1) if len(data.shape) <= 2 else data.shape[2]
@@ -1021,14 +1087,14 @@ class RPN():
         nomvar = create_string_buffer(name)
         etiket = create_string_buffer(label)
         grtyp = create_string_buffer(grid_type)
-        datyp = c_int(data_types.IEEE_floating_point)
+        datyp = c_int(data_type)
         rewrite = c_int(1)
 
 
 
 
         status = self._dll.fstecr_wrapper( theData.ctypes.data_as(POINTER(c_float)),
-                                  nbits, self._file_unit, date_c, deet, npas,
+                                  nbits_c, self._file_unit, date_c, deet, npas,
                                   ni, nj, nk,
                                   ip1, ip2, ip3, typvar, nomvar,
                                   etiket, grtyp,
@@ -1042,14 +1108,15 @@ class RPN():
         self._current_info = {'ig': [ig1, ig2, ig3, ig4],
                   'ip': [ip1, ip2, ip3],
                   'shape': [ni, nj, nk],
-                  'dateo': datetime.strptime(dateo, self._dateo_format),
+                  'dateo': dateo_datetime,
                   'dt_seconds': deet,
                   'npas': npas,
                   'varname': nomvar,
                   "var_type" : typvar,
-                  "data_type" : datyp.value,
-                  "nbits" : nbits.value,
-                  "grid_type" : grtyp.value
+                  "data_type" : datyp,
+                  "nbits" : nbits_c,
+                  "grid_type" : grtyp,
+                  "dateo_rpn_format": dateo
                   }
 
         #print 'write status: {0}'.format(status)
