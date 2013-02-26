@@ -830,7 +830,7 @@ class RPN():
         if nbits == 32:
             if data_type in [data_types.IEEE_floating_point, data_types.compressed_IEEE]:
                 return np.float32
-            else:
+            elif data_type == data_types.signed_integer:
                 print "data_type = ", data_type
                 return np.int32
         elif nbits == 64:
