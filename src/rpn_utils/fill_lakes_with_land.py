@@ -25,9 +25,11 @@ def main():
 
     glob_fields_to_interp = ["SAND", "CLAY", "DPTH"]
 
-    in_path = "/home/huziy/skynet3_rech1/from_guillimin/geophys_Quebec_0.1deg_260x260_with_dd_v6"
+    in_path = "/home/huziy/skynet3_rech1/geof_lake_infl_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6"
     out_path = in_path + "_no_lakes"
 
+    critlac = 0.01
+    critmask = 0.001
 
     #read in lake fraction field
 
@@ -40,11 +42,10 @@ def main():
 
     lonsTarget, latsTarget = inRpnObj.get_longitudes_and_latitudes_for_the_last_read_rec()
 
-
+    targetInfo = inRpnObj.get_current_info()
 
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lonsTarget.flatten(), latsTarget.flatten())
 
-    selLkfrFlat = lkfr[lkfr < 1]
 
 
 
@@ -62,20 +63,7 @@ def main():
     print info[RPN.GRID_TYPE].value
 
 
-
-
-    if True:
-        inRpnObj.close()
-        return
-
-
-
-
-
-    plt.pcolormesh(lkfr.transpose())
-    plt.show()
-
-
+    thirdLevelIp1 = inRpnObj.get_ip1_from_level(3)
     outRpnObj = RPN(out_path, mode="w")
 
     data = []
@@ -90,6 +78,8 @@ def main():
         nbits = info["nbits"].value
         data_type = info["data_type"].value
 
+        current_ip1 = info["ip"][0].value
+
         if nbits > 0:
             nbits = -nbits
 
@@ -99,15 +89,16 @@ def main():
         dateo = info["dateo_rpn_format"].value
 
 
-        if info["varname"].value.strip().upper() in glob_fields_to_interp:
-            lonsG, latsG = inRpnObj.get_longitudes_and_latitudes_for_the_last_read_rec()
-            x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lonsG.flatten(), latsG.flatten())
-            kdt = KDTree(zip(x0, y0, z0))
+        the_varname = info["varname"].value.strip().upper()
+
+        if the_varname in glob_fields_to_interp:
+            pass #TODO, maybe do something here, later
+
+        if the_varname == "MG":
+            data[lkfr > 0] = 1
+        if the_varname == "VF" and current_ip1 == thirdLevelIp1:
+            data[:,:] = 0
             pass
-
-
-
-
 
         outRpnObj.write_2D_field(name = info["varname"].value,
             data = data, ip = ips,

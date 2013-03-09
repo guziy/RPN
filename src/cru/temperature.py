@@ -48,6 +48,8 @@ class CRUDataManager:
         months = list of month numbers over which the averaging is done
         """
 
+        if months is None:
+            months = list(range(1,13))
 
         bool_vector = np.where(map( lambda x: (x.month in months) and
                                               (start_year <= x.year) and

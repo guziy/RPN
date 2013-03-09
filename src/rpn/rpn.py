@@ -1048,9 +1048,15 @@ class RPN():
                 dateo_datetime = datetime.strptime( self._dateo_to_string(dateo), self._dateo_format )
             else:
                 dateo_datetime = None
-        else:
+        elif type(dateo) == datetime:
+            dateo_datetime = dateo
+            dateo_s = dateo.strftime(self._dateo_format)
+            date_c = self._string_to_dateo(dateo_s)
+        elif type(dateo) == str:
             date_c = c_int(self._string_to_dateo(dateo))
             dateo_datetime = datetime.strptime(dateo, self._dateo_format)
+        else:
+            raise   Exception("Unknown dateo format")
 
 
         deet = c_int(0) if deet is None else c_int(deet)
@@ -1249,8 +1255,8 @@ def test_select_by_date():
 import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    test_select_by_date()
+    #test_select_by_date()
     #test_dateo()
-    #test()
+    test()
    # test_get_all_records_for_name()
     print "Hello World"

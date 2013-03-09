@@ -86,6 +86,81 @@ def do_stats_plots(x,y,basemap, hc, hm, hm2d, permafrost_mask):
 
     pass
 
+
+
+
+def plot_alt_from_recent_jpp_and_andrey():
+    driver = "CanESM"
+    path = "/home/huziy/skynet1_rech3/jpp_progs_recent/pf/Arctic_Andrey_ALT_canesm1"
+    rObj = RPN(path)
+
+    altt = rObj.get_all_time_records_for_name(varname="FALT")
+    alt = np.mean( np.array(altt.values()), axis = 0)
+    rObj.close()
+
+
+    coord_file = path 
+    basemap, lons2d, lats2d = draw_regions.get_basemap_and_coords(resolution="c",
+        file_path = coord_file, lon1 = 60, lat1 = 89.999, lon2 = -30, lat2 = 0.00001, 
+        projection = "omerc", round = True
+    )
+    assert isinstance(basemap, Basemap)
+
+    lons2d[lons2d > 180] -= 360
+
+    x, y = basemap(lons2d, lats2d)
+
+
+    #permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
+    #mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 3)
+    alt = np.ma.masked_where(alt < 0, alt)
+
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+
+    h_max = 10
+    
+    bounds = list(range(6))
+    cmap = my_colormaps.get_lighter_jet_cmap(ncolors=len(bounds) - 1) #cm.get_cmap("jet",10)
+    #bounds = [0,0.1,0.5,1,2,3,5,8,9,10,11]
+    norm = BoundaryNorm(boundaries=bounds,ncolors=len(bounds)-1, clip = False)
+    #norm = None
+
+    cmap.set_over(cmap(1.0))
+    clevels = np.arange(0,h_max+1,1)
+    gs = gridspec.GridSpec(1,1)
+
+
+
+    #ax = fig.add_axes([0,0,1,1], polar = True)
+    ax = fig.add_subplot(gs[0,0])
+    assert isinstance(ax, Axes)
+    #hc = np.ma.masked_where(mask_cond | (np.min(altt.values(), axis = 0) < 0), alt)
+    #hc = np.ma.masked_where( (hc < 0), hc)
+    img = basemap.pcolormesh(x, y, alt, cmap = cmap, vmax = h_max, norm=norm)
+    ax.set_title("ALT, JPP-Andrey, ({0} - CRCM5)  \n".format(driver))
+
+    basemap.drawcoastlines(ax = ax, linewidth=0.5)
+    #basemap.readshapefile("data/pf_4/permafrost8_wgs84/permaice", name="zone",
+    #        ax=ax, linewidth=1.5)
+
+    basemap.readshapefile("data/permafrost_lat-lon1/permafrost_latlon", name="zone",
+            ax=ax, linewidth=1.5)
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", "5%", pad="3%")
+    cb = fig.colorbar(img,  cax = cax, extend = "max", ticks = bounds)
+    cax.set_title("m \n")
+
+
+    fig.tight_layout(w_pad=0.0)
+
+
+    fig.savefig("alt_jpp_current_{0}.png".format(driver))
+
+
+
+
 def plot_mean_alt_from_jpp_results():
     start_year = 1981
     end_year = 2008
@@ -839,9 +914,12 @@ if __name__ == "__main__":
     import application_properties
     plot_utils.apply_plot_params(width_pt=None, width_cm=25, height_cm=35, font_size=20)
     application_properties.set_current_directory()
+
+    plot_alt_from_recent_jpp_and_andrey()
+
     #plot_future_alts()
 #    plot_current_alts_nyear_rule()
-    plot_current_alts()
+#    plot_current_alts()
 #    plot_mean_alt_from_jpp_results()
     #plt.show()
     #main()

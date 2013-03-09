@@ -22,7 +22,7 @@ def get_cmap_from_ncl_spec_file(path = "", ncolors = None):
             ncolors = int( line.split("=")[1].strip() )
             continue
         if not line.startswith("#") and not line.lower().startswith("ncolors"):
-            vals = map( lambda x: float(x.strip())/Nmax, line.split())
+            vals = map( lambda x: float(x.strip())/Nmax, line.split()[:3])
             all_numbers.append(vals)
 
     all_numbers = np.array(all_numbers)
@@ -604,6 +604,49 @@ def cmap_map(function,cmap):
     return mpl.colors.LinearSegmentedColormap('colormap',cdict,1024)
 
 
+def get_dem_colormap(ncolors  = 1024):
+        d = {'blue': ((0.0, 0.0, 0.0),
+                      (0.2824, 0.5004, 0.5004),
+                      (0.4667, 0.2748, 0.2748),
+                      (0.5451, 0.3205, 0.3205),
+                      (0.7843, 0.3961, 0.3961),
+                      (0.8941, 0.6651, 0.6651),
+                      (1.0, 0.9843, 0.9843)),
+             'green': (
+                       (0, 0.5, 0.5),
+                       (0.2078, 0.3841, 0.3841),
+                       (0.2824, 0.502, 0.502),
+                       (0.5216, 0.6397, 0.6397),
+                       (0.698, 0.7171, 0.7171),
+                       (0.7882, 0.6392, 0.6392),
+                       (0.7922, 0.6413, 0.6413),
+                       (0.8, 0.6447, 0.6447),
+                       (0.8078, 0.6481, 0.6481),
+                       (0.8157, 0.6549, 0.6549),
+                       (0.8667, 0.6991, 0.6991),
+                       (0.8745, 0.7103, 0.7103),
+                       (0.8824, 0.7216, 0.7216),
+                       (0.8902, 0.7323, 0.7323),
+                       (0.898, 0.743, 0.743),
+                       (0.9412, 0.8275, 0.8275),
+                       (0.9569, 0.8635, 0.8635),
+                       (0.9647, 0.8816, 0.8816),
+                       (0.9961, 0.9733, 0.9733),
+                       (1.0, 0.9843, 0.9843)),
+             'red': (
+                     (0,0.7,0.7),
+                     (0.2, 0.2714, 0.2714),
+                     (0.549, 0.4719, 0.4719),
+                     (0.698, 0.7176, 0.7176),
+                     (0.7882, 0.7553, 0.7553),
+                     (1.0, 0.9922, 0.9922))}
+        return mpl.colors.LinearSegmentedColormap('colormap_dem',d,ncolors)
+
+
+
+
+
+
 def test_ncl_map():
 
     import application_properties
@@ -613,10 +656,26 @@ def test_ncl_map():
     fig = plt.figure(figsize=(8,3))
     ax1 = fig.add_axes([0.05, 0.65, 0.9, 0.15])
 
-    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap = get_cmap_from_ncl_spec_file(path="colormap_files/topo_15lev.rgb",
+    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap = get_cmap_from_ncl_spec_file(path="colormap_files/OceanLakeLandSnow.rgb",
                                             ncolors=  None),
                                    orientation='horizontal')
     plt.show()
+
+
+def dem_cmap():
+
+    import application_properties
+    application_properties.set_current_directory()
+
+    # Make a figure and axes with dimensions as desired.
+    fig = plt.figure(figsize=(8,3))
+    ax1 = fig.add_axes([0.05, 0.65, 0.9, 0.15])
+
+    cb1 = mpl.colorbar.ColorbarBase(ax1, cmap = get_dem_colormap(ncolors=10),
+                                   orientation='horizontal')
+    plt.show()
+
+
 
 
 def test():
@@ -630,4 +689,5 @@ def test():
 if __name__ == "__main__":
     #test()
     test_ncl_map()
+    #dem_cmap()
     print "Hello World"

@@ -494,7 +494,15 @@ class Crcm5ModelDataManager:
 
         pass
 
-
+    @classmethod
+    def get_omerc_basemap_using_lons_lats(cls, lons2d = None, lats2d = None,lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0, resolution = "l"):
+        basemap = Basemap(projection="omerc", no_rot=True, lon_1=lon_1, lat_1=lat_1,
+                lon_2=lon_2, lat_2=lat_2,
+                llcrnrlon=lons2d[0,0], llcrnrlat=lats2d[0,0],
+                urcrnrlon=lons2d[-1,-1], urcrnrlat=lats2d[-1, -1],
+                resolution=resolution
+        )
+        return basemap
 
 
     def get_omerc_basemap(self, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0, resolution = "l"):
@@ -810,6 +818,24 @@ class Crcm5ModelDataManager:
         return result
 
 
+    def get_mean_2d_field_and_all_data(self, var_name = "STFL", level = -1,
+                                       level_kind = level_kinds.ARBITRARY):
+        all_fields = []
+        date_to_field = {}
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                if not fName.startswith(self.file_name_prefix): continue
+                fPath = os.path.join(self.samples_folder, fName)
+                rpnObj = RPN(fPath)
+                cur_date_to_field = rpnObj.get_all_time_records_for_name_and_level(
+                        varname = var_name, level=level, level_kind=level_kind)
+                all_fields.extend( cur_date_to_field.values() )
+                date_to_field.update(cur_date_to_field)
+
+
+        return np.mean(all_fields, axis=0), date_to_field
+
+
     def get_mean_in_time(self, var_name = "STFL"):
         all_fields = []
         if self.all_files_in_one_folder:
@@ -820,6 +846,18 @@ class Crcm5ModelDataManager:
         return np.mean(all_fields, axis=0)
 
 
+
+    def _read_static_field(self, rpnObj, varname):
+        msg = "{0} variable was not found in the dataset"
+        res = None
+        try:
+            res = rpnObj.get_first_record_for_name(varname)
+        except Exception,e:
+            print msg.format(varname)
+
+        return res
+
+
     def _read_static_data(self, derive_from_data = True):
         """
          get drainage area fields
@@ -828,33 +866,56 @@ class Crcm5ModelDataManager:
 
         if derive_from_data and self.all_files_in_one_folder:
             files = os.listdir(self.samples_folder)
-            files = itertools.ifilter(lambda x: x.startswith(self.file_name_prefix)
-                and not x.startswith("."), files
-            )
-            file = sorted(files)[0]
+            files = itertools.ifilter(lambda x: not x.startswith(".") and x.startswith("pm"), files)
+            file = sorted(files,key = lambda x: x[2:])[0] #take the first file disregarding prefixes
             file_path = os.path.join(self.samples_folder, file)
             rpnObj = RPN(file_path)
-            self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
-            self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
-            self.lake_fraction = rpnObj.get_first_record_for_name("LF1")
-            self.bankfull_storage_m3 = rpnObj.get_first_record_for_name("STBM")
-            self.cbf = rpnObj.get_first_record_for_name("CBF")
 
 
+
+            varname = "FAA"
+            self.accumulation_area_km2 = self._read_static_field(rpnObj, varname)
+
+            varname = "FLDR"
+            self.flow_directions = self._read_static_field(rpnObj, varname)
+
+
+            varname = "LF1"
+            self.lake_fraction = self._read_static_field(rpnObj, varname)
+
+            varname = "STBM"
+            self.bankfull_storage_m3 = self._read_static_field(rpnObj, varname)
+
+
+            varname = "CBF"
+            self.cbf = self._read_static_field(rpnObj, varname)
+
+
+            varname = "GWRT"
+            self.gw_res_time = self._read_static_field(rpnObj, varname)
+
+            varname = "LKAR"
+            self.lake_area = self._read_static_field(rpnObj, varname)
 
             #try to read cell areas from the input file
-            try:
-                self.cell_area = rpnObj.get_first_record_for_name("DX") #in m**2
-            except Exception, e:
-                print e.message
-                print "Could not find cell area in the output: ", file_path
+            varname = "DX"
+            self.cell_area = self._read_static_field(rpnObj, varname) #in m**2
+
+            varname = "MABF"
+            self.manning_bf = self._read_static_field(rpnObj, varname) #in m**2
+
+            varname = "MG"
+            self.mg = self._read_static_field(rpnObj, varname)
+            self.land_sea_mask = (self.mg > 0.6).astype(int) #0/1
 
 
-            try:
-                self.land_sea_mask = (rpnObj.get_first_record_for_name("MG") > 0.6).astype(int) #0/1
-            except Exception, e:
-                print e.message
-                print "Could not find land/sea mask in the output: ", file_path
+            varname = "SLOP"
+            self.slope = self._read_static_field(rpnObj, varname)
+
+            varname = "LKOU"
+            self.lkou = self._read_static_field(rpnObj, varname)
+
+
 
 
 

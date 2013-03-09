@@ -73,7 +73,8 @@ def get_basemap_and_coords(
         lon1 = -97.0, lat1 = 47.50,
         lon2 = -7, lat2 = 0,
         llcrnrlon = None, llcrnrlat = None,
-        urcrnrlon = None, urcrnrlat = None, resolution = "l", anchor = "W"
+        urcrnrlon = None, urcrnrlat = None, resolution = "l", anchor = "W", projection = "omerc",
+        round = False
 
         ):
     rpnObj = RPN(file_path)
@@ -86,7 +87,7 @@ def get_basemap_and_coords(
     the_ur_lon = lons2D[-1, -1] if urcrnrlon is None else urcrnrlon
     the_ur_lat = lats2D[-1, -1] if urcrnrlat is None else urcrnrlat
 
-    return Basemap(projection="omerc", resolution=resolution,
+    return Basemap(projection=projection, resolution=resolution,
             llcrnrlon=the_ll_lon,
             llcrnrlat=the_ll_lat,
             urcrnrlon=the_ur_lon,

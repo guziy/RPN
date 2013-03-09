@@ -18,9 +18,33 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
         """
         SoundingPlotter.__init__(self, ax, basemap, tmin_3d, tmax_3d, lons2d, lats2d, levelheights = levelheights)
 
-
+        self.i_inds = []
+        self.j_inds = []
         self.annual_means = temporal_data
         print self.annual_means.shape
+
+
+    def plot_cross_sections_for(self, i_inds, j_inds):
+        for i, j in zip(i_inds, j_inds):
+            fig1 = plt.figure()
+            gs = gridspec.GridSpec(1,2)
+            #sounding
+            sounding_ax = fig1.add_subplot(gs[0,0])
+            self._plot_sounding(sounding_ax, i, j)
+
+            #cross-section of temperature
+            cross_ax = fig1.add_subplot(gs[0,1])
+            self._plot_cross_section(fig1, cross_ax, i, j)
+
+
+
+            x, y = self.basemap(self.lons2d[i,j], self.lats2d[i,j])
+
+            self.ax.annotate(str(self.counter), (x, y), font_properties =
+                    FontProperties(size=10),  bbox=dict(boxstyle="round", fc="w"))
+
+            fig1.savefig("pf_images/image_cross_and_profile_{0}.png".format(self.counter))
+            self.counter += 1
 
 
 
@@ -38,12 +62,18 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
 
 
     def __call__(self, event):
-        print event.xdata, event.ydata
+        #print event.xdata, event.ydata
 
-        print event.button
+        #print event.button
         if event.button != 3:
             return
         ix, jy = self._get_closest_ij(event)
+
+        self.i_inds.append(ix)
+        self.j_inds.append(jy)
+        print self.i_inds
+        print self.j_inds
+        print 20 * "="
 
         fig = plt.figure()
         assert isinstance(fig, Figure)
