@@ -486,8 +486,8 @@ class RPN():
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
 
-        print in_typvar.value
-        print "key({0}) = {1}".format(varname, key)
+        #print in_typvar.value
+        #print "key({0}) = {1}".format(varname, key)
 
         if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
 
@@ -553,13 +553,6 @@ class RPN():
 
 
 
-
-
-
-
-
-
-
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -596,10 +589,10 @@ class RPN():
         n_lats = lats.shape[0]
 
         grid_type = self._current_info[RPN.GRID_TYPE]
-        grid_reference = create_string_buffer(self.current_grid_reference)
+        data_grid_type = c_char_p("Z")
 
         ezgdef = self._dll.ezgdef_fmem_wrapper(c_int(n_lons), c_int(n_lats),
-                            grid_type, grid_reference,
+                            data_grid_type, grid_type,
                             ig[0], ig[1], ig[2], ig[3],
                             lons.ctypes.data_as(POINTER(c_float)),
                             lats.ctypes.data_as(POINTER(c_float)))
@@ -823,15 +816,15 @@ class RPN():
         data_type = self._current_info["data_type"].value
         nbits = self._current_info["nbits"].value
 
-        print("data_type = ", data_type)
-        print(nbits)
+        #print("data_type = ", data_type)
+        #print(nbits)
 
         #print data_type, nbits
         if nbits == 32:
             if data_type in [data_types.IEEE_floating_point, data_types.compressed_IEEE]:
                 return np.float32
             elif data_type == data_types.signed_integer:
-                print "data_type = ", data_type
+                #print "data_type = ", data_type
                 return np.int32
         elif nbits == 64:
             return np.float64

@@ -11,16 +11,19 @@ from util.geo import lat_lon
 __author__ = 'huziy'
 
 import numpy as np
-from netCDF4 import Dataset, num2date
+from netCDF4 import Dataset, num2date, date2num
 import matplotlib.pyplot as plt
 
 
 class CRUDataManager:
-    def __init__(self, path = "data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc", var_name = "tmp"):
+    def __init__(self, path = "data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc", var_name = "tmp", lazy = False):
+        self.lazy = lazy
         ds = Dataset(path)
         self.var_name = var_name
         self._init_fields(ds)
         self.nc_dataset = ds
+
+        self.nc_vars = ds.variables
 
         pass
 
@@ -33,9 +36,11 @@ class CRUDataManager:
 
         self.lons2d, self.lats2d = lons2d, lats2d
 
-        times = nc_vars["time"]
-        self.times = num2date(times[:], times.units, times.calendar)
-        self.var_data = np.transpose( nc_vars[self.var_name][:], axes=(0,2,1))
+        self.timesVar = nc_vars["time"]
+        self.times_num = nc_vars["time"][:]
+        self.times = num2date(self.times_num, self.timesVar.units, self.timesVar.calendar)
+        if not self.lazy:
+            self.var_data = np.transpose( nc_vars[self.var_name][:], axes=(0,2,1))
 
         x_in,y_in,z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
         self.kdtree = KDTree(zip(x_in, y_in, z_in))
@@ -51,10 +56,22 @@ class CRUDataManager:
         if months is None:
             months = list(range(1,13))
 
-        bool_vector = np.where(map( lambda x: (x.month in months) and
-                                              (start_year <= x.year) and
-                                              (x.year <= end_year), self.times))[0]
-        return np.mean(self.var_data[bool_vector, :, :], axis=0)
+
+        start_date = datetime(start_year,1,1)
+        end_date = datetime(end_year + 1,1,1)
+
+        start_date_num = date2num(start_date, self.timesVar.units)
+        end_date_num = date2num(end_date, self.timesVar.units)
+
+        sel_query = (self.times_num >= start_date_num) & (self.times_num < end_date_num)
+        sel_dates = self.times_num[sel_query]
+        sel_data = np.transpose( self.nc_vars[self.var_name][sel_query,:,:], axes=(0,2,1))
+
+
+        sel_dates = num2date(sel_dates,self.timesVar.units)
+
+        bool_vector = np.where(map( lambda x: (x.month in months), sel_dates))[0]
+        return np.mean(sel_data[bool_vector, :, :], axis=0)
 
 
     def get_daily_climatology(self, start_year, end_year, stamp_year = 2001):

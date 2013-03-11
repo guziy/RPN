@@ -66,6 +66,9 @@ class Crcm5ModelDataManager:
 
 
 
+
+
+
     def get_daily_means(self, var_name = None):
         if var_name is None:
             var_name = self.var_name
@@ -103,6 +106,108 @@ class Crcm5ModelDataManager:
         x = arr.copy()
         x[x< 0] = 0
         return x
+
+
+    def interpolate_data_to(self, data_in, lons2d, lats2d, nneighbours = 4):
+        """
+        Interpolates data_in to the grid defined by (lons2d, lats2d)
+        assuming that the data_in field is on the initial CRU grid
+
+        interpolate using 4 nearest neighbors and inverse of squared distance
+        """
+
+        x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
+        dst, ind = self.kdtree.query(zip(x_out, y_out, z_out), k=nneighbours)
+
+        data_in_flat = data_in.flatten()
+
+        inverse_square = 1.0 / dst ** 2
+        if len(dst.shape) > 1:
+            norm = np.sum(inverse_square, axis=1)
+            norm = np.array( [norm] * dst.shape[1] ).transpose()
+            coefs = inverse_square / norm
+
+            data_out_flat = np.sum( coefs * data_in_flat[ind], axis= 1)
+        elif len(dst.shape) == 1:
+            data_out_flat = data_in_flat[ind]
+        else:
+            raise Exception("Could not find neighbor points")
+        return np.reshape(data_out_flat, lons2d.shape)
+
+
+    def export_monthly_mean_fields(self, sim_name = "default_sim", in_file_prefix = "",
+                                   start_year = 1979, end_year = 1988,
+                                   varname = "",nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb",
+                                   level = -1, level_kind = -1):
+
+        """
+        start_year and end_year are inclusive
+        save fields as a variable with the following dimensions
+        F(year, month, lon, lat), file naming convention: varname.nc
+
+        Assumes that one file contains fields for one month
+
+        """
+
+        nc_sim_folder = os.path.join(nc_db_folder, sim_name)
+        if not os.path.isdir(nc_sim_folder):
+            os.mkdir(nc_sim_folder)
+
+        nyears = end_year - start_year + 1
+
+        nc_path = os.path.join(nc_sim_folder, "{0}.nc".format(varname))
+
+
+        from netCDF4 import Dataset
+        ds = Dataset(nc_path, mode="w", format = "NETCDF3_CLASSIC")
+
+        ds.createDimension("year", nyears)
+        ds.createDimension("month", 12)
+        ds.createDimension("lon", self.lons2D.shape[0])
+        ds.createDimension("lat", self.lons2D.shape[1])
+
+
+        data = ds.createVariable(varname, "f8", dimensions=("year", "month", "lon", "lat"))
+        yearVar = ds.createVariable("year", "i4", dimensions=("year",))
+        lonVar = ds.createVariable("lon", "f8", dimensions=("lon", "lat"))
+        latVar = ds.createVariable("lat", "f8", dimensions=("lon", "lat"))
+
+        monthVar = ds.createVariable("month", "i4", dimensions=("month"))
+
+        lonVar[:,:] = self.lons2D[:,:]
+        latVar[:,:] = self.lats2D[:,:]
+        yearVar[:] = np.arange(start_year, end_year + 1)
+        monthVar[:] = np.arange(1,13)
+
+
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                if not fName.startswith(in_file_prefix): continue
+
+                rObj = RPN(os.path.join(self.samples_folder, fName))
+                rObj.suppress_log_messages()
+
+                date_to_field = rObj.get_all_time_records_for_name_and_level(varname=varname, level = level, level_kind = level_kind)
+                rObj.close()
+                dates = list( sorted( date_to_field.keys() ) )
+
+                if dates[0].year < start_year or dates[0].year > end_year:
+                    continue
+
+                #assert dates[0].month == dates[-1].month, "{0} != {1}".format( str( dates[0] ),  str( dates[-1] ) )
+                data[dates[0].year - start_year, dates[0].month - 1, :, : ] = np.mean(date_to_field.values(), axis=0)
+
+        ds.close()
+        pass
+
+
+
+
+
+
+
+
+
 
 
     def get_annual_mean_fields(self, start_year = -np.Inf, end_year = np.Inf, varname = None, level = -1, level_kind = level_kinds.ARBITRARY):
@@ -145,8 +250,8 @@ class Crcm5ModelDataManager:
 
             print type(the_group)
             print dir(the_group)
-            the_group1 = the_group.apply(self._zero_negatives)
-            data_dict[key] = the_group1.mean()
+            #the_group1 = the_group.apply(self._zero_negatives)
+            data_dict[key] = the_group.mean()
 
 
 
@@ -495,17 +600,24 @@ class Crcm5ModelDataManager:
         pass
 
     @classmethod
-    def get_omerc_basemap_using_lons_lats(cls, lons2d = None, lats2d = None,lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0, resolution = "l"):
+    def get_omerc_basemap_using_lons_lats(cls, lons2d = None, lats2d = None,
+                                          lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0.0, resolution = "l"
+                                          ):
+
         basemap = Basemap(projection="omerc", no_rot=True, lon_1=lon_1, lat_1=lat_1,
                 lon_2=lon_2, lat_2=lat_2,
+                #width=2600000, height=2600000,
                 llcrnrlon=lons2d[0,0], llcrnrlat=lats2d[0,0],
                 urcrnrlon=lons2d[-1,-1], urcrnrlat=lats2d[-1, -1],
-                resolution=resolution
+                resolution=resolution#, lon_0 = lon_0, lat_0=lat_0
         )
+
         return basemap
 
 
     def get_omerc_basemap(self, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0, resolution = "l"):
+
+
         basemap = Basemap(projection="omerc", no_rot=True, lon_1=lon_1, lat_1=lat_1,
                 lon_2=lon_2, lat_2=lat_2,
                 llcrnrlon=self.lons2D[0,0], llcrnrlat=self.lats2D[0,0],

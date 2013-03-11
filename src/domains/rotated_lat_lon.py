@@ -1,5 +1,4 @@
-import Ngl
-
+#
 
 __author__ = 'huziy'
 
@@ -129,6 +128,8 @@ def south_pole_coords_test():
     lats2d = base_data_manager.lats2D
 
     acc = base_data_manager.accumulation_area_km2
+
+    import Ngl
 
     #
     #  Open a workstation.

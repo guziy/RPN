@@ -13,8 +13,6 @@ import numpy as np
 import application_properties
 
 
-from osgeo import ogr
-from osgeo import osr
 
 from rpn.rpn import RPN
 import matplotlib.pyplot as plt
@@ -29,6 +27,8 @@ permafrost_types_long_names = ("Continuous", "Discontinuous", "Sporadic", "Isola
 def delete_points_in_countries(points_lat_long, points, indices, countries = None,
                                path = "data/shp/countries/cntry00.shp"):
 
+    from osgeo import ogr
+    from osgeo import osr
 
     query = "CNTRY_NAME IN (\'" + "\',\'".join(countries) + "\')"
     print query
