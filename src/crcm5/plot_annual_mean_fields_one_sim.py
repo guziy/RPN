@@ -1,3 +1,10 @@
+from netCDF4 import Dataset
+from matplotlib import gridspec, cm
+from matplotlib.axes import Axes
+from matplotlib.colors import BoundaryNorm
+from matplotlib.ticker import ScalarFormatter
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+import os
 from crcm5.model_data import Crcm5ModelDataManager
 from rpn import level_kinds
 
@@ -8,12 +15,12 @@ import numpy as np
 ##Plot list of fields for one simulation
 
 start_year = 1979
-end_year = 1988
+end_year = 1986
 
-field_names = ["TT", "PR", "AU", "AV", "STFL"]
-file_name_prefixes = ["dm", "pm", "pm", "pm", "pm"]
-sim_name = "crcm5-r"
-rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-r_spinup"
+field_names = ["TT", "PR", "AU", "AV", "STFL","STFA", "TRAF", "TDRA"]
+file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
+sim_name = "crcm5-hcd-rl"
+rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name)
 nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
 export_to_nc = True
@@ -53,18 +60,158 @@ def main():
                 level = 1
                 level_kind = level_kinds.HYBRID
 
-            export_monthly_means_to_ncdb(manager, varname, level= level, level_kind= level_kind)
 
+            if varname in ["TRAF", "TDRA"]:
+                level = 1
+                level_kind = level_kinds.ARBITRARY
+
+
+            if varname == "STFA": continue
+            export_monthly_means_to_ncdb(manager, varname, level= level, level_kind= level_kind)
     #plot results
     basemap = pmManager.get_omerc_basemap()
+    lons, lats = pmManager.lons2D, pmManager.lats2D
+    x, y = basemap(lons, lats)
+
+
+    nc_data_folder = os.path.join(nc_db_folder, sim_name)
+
+    import matplotlib.pyplot as plt
+    all_axes = []
+    ax_to_levels = {}
+    imgs = []
+
+    gs = gridspec.GridSpec(2,3, height_ratios=[1,1], width_ratios=[1,1,1])
+    fig = plt.figure()
+    #fig.suptitle("({0} - {1})".format(start_year, end_year))
+    #plot Temp
+    varname = "TT"
+    levels = [-30, -25, -10, -5, -2, 0, 2, 5,10, 15, 20, 25]
+    cmap = cm.get_cmap("jet", len(levels) - 1)
+    bn = BoundaryNorm(levels, cmap.N)
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    years = ds.variables["year"][:]
+    sel = (start_year <= years) & (years <= end_year)
+    tt = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
+    ds.close()
+    ax = fig.add_subplot(gs[0,0])
+    ax.set_title("Temperature (${\\rm ^\circ C}$)")
+    img = basemap.contourf(x, y, tt, levels = levels, cmap = cmap, norm = bn)
+    all_axes.append(ax)
+    imgs.append(img)
+    ax_to_levels[ax] = levels
+
+
+    #plot precip
+    varname = "PR"
+    levels = np.arange(0, 6.5, 0.5)
+    cmap = cm.get_cmap("jet_r", len(levels) - 1)
+    bn = BoundaryNorm(levels, cmap.N)
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    years = ds.variables["year"][:]
+    sel = (start_year <= years) & (years <= end_year)
+    pr = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
+    convert_factor = 1000.0 * 24 * 60 * 60  #m/s to mm/day
+    pr *= convert_factor
+    ds.close()
+    ax = fig.add_subplot(gs[0,1])
+    ax.set_title("Precip (mm/day)")
+    img = basemap.contourf(x, y, pr, levels = levels, cmap = cmap, norm = bn)
+    all_axes.append(ax)
+    imgs.append(img)
+    ax_to_levels[ax] = levels
+
+
+    #plot AU
+    varname = "AU"
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    years = ds.variables["year"][:]
+    sel = (start_year <= years) & (years <= end_year)
+    au = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
+    ds.close()
+
+    levels = np.arange(60, 160, 10)# np.linspace(au.min(), au.max(), 10)
+    cmap = cm.get_cmap("jet", len(levels) - 1)
+    bn = BoundaryNorm(levels, cmap.N)
+    ax = fig.add_subplot(gs[1,0])
+    ax.set_title("Sensible heat flux (${\\rm W/m^2}$)")
+    img = basemap.contourf(x, y, au, levels = levels, cmap = cmap, norm = bn)
+    all_axes.append(ax)
+    imgs.append(img)
+    ax_to_levels[ax] = levels
+
+    #plot AV
+    varname = "AV"
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    years = ds.variables["year"][:]
+    sel = (start_year <= years) & (years <= end_year)
+    av = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
+    ds.close()
+    levels = np.array( [0,0.1,0.2,0.4, 0.6, 0.8, 1,1.2, 1.4, 1.6, 1.8, 2] )
+    levels *= 1e-2
+    cmap = cm.get_cmap("jet", len(levels) - 1)
+    bn = BoundaryNorm(levels, cmap.N)
+    ax = fig.add_subplot(gs[1,1])
+    ax.set_title("Latent heat flux (${\\rm W/m^2}$)")
+    img = basemap.contourf(x, y, av, levels = levels, cmap = cmap, norm = bn)
+    all_axes.append(ax)
+    imgs.append(img)
+    ax_to_levels[ax] = levels
+
+
+#plot stfl
+    varname = "STFA"
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    years = ds.variables["year"][:]
+    sel = (start_year <= years) & (years <= end_year)
+
+    stfl = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
+    ds.close()
+    levels = [0,50,100,200,300,500,750,1000, 1500,2000,5000,10000,15000]
+    stfl = np.ma.masked_where(stfl < 0.01, stfl)
+    cmap = cm.get_cmap("jet", len(levels) - 1)
+    bn = BoundaryNorm(levels, cmap.N)
+    ax = fig.add_subplot(gs[0,2])
+    ax.set_title("Streamflow (${\\rm m^3/s}$)")
+    img = basemap.contourf(x, y, stfl, levels = levels, cmap = cmap, norm = bn)
+    all_axes.append(ax)
+    imgs.append(img)
+    ax_to_levels[ax] = levels
+
+
+    sf  = ScalarFormatter(useMathText=True)
+    sf.set_powerlimits([-3,4])
 
 
 
+    #draw coast lines
+    for the_ax, the_img in zip(all_axes, imgs):
+        basemap.drawcoastlines(ax = the_ax)
+        divider = make_axes_locatable(the_ax)
+        cax = divider.append_axes("right", "10%", pad="3%")
+
+        cb = plt.colorbar(the_img, ticks = ax_to_levels[the_ax], cax = cax)
+        assert isinstance(cax, Axes)
+        title = cax.get_title()
 
 
-    pass
+    fig.savefig("{0}-mean-annual-fields.pdf".format(sim_name))
+
+def doAll():
+    global sim_name, rpn_folder
+    sims = ["crcm5-hcd-rl-intfl"]
+    for sim in sims:
+        sim_name = sim
+        rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name)
+        main()
 
 if __name__ == "__main__":
+    import application_properties
+    from util import plot_utils
+    plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=25, font_size=14)
+    application_properties.set_current_directory()
+
+    #doAll()
     main()
     print "Hello world"
   

@@ -673,7 +673,7 @@ class RPN():
 
 
         #print 'grid type: ',  self.current_grid_type
-        grid_type = create_string_buffer(self.current_grid_type)
+        grid_type = create_string_buffer("Z") #create_string_buffer(self.current_grid_type)
         grid_reference = create_string_buffer(self.current_grid_reference)
 
         ezgdef = self._dll.ezgdef_fmem_wrapper(c_int(n_lons), c_int(n_lats),

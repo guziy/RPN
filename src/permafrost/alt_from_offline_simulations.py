@@ -87,7 +87,7 @@ def main():
     #path = "/home/huziy/skynet1_rech3/cordex/Offline_CLASS_simulations/CLASSoff_300yrs_LAM_NA_ERA40_CORDEX_clim2_19610115_monthly_I0_all.rpn"
     #path = "/home/huziy/skynet1_rech3/cordex/Offline_CLASS_simulations/spinup_with10yr_data/CLASSoff_300yrs_LAM_NA_ERA40_CORDEX2_19610115_monthly_I0_all.rpn"
     #path = "/home/huziy/skynet3_rech1/classOff_Andrey/mpi1/temp_3d"
-    path = "/home/huziy/skynet3_rech1/classOff_Andrey/era1/temp_3d"
+    path = "/home/huziy/skynet3_rech1/classOff_Andrey/era2/temp_3d"
     if not os.path.isfile(cache_file):
 
         temp_arr_derivs = TempArrDerivs()

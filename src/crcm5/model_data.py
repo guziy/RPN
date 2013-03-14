@@ -159,6 +159,12 @@ class Crcm5ModelDataManager:
 
 
         from netCDF4 import Dataset
+        if os.path.isfile(nc_path):
+            res = raw_input("{0} already exist, do yu really want to re-export?[y/n]".format(nc_path))
+        else:
+            res = "y"
+        if res.strip().lower() != "y":
+            return
         ds = Dataset(nc_path, mode="w", format = "NETCDF3_CLASSIC")
 
         ds.createDimension("year", nyears)
@@ -992,7 +998,7 @@ class Crcm5ModelDataManager:
             self.flow_directions = self._read_static_field(rpnObj, varname)
 
 
-            varname = "LF1"
+            varname = "ML"
             self.lake_fraction = self._read_static_field(rpnObj, varname)
 
             varname = "STBM"
