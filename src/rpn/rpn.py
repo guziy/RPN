@@ -1245,8 +1245,8 @@ def test_select_by_date():
 
 
 
-import application_properties
 if __name__ == "__main__":
+    import application_properties
     application_properties.set_current_directory()
     #test_select_by_date()
     #test_dateo()
