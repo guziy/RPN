@@ -1,3 +1,4 @@
+
 from netCDF4 import Dataset
 from matplotlib.cm import get_cmap
 from matplotlib.colors import BoundaryNorm
@@ -15,7 +16,8 @@ from scipy import stats
 start_year = 1979
 end_year = 1986
 
-field_names = ["TT", "PR", "AU", "AV", "STFA"]
+
+field_names = ["TT", "PR", "AU", "AV", "STFA", "TRAF", "TDRA"]
 
 #field_names = ["TRAF", "TDRA"]
 
@@ -47,35 +49,44 @@ field_name_to_clevels = {
     "AU": [-55, -35, -25, -10, -5, 0, 2, 4,6, 8,10],
     "AV": [-0.002, -0.0015, -0.001, 0, 0.003, 0.005, 0.007],
     "STFA" : [-3500, -1000, -100, -50 , -10, -5, 0,1,2,4,6,8, 10],
-    "TRAF" : np.arange(0, 0.35, 0.02),
+    "TRAF" : np.arange(-0.008,0.001, 0.001),
     "TDRA": np.arange(-0.3, 0.05, 0.02)
 
 }
 
 
 
-sim_name1 = "crcm5-r"
-sim_name2 = "crcm5-hcd-r"
+sim_name1 = "crcm5-hcd-rl"
+sim_name2 = "crcm5-hcd-rl-intfl"
 nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
 #needed for basemap
 rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name2)
 
 
-def _get_values(sim_name, varname):
+def _get_values(sim_name, varname, months = None):
     print varname, sim_name
+
+    if months is None:
+        months = range(12)
+    else:
+        months = np.array(months) - 1
+
+
+
     nc_data_folder = os.path.join(nc_db_folder, sim_name)
     ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
     years = ds.variables["year"][:]
     sel = (start_year <= years) & (years <= end_year)
-    tt = ds.variables[varname][sel,:,:,:]
+    tt = ds.variables[varname][sel,months,:,:]
+    print tt.shape
     ds.close()
     return tt
 
-    pass
 
 
-def main():
+
+def main(months = None):
     import matplotlib.pyplot as plt
     fig = plt.figure()
 
@@ -86,9 +97,8 @@ def main():
         "AU": (1,0),
         "AV": (1,1),
         "STFA": (0,2),
-
-
-        "TRAF": (0, 0), "TDRA" : (0, 1)
+        "TRAF": (1, 2),
+        "TDRA" : (2, 0)
     }
 
     dmManager = Crcm5ModelDataManager(samples_folder_path=rpn_folder, file_name_prefix="dm", all_files_in_samples_folder=True)
@@ -100,7 +110,7 @@ def main():
 
 
 
-    gs = GridSpec(2,3, width_ratios=[1,1,1], height_ratios=[1, 1])
+    gs = GridSpec(3,3, width_ratios=[1,1,1], height_ratios=[1, 1, 1])
 
     fig.suptitle("{0} minus {1}".format(sim_name2, sim_name1))
 
@@ -122,8 +132,8 @@ def main():
             coef = 24 * 60 * 60
         cmap.set_bad("0.6")
         print var_name
-        v1 = _get_values(sim_name1, var_name)
-        v2 = _get_values(sim_name2, var_name)
+        v1 = _get_values(sim_name1, var_name, months = months)
+        v2 = _get_values(sim_name2, var_name, months = months)
 
         #calculate annual means, for each year
         v1 = v1.mean(axis=1)
@@ -144,21 +154,14 @@ def main():
             print "lf_max = {0}".format(lkfr[lkfr < 0.6].max())
             print "lf_susp = {0}".format(lkfr[np.where(dv == dv.min())])
 
-            dv = maskoceans(lons, lats, dv)
-
-        elif var_name == "TRAF":
-            dv = np.ma.masked_where(dv < 0, dv)
-            dv = maskoceans(lons, lats, dv)
-        elif var_name == "TDRA":
-            dv = np.ma.masked_where(dv > 0, dv)
-            dv = maskoceans(lons, lats, dv)
+            #dv = maskoceans(lons, lats, dv)
         else:
             dv = np.ma.masked_where(p > 0.05, dv)
             pass
 
 
         print "{0}: min = {1}; max = {2}".format(var_name, dv.min(), dv.max())
-        the_img = basemap.pcolormesh(x, y, dv, cmap=cmap, norm = bn)
+        the_img = basemap.pcolormesh(x, y, dv, cmap=cmap)
 
 
         #add colorbar
@@ -170,8 +173,11 @@ def main():
         basemap.drawcoastlines(ax = ax, linewidth=0.1)
 
         ax.set_title( "$\Delta$ " + field_name_to_long_name[var_name] + " ({0})".format(field_name_to_units[var_name]))
-
-    fig.savefig("annual_mean_diffs_{0}_minus_{1}.png".format(sim_name2, sim_name1))
+    if months is None:
+        fig.savefig("annual_mean_diffs_{0}_minus_{1}.png".format(sim_name2, sim_name1))
+    else:
+        fig.savefig("seasonal_mean_{0}_diffs_{1}_minus_{2}.png".format("_".join(map(str, months)),
+            sim_name2, sim_name1) )
     pass
 
 if __name__ == "__main__":
@@ -179,6 +185,7 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     from util import plot_utils
     plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=25, font_size=14)
-    main()
+    for i in range(1, 13):
+        main(months=[i,])
     print "Hello world"
   

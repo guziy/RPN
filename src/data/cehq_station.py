@@ -1,4 +1,5 @@
 import itertools
+import pandas
 
 __author__="huziy"
 __date__ ="$8 dec. 2010 10:38:26$"
@@ -287,6 +288,15 @@ class Station:
 
 
 
+    @classmethod
+    def get_stamp_days(cls, stamp_year):
+        """
+        returns stampdates for the year
+        """
+        dt = timedelta(days = 1)
+        return [datetime(stamp_year,1,1) + i * dt for i in range(365) ]
+
+
     def delete_data_after_date(self, the_date):
         """
         delete values corresponding to the dates later than the_date,
@@ -345,6 +355,67 @@ class Station:
         nyears = end_date.year - start_date.year + 1
         nentries = sum( map(lambda t: int( start_date <= t <= end_date), self.dates) )
         return nentries >= 365 * nyears
+
+    def get_list_of_complete_years(self):
+        """
+        assumes that the observed data frequency is daily
+        """
+        years = []
+
+        years_all = np.array( [d.year for d in self.dates] )
+        years_unique = np.unique(years_all)
+
+        for y in years_unique:
+            count = np.array(years_all == y, dtype = bool).astype(int).sum()
+            if count >= 365:
+                years.append(y)
+
+        return years
+
+
+
+    def get_daily_climatology_for_complete_years(self, stamp_dates = None, years = None):
+        if stamp_dates is None:
+            stamp_year = 2001
+            stamp_dates = Station.get_stamp_days(stamp_year)
+
+        if years is None:
+            years = self.get_list_of_complete_years()
+
+        vals = []
+        all_data = np.array(self.values)
+
+        year_mask = np.array( [d.year in years for d in self.dates] )
+        for d in stamp_dates:
+            mask = [1 if d.month == x.month and d.day == x.day else 0 for x in self.dates ]
+            x = np.array(mask) * all_data * year_mask
+            vals.append( np.mean(  x[x > 0] ))
+
+        return stamp_dates, vals
+
+
+    def get_daily_climatology_for_complete_years_with_pandas(self, stamp_dates = None, years = None):
+        assert stamp_dates is not None
+        assert years is not None
+
+        df = pandas.DataFrame(data=self.values, index=self.dates, columns=["values",])
+        df["year"] = df.index.map(lambda d: d.year)
+
+        df = df[df["year"].isin(years)]
+        daily_clim = df.groupby(by=lambda d: (d.month, d.day)).mean()
+
+        #print daily_clim.describe()
+
+
+        vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
+
+
+
+        return stamp_dates, vals
+
+
+
+
 
 
 def print_info_of(station_ids):
@@ -418,10 +489,11 @@ if __name__ == "__main__":
 
     s = Station()
     s.parse_from_cehq('data/cehq_measure_data/051004_Q.txt')
-    data = s.get_continuous_dataseries_for_year(1970)
+    #data = s.get_continuous_dataseries_for_year(1970)
 #    for date in sorted(data.keys()):
 #        print date, '-->', data[date]
 
+    s.get_daily_climatology_for_complete_years()
     print np.max(s.values)
     print np.max(s.dates)
     print "Hello World"

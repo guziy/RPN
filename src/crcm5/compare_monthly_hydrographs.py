@@ -1,5 +1,6 @@
 from netCDF4 import Dataset
 from matplotlib import gridspec
+from matplotlib.patches import Rectangle
 import os
 from crcm5.model_data import Crcm5ModelDataManager
 
@@ -71,7 +72,7 @@ def main():
     i_arr, j_arr = np.where((lkfr > 0.4) & (lkfr < 0.6) & (acc_area > 10000))
     name_to_data = {}
     for sim in sim_names:
-        name_to_data[sim] = _get_values(sim, "STFA").mean(axis = 0)
+        name_to_data[sim] = _get_values(sim, "STFL").mean(axis = 0)
 
     fig = plt.figure()
 
@@ -95,7 +96,7 @@ def main():
                 ax.xaxis.set_ticks(np.arange(1, 13))
                 ax.set_title("{0}, {1}".format(lons[i,j], lats[i,j]))
                 if not k:
-                    name_to_handle[sim] = h
+                    name_to_handle[sim] = h[0]
 
                 if row == 1 and col == 0:
                     ax.set_ylabel("Streamflow ($m^3/s$)")
