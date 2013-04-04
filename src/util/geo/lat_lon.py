@@ -61,9 +61,9 @@ def cartesian_to_lon_lat(x):
      returns [lon, lat]
     """
 
-    lon = math.atan2(x[1], x[0])
-    lon = math.degrees(lon)
-    lat = math.asin(x[2] / np.sqrt( np.dot(x, x) ))
+    lon = np.arctan2(x[1], x[0])
+    lon = np.degrees(lon)
+    lat = np.arcsin(x[2]/ (np.dot(x, x)))
     lat = np.degrees(lat)
     return lon, lat
 

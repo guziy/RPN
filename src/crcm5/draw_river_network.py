@@ -22,8 +22,8 @@ def get_label( curText, pos):
 def main():
     #base_data_path =  "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff"
 
-    base_data_path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff"
-
+    #base_data_path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_86x86_0.5deg_wo_lakes_and_wo_lakeroff"
+    base_data_path = "/home/huziy/skynet3_rech1/from_guillimin/quebec_260x260_wo_lakes_and_with_lakeroff"
     base_data_manager = Crcm5ModelDataManager(samples_folder_path=base_data_path,
         all_files_in_samples_folder=True, need_cell_manager=True)
 
@@ -84,7 +84,7 @@ def main():
 
     assert len(i1d_start) == len(i1d_end)
 
-    fig = plt.figure()
+    fig = plt.figure(dpi=600)
     ax = fig.add_subplot(1,1,1)
 
 
@@ -95,16 +95,21 @@ def main():
     basemap.drawcoastlines(linewidth=0.25)
     cMap = cm.get_cmap("RdYlBu")
     lines = []
-    basemap.drawrivers(color="b")
+    #basemap.drawrivers(color="b")
+    #basemap.drawmapboundary(fill_color="aqua")
 
+    im = basemap.etopo()
+    #im = basemap.shadedrelief(zorder = 2)
+    #plt.colorbar(im)
+    #basemap.fillcontinents(lake_color="aqua")
 
     x1, x2, y1, y2 = x[i1d_start,j1d_start], x[i1d_end, j1d_end], y[i1d_start, j1d_start], y[i1d_end, j1d_end]
-    basemap.quiver(x1,y1,x2-x1, y2-y1, scale_units="xy", angles = "xy", scale = 1,
-             color = "k")
+    #basemap.quiver(x1,y1,x2-x1, y2-y1, scale_units="xy", angles = "xy", scale = 1,
+    #         color = "k", zorder=2, headwidth = 1, headlength = 0.2)
+    basemap.scatter(x,y, color="k", s = 1, linewidths = 0)
 
-
-
-    plt.show()
+    plt.tight_layout()
+    plt.savefig("domain1.pdf")
 
 
 
@@ -113,6 +118,8 @@ def main():
 if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
+    from util import plot_utils
+    plot_utils.apply_plot_params(width_cm=15, height_cm=15)
     main()
     print "Hello world"
   

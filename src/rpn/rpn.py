@@ -486,8 +486,8 @@ class RPN():
                                  ip1, ip2, ip3, in_typvar, in_nomvar
                                 )
 
-        print in_typvar.value
-        print "key({0}) = {1}".format(varname, key)
+        #print in_typvar.value
+        #print "key({0}) = {1}".format(varname, key)
 
         if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
 
@@ -553,13 +553,6 @@ class RPN():
 
 
 
-
-
-
-
-
-
-
         ni = c_int(0)
         nj = c_int(0)
         nk = c_int(0)
@@ -596,10 +589,10 @@ class RPN():
         n_lats = lats.shape[0]
 
         grid_type = self._current_info[RPN.GRID_TYPE]
-        grid_reference = create_string_buffer(self.current_grid_reference)
+        data_grid_type = c_char_p("Z")
 
         ezgdef = self._dll.ezgdef_fmem_wrapper(c_int(n_lons), c_int(n_lats),
-                            grid_type, grid_reference,
+                            data_grid_type, grid_type,
                             ig[0], ig[1], ig[2], ig[3],
                             lons.ctypes.data_as(POINTER(c_float)),
                             lats.ctypes.data_as(POINTER(c_float)))
@@ -680,7 +673,7 @@ class RPN():
 
 
         #print 'grid type: ',  self.current_grid_type
-        grid_type = create_string_buffer(self.current_grid_type)
+        grid_type = create_string_buffer("Z") #create_string_buffer(self.current_grid_type)
         grid_reference = create_string_buffer(self.current_grid_reference)
 
         ezgdef = self._dll.ezgdef_fmem_wrapper(c_int(n_lons), c_int(n_lats),
@@ -823,7 +816,7 @@ class RPN():
         data_type = self._current_info["data_type"].value
         nbits = self._current_info["nbits"].value
 
-        print("data_type = ", data_type)
+        #print("data_type = ", data_type)
         #print(nbits)
 
         #print data_type, nbits
@@ -831,7 +824,7 @@ class RPN():
             if data_type in [data_types.IEEE_floating_point, data_types.compressed_IEEE]:
                 return np.float32
             elif data_type == data_types.signed_integer:
-                print "data_type = ", data_type
+                #print "data_type = ", data_type
                 return np.int32
         elif nbits == 64:
             return np.float64
@@ -1048,9 +1041,15 @@ class RPN():
                 dateo_datetime = datetime.strptime( self._dateo_to_string(dateo), self._dateo_format )
             else:
                 dateo_datetime = None
-        else:
+        elif type(dateo) == datetime:
+            dateo_datetime = dateo
+            dateo_s = dateo.strftime(self._dateo_format)
+            date_c = self._string_to_dateo(dateo_s)
+        elif type(dateo) == str:
             date_c = c_int(self._string_to_dateo(dateo))
             dateo_datetime = datetime.strptime(dateo, self._dateo_format)
+        else:
+            raise   Exception("Unknown dateo format")
 
 
         deet = c_int(0) if deet is None else c_int(deet)
@@ -1246,11 +1245,11 @@ def test_select_by_date():
 
 
 
-import application_properties
 if __name__ == "__main__":
+    import application_properties
     application_properties.set_current_directory()
-    test_select_by_date()
+    #test_select_by_date()
     #test_dateo()
-    #test()
+    test()
    # test_get_all_records_for_name()
     print "Hello World"

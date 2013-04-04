@@ -1,5 +1,4 @@
-import Ngl
-
+#
 
 __author__ = 'huziy'
 
@@ -112,6 +111,27 @@ class RotatedLatLon():
         pass
 
 
+    def get_north_pole_coords(self):
+        """
+        get true coordinates of the rotated north pole
+        """
+        rot_pole = self.rot_matrix * np.mat([0,0,1]).T
+        return lat_lon.cartesian_to_lon_lat(rot_pole.A1)
+
+
+    def get_true_pole_coords_in_rotated_system(self):
+        """
+        needed for lon_0 in basemap
+        """
+        rot_pole = self.rot_matrix.T * np.mat([0,0,1]).T
+        return lat_lon.cartesian_to_lon_lat(rot_pole.A1)
+
+
+        pass
+
+
+
+
 
 def south_pole_coords_test():
     import  application_properties
@@ -129,6 +149,8 @@ def south_pole_coords_test():
     lats2d = base_data_manager.lats2D
 
     acc = base_data_manager.accumulation_area_km2
+
+    import Ngl
 
     #
     #  Open a workstation.

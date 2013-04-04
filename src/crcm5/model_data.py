@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import itertools
+from netCDF4 import Dataset, date2num
 from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
@@ -8,10 +9,11 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import LinearLocator
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
+from netcdftime import num2date
 from numpy.lib.function_base import meshgrid
-from pandas.core.groupby import GroupBy
 from scipy.spatial.kdtree import KDTree
 import application_properties
+from crcm5.model_point import ModelPoint
 from data import cehq_station
 from data.cehq_station import Station
 from data.cell_manager import CellManager
@@ -32,7 +34,6 @@ import matplotlib.pyplot as plt
 
 import shelve
 import pandas
-
 class Crcm5ModelDataManager:
 
     def __init__(self, samples_folder_path = "data/gemclim/quebec/Samples",
@@ -42,6 +43,11 @@ class Crcm5ModelDataManager:
         self.samples_folder = samples_folder_path
         self.all_files_in_one_folder = all_files_in_samples_folder
         self.need_cell_manager = need_cell_manager
+
+        #approximate estimate of the distance between grid cells
+        self.characteristic_distance = None
+
+
         self._read_lat_lon_fields()
         self.run_id = "undefined"
 
@@ -63,6 +69,9 @@ class Crcm5ModelDataManager:
 
         self.shelve_path = "cache_db"
         pass
+
+
+
 
 
 
@@ -105,6 +114,114 @@ class Crcm5ModelDataManager:
         return x
 
 
+    def interpolate_data_to(self, data_in, lons2d, lats2d, nneighbours = 4):
+        """
+        Interpolates data_in to the grid defined by (lons2d, lats2d)
+        assuming that the data_in field is on the initial CRU grid
+
+        interpolate using 4 nearest neighbors and inverse of squared distance
+        """
+
+        x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
+        dst, ind = self.kdtree.query(zip(x_out, y_out, z_out), k=nneighbours)
+
+        data_in_flat = data_in.flatten()
+
+        inverse_square = 1.0 / dst ** 2
+        if len(dst.shape) > 1:
+            norm = np.sum(inverse_square, axis=1)
+            norm = np.array( [norm] * dst.shape[1] ).transpose()
+            coefs = inverse_square / norm
+
+            data_out_flat = np.sum( coefs * data_in_flat[ind], axis= 1)
+        elif len(dst.shape) == 1:
+            data_out_flat = data_in_flat[ind]
+        else:
+            raise Exception("Could not find neighbor points")
+        return np.reshape(data_out_flat, lons2d.shape)
+
+
+    def export_monthly_mean_fields(self, sim_name = "default_sim", in_file_prefix = "",
+                                   start_year = 1979, end_year = 1988,
+                                   varname = "",nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb",
+                                   level = -1, level_kind = -1):
+
+        """
+        start_year and end_year are inclusive
+        save fields as a variable with the following dimensions
+        F(year, month, lon, lat), file naming convention: varname.nc
+
+        Assumes that one file contains fields for one month
+
+        """
+
+        nc_sim_folder = os.path.join(nc_db_folder, sim_name)
+        if not os.path.isdir(nc_sim_folder):
+            os.mkdir(nc_sim_folder)
+
+        nyears = end_year - start_year + 1
+
+        nc_path = os.path.join(nc_sim_folder, "{0}.nc".format(varname))
+
+
+        from netCDF4 import Dataset
+        if os.path.isfile(nc_path):
+            res = raw_input("{0} already exist, do yu really want to re-export?[y/n]".format(nc_path))
+        else:
+            res = "y"
+        if res.strip().lower() != "y":
+            return
+        ds = Dataset(nc_path, mode="w", format = "NETCDF3_CLASSIC")
+
+        ds.createDimension("year", nyears)
+        ds.createDimension("month", 12)
+        ds.createDimension("lon", self.lons2D.shape[0])
+        ds.createDimension("lat", self.lons2D.shape[1])
+
+
+        data = ds.createVariable(varname, "f8", dimensions=("year", "month", "lon", "lat"))
+        yearVar = ds.createVariable("year", "i4", dimensions=("year",))
+        lonVar = ds.createVariable("lon", "f8", dimensions=("lon", "lat"))
+        latVar = ds.createVariable("lat", "f8", dimensions=("lon", "lat"))
+
+        monthVar = ds.createVariable("month", "i4", dimensions=("month"))
+
+        lonVar[:,:] = self.lons2D[:,:]
+        latVar[:,:] = self.lats2D[:,:]
+        yearVar[:] = np.arange(start_year, end_year + 1)
+        monthVar[:] = np.arange(1,13)
+
+
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                if not fName.startswith(in_file_prefix): continue
+
+                rObj = RPN(os.path.join(self.samples_folder, fName))
+                rObj.suppress_log_messages()
+
+                date_to_field = rObj.get_all_time_records_for_name_and_level(varname=varname, level = level, level_kind = level_kind)
+                rObj.close()
+                dates = list( sorted( date_to_field.keys() ) )
+
+                if dates[0].year < start_year or dates[0].year > end_year:
+                    continue
+
+                #assert dates[0].month == dates[-1].month, "{0} != {1}".format( str( dates[0] ),  str( dates[-1] ) )
+                data[dates[0].year - start_year, dates[0].month - 1, :, : ] = np.mean(date_to_field.values(), axis=0)
+
+        ds.close()
+        pass
+
+
+
+
+
+
+
+
+
+
+
     def get_annual_mean_fields(self, start_year = -np.Inf, end_year = np.Inf, varname = None, level = -1, level_kind = level_kinds.ARBITRARY):
         """
         returns pandas.Series withe year as an index, and 2d fields of annual means as values
@@ -145,8 +262,8 @@ class Crcm5ModelDataManager:
 
             print type(the_group)
             print dir(the_group)
-            the_group1 = the_group.apply(self._zero_negatives)
-            data_dict[key] = the_group1.mean()
+            #the_group1 = the_group.apply(self._zero_negatives)
+            data_dict[key] = the_group.mean()
 
 
 
@@ -492,17 +609,64 @@ class Crcm5ModelDataManager:
         self.kdtree = KDTree(zip(x, y, z))
 
 
+        #calculate characteristic distance
+        v1 = lat_lon.lon_lat_to_cartesian(self.lons2D[0,0], self.lats2D[0,0])
+        v2 = lat_lon.lon_lat_to_cartesian(self.lons2D[1,1], self.lats2D[1,1])
+        dv = np.array(v2) - np.array(v1)
+        self.characteristic_distance = np.sqrt( np.dot(dv, dv) )
+        print "Grid's approximate distance between the neighbour cells is: {0:.2f}".format(self.characteristic_distance)
+
+        pass
+
+    @classmethod
+    def get_omerc_basemap_using_lons_lats(cls, lons2d = None, lats2d = None,
+                                          lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0.0, resolution = "l"
+                                          ):
+
+        basemap = Basemap(projection="omerc", no_rot=True, lon_1=lon_1, lat_1=lat_1,
+                lon_2=lon_2, lat_2=lat_2,
+                #width=2600000, height=2600000,
+                llcrnrlon=lons2d[0,0], llcrnrlat=lats2d[0,0],
+                urcrnrlon=lons2d[-1,-1], urcrnrlat=lats2d[-1, -1],
+                resolution=resolution#, lon_0 = lon_0, lat_0=lat_0
+        )
+
+        return basemap
+
+
+    @classmethod
+    def get_rotpole_basemap_using_lons_lats(cls, lons2d = None, lats2d = None, lon_1=-68, lat_1=52, lon_2=16.65,
+                                           lat_2=0.0, resolution = "l"):
+
+        rll = RotatedLatLon(lon1=lon_1, lat1=lat_1, lon2 = lon_2, lat2 = lat_2)
+        rplon, rplat = rll.get_north_pole_coords()
+        lon_0, lat_0 = rll.get_true_pole_coords_in_rotated_system()
+
+        print rplon, rplat
+        print lon_0, lat_0
+
+        basemap = Basemap(projection="rotpole", o_lon_p=rplon, o_lat_p=rplat,
+                lon_0 = lon_0 - 180,
+                llcrnrlon=lons2d[0,0], llcrnrlat=lats2d[0,0],
+                urcrnrlon=lons2d[-1,-1], urcrnrlat=lats2d[-1, -1],
+                resolution=resolution
+        )
+        return basemap
         pass
 
 
 
-
     def get_omerc_basemap(self, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0, resolution = "l"):
+        nx, ny = self.lons2D.shape
+
+
+        lon_0 = self.lons2D[nx // 2, ny // 2]
+        lat_0 = self.lats2D[nx // 2, ny // 2]
         basemap = Basemap(projection="omerc", no_rot=True, lon_1=lon_1, lat_1=lat_1,
                 lon_2=lon_2, lat_2=lat_2,
                 llcrnrlon=self.lons2D[0,0], llcrnrlat=self.lats2D[0,0],
                 urcrnrlon=self.lons2D[-1,-1], urcrnrlat=self.lats2D[-1, -1],
-                resolution=resolution
+                resolution=resolution, lon_0 = lon_0, lat_0 = lat_0
         )
         return basemap
 
@@ -810,6 +974,24 @@ class Crcm5ModelDataManager:
         return result
 
 
+    def get_mean_2d_field_and_all_data(self, var_name = "STFL", level = -1,
+                                       level_kind = level_kinds.ARBITRARY):
+        all_fields = []
+        date_to_field = {}
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                if not fName.startswith(self.file_name_prefix): continue
+                fPath = os.path.join(self.samples_folder, fName)
+                rpnObj = RPN(fPath)
+                cur_date_to_field = rpnObj.get_all_time_records_for_name_and_level(
+                        varname = var_name, level=level, level_kind=level_kind)
+                all_fields.extend( cur_date_to_field.values() )
+                date_to_field.update(cur_date_to_field)
+
+
+        return np.mean(all_fields, axis=0), date_to_field
+
+
     def get_mean_in_time(self, var_name = "STFL"):
         all_fields = []
         if self.all_files_in_one_folder:
@@ -820,6 +1002,18 @@ class Crcm5ModelDataManager:
         return np.mean(all_fields, axis=0)
 
 
+
+    def _read_static_field(self, rpnObj, varname):
+        msg = "{0} variable was not found in the dataset"
+        res = None
+        try:
+            res = rpnObj.get_first_record_for_name(varname)
+        except Exception,e:
+            print msg.format(varname)
+
+        return res
+
+
     def _read_static_data(self, derive_from_data = True):
         """
          get drainage area fields
@@ -828,33 +1022,56 @@ class Crcm5ModelDataManager:
 
         if derive_from_data and self.all_files_in_one_folder:
             files = os.listdir(self.samples_folder)
-            files = itertools.ifilter(lambda x: x.startswith(self.file_name_prefix)
-                and not x.startswith("."), files
-            )
-            file = sorted(files)[0]
+            files = itertools.ifilter(lambda x: not x.startswith(".") and x.startswith("pm"), files)
+            file = sorted(files,key = lambda x: x[2:])[0] #take the first file disregarding prefixes
             file_path = os.path.join(self.samples_folder, file)
             rpnObj = RPN(file_path)
-            self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FAA")
-            self.flow_directions = rpnObj.get_first_record_for_name("FLDR")
-            self.lake_fraction = rpnObj.get_first_record_for_name("LF1")
-            self.bankfull_storage_m3 = rpnObj.get_first_record_for_name("STBM")
-            self.cbf = rpnObj.get_first_record_for_name("CBF")
 
 
+
+            varname = "FAA"
+            self.accumulation_area_km2 = self._read_static_field(rpnObj, varname)
+
+            varname = "FLDR"
+            self.flow_directions = self._read_static_field(rpnObj, varname)
+
+
+            varname = "ML"
+            self.lake_fraction = self._read_static_field(rpnObj, varname)
+
+            varname = "STBM"
+            self.bankfull_storage_m3 = self._read_static_field(rpnObj, varname)
+
+
+            varname = "CBF"
+            self.cbf = self._read_static_field(rpnObj, varname)
+
+
+            varname = "GWRT"
+            self.gw_res_time = self._read_static_field(rpnObj, varname)
+
+            varname = "LKAR"
+            self.lake_area = self._read_static_field(rpnObj, varname)
 
             #try to read cell areas from the input file
-            try:
-                self.cell_area = rpnObj.get_first_record_for_name("DX") #in m**2
-            except Exception, e:
-                print e.message
-                print "Could not find cell area in the output: ", file_path
+            varname = "DX"
+            self.cell_area = self._read_static_field(rpnObj, varname) #in m**2
+
+            varname = "MABF"
+            self.manning_bf = self._read_static_field(rpnObj, varname) #in m**2
+
+            varname = "MG"
+            self.mg = self._read_static_field(rpnObj, varname)
+            self.land_sea_mask = (self.mg > 0.6).astype(int) #0/1
 
 
-            try:
-                self.land_sea_mask = (rpnObj.get_first_record_for_name("MG") > 0.6).astype(int) #0/1
-            except Exception, e:
-                print e.message
-                print "Could not find land/sea mask in the output: ", file_path
+            varname = "SLOP"
+            self.slope = self._read_static_field(rpnObj, varname)
+
+            varname = "LKOU"
+            self.lkou = self._read_static_field(rpnObj, varname)
+
+
 
 
 
@@ -968,11 +1185,254 @@ class Crcm5ModelDataManager:
                 rObj.close()
 
                 #if the field for date is found
-                if data != None:
+                if data is not None:
                     return data
         else:
             raise NotImplementedError("You need to implement this method for the given positions of files")
 
+
+
+
+    def _create_nc_structure(self, dataset,  levels, var_name):
+        dataset.createDimension("time", None)
+        dataset.createDimension("lon", self.lons2D.shape[0])
+        dataset.createDimension("lat", self.lons2D.shape[1])
+        dataset.createDimension("level", len(levels))
+
+        dataVar = dataset.createVariable(var_name, "f8", dimensions=("time", "level", "lon", "lat"))
+        lonVar = dataset.createVariable("lon", "f8", dimensions=("lon", "lat"))
+        latVar = dataset.createVariable("lat", "f8", dimensions=("lon", "lat"))
+
+        levelVar = dataset.createVariable("level", "f8", dimensions = ("level", ))
+        timeVar = dataset.createVariable("time", "f8", dimensions = ("time", ))
+
+
+        levelVar[:] = levels
+        lonVar[:,:] = self.lons2D[:,:]
+        latVar[:,:] = self.lats2D[:,:]
+        return dataVar
+
+
+
+
+    def export_field_to_netcdf(self, start_year, end_year, nc_sim_folder = "", var_name = ""):
+        """
+        Exports data to netcdf without aggregation
+        nc_sim_folder - is a folder with netcdf files for a given simulation
+        the file name patterns are <varname>_all.nc
+
+        the data for the period [start_year, end_year] should exist
+
+
+        Note: the dates are not continuous here and not growing monotonously
+        """
+
+        nc_file_path = "{0}_all.nc".format(var_name)
+
+        nc_file_path = os.path.join(nc_sim_folder, nc_file_path)
+        start_date = datetime(start_year,1,1)
+
+
+        if os.path.isfile(nc_file_path):
+            res = raw_input("The file {0} already exists, do you want to reexport? [y/n]: ".format(nc_file_path))
+            if res.strip().lower() != "y":
+                return
+
+
+
+        if self.all_files_in_one_folder:
+            ds = Dataset(nc_file_path, "w", format="NETCDF3_CLASSIC")
+
+            dataVar = None
+            timeVar = None
+            levels = None
+            t = 0
+
+
+            fNames = os.listdir(self.samples_folder)
+            fNames = itertools.ifilter( lambda name: name.startswith(self.file_name_prefix), fNames)
+            fNames = sorted(fNames, key=lambda name: int(name.split("_")[-1][:-1]))
+
+            fNames = list(fNames)
+
+
+
+
+            for fName in fNames:
+                fPath = os.path.join(self.samples_folder, fName)
+
+
+                rObj = RPN(fPath)
+                #{time => {level => F(x, y)}}
+                rObj.suppress_log_messages()
+                data = rObj.get_4d_field(name = var_name)
+
+                rObj.close()
+
+                if dataVar is None:
+
+                    levels = data.items()[0][1].keys()
+                    levels =list(sorted(levels))
+
+                    dataVar = self._create_nc_structure(ds, levels, var_name)
+                    timeVar = ds.variables["time"]
+                    timeVar.units = "hours since {0}".format(str(start_date))
+
+                #put data and time to netcdf file
+                times = sorted(  data.keys() )
+                times = list(itertools.ifilter(lambda d: d.year <= end_year, times))
+
+
+                #if there are records in the given time range
+                if len(times) > 0:
+                    times_num = date2num(times, units = timeVar.units)
+                    timeVar[t:] = times_num[:]
+                    for k, level in enumerate(levels):
+                        dataVar[t:,k,:,:] = np.array(
+                            [data[d][level] for d in times]
+                        )
+
+                    t += len(times) #remember how many time steps have already been written
+
+            ds.close()
+        else:
+            raise Exception("Not yet implemented")
+
+        pass
+
+
+
+    def export_daily_mean_fields(self, start_year, end_year,var_name = "" , nc_sim_folder = ""):
+        """
+        Exports daily mean fields to netcdf
+        nc_sim_folder - is a folder with netcdf files for a given simulation
+        the file name patterns are <varname>_daily.nc
+
+        """
+        #TODO:
+
+        pass
+
+
+
+
+
+
+    def get_model_points_for_stations(self, station_list, varname = "STFL", nc_path = ""):
+        """
+        returns a map {station => modelpoint} for comparison modeled streamflows with observed
+        modelpoint.data - contains series of data in time for the modelpoint
+        modelpoint.time - contains times corresponding to modelpoint.data
+        """
+
+        station_to_grid_point = {}
+        model_acc_area = self.accumulation_area_km2
+        model_acc_area_1d = model_acc_area.flatten()
+        mp_list = []
+        for s in station_list:
+            assert isinstance(s, Station)
+            x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
+            dists, inds = self.kdtree.query((x,y,z), k = 8)
+
+
+            deltaDaMin = np.min( np.abs( model_acc_area_1d[inds] - s.drainage_km2) )
+
+            imin = np.where(np.abs( model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
+
+            deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
+
+            ij = np.where(  deltaDa2D == deltaDaMin )
+
+
+
+            #check if it is not global lake cell
+            if self.lake_fraction[ij[0][0], ij[1][0]] >= 0.6:
+                continue
+
+            #check if the gridcell is not too far from the station
+            if dists[imin] > 2 * self.characteristic_distance:
+                continue
+
+            #check if difference in drainage areas is not too big less than 10 %
+            if deltaDaMin / s.drainage_km2 > 0.1: continue
+
+
+
+            mp = ModelPoint()
+            mp.accumulation_area = model_acc_area[ij[0][0], ij[1][0]]
+            mp.ix = ij[0][0]
+            mp.jy = ij[1][0]
+            mp.longitude = self.lons2D[mp.ix, mp.jy]
+            mp.latitude = self.lats2D[mp.ix, mp.jy]
+
+
+
+
+            station_to_grid_point[s] = mp
+
+
+            #flow in mask
+            mp.flow_in_mask = self.get_mask_for_cells_upstream(mp.ix, mp.jy)
+
+
+            print "da_diff (sel) = ", deltaDaMin
+            print "dist (sel) = ", dists[imin]
+
+
+            mp_list.append(mp)
+
+        ix_list = map(lambda p: p.ix, mp_list)
+        jy_list = map(lambda p: p.jy, mp_list)
+
+        times, data = self.get_list_of_ts_from_netcdf(nc_path=nc_path, varname=varname,
+            ix_list = ix_list, jy_list = jy_list
+        )
+
+        #get data to model points
+        for k, mp in enumerate(mp_list):
+            assert isinstance(mp, ModelPoint)
+            mp.time = times
+            mp.data = data[:, :, k]
+
+        return station_to_grid_point
+
+
+    def get_list_of_ts_from_netcdf(self, nc_path = "", varname = "STFL", ix_list = None, jy_list = None):
+        ds = Dataset(nc_path)
+        var = ds.variables[varname][:]
+
+        var = var[:,:,np.array(ix_list),np.array(jy_list)]
+
+
+
+        print var.shape
+
+        tVar = ds.variables["time"]
+        times = num2date(tVar[:], tVar.units)
+
+        ds.close()
+        return times, var
+
+        pass
+
+
+    def get_timeseries_from_netcdf(self, nc_path = "", varname = "STFL", ix = -1, jy = -1,
+                                   times = None
+                                   ):
+        ds = Dataset(nc_path)
+        var = ds.variables[varname][:,:, ix, jy]
+
+        if times is None:
+            tVar = ds.variables["time"]
+            times = num2date(tVar[:], tVar.units)
+
+        ds.close()
+        return times, var
+
+
+
+
+        pass
 
 
 def do_test_seasonal_mean():
@@ -1541,6 +2001,50 @@ def main():
     pass
 
 
+
+def doTestRotPole():
+    data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
+    manager = Crcm5ModelDataManager(samples_folder_path=data_path,
+                file_name_prefix="pm", all_files_in_samples_folder=True)
+
+
+    b = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(lons2d=manager.lons2D, lats2d=manager.lats2D)
+
+    x, y = b(manager.lons2D, manager.lats2D)
+    b.contourf(x, y, manager.mg)
+    b.drawmeridians(np.arange(-180, 180,30))
+    b.drawparallels(np.arange(-90,90,30))
+
+
+    b.drawcoastlines()
+
+
+    ds = Dataset("/home/huziy/skynet1_rech3/Converters/NetCDF_converter/pm1958010100_00002232p_na_0.44deg_AU.nc")
+    na_data = ds.variables["osr"][0,0,:,:]
+    rlons = ds.variables["rlon"][:]
+    rlats = ds.variables["rlat"][:]
+
+
+    rlats, rlons = np.meshgrid(rlats, rlons)
+
+    lons = ds.variables["lon"][:]
+    lats = ds.variables["lat"][:]
+
+
+    b1 = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(
+            lons2d=lons, lats2d=lats, lon_1=-97, lon_2=-7, lat_1=47.5, lat_2=0
+    )
+    x, y = b1(lons, lats)
+    plt.figure()
+    b1.contourf(x, y, na_data)
+    b1.colorbar()
+    b1.drawcoastlines()
+
+
+    plt.show()
+
+
+
 def doTestStuff():
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,
@@ -1561,7 +2065,7 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
 
     #testStuff()
-
-    main()
+    doTestRotPole()
+    #main()
     print "Hello world"
   
