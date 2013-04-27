@@ -2,9 +2,6 @@ __author__ = 'huziy'
 
 import numpy as np
 
-
-
-
 def main():
     #TODO: implement
     pass

@@ -12,9 +12,9 @@ def main():
     start_year = 1979
     end_year = 1988
 
-    field_names = ["TT", "PR", "AU", "AV", "STFL","STFA", "TRAF", "TDRA", "I5"]
-    file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
-    sim_name = "crcm5-hcd-rl-intfl"
+    field_names = ["TT", "PR", "AU", "AH", "AV", "STFL","STFA", "TRAF", "TDRA", "I5", "GWDI"]
+    file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
+    sim_name = "crcm5-r"
     rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name)
     nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 

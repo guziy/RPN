@@ -315,12 +315,21 @@ def step(inflow_loc =  8.995517, inflow_upstream = 0,
 
     pass
 
-
+#route params (stfl-too-high):     300.0000000000000         20186.78
+#Other:    5.1975232E+08   8.8461121E-07   4.4230561E-07    1270794.
+#Other:    5.0000001E-02    0.000000        0.000000      F   4.7354861E+08
+#Other:    5.0000001E-02    174199.2
 
 
 if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
-    main()
+    print step(
+        inflow_loc=0,
+        inflow_upstream=72829.49,
+        k_bf=4.3803720E-07,
+        s0_r=5.8258285E+08,   acc= 0.05
+    )
+    #main()
 
   

@@ -2,8 +2,12 @@ from datetime import timedelta, datetime
 import itertools
 from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+import pandas
+from scipy.spatial.ckdtree import cKDTree
 from scipy.spatial.kdtree import KDTree
 import application_properties
+from crcm5.model_data import Crcm5ModelDataManager
+from crcm5.model_point import ModelPoint
 from data.timeseries import TimeSeries
 
 from util.geo import lat_lon
@@ -43,7 +47,7 @@ class CRUDataManager:
             self.var_data = np.transpose( nc_vars[self.var_name][:], axes=(0,2,1))
 
         x_in,y_in,z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-        self.kdtree = KDTree(zip(x_in, y_in, z_in))
+        self.kdtree = cKDTree(zip(x_in, y_in, z_in))
 
 
     def get_mean(self, start_year, end_year, months = None):
@@ -163,6 +167,130 @@ class CRUDataManager:
 
         print "Interpolated all"
         return TimeSeries(time=new_times, data=data_interp).get_ts_of_monthly_means()
+
+
+    def get_mean_upstream_timeseries_monthly(self, model_point, data_manager):
+        """
+        get mean swe upstream of the model_point
+
+        year range for selection is in model_point.continuous_data_years() ..
+        """
+        assert isinstance(model_point, ModelPoint)
+        assert isinstance(data_manager, Crcm5ModelDataManager)
+
+
+
+        #create the mask of points over which the averaging is going to be done
+        lons_targ = data_manager.lons2D[model_point.flow_in_mask == 1]
+        lats_targ = data_manager.lats2D[model_point.flow_in_mask == 1]
+
+        xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_targ, lats_targ)
+
+        nxs, nys = self.lons2d.shape
+        i_source, j_source = range(nxs), range(nys)
+
+        j_source, i_source = np.meshgrid(j_source, i_source)
+
+        i_source = i_source.flatten()
+        j_source = j_source.flatten()
+
+
+        dists, inds = self.kdtree.query(zip(xt,yt,zt), k = 1)
+        ixsel = i_source[inds]
+        jysel = j_source[inds]
+
+
+        print "Calculating spatial mean"
+        #calculate spatial mean
+        #calculate spatial mean
+        if self.lazy:
+            theVar = self.nc_vars[self.var_name]
+
+            data_series = []
+            for i, j in zip(ixsel, jysel):
+                data_series.append(theVar[:,j,i])
+
+            data_series = np.mean(data_series, axis = 0)
+        else:
+            data_series = np.mean(self.var_data[:,ixsel, jysel], axis=1)
+
+        print "Finished calculating spatial mean"
+
+        #calculate daily climatology
+        df = pandas.DataFrame(data = data_series, index=self.times, columns=["values"])
+
+        df["year"] = df.index.map(lambda d: d.year)
+
+        df = df[df["year"].isin(model_point.continuous_data_years)]
+        monthly_clim = df.groupby(by=lambda d: d.month).mean()
+
+
+
+        month_dates = [datetime(1985, m, 15) for m in range(1,13)]
+        vals = [ monthly_clim.ix[d.month, "values"] for d in month_dates ]
+
+        return pandas.TimeSeries(data = vals, index = month_dates)
+
+
+
+
+
+
+    def get_mean_upstream_timeseries_daily(self, model_point, dm, stamp_dates = None):
+        """
+        get mean swe upstream of the model_point
+        """
+        assert isinstance(model_point, ModelPoint)
+
+
+        assert isinstance(dm, Crcm5ModelDataManager)
+
+
+
+        #create the mask of points over which the averaging is going to be done
+        lons_targ = dm.lons2D[model_point.flow_in_mask == 1]
+        lats_targ = dm.lats2D[model_point.flow_in_mask == 1]
+
+        xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_targ, lats_targ)
+
+        nxs, nys = self.lons2d.shape
+        i_source, j_source = range(nxs), range(nys)
+
+        j_source, i_source = np.meshgrid(j_source, i_source)
+
+        i_source = i_source.flatten()
+        j_source = j_source.flatten()
+
+
+        dists, inds = self.kdtree.query(zip(xt,yt,zt), k = 1)
+        ixsel = i_source[inds]
+        jysel = j_source[inds]
+
+
+        df_empty = pandas.DataFrame(index=self.times)
+        df_empty["year"] = df_empty.index.map(lambda d: d.year)
+
+        #calculate spatial mean
+        #calculate spatial mean
+        sel_date_indices = np.where(df_empty["year"].isin(model_point.continuous_data_years))[0]
+        if self.lazy:
+            theVar = self.nc_vars[self.var_name]
+            data_series = np.mean([ theVar[sel_date_indices, j, i] for i,j in zip(ixsel, jysel) ], axis = 0)
+        else:
+            data_series = np.mean(self.var_data[:, ixsel, jysel], axis=1)
+
+
+        #calculate daily climatology
+        df = pandas.DataFrame(data = data_series, index=self.times, columns=["values"])
+
+        df["year"] = df.index.map(lambda d: d.year)
+        df = df[df["year"].isin(model_point.continuous_data_years)]
+        daily_clim = df.groupby(by=lambda d: (d.month, d.day)).mean()
+
+        vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
+        return pandas.TimeSeries(data = vals, index = stamp_dates)
+
+
 
 
     def get_daily_timeseries_using_mask(self, mask, lons2d_target, lats2d_target, multipliers_2d, start_date = None, end_date = None):

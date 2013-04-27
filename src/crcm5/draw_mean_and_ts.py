@@ -1,5 +1,4 @@
 from netCDF4 import Dataset
-import ds
 from crcm5.model_data import Crcm5ModelDataManager
 from crcm5.timeseries_plotter import TimeseriesPlotter
 from rpn import level_kinds
@@ -13,7 +12,8 @@ def main():
     import matplotlib.pyplot as plt
     #path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/test_with_lakeroff"
 
-    path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl_spinup"
+    #path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl_spinup"
+    path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-r/all_in_one_folder"
     manager = Crcm5ModelDataManager(
         samples_folder_path=path, file_name_prefix="pm",
         all_files_in_samples_folder=True,

@@ -17,9 +17,9 @@ import numpy as np
 start_year = 1979
 end_year = 1986
 
-field_names = ["TT", "PR", "AU", "AV", "STFL","STFA", "TRAF", "TDRA"]
-file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
-sim_name = "crcm5-hcd-rl-intfl"
+field_names = ["TT", "PR", "AU", "AV", "STFL","STFA", "TRAF", "TDRA", "AH"]
+file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
+sim_name = "crcm5-hcd-r"
 rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name)
 nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
@@ -69,8 +69,12 @@ def main():
             if varname == "STFA": continue
             export_monthly_means_to_ncdb(manager, varname, level= level, level_kind= level_kind)
     #plot results
-    basemap = pmManager.get_omerc_basemap()
+    assert isinstance(pmManager, Crcm5ModelDataManager)
     lons, lats = pmManager.lons2D, pmManager.lats2D
+
+    basemap = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(
+        lons2d=lons, lats2d = lats
+    )
     x, y = basemap(lons, lats)
 
 
@@ -122,8 +126,8 @@ def main():
     ax_to_levels[ax] = levels
 
 
-    #plot AU
-    varname = "AU"
+    #plot AH
+    varname = "AH"
     ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
     years = ds.variables["year"][:]
     sel = (start_year <= years) & (years <= end_year)
@@ -135,7 +139,7 @@ def main():
     bn = BoundaryNorm(levels, cmap.N)
     ax = fig.add_subplot(gs[1,0])
     ax.set_title("Sensible heat flux (${\\rm W/m^2}$)")
-    img = basemap.contourf(x, y, au, levels = levels, cmap = cmap, norm = bn)
+    img = basemap.contourf(x, y, au,  cmap = cmap)
     all_axes.append(ax)
     imgs.append(img)
     ax_to_levels[ax] = levels
@@ -190,7 +194,7 @@ def main():
         divider = make_axes_locatable(the_ax)
         cax = divider.append_axes("right", "10%", pad="3%")
 
-        cb = plt.colorbar(the_img, ticks = ax_to_levels[the_ax], cax = cax)
+        cb = plt.colorbar(the_img, cax = cax)
         assert isinstance(cax, Axes)
         title = cax.get_title()
 

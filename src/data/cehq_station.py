@@ -7,7 +7,7 @@ __date__ ="$8 dec. 2010 10:38:26$"
 import re
 import os
 import codecs
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 import numpy as np
 
 
@@ -28,6 +28,13 @@ class Station:
         self.values = []
         
         self.date_to_value = {}
+
+        #daily climatology of mean swe upstream (as seen by the model) to the station
+        #ideally pandas.Timeseries?
+        self.mean_swe_upstream_daily_clim = None
+        self.mean_temp_upstream_monthly_clim = None
+        self.mean_prec_upstream_monthly_clim = None
+
 
 
     def get_mean_value(self):
@@ -360,6 +367,11 @@ class Station:
         """
         assumes that the observed data frequency is daily
         """
+
+
+        if hasattr(self, "_complete_years"):
+            return self._complete_years
+
         years = []
 
         years_all = np.array( [d.year for d in self.dates] )
@@ -370,6 +382,7 @@ class Station:
             if count >= 365:
                 years.append(y)
 
+        self._complete_years = years
         return years
 
 
@@ -408,10 +421,71 @@ class Station:
 
 
         vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
-
-
-
         return stamp_dates, vals
+
+
+
+    def get_daily_climatology_minimums_pandas(self, stamp_dates = None, years = None):
+
+        """
+        get minimum flow value for a given day during years
+        TODO: implement
+        """
+        pass
+
+
+
+
+
+
+    def parse_from_hydat(self, path):
+        f = open(path)
+
+        lines = f.readlines()
+
+        read_data_flag = False
+        for line in lines:
+            line = line.strip()
+
+            if line == "": continue
+            if not read_data_flag:
+                line = line.lower()
+                read_data_flag = "id" in line and "datatype" in line and "date" in line
+                read_data_flag = "value" in line and read_data_flag
+
+                if line.startswith("superf"):
+                    sarea = re.findall("\\d+", line)
+
+                    self.drainage_km2 = float(sarea[0])
+                elif line.startswith("longitude") or line.startswith("latitude"):
+                    groups = re.findall("\\d+", line)
+
+                    degs, mins, secs = [float(g) for g in groups]
+                    coef = -1 if line.endswith("w")  or line.endswith("s") else 1
+                    if line.startswith("longitude"):
+                        self.longitude = (degs + mins / 60.0 + secs / 3600.0) * coef
+                    else:
+                        self.latitude = (degs + mins / 60.0 + secs / 3600.0) * coef
+
+
+
+
+            else:
+                fields = line.split(",")
+                if self.id is None:
+                    self.id = fields[0].strip()
+
+                date = datetime.strptime(fields[2].strip(), "%Y/%m/%d")
+                val = float(fields[3].strip())
+
+                self.dates.append(date)
+                self.values.append(val)
+
+        self.date_to_value = dict(zip(self.dates, self.values))
+
+
+
+
 
 
 
@@ -478,22 +552,112 @@ def read_station_data(folder = 'data/cehq_measure_data',
 
 
 
+def read_hydat_station_data(folder_path = "", start_date = None, end_date = None):
+    """
+    Read files downloaded from EC website (csv)
+    """
+    stations = []
+    for file in os.listdir(folder_path):
+        path = os.path.join(folder_path, file)
+        s = Station()
+
+        s.parse_from_hydat(path)
+        if start_date is not None:
+            s.delete_data_before_date(start_date)
+
+        if end_date is not None:
+            s.delete_data_after_date(end_date)
+
+        #only save stations with nonzero timeseries length
+        if s.get_timeseries_length():
+            stations.append(s)
+
+    return stations
+
+
+def load_from_hydat_db(path = "/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite", natural = True,
+                       province = "QC"
+                       ):
+    """
+    loads stations from sqlite db
+    """
+    import sqlite3
+
+
+    province = province.upper()
+
+    #shortcuts
+    stations_table = "STATIONS"
+    station_number_field = "STATION_NUMBER"
+
+    regulation_table = "STN_REGULATION"
+    daily_streamflow_table = "DLY_FLOWS" #streamflow is in m**3
+
+
+    tables_of_interest = [stations_table, regulation_table, daily_streamflow_table]
+
+    connect = sqlite3.connect(path)
+    assert isinstance(connect, sqlite3.Connection)
+
+
+    cur = connect.cursor()
+    assert isinstance(cur, sqlite3.Cursor)
+
+    cur.execute("select * from Version;")
+    row = cur.fetchone()
+
+    print
+    print "using hydat version {0} generated on {1}".format(row[0], row[1])
+
+
+
+
+
+
+    cur.execute("select name from sqlite_master where type = 'table';")
+
+    table_names = cur.fetchall()
+
+
+
+    for table_name in table_names:
+        cur.execute("select sql from sqlite_master where type = 'table' and name = ?;", table_name)
+
+        if table_name[0] not in tables_of_interest: continue
+
+        scheme = cur.fetchone()
+        print scheme
+        print "++++" * 20
+
+
+
+
+    connect.close()
+
+    pass
+
+
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
 
     station_ids = [104001, 103715, 93801, 93806, 81006, 92715, 61502, 80718, 42607, 40830]
-    print_info_of(station_ids)
+    #print_info_of(station_ids)
 
 
 
-    s = Station()
-    s.parse_from_cehq('data/cehq_measure_data/051004_Q.txt')
+    #s = Station()
+    #s.parse_from_cehq('data/cehq_measure_data/051004_Q.txt')
     #data = s.get_continuous_dataseries_for_year(1970)
 #    for date in sorted(data.keys()):
 #        print date, '-->', data[date]
 
-    s.get_daily_climatology_for_complete_years()
-    print np.max(s.values)
-    print np.max(s.dates)
+    #s.parse_from_hydat("/home/huziy/skynet3_rech1/HYDAT/daily_streamflow_02OJ007.csv")
+
+    #s.get_daily_climatology_for_complete_years()
+    #print np.max(s.values)
+    #print np.max(s.dates)
+
+    load_from_hydat_db()
+
     print "Hello World"

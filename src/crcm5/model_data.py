@@ -1,6 +1,10 @@
 from datetime import datetime, timedelta
+import functools
 import itertools
+from multiprocessing import Pool
 from netCDF4 import Dataset, date2num
+import pickle
+import shelve
 from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
@@ -11,7 +15,8 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 from netcdftime import num2date
 from numpy.lib.function_base import meshgrid
-from scipy.spatial.kdtree import KDTree
+from scipy.spatial.ckdtree import cKDTree
+import time
 import application_properties
 from crcm5.model_point import ModelPoint
 from data import cehq_station
@@ -32,7 +37,43 @@ import os
 
 import matplotlib.pyplot as plt
 
-import shelve
+class InputForProcessPool:
+    def __init__(self):
+        self.i_upstream = None
+        self.j_upstream = None
+        self.multipliers = None
+        self.mp_ix = None
+        self.mp_jy = None
+
+
+def _get_var_data_to_pandas(x):
+    vName, level, average_upstream, nc_sim_folder, inObject = x
+    assert isinstance(inObject, InputForProcessPool)
+    ds = Dataset(os.path.join(nc_sim_folder, "{0}_all.nc4".format(vName)))
+    var = ds.variables[vName]
+    if average_upstream:
+        #data_frame[vName] = np.sum( var[:,level,:,:][:,i_upstream, j_upstream] * coefs, axis = 1 )
+
+        imin, imax = min(inObject.i_upstream), max(inObject.i_upstream)
+        jmin, jmax = min(inObject.j_upstream), max(inObject.j_upstream)
+
+
+        the_data = var[:,level,imin:imax+1, jmin:jmax+1]
+
+        i_adapt = np.array(inObject.i_upstream) - imin
+        j_adapt = np.array(inObject.j_upstream) - jmin
+
+
+        the_data = np.sum( the_data[:, i_adapt, j_adapt] * inObject.multipliers, axis = 1 )
+    else:
+        the_data = var[:,level,inObject.mp_ix, inObject.mp_jy]
+
+    ds.close()
+    return the_data
+
+
+    pass
+
 import pandas
 class Crcm5ModelDataManager:
 
@@ -606,7 +647,7 @@ class Crcm5ModelDataManager:
         #create kdtree for easier and faster lookup of the corresponding points
         #model <=> obs, for comparison
         [x, y, z] = lat_lon.lon_lat_to_cartesian(self.lons2D.flatten(), self.lats2D.flatten())
-        self.kdtree = KDTree(zip(x, y, z))
+        self.kdtree = cKDTree(zip(x, y, z))
 
 
         #calculate characteristic distance
@@ -633,6 +674,22 @@ class Crcm5ModelDataManager:
 
         return basemap
 
+
+    def get_rotpole_basemap(self, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0.0, resolution = "l"):
+        rll = RotatedLatLon(lon1=lon_1, lat1=lat_1, lon2 = lon_2, lat2 = lat_2)
+        rplon, rplat = rll.get_north_pole_coords()
+        lon_0, lat_0 = rll.get_true_pole_coords_in_rotated_system()
+
+        print rplon, rplat
+        print lon_0, lat_0
+
+        basemap = Basemap(projection="rotpole", o_lon_p=rplon, o_lat_p=rplat,
+                lon_0 = lon_0 - 180,
+                llcrnrlon=self.lons2D[0,0], llcrnrlat=self.lats2D[0,0],
+                urcrnrlon=self.lons2D[-1,-1], urcrnrlat=self.lats2D[-1, -1],
+                resolution=resolution
+        )
+        return basemap
 
     @classmethod
     def get_rotpole_basemap_using_lons_lats(cls, lons2d = None, lats2d = None, lon_1=-68, lat_1=52, lon_2=16.65,
@@ -1164,12 +1221,24 @@ class Crcm5ModelDataManager:
         return all_ts
 
     def get_mask_for_cells_upstream(self, i_model0, j_model0):
+        #cache the list of upstream cells for performance
+        if hasattr(self, "upstream_cells_cache"):
+            if self.upstream_cells_cache.has_key((i_model0, j_model0)):
+                return self.upstream_cells_cache[(i_model0, j_model0)]
+        else:
+            self.upstream_cells_cache = {}
+        ######
         if self.cell_manager is not None:
             aCell = self.cell_manager.cells[i_model0][j_model0]
-            return self.cell_manager.get_mask_of_cells_connected_with(aCell)
+            self.upstream_cells_cache[(i_model0, j_model0)] = self.cell_manager.get_mask_of_cells_connected_with(aCell)
         else:
             print "CellManager should be supplied for this operation."
             raise Exception("Cellmanager should be created via option need_cell_manager = True in the constructor.")
+
+        return self.upstream_cells_cache[(i_model0, j_model0)]
+
+
+
 
     def get_2d_field_for_date(self, date, dateo, varname, level = -1, level_kind = level_kinds.ARBITRARY):
         if self.all_files_in_one_folder:
@@ -1241,7 +1310,7 @@ class Crcm5ModelDataManager:
 
 
         if self.all_files_in_one_folder:
-            ds = Dataset(nc_file_path, "w", format="NETCDF3_CLASSIC")
+            ds = Dataset(nc_file_path, "w")
 
             dataVar = None
             timeVar = None
@@ -1302,97 +1371,247 @@ class Crcm5ModelDataManager:
 
 
 
-    def export_daily_mean_fields(self, start_year, end_year,var_name = "" , nc_sim_folder = ""):
+    def export_daily_mean_fields(self, start_year, end_year,var_name = "" , nc_sim_folder = "", quiet = False):
         """
         Exports daily mean fields to netcdf
         nc_sim_folder - is a folder with netcdf files for a given simulation
         the file name patterns are <varname>_daily.nc
 
         """
-        #TODO:
+        nc_file_name = "{0}_daily.nc".format(var_name)
 
+        nc_file_path = os.path.join(nc_sim_folder, nc_file_name)
+        start_date = datetime(start_year,1,1)
+
+
+        if os.path.isfile(nc_file_path) and not quiet:
+            res = raw_input("The file {0} already exists, do you want to reexport? [y/n]: ".format(nc_file_path))
+            if res.strip().lower() != "y":
+                return
+
+
+
+        if self.all_files_in_one_folder:
+            ds = Dataset(nc_file_path, "w", format="NETCDF3_CLASSIC")
+
+            dataVar = None
+            timeVar = None
+            levels = None
+            t = 0
+
+
+            fNames = os.listdir(self.samples_folder)
+            fNames = itertools.ifilter( lambda name: name.startswith(self.file_name_prefix), fNames)
+            fNames = sorted(fNames, key=lambda name: int(name.split("_")[-1][:-1]))
+
+            fNames = list(fNames)
+
+
+
+
+            for fName in fNames:
+                fPath = os.path.join(self.samples_folder, fName)
+
+
+                rObj = RPN(fPath)
+                #{time => {level => F(x, y)}}
+                rObj.suppress_log_messages()
+                data = rObj.get_4d_field(name = var_name)
+
+                #TODO: calculate daily means
+
+                rObj.close()
+
+                if dataVar is None:
+
+                    levels = data.items()[0][1].keys()
+                    levels =list(sorted(levels))
+
+                    dataVar = self._create_nc_structure(ds, levels, var_name)
+                    timeVar = ds.variables["time"]
+                    timeVar.units = "hours since {0}".format(str(start_date))
+
+                #put data and time to netcdf file
+                times = sorted(  data.keys() )
+                times = list(itertools.ifilter(lambda d: start_year <= d.year <= end_year, times))
+
+
+                #if there are records in the given time range
+                if len(times) > 0:
+                    times_num = date2num(times, units = timeVar.units)
+                    timeVar[t:] = times_num[:]
+                    for k, level in enumerate(levels):
+                        dataVar[t:,k,:,:] = np.array(
+                            [data[d][level] for d in times]
+                        )
+
+                    t += len(times) #remember how many time steps have already been written
+
+            ds.close()
+        else:
+            raise Exception("Not yet implemented")
+
+        pass
         pass
 
 
 
 
+    def _init_model_point(self, station, ix, jy, dist_to_station, timeArr, nc_sim_folder):
+        assert isinstance(station, Station)
+
+        #variables to be read and correspondong levels
+        varnames = ["STFL", "I5", "TT", "PR", "TRAF", "TDRA"]
+        levels = [0,0,0,0,4,4] #zero-based
+        mean_upstream = [False, True, True, True, True, True]
 
 
-    def get_model_points_for_stations(self, station_list, varname = "STFL", nc_path = ""):
+        mp = ModelPoint()
+        mp.accumulation_area = self.accumulation_area_km2[ix, jy]
+        mp.lake_fraction = self.lake_fraction[ix, jy]
+        mp.ix = ix
+        mp.jy = jy
+        mp.longitude = self.lons2D[mp.ix, mp.jy]
+        mp.latitude = self.lats2D[mp.ix, mp.jy]
+        mp.distance_to_station = dist_to_station
+
+        #flow in mask
+        mp.flow_in_mask = self.get_mask_for_cells_upstream(ix, jy)
+
+        mp.continuous_data_years = station.get_list_of_complete_years()
+        mp.mean_upstream_lake_fraction = self.lake_fraction[mp.flow_in_mask == 1].mean()
+
+        inObject = InputForProcessPool()
+        inObject.mp_ix = mp.ix
+        inObject.mp_jy = mp.jy
+
+        inObject.i_upstream, inObject.j_upstream = np.where(mp.flow_in_mask == 1)
+        sel_areas = self.cell_area[inObject.i_upstream, inObject.j_upstream]
+        inObject.multipliers = sel_areas / np.sum(sel_areas)
+
+
+        t0 = time.time()
+
+        #vName, level, average_upstream, nc_sim_folder, inObject = x
+        nvars = len(varnames)
+
+        if not hasattr(self, "reusable_pool"):
+            self.reusable_pool = Pool(processes = nvars)
+        ppool = self.reusable_pool
+
+
+
+        frames = ppool.map( _get_var_data_to_pandas,
+            zip(varnames, levels, mean_upstream, [nc_sim_folder,] *  nvars, [inObject, ] * nvars))
+
+        print "extracted data from netcdf in {0} s".format(time.time() - t0)
+
+
+        data_frame = pandas.DataFrame(index = timeArr)
+        for vName, frame in zip(varnames, frames):
+            data_frame[vName] = frame
+
+
+
+        data_frame["year"] = data_frame.index.map(lambda d: d.year)
+        #select only the years that the complete timeseries exist for the station corresponding  to the model point
+        data_frame = data_frame.drop(data_frame.index[~data_frame.year.isin(station.get_list_of_complete_years())])
+        data_frame = data_frame.resample("D", how = "mean")
+
+        assert isinstance(data_frame, pandas.DataFrame)
+        data_frame = data_frame.groupby(lambda d: (d.day, d.month ) ).mean()
+        mp.climatology_data_frame = data_frame.drop([(29, 2)]) ##drop 29 of February
+
+        return mp
+
+
+
+
+    def get_model_points_for_stations(self, station_list, sim_name = "", nc_path = "",
+                                      npoints = 1, nc_sim_folder = None):
         """
         returns a map {station => modelpoint} for comparison modeled streamflows with observed
         modelpoint.data - contains series of data in time for the modelpoint
         modelpoint.time - contains times corresponding to modelpoint.data
         """
 
+        cache_file = "stations_to_model_points_{0}.bin".format(sim_name)
+        if os.path.isfile(cache_file):
+            print "I found a cache file: {0}, and will be using data from it, if you want to reimport the data, delete the cache file".format(cache_file)
+            return pickle.load(open(cache_file))
+
+
         station_to_grid_point = {}
         model_acc_area = self.accumulation_area_km2
         model_acc_area_1d = model_acc_area.flatten()
-        mp_list = []
+
+
+        nx, ny = model_acc_area.shape
+
+        jy_indices_2d, ix_indices_2d = np.meshgrid(range(ny), range(nx))
+        jy_indices_flat = jy_indices_2d.flatten()
+        ix_indices_flat = ix_indices_2d.flatten()
+
+        ds = Dataset(nc_path)
+        timeVar = ds.variables["time"]
+        timeArr = num2date(timeVar[:], timeVar.units)
+        ds.close()
+
+
+
+        t0 = time.time()
+
         for s in station_list:
+            #list of model points which could represent the station
+            mp_list_for_station = []
+
             assert isinstance(s, Station)
             x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
-            dists, inds = self.kdtree.query((x,y,z), k = 8)
+            dists, inds = self.kdtree.query((x,y,z), k = npoints)
 
 
-            deltaDaMin = np.min( np.abs( model_acc_area_1d[inds] - s.drainage_km2) )
+            if npoints == 1:
+                dists = np.array([dists])
+                inds = np.array([inds], dtype=int)
 
-            imin = np.where(np.abs( model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
+                deltaDaMin = np.min( np.abs( model_acc_area_1d[inds] - s.drainage_km2) )
 
-            deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
+                #this returns a  list of numpy arrays
+                imin = np.where(np.abs( model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
 
-            ij = np.where(  deltaDa2D == deltaDaMin )
+                deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
 
+                ij = np.where( deltaDa2D == deltaDaMin )
 
+                #check if it is not global lake cell
+                if self.lake_fraction[ij[0][0], ij[1][0]] >= 0.6:
+                    continue
 
-            #check if it is not global lake cell
-            if self.lake_fraction[ij[0][0], ij[1][0]] >= 0.6:
+                #check if the gridcell is not too far from the station
+                if dists[imin] > 2 * self.characteristic_distance:
+                    continue
+
+                #check if difference in drainage areas is not too big less than 10 %
+                if deltaDaMin / s.drainage_km2 > 0.1: continue
+
+                mp = self._init_model_point(s, ij[0][0], ij[1][0], dists[imin], timeArr, nc_sim_folder)
+                mp_list_for_station.append(mp)
+
+            else:
+                for d, i in zip(dists, inds):
+                    mp = self._init_model_point(s, ix_indices_flat[i], jy_indices_flat[i], d, timeArr, nc_sim_folder)
+                    mp_list_for_station.append(mp)
+
+            #if no model points found for the station, do not put it in the result dictionary
+            if not len(mp_list_for_station):
                 continue
+            station_to_grid_point[s] = mp_list_for_station
 
-            #check if the gridcell is not too far from the station
-            if dists[imin] > 2 * self.characteristic_distance:
-                continue
-
-            #check if difference in drainage areas is not too big less than 10 %
-            if deltaDaMin / s.drainage_km2 > 0.1: continue
+        print "read in data from netcdf in {0} seconds".format(time.time() - t0)
 
 
-
-            mp = ModelPoint()
-            mp.accumulation_area = model_acc_area[ij[0][0], ij[1][0]]
-            mp.ix = ij[0][0]
-            mp.jy = ij[1][0]
-            mp.longitude = self.lons2D[mp.ix, mp.jy]
-            mp.latitude = self.lats2D[mp.ix, mp.jy]
-
-
-
-
-            station_to_grid_point[s] = mp
-
-
-            #flow in mask
-            mp.flow_in_mask = self.get_mask_for_cells_upstream(mp.ix, mp.jy)
-
-
-            print "da_diff (sel) = ", deltaDaMin
-            print "dist (sel) = ", dists[imin]
-
-
-            mp_list.append(mp)
-
-        ix_list = map(lambda p: p.ix, mp_list)
-        jy_list = map(lambda p: p.jy, mp_list)
-
-        times, data = self.get_list_of_ts_from_netcdf(nc_path=nc_path, varname=varname,
-            ix_list = ix_list, jy_list = jy_list
-        )
-
-        #get data to model points
-        for k, mp in enumerate(mp_list):
-            assert isinstance(mp, ModelPoint)
-            mp.time = times
-            mp.data = data[:, :, k]
+        #save to cache file
+        pickle.dump(station_to_grid_point, open(cache_file, mode = "w"))
 
         return station_to_grid_point
 
@@ -1415,24 +1634,6 @@ class Crcm5ModelDataManager:
 
         pass
 
-
-    def get_timeseries_from_netcdf(self, nc_path = "", varname = "STFL", ix = -1, jy = -1,
-                                   times = None
-                                   ):
-        ds = Dataset(nc_path)
-        var = ds.variables[varname][:,:, ix, jy]
-
-        if times is None:
-            tVar = ds.variables["time"]
-            times = num2date(tVar[:], tVar.units)
-
-        ds.close()
-        return times, var
-
-
-
-
-        pass
 
 
 def do_test_seasonal_mean():

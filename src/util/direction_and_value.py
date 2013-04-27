@@ -2,6 +2,7 @@
 __author__="huziy"
 __date__ ="$Jul 31, 2011 11:59:38 PM$"
 
+import numpy as np
 
 iShifts = [1,  1,  0, -1, -1, -1,  0, 1]
 jShifts = [0, -1, -1, -1,  0,  1,  1, 1]
@@ -31,6 +32,18 @@ def to_indices(i, j, value):
     return -1, -1
 
 
+
+def flowdir_values_to_shift(flowdir_values):
+    i_shift = np.array(iShifts)
+    j_shift = np.array(jShifts)
+
+    indices = np.ones(flowdir_values.shape, dtype=int)
+    for i, v in enumerate(values):
+        sel = v == flowdir_values
+        if np.any(sel):
+            indices[ sel ] = i
+
+    return i_shift[indices], j_shift[indices]
 
 if __name__ == "__main__":
     print "Hello World"

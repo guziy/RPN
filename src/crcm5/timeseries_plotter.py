@@ -153,74 +153,74 @@ class TimeseriesPlotter:
 
 
 
-        plt.figure()
-        ax1 = plt.gca()
-        to_plot_2d = np.ma.masked_where(mask < 0.5, self.upin_mean_field)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-        plt.title("min-max: {0};{1}".format(to_plot_2d.min(), to_plot_2d.max()))
-
-        self.ax.annotate(str(self.counter), (event.xdata, event.ydata), font_properties =
-                FontProperties(size=10), bbox=dict(boxstyle="round", fc="w"))
-        self.ax.redraw_in_frame()
-
-        plt.figure()
-        ax1 = plt.gca()
-        to_plot_2d = np.ma.masked_where(mask < 0.5, self.data_manager.cbf)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-
-
-        plt.title("CBF, {0:g}: v= {1}, min={2}, max={3}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
-
-
-        plt.figure()
-        ax1 = plt.gca()
-        to_plot_2d = np.ma.masked_where(mask < 0.5, self.data_manager.bankfull_storage_m3)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-        plt.title("STBM, {0}: v= {1}".format(self.counter, to_plot_2d[i,j]))
-
-
-        plt.figure()
-        ax1 = plt.gca()
-        mbf = self.data_manager.manning_bf
-        to_plot_2d = np.ma.masked_where(mask < 0.5, mbf)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-        plt.title("MABF, {0}: v= {1}, min={2}, max={3}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
-
-        plt.figure()
-        ax1 = plt.gca()
-        to_plot_2d = np.ma.masked_where(mask < 0.5, self.slope)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-        plt.title("SLOPe, {0}: v= {1}, min={2}, max={3}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
-
-
-
-
-        plt.figure()
-        ax1 = plt.gca()
-        to_plot_2d = np.ma.masked_where(mask < 0.5, self.data_manager.lake_area)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-        plt.title("lake area, {0}: v= {1}".format(self.counter, to_plot_2d[i,j]))
-
-        plt.figure()
-        ax1 = plt.gca()
-        to_plot_2d = np.ma.masked_where(mask < 0.5, self.coef_bf)
-        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
-        plt.colorbar(img, ax = ax1)
-        self.basemap.drawcoastlines(ax = ax1)
-        plt.title("coef_bf, {0}: v= {1:.1g}, min={2:.1g}, max={3:.1g}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
-
+#        plt.figure()
+#        ax1 = plt.gca()
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, self.upin_mean_field)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#        plt.title("min-max: {0};{1}".format(to_plot_2d.min(), to_plot_2d.max()))
+#
+#        self.ax.annotate(str(self.counter), (event.xdata, event.ydata), font_properties =
+#                FontProperties(size=10), bbox=dict(boxstyle="round", fc="w"))
+#        self.ax.redraw_in_frame()
+#
+#        plt.figure()
+#        ax1 = plt.gca()
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, self.data_manager.cbf)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#
+#
+#        plt.title("CBF, {0:g}: v= {1}, min={2}, max={3}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
+#
+#
+#        plt.figure()
+#        ax1 = plt.gca()
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, self.data_manager.bankfull_storage_m3)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#        plt.title("STBM, {0}: v= {1}".format(self.counter, to_plot_2d[i,j]))
+#
+#
+#        plt.figure()
+#        ax1 = plt.gca()
+#        mbf = self.data_manager.manning_bf
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, mbf)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#        plt.title("MABF, {0}: v= {1}, min={2}, max={3}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
+#
+#        plt.figure()
+#        ax1 = plt.gca()
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, self.slope)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#        plt.title("SLOPe, {0}: v= {1}, min={2}, max={3}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
+#
+#
+#
+#
+#        plt.figure()
+#        ax1 = plt.gca()
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, self.data_manager.lake_area)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#        plt.title("lake area, {0}: v= {1}".format(self.counter, to_plot_2d[i,j]))
+#
+#        plt.figure()
+#        ax1 = plt.gca()
+#        to_plot_2d = np.ma.masked_where(mask < 0.5, self.coef_bf)
+#        img = self.basemap.pcolormesh(self.x_pr, self.y_pr, to_plot_2d, ax = ax1)
+#        plt.colorbar(img, ax = ax1)
+#        self.basemap.drawcoastlines(ax = ax1)
+#        plt.title("coef_bf, {0}: v= {1:.1g}, min={2:.1g}, max={3:.1g}".format(self.counter, to_plot_2d[i,j], to_plot_2d.min(), to_plot_2d.max()))
+#
 
 
 
