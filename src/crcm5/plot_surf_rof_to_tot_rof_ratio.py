@@ -15,7 +15,7 @@ import numpy as np
 
 
 
-AGGREGATED_LEVEL = 1
+AGGREGATED_LEVEL = 5
 SUBSROF_VARNAME = "TDRA"
 SROF_VARNAME = "TRAF"
 
@@ -78,12 +78,15 @@ def plot_ratios_using_narccap_data(start_year = None, end_year = None):
     dm = Crcm5ModelDataManager(samples_folder_path=crcm5_sim_path, all_files_in_samples_folder=True)
 
     model_lons, model_lats = dm.lons2D, dm.lats2D
-    basemap = dm.get_omerc_basemap()
+    basemap = dm.get_rotpole_basemap()
     x, y = basemap(model_lons, model_lats)
 
     #narccap simulations gcm-rcm names
-    narccap_sims = ["ccsm-crcm",  "ccsm-wrfg",  "cgcm3-crcm",  "cgcm3-rcm3",
-                    "cgcm3-wrfg",  "gfdl-ecp2",  "gfdl-hrm3",  "gfdl-rcm3",  "hadcm3-hrm3"]
+    narccap_sims = ["ccsm-crcm",  "cgcm3-crcm", "ccsm-wrfg",
+                    "cgcm3-rcm3", "gfdl-rcm3", "cgcm3-wrfg",
+                    "gfdl-hrm3",  "hadcm3-hrm3",  "gfdl-ecp2"]
+
+
 
     ncManager = NarccapDataManager()
 
@@ -98,9 +101,10 @@ def plot_ratios_using_narccap_data(start_year = None, end_year = None):
     plot_utils.apply_plot_params(width_pt=None, width_cm=22, height_cm=30)
     ncols = 3
     nrows = 4
+    img = None
     for m in range(1,13):
         fig = plt.figure()
-        gs = gridspec.GridSpec(nrows,ncols)
+        gs = gridspec.GridSpec(nrows,ncols, height_ratios=[1,1,1,0.5])
         i = 0 #just in case we don't go inside the loop
         for i, the_sim in enumerate(narccap_sims):
             print "processing {0} ...".format(the_sim)
@@ -121,27 +125,28 @@ def plot_ratios_using_narccap_data(start_year = None, end_year = None):
 
             #interpolate to the model grid
             data = ncManager.inerpolate_to(model_lons, model_lats, data)
-            basemap.contourf(x, y, data, levels = levels, cmap = cmap, ax = ax)
+            data = maskoceans(model_lons, model_lats, data)
+            img = basemap.contourf(x, y, data, levels = levels, cmap = cmap, ax = ax)
             basemap.drawcoastlines(ax = ax)
-            ax.set_title(the_sim)
+            ax.set_title(the_sim.upper())
 
         #plot the panel with model data
-        i += 1
-        ax = fig.add_subplot(gs[i//ncols, i%ncols])
-        ssrof = dm.get_mean_field(start_year, end_year, months= [m,],
-            var_name=SUBSROF_VARNAME, level=AGGREGATED_LEVEL)
-        srof = dm.get_mean_field(start_year, end_year, months= [m,],
-            var_name=SROF_VARNAME, level = AGGREGATED_LEVEL)
-
-
-        trof = srof + ssrof
-        srof = np.ma.masked_where((srof < 0) | (trof == 0), srof)
-        trof = srof + ssrof
-
-        ratio = ssrof / trof
-        img = basemap.contourf(x, y, ratio, levels = levels, cmap = cmap, ax = ax)
-        basemap.drawcoastlines(ax = ax)
-        ax.set_title("era40-crcm5")
+#        i += 1
+#        ax = fig.add_subplot(gs[i//ncols, i%ncols])
+#        ssrof = dm.get_mean_field(start_year, end_year, months= [m,],
+#            var_name=SUBSROF_VARNAME, level=AGGREGATED_LEVEL)
+#        srof = dm.get_mean_field(start_year, end_year, months= [m,],
+#            var_name=SROF_VARNAME, level = AGGREGATED_LEVEL)
+#
+#
+#        trof = srof + ssrof
+#        srof = np.ma.masked_where((srof < 0) | (trof == 0), srof)
+#        trof = srof + ssrof
+#
+#        ratio = ssrof / trof
+#        img = basemap.contourf(x, y, ratio, levels = levels, cmap = cmap, ax = ax)
+#        basemap.drawcoastlines(ax = ax)
+#        ax.set_title("era40-crcm5")
 
 
         #plot color bar
@@ -151,15 +156,47 @@ def plot_ratios_using_narccap_data(start_year = None, end_year = None):
         ax.set_aspect(1.0/20.0)
 
         fig.colorbar(img, ticks = levels[::2] ,cax = ax, orientation = "horizontal")
-
-        fig.suptitle(datetime(2000,m,1).strftime("%B"))
-
+        ax.set_title(datetime(2000,m,1).strftime("%B"))
+        fig.tight_layout()
         fig.savefig("{0}_month_rof_ratio.png".format(m))
 
 
     pass
 
 
+
+
+def plot_ratio_for_all_seasons():
+    fig = plt.figure()
+    run_name = "CRCM5-HCD-RL"
+    run_folder = ""
+
+    seasons = [
+            [12,1,2],
+            range(3,6),
+            range(6,9),
+            range(9,12)
+    ]
+
+
+    gs = gridspec.GridSpec(2,len(seasons), height_ratios=[1, 0.03])
+    img = None
+    levels = None
+    i = 0
+
+    for months in seasons:
+        ax = fig.add_subplot(gs[0,i])
+        img, levels = plot_ratio_for_the_run(run_name, run_folder, ax, start_year=1985, months=months)
+        i += 1
+    ax = fig.add_subplot(gs[1,:])
+    assert isinstance(ax, Axes)
+    #ax.set_aspect(1.0/20.0)
+    fig.colorbar(img, cax = ax, ticks = levels, orientation = "horizontal")
+
+
+
+
+    pass
 
 def main():
 
@@ -168,6 +205,7 @@ def main():
     run_folders = ["/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_002",
                    "/home/huziy/skynet3_exec1/from_guillimin/quebec_lowres_001"
                    ]
+
 
     gs = gridspec.GridSpec(2,len(run_names), height_ratios=[1, 0.03])
     img = None
@@ -181,12 +219,12 @@ def main():
     assert isinstance(ax, Axes)
     #ax.set_aspect(1.0/20.0)
     fig.colorbar(img, cax = ax, ticks = levels, orientation = "horizontal")
-    fig.savefig("ssroff_to_totalrof_ratio_may.png")
+    fig.savefig("ssroff_to_totalrof_ratio_may.jpeg")
 
 if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
-    main()
-    #plot_ratios_using_narccap_data(start_year=1985, end_year=1990)
+    #main()
+    plot_ratios_using_narccap_data(start_year=1985, end_year=1990)
     print "Hello world"
   

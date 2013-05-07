@@ -1,5 +1,7 @@
 from datetime import date, timedelta, datetime
 import itertools
+import pandas
+from pandas.core.frame import DataFrame
 
 __author__ = 'huziy'
 
@@ -178,17 +180,8 @@ class TimeSeries:
         :type end_date: datetime.datetime
         :rtype : list , list
         """
-        the_date = date(stamp_year, 1, 1)
-
-        day = timedelta(days = 1)
-        year_dates = [ ]
-
-        #creat objects for each day of year
-        while the_date.year == stamp_year:
-            year_dates.append(the_date)
-            the_date += day
-
-        self.stamp_day_dates = year_dates
+        self.stamp_day_dates = pandas.DatetimeIndex(start = datetime(stamp_year,1,1), end = date(stamp_year, 12, 31),
+            freq = pandas.datetools.offsets.Day())
 
         if start_date is None:
             start_date = self.time[0]
@@ -197,17 +190,15 @@ class TimeSeries:
             end_date = self.time[-1]
 
 
+        di = pandas.DatetimeIndex(data = self.time)
+        df = DataFrame(data = self.data, index = di, columns=["values",])
 
-        daily_means = []
-        for stamp_day in year_dates:
-            bool_vector = map(lambda x: x.day == stamp_day.day and
-                                        x.month == stamp_day.month and
-                                        start_date <= x <= end_date, self.time)
 
-            indices = np.where( bool_vector )[0]
-            daily_means.append(np.array(self.data)[indices].mean())
+        df = df.select( lambda d: start_date <= d <= end_date )
+        df_mean = df.groupby(by = lambda d: (d.day, d.month)).mean()
 
-        return year_dates, daily_means
+
+        return self.stamp_day_dates, df_mean.ix[[ (d.day, d.month) for d in self.stamp_day_dates] ,"values"]
 
 
     def get_size(self):

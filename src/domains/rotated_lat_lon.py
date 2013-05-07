@@ -132,7 +132,6 @@ class RotatedLatLon():
 
 
 
-
 def south_pole_coords_test():
     import  application_properties
     application_properties.set_current_directory()

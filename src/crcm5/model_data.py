@@ -202,7 +202,7 @@ class Crcm5ModelDataManager:
 
         nyears = end_year - start_year + 1
 
-        nc_path = os.path.join(nc_sim_folder, "{0}.nc".format(varname))
+        nc_path = os.path.join(nc_sim_folder, "{0}.nc4".format(varname))
 
 
         from netCDF4 import Dataset
@@ -212,7 +212,7 @@ class Crcm5ModelDataManager:
             res = "y"
         if res.strip().lower() != "y":
             return
-        ds = Dataset(nc_path, mode="w", format = "NETCDF3_CLASSIC")
+        ds = Dataset(nc_path, mode="w")
 
         ds.createDimension("year", nyears)
         ds.createDimension("month", 12)
@@ -883,6 +883,7 @@ class Crcm5ModelDataManager:
                 if fName.startswith(self.file_name_prefix) and os.path.isfile(the_path):
                     print "Opening the file {0} ...".format(the_path)
                     rpnObj = RPN(the_path)
+                    rpnObj.suppress_log_messages()
                     hour_to_field = rpnObj.get_all_time_records_for_name(varname=var_name)
                     rpnObj.close()
                     #print( hour_to_field.items()[0][0] , "for file {0}".format(the_path))
@@ -1288,7 +1289,7 @@ class Crcm5ModelDataManager:
         """
         Exports data to netcdf without aggregation
         nc_sim_folder - is a folder with netcdf files for a given simulation
-        the file name patterns are <varname>_all.nc
+        the file name patterns are <varname>_all.nc4
 
         the data for the period [start_year, end_year] should exist
 
@@ -1296,7 +1297,7 @@ class Crcm5ModelDataManager:
         Note: the dates are not continuous here and not growing monotonously
         """
 
-        nc_file_path = "{0}_all.nc".format(var_name)
+        nc_file_path = "{0}_all.nc4".format(var_name)
 
         nc_file_path = os.path.join(nc_sim_folder, nc_file_path)
         start_date = datetime(start_year,1,1)
@@ -1735,24 +1736,24 @@ def do_test_mean():
 
 def compare_lake_levels():
     #lake level controlled only with evaporation and precipitation
-    data_path = "data/from_guillimin/vary_lake_level1"
+    data_path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl_spinup"
 
     #lake level controlled only by routing
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     selected_ids = [
-        "093807", "011508", "061303", "061304", "040408", "030247"
+        "093807", "011508", "061303", "040408", "030247"
     ]
 
-    coord_file = os.path.join(data_path, "pm1985010100_00000000p")
+    coord_file = os.path.join(data_path, "pm1979010100_00000000p")
 
 
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,
             file_name_prefix="pm", all_files_in_samples_folder=True, var_name="CLDP"
     )
 
-    start_date = datetime(1987, 1, 1)
-    end_date = datetime(1987, 12, 31)
+    start_date = datetime(1979, 1, 1)
+    end_date = datetime(1988, 12, 31)
 
     stations = cehq_station.read_station_data( folder="data/cehq_levels",
             start_date=start_date, end_date=end_date, selected_ids=selected_ids
@@ -1808,12 +1809,12 @@ def compare_lake_levels():
         assert isinstance(ax, Axes)
         print len(mod_normals), len(sta_day_dates)
         #normals
-        #h_m = ax.plot(sta_day_dates, mod_normals - np.mean(mod_normals) , "b", label = "model", lw = 3)
-        #h_s = ax.plot(sta_day_dates, sta_normals - np.mean(sta_normals), "r", label = "station", lw = 3)
+        h_m = ax.plot(sta_day_dates, mod_normals - np.mean(mod_normals) , "b", label = "model", lw = 3)
+        h_s = ax.plot(sta_day_dates, sta_normals - np.mean(sta_normals), "r", label = "station", lw = 2)
 
         #instantaneous values
-        h_m = ax.plot(mod_ts_all[0].time, mod_ts_all[0].data - np.mean(mod_ts_all[0].data) , "b", label = "model", lw = 3)
-        h_s = ax.plot(s.dates, s.values - np.mean(s.values), "r", label = "station", lw = 1)
+        #h_m = ax.plot(mod_ts_all[0].time, mod_ts_all[0].data - np.mean(mod_ts_all[0].data) , "b", label = "model", lw = 3)
+        #h_s = ax.plot(s.dates, s.values - np.mean(s.values), "r", label = "station", lw = 1)
 
 
 
@@ -1828,10 +1829,8 @@ def compare_lake_levels():
         #ax.legend()
 
     ax = fig.add_subplot(gs[(r+1):,:])
-    b, lons2d, lats2d = draw_regions.get_basemap_and_coords(
-        file_path=coord_file,
-        lon1=-68, lat1=52, lon2=16.65, lat2=0
-    )
+    #lons2d, lats2d = manager.lons2D, manager.lats2D
+    b = manager.get_rotpole_basemap()
     b.drawcoastlines()
     y1 = 0.8
     dy = y1 / float( len(selected_stations) )
@@ -1847,7 +1846,7 @@ def compare_lake_levels():
             arrowprops=dict(facecolor='black', arrowstyle="->")
         )
 
-    fig.legend([h_m, h_s], ["Model", "Obs."], "lower right")
+    fig.legend([h_m[0], h_s[0]], ["Model", "Obs."], "lower right")
     fig.tight_layout(h_pad=2)
     fig.savefig("lake_level_comp_mean_anomalies.png")
 
@@ -2192,8 +2191,8 @@ def draw_drainage_area():
 def main():
     plot_utils.apply_plot_params(width_pt=None, height_cm=60, width_cm=20)
     #draw_drainage_area()
-    compare_streamflow_normals()
-    #compare_lake_levels()
+    #compare_streamflow_normals()
+    compare_lake_levels()
     #
     # test_mean()
     plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=20)
@@ -2266,7 +2265,7 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
 
     #testStuff()
-    doTestRotPole()
-    #main()
+    #doTestRotPole()
+    main()
     print "Hello world"
   

@@ -107,7 +107,7 @@ def validate_daily_climatology():
             mp = sim_name_to_station_to_model_point[sim_name][s]
             for mp in sim_name_to_station_to_model_point[sim_name][s]:
                 assert isinstance(mp, ModelPoint)
-                dates, values = mp.get_daily_climatology_for_complete_years(stamp_dates=day_stamps, years=years, varname = "STFL")
+                dates, values = mp.get_daily_climatology_for_complete_years(stamp_dates=day_stamps, varname = "STFL")
                 plt.plot(dates, values , label = "{0}: {1:.2f} \n ann.mean = {2:.1f}, dist = {3:.1f} km".format( sim_name,
                     manager.lake_fraction[mp.flow_in_mask == 1].mean(), np.mean(values), mp.distance_to_station / 1000.0) )
 

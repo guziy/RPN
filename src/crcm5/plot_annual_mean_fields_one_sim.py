@@ -15,12 +15,12 @@ import numpy as np
 ##Plot list of fields for one simulation
 
 start_year = 1979
-end_year = 1986
+end_year = 1988
 
 field_names = ["TT", "PR", "AU", "AV", "STFL","STFA", "TRAF", "TDRA", "AH"]
 file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
-sim_name = "crcm5-hcd-r"
-rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name)
+sim_name = "crcm5-hcd-rl-intfl"
+rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup2/Samples_all_in_one".format(sim_name)
 nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
 export_to_nc = True
@@ -93,9 +93,9 @@ def main():
     levels = [-30, -25, -10, -5, -2, 0, 2, 5,10, 15, 20, 25]
     cmap = cm.get_cmap("jet", len(levels) - 1)
     bn = BoundaryNorm(levels, cmap.N)
-    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc4".format(varname)))
     years = ds.variables["year"][:]
-    sel = (start_year <= years) & (years <= end_year)
+    sel = np.where((start_year <= years) & (years <= end_year))[0]
     tt = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     ds.close()
     ax = fig.add_subplot(gs[0,0])
@@ -111,9 +111,9 @@ def main():
     levels = np.arange(0, 6.5, 0.5)
     cmap = cm.get_cmap("jet_r", len(levels) - 1)
     bn = BoundaryNorm(levels, cmap.N)
-    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc4".format(varname)))
     years = ds.variables["year"][:]
-    sel = (start_year <= years) & (years <= end_year)
+    sel = np.where((start_year <= years) & (years <= end_year))[0]
     pr = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     convert_factor = 1000.0 * 24 * 60 * 60  #m/s to mm/day
     pr *= convert_factor
@@ -128,10 +128,10 @@ def main():
 
     #plot AH
     varname = "AH"
-    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc4".format(varname)))
     years = ds.variables["year"][:]
-    sel = (start_year <= years) & (years <= end_year)
-    au = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
+    sel = np.where((start_year <= years) & (years <= end_year))[0]
+    ah = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     ds.close()
 
     levels = np.arange(60, 160, 10)# np.linspace(au.min(), au.max(), 10)
@@ -139,16 +139,16 @@ def main():
     bn = BoundaryNorm(levels, cmap.N)
     ax = fig.add_subplot(gs[1,0])
     ax.set_title("Sensible heat flux (${\\rm W/m^2}$)")
-    img = basemap.contourf(x, y, au,  cmap = cmap)
+    img = basemap.contourf(x, y, ah,  cmap = cmap)
     all_axes.append(ax)
     imgs.append(img)
     ax_to_levels[ax] = levels
 
     #plot AV
     varname = "AV"
-    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc4".format(varname)))
     years = ds.variables["year"][:]
-    sel = (start_year <= years) & (years <= end_year)
+    sel = np.where((start_year <= years) & (years <= end_year))[0]
     av = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     ds.close()
     levels = np.array( [0,0.1,0.2,0.4, 0.6, 0.8, 1,1.2, 1.4, 1.6, 1.8, 2] )
@@ -164,10 +164,10 @@ def main():
 
 
 #plot stfl
-    varname = "STFA"
-    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
+    varname = "STFL"
+    ds = Dataset(os.path.join(nc_data_folder, "{0}.nc4".format(varname)))
     years = ds.variables["year"][:]
-    sel = (start_year <= years) & (years <= end_year)
+    sel = np.where((start_year <= years) & (years <= end_year))[0]
 
     stfl = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     ds.close()
@@ -198,7 +198,7 @@ def main():
         assert isinstance(cax, Axes)
         title = cax.get_title()
 
-
+    fig.tight_layout()
     fig.savefig("{0}-mean-annual-fields.pdf".format(sim_name))
 
 def doAll():
@@ -212,7 +212,7 @@ def doAll():
 if __name__ == "__main__":
     import application_properties
     from util import plot_utils
-    plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=25, font_size=14)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=25)
     application_properties.set_current_directory()
 
     #doAll()

@@ -65,7 +65,8 @@ class ModelPoint:
         """
         Gets daily climatology using pandas.DataFrame that backs up this point
         """
-        monthly_clim = self.climatology_data_frame.groupby(by=lambda d: d.month).mean()
+        #index of climatology_data_frame is (day, month)
+        monthly_clim = self.climatology_data_frame.groupby(by=lambda x: x[1]).mean()
         if stamp_dates is None:
             stamp_dates = [ datetime(1985, m, 15) for m in range(1,13) ]
 
@@ -82,7 +83,12 @@ class ModelPoint:
         Gets daily climatology using pandas.DataFrame that backs up this point
         """
         assert isinstance(self.climatology_data_frame, DataFrame)
-        vals = np.array([self.climatology_data_frame.ix[(d.month, d.day), varname] for d in stamp_dates])
+        #print stamp_dates
+        #for d in stamp_dates:
+        #    print d, self.climatology_data_frame.ix[(d.month,d.day), varname]        
+
+
+        vals = np.array([self.climatology_data_frame.ix[(d.day, d.month), varname] for d in stamp_dates])
         return stamp_dates, vals
 
     def get_mask_of_cells_upstream(self):

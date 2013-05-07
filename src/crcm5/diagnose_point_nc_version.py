@@ -1,9 +1,13 @@
 from datetime import datetime
 from descartes.patch import PolygonPatch
 from matplotlib import gridspec
+import matplotlib
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator
 from matplotlib.font_manager import FontProperties
+from matplotlib.spines import Spine
+from matplotlib.transforms import Affine2D, Bbox
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
 import os
 import time
 import shapely
@@ -40,7 +44,6 @@ def plot_hydrographs(ax, station, sim_name_to_station_to_model_point,
     if day_stamps is None:
         day_stamps = Station.get_stamp_days(2001)
 
-    print station
     if len(years) < 6: return
 
     handles = []
@@ -48,7 +51,7 @@ def plot_hydrographs(ax, station, sim_name_to_station_to_model_point,
     dates, obs_data = station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=day_stamps, years=years)
     obs_ann_mean = np.mean(obs_data)
     label = "Obs: ann.mean = {0:.1f}".format( obs_ann_mean )
-    h = ax.plot( dates, obs_data, label = label )
+    h = ax.plot( dates, obs_data, "k", lw = 2, label = label )
 
     handles.append(h[0])
     labels.append(label)
@@ -78,7 +81,6 @@ def plot_hydrographs(ax, station, sim_name_to_station_to_model_point,
 
 
     if mp is None: return
-    print mp.lake_fraction
     ax.set_title("{0}: point lake fr.={1:.2f}".format(station.id, mp.lake_fraction) )
     return labels, handles
 
@@ -106,7 +108,6 @@ def plot_swe_1d_compare_with_obs(ax, station,  sim_name_to_station_to_model_poin
     if day_stamps is None:
         day_stamps = Station.get_stamp_days(2001)
 
-    print station
     if len(years) < 6: return {}
 
     #suppose here that values and times are ordered accordingly in pandas.Timeseries
@@ -118,7 +119,7 @@ def plot_swe_1d_compare_with_obs(ax, station,  sim_name_to_station_to_model_poin
     handles = []
     labels = []
     label =  "Obs: ann.mean = {0:.1f}".format( obs_ann_mean )
-    h = ax.plot( time, obs_data, label = label )
+    h = ax.plot( time, obs_data, "k", label = label, lw = 2 )
 
     handles.append(h[0])
     labels.append(label)
@@ -143,8 +144,8 @@ def plot_swe_1d_compare_with_obs(ax, station,  sim_name_to_station_to_model_poin
             handles.append(h[0])
             labels.append(label)
 
-        ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
+        #ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
+        #ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
 
     return labels, handles
 
@@ -157,7 +158,6 @@ def plot_temp_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_poin
     years = station.get_list_of_complete_years()
 
 
-    print station
     if len(years) < 6: return None, None
 
     #suppose here that values and times are ordered accordingly in pandas.Timeseries
@@ -169,7 +169,7 @@ def plot_temp_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_poin
     handles = []
     labels = []
     label =  "Obs: ann.mean = {0:.1f}".format( obs_ann_mean )
-    h = ax.plot( time, obs_data, label = label )
+    h = ax.plot( time, obs_data, "k", lw = 2, label = label )
 
     handles.append(h[0])
     labels.append(label)
@@ -207,7 +207,6 @@ def plot_precip_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_po
     from calendar import monthrange
 
 
-    years = station.get_list_of_complete_years()
 
 
 
@@ -224,7 +223,7 @@ def plot_precip_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_po
 
 
     days_in_months = np.array([monthrange(d.year, d.month)[1] for d in time])
-    h = ax.plot( time, obs_data / days_in_months, label = label ) #convert mm/month to mm/day
+    h = ax.plot( time, obs_data / days_in_months, "k", lw = 2, label = label ) #convert mm/month to mm/day
 
     handles.append(h[0])
     labels.append(label)
@@ -240,16 +239,14 @@ def plot_precip_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_po
 
         for mp in mps:
             dates, values = mp.get_monthly_climatology_for_complete_years(varname = "PR")
-            print "len(dates) = ", len(dates)
-            print len(values)
             label = "{0}".format( sim_name )
             h = ax.plot(dates, values * multiplier , label = label )
 
             handles.append(h[0])
             labels.append(label)
 
-        ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
+        #ax.xaxis.set_major_formatter(DateFormatter("%b"))
+        #ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
 
     return labels, handles
 
@@ -265,7 +262,7 @@ def plot_surf_runoff(ax, station, sim_name_to_station_to_model_point, sim_names 
 
 
 
-     ax.plot(day_stamps, [0] * len(day_stamps), lw = 0) #so the colors correspond to the same simulation on all panels
+     ax.plot(day_stamps, [0] * len(day_stamps), "k", lw = 0) #so the colors correspond to the same simulation on all panels
 
      handles = []
      labels = []
@@ -291,8 +288,8 @@ def plot_surf_runoff(ax, station, sim_name_to_station_to_model_point, sim_names 
              handles.append(h[0])
              labels.append(label)
 
-         ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-         ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
+         #ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
+         #ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
 
      return labels, handles
 
@@ -306,9 +303,7 @@ def plot_subsurf_runoff(ax, station, sim_name_to_station_to_model_point, sim_nam
      if day_stamps is None:
          day_stamps = Station.get_stamp_days(2001)
 
-
-
-     ax.plot(day_stamps, [0] * len(day_stamps), lw = 0) #so the colors correspond to the same simulation on all panels
+     ax.plot(day_stamps, [0] * len(day_stamps), "k", lw = 0) #so the colors correspond to the same simulation on all panels
 
      handles = []
      labels = []
@@ -334,8 +329,8 @@ def plot_subsurf_runoff(ax, station, sim_name_to_station_to_model_point, sim_nam
              handles.append(h[0])
              labels.append(label)
 
-         ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-         ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
+         #ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
+         #ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
 
      return labels, handles
 
@@ -350,7 +345,7 @@ def plot_total_runoff(ax, station, sim_name_to_station_to_model_point, sim_names
 
 
 
-     ax.plot(day_stamps, [0] * len(day_stamps), lw = 0) #so the colors correspond to the same simulation on all panels
+     ax.plot(day_stamps, [0] * len(day_stamps),"k", lw = 0) #so the colors correspond to the same simulation on all panels
 
      handles = []
      labels = []
@@ -376,8 +371,8 @@ def plot_total_runoff(ax, station, sim_name_to_station_to_model_point, sim_names
              handles.append(h[0])
              labels.append(label)
 
-         ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-         ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
+         #ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
+         #ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
 
      return labels, handles
 
@@ -401,6 +396,7 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
     flow_in_mask = manager.get_mask_for_cells_upstream(mp.ix, mp.jy)
 
     lons2d, lats2d = manager.lons2D, manager.lats2D
+
     i_upstream, j_upstream = np.where(flow_in_mask == 1)
 
 
@@ -431,6 +427,48 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
         lons2d = sub_lons2d, lats2d = sub_lats2d, resolution="h"
     )
 
+
+
+    #plot all stations
+    #stations = sim_name_to_station_to_model_point.items()[0][1].keys()
+    x_list = [the_station.longitude for the_station in (s,)]
+    y_list = [the_station.latitude for the_station in (s,) ]
+
+    basemap_big = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(
+            lons2d = lons2d, lats2d = lats2d
+    )
+    x_list, y_list = basemap_big(x_list, y_list)
+
+    basemap_big.scatter(x_list, y_list, c="r", s=40, linewidths=0, ax = ax)
+    basemap_big.drawcoastlines(ax = ax)
+    basemap_big.drawrivers(ax = ax)
+    ax.annotate(s.id, xy=basemap(s.longitude, s.latitude),xytext=(3, 3), textcoords='offset points',
+                    font_properties = FontProperties(weight="bold"), bbox = dict(facecolor = 'w', alpha = 1),
+                    ha = "left", va = "bottom", zorder = 2 )
+
+    x_big, y_big = basemap_big(manager.lons2D, manager.lats2D)
+
+
+    ####zoom to the area of interest
+    #axins = zoomed_inset_axes(ax, 3, loc=2)
+    displayCoords = ax.transData.transform((x_big[imin, jmin], y_big[imin, jmin]))
+    x_shift_fig, y_shift_fig = ax.figure.transFigure.inverted().transform(displayCoords)
+    print "After transData", displayCoords
+    print "xshift and yshift", x_shift_fig, y_shift_fig
+
+
+    #ax.annotate("yuyu", xy = ( 0.733264985153, 0.477182994408), xycoords = "figure fraction" )
+
+
+
+    rect = [0.1 , y_shift_fig + 0.1, 0.4, 0.4 ]
+    axins = ax.figure.add_axes(rect)
+
+
+    #assert isinstance(axins, Axes)
+
+
+
     x, y = basemap(sub_lons2d, sub_lats2d)
 
     x1d_start = x[sub_flow_in_mask == 1]
@@ -457,10 +495,15 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
     v2d[sub_i_upstream, sub_j_upstream] = v
 
 
-    basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax = ax)
-    basemap.scatter([x[mp.ix - imin, mp.jy - jmin]],[y[mp.ix - imin, mp.jy - jmin]],c = "r", s = 40, linewidths=0)
-    basemap.drawcoastlines(ax = ax)
-    basemap.drawrivers(ax = ax)
+    basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax = axins)
+
+    x_list = [the_station.longitude for the_station in (s,)]
+    y_list = [the_station.latitude for the_station in (s,) ]
+    x_list, y_list = basemap(x_list, y_list)
+    basemap.scatter(x_list, y_list, c = "r", s = 40, linewidths=0)
+
+    basemap.drawcoastlines(ax = axins)
+    basemap.drawrivers(ax = axins)
 
 
     #read waterbase file, and plot only the polygons which contain at least one upstream point
@@ -490,8 +533,20 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
             selected_polygons.append(feature["geometry"])
 
     for p in selected_polygons:
-        ax.add_patch(PolygonPatch(p, fc = "none", ec = "b", lw = 0.5))
+        axins.add_patch(PolygonPatch(p, fc = "none", ec = "b", lw = 1.5))
 
+
+
+    zoom_lines_color = "#6600FF"
+    #set color of the frame
+    for child in axins.get_children():
+        if isinstance(child, Spine):
+            child.set_color(zoom_lines_color)
+            child.set_linewidth(3)
+
+    # draw a bbox of the region of the inset axes in the parent axes and
+    # connecting lines between the bbox and the inset axes area
+    mark_inset(ax, axins, loc1=1, loc2=3, fc="none", ec=zoom_lines_color, lw = 3)
     #basemap.readshapefile(, "basin")
 
 
@@ -505,9 +560,9 @@ def validate_daily_climatology():
     """
     #years are inclusive
     start_year = 1979
-    end_year =1988
+    end_year = 1988
 
-    sim_name_list = ["crcm5-r", "crcm5-hcd-r", "crcm5-hcd-rl"]
+    sim_name_list = ["crcm5-hcd-rl", "crcm5-hcd-rl-intfl"]
     rpn_folder_path_form = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup"
     nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
@@ -523,6 +578,7 @@ def validate_daily_climatology():
             start_date=start_date, end_date=end_date
     )
 
+
     stations_hydat = cehq_station.read_hydat_station_data(folder_path = "/home/huziy/skynet3_rech1/HYDAT",
         start_date = start_date, end_date = end_date)
 
@@ -535,8 +591,8 @@ def validate_daily_climatology():
 
     day_stamps = Station.get_stamp_days(2001)
     sweManager = SweDataManager(var_name="SWE")
-    cruTempManager = CRUDataManager()
-    cruPreManager = CRUDataManager(var_name="pre", path = "data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.pre.dat.nc")
+    cruTempManager = CRUDataManager(lazy=True)
+    cruPreManager = CRUDataManager(var_name="pre", lazy = True, path = "data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.pre.dat.nc")
 
     #common lake fractions when comparing simulations on the same grid
     all_model_points = []
@@ -590,7 +646,6 @@ def validate_daily_climatology():
                     s.mean_prec_upstream_monthly_clim = cruPreManager.get_mean_upstream_timeseries_monthly(mp, dmManager)
 
                     print "Calculated observed upstream mean values..."
-
             all_model_points.extend(mps)
 
 
@@ -601,7 +656,8 @@ def validate_daily_climatology():
     #for tests
     #test(sim_name_to_station_to_model_point)
 
-
+    #select only stations which have corresponding model points
+    stations = sim_name_to_station_to_model_point[sim_name_list[0]].keys()
 
 
 
@@ -617,46 +673,48 @@ def validate_daily_climatology():
 
         #plot hydrographs
         fig = plt.figure()
-        gs = gridspec.GridSpec(3,3, hspace=0.5)
-        ax = fig.add_subplot(gs[0,0])
-        labels, handles = plot_hydrographs(ax, s, sim_name_to_station_to_model_point,
+        gs = gridspec.GridSpec(3,3, left=0.05, hspace= 0.3 , wspace=0.2)
+        ax_stfl = fig.add_subplot(gs[0,0])
+        labels, handles = plot_hydrographs(ax_stfl, s, sim_name_to_station_to_model_point,
             day_stamps = day_stamps, sim_names= sim_name_list
         )
+        plt.setp(ax_stfl.get_xticklabels(), visible=False) #do not show ticklabels for upper rows
 
         fig.legend(handles, labels, "lower right")
 
         #plot swe 1d compare with obs
-        ax = fig.add_subplot(gs[1,0])
-        plot_swe_1d_compare_with_obs(ax, s, sim_name_to_station_to_model_point,
+        ax_swe = fig.add_subplot(gs[1,0], sharex = ax_stfl)
+        plot_swe_1d_compare_with_obs(ax_swe, s, sim_name_to_station_to_model_point,
                      day_stamps = day_stamps, sim_names = sim_name_list)
 
 
         #plot mean temp 1d compare with obs   -- here plot biases directly...??
-        ax = fig.add_subplot(gs[0,2])
-        plot_temp_1d_compare_with_obs(ax, s, sim_name_to_station_to_model_point, sim_names = sim_name_list)
+        ax_temp = fig.add_subplot(gs[0,2])
+        plot_temp_1d_compare_with_obs(ax_temp, s, sim_name_to_station_to_model_point, sim_names = sim_name_list)
+        plt.setp(ax_temp.get_xticklabels(), visible=False) #do not show ticklabels for upper rows
 
         #plot mean precip 1d compare with obs   -- here plot biases directly...??
-        ax = fig.add_subplot(gs[1,2])
+        ax = fig.add_subplot(gs[1,2], sharex = ax_temp)
         plot_precip_1d_compare_with_obs(ax, s, sim_name_to_station_to_model_point, sim_names = sim_name_list )
 
 
         #plot mean Surface and subsurface runoff
-        ax = fig.add_subplot(gs[0,1])
+        ax = fig.add_subplot(gs[0,1], sharex = ax_stfl)
         plot_surf_runoff(ax, s, sim_name_to_station_to_model_point, sim_names = sim_name_list)
+        plt.setp(ax.get_xticklabels(), visible=False) #do not show ticklabels for upper rows
 
-        ax = fig.add_subplot(gs[1,1])
+        ax = fig.add_subplot(gs[1,1], sharex = ax_stfl)
         plot_subsurf_runoff(ax, s, sim_name_to_station_to_model_point, sim_names = sim_name_list)
+        plt.setp(ax.get_xticklabels(), visible=False) #do not show ticklabels for upper rows
 
-
-        ax = fig.add_subplot(gs[2,1])
+        ax = fig.add_subplot(gs[2,1], sharex = ax_stfl)
         plot_total_runoff(ax, s, sim_name_to_station_to_model_point, sim_names = sim_name_list)
-
 
         pp.savefig()
         #plot flow direction and basin boundaries
         fig = plt.figure()
-        gs = gridspec.GridSpec(1,1)
-        ax = fig.add_subplot(gs[0, 0])
+        gs = gridspec.GridSpec(1,2, right=0.99, bottom=0.001)
+        ax = fig.add_subplot(gs[0, 1])
         plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_model_point, sim_name_to_manager = sim_name_to_manager)
         pp.savefig()
 
@@ -671,6 +729,8 @@ def validate_daily_climatology():
 
 
 
+
+
 def main():
     validate_daily_climatology()
     pass
@@ -679,7 +739,7 @@ if __name__ == "__main__":
     t0 = time.time()
     import application_properties
     from util import plot_utils
-    plot_utils.apply_plot_params(font_size=8, width_pt=None, height_cm=20, width_cm=20)
+    plot_utils.apply_plot_params(font_size=14, width_pt=None, height_cm=25, width_cm=39)
     application_properties.set_current_directory()
     main()
     print "Execution time {0} seconds".format(time.time() - t0)
