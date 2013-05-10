@@ -49,7 +49,7 @@ class RPN():
         try:
             self._dll = CDLL('rmnlib.so')
         except OSError:
-            self._dll = CDLL('lib/rmnlib.so')
+            self._dll = CDLL('/skynet3_rech1/huziy/Netbeans Projects/CPP/RPNc/libpyrmn.so')
 
         self.VARNAME_DEFAULT = 8 * ' '
         self.VARTYPE_DEFAULT = 4 * ' '
@@ -81,6 +81,7 @@ class RPN():
         self._dll.fnom_wrapper.argtypes = [POINTER(c_int), c_char_p, c_char_p, c_int]
         self._dll.fnom_wrapper.restype = c_int
         self._file_unit = c_int()
+
         self._dll.fnom_wrapper(byref(self._file_unit), rpn_file_path, options, dummy)
         
 
@@ -149,6 +150,23 @@ class RPN():
             POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int),
             POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float),
         ]
+
+
+        self._dll.fstprm_wrapper.argtypes = [
+            c_int,
+            POINTER(c_int), POINTER(c_int), POINTER(c_int),
+            POINTER(c_int), POINTER(c_int), POINTER(c_int),
+            POINTER(c_int), POINTER(c_int),
+            POINTER(c_int), POINTER(c_int), POINTER(c_int),
+            c_char_p, c_char_p, c_char_p, c_char_p,
+            POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int),
+            POINTER(c_int), POINTER(c_int),
+            POINTER(c_int), POINTER(c_int),
+            POINTER(c_int), POINTER(c_int), POINTER(c_int)
+        ]
+
+        self._dll.fstprm_wrapper.restype = c_int
+
 
         #newdate
 #        *
@@ -277,8 +295,8 @@ class RPN():
         #fstopc
         self._dll.fstopc_wrapper.argtypes = [
             c_char_p, c_char_p, c_int
-        ] 
-        
+        ]
+
         self._dll.fstopc_wrapper.restype = c_int
 
 
@@ -438,7 +456,7 @@ class RPN():
         ip3 = c_int(-1)
         in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
 
-        
+
         in_nomvar = create_string_buffer(self.VARNAME_DEFAULT)
 
         #int fstinf_wrapper(int iun, int *ni, int *nj, int *nk, int datev,char *in_etiket,
@@ -630,7 +648,7 @@ class RPN():
         nk = c_int(0)
         datev = c_int(-1)
 
-        
+
         ip1 = c_int(-1)
         ip2 = c_int(-1)
         ip3 = c_int(-1)
@@ -686,11 +704,11 @@ class RPN():
         the_type = self._get_current_data_type()
         lons_2d = np.zeros((n_lats, n_lons), dtype = the_type)
         lats_2d = np.zeros((n_lats, n_lons), dtype = the_type)
-        
-        self._dll.gdll_wrapper(ezgdef, lats_2d.ctypes.data_as(POINTER(c_float)), 
+
+        self._dll.gdll_wrapper(ezgdef, lats_2d.ctypes.data_as(POINTER(c_float)),
                                        lons_2d.ctypes.data_as(POINTER(c_float)))
 
-        
+
         return np.transpose(lons_2d), np.transpose(lats_2d)
 
 
@@ -752,7 +770,7 @@ class RPN():
         ubc = c_int()
 
 
-        self._dll.fstprm_wrapper(key,
+        self._dll.fstprm_wrapper(c_int(key),
              byref(dateo), byref(dt_seconds), byref(npas),
              byref(ni), byref(nj), byref(nk),
              byref(nbits), byref(datyp),
@@ -763,6 +781,10 @@ class RPN():
              byref(swa), byref(lng),
              byref(dltf), byref(ubc),
              byref(extra1), byref(extra2), byref(extra3))
+
+
+
+
 
         if verbose:
             print 'ip ', [ip1.value, ip2.value, ip3.value]
@@ -779,7 +801,7 @@ class RPN():
         #print 'current grid type ', self.current_grid_type
 
         try:
-            dateo_s = self._dateo_to_string(dateo.value)
+            dateo_s = self._dateo_to_string(extra1.value)
             the_dateo = datetime.strptime(dateo_s, self._dateo_format)
         except Exception,e:
             print e
@@ -802,7 +824,8 @@ class RPN():
                   "data_type" : datyp,
                   "nbits" : nbits,
                   "grid_type" : grid_type,
-                  "dateo_rpn_format": dateo
+                  "dateo_rpn_format": dateo,
+                  "extra1": extra1
                   }
         self._current_info = result #update info from the last read record
 
@@ -876,6 +899,8 @@ class RPN():
         """
         if self._current_info is None:
             return None
+
+
         return self._current_info['ip'][1].value ##ip2
 
     def get_dateo_of_last_read_record(self):
@@ -896,6 +921,14 @@ class RPN():
 
         if not self._current_info is None :
             try:
+
+                #extra can contain the validity date
+                extra1 = self._current_info["extra1"].value
+                if extra1 > 0:
+                    date_s = self._dateo_to_string(extra1)
+                    return datetime.strptime(date_s, self._dateo_format)
+
+
                 forecastHour = self.get_current_validity_date()
                 assert forecastHour >= 0
 
@@ -903,6 +936,7 @@ class RPN():
                     self.dateo_fallback = self._current_info["dateo"]
 
                 d = self._current_info["dateo"] + timedelta(hours = forecastHour)
+                print d, forecastHour, self._current_info["dateo"]
 
                 if d < self.dateo_fallback:
                     print "sim date appears to be earlier than the start date"

@@ -123,7 +123,7 @@ def main():
     #plotting starts here
     fig = plt.figure()
 
-    plt.suptitle("({0} - {1})".format(start_year, end_year))
+    #plt.suptitle("({0} - {1})".format(start_year, end_year))
 
     nrows = 2
     ncols = 7
@@ -142,19 +142,19 @@ def main():
     ax = fig.add_subplot(gs[0,0])
     img = b05.contourf(x05, y05, tt05, levels = levels, norm = bn, cmap = cMap)
     b05.drawcoastlines()
-    ax.set_title("dx = 0.5")
-    ax.set_ylabel("TT")
+    #ax.set_title("dx = 0.5")
+    #ax.set_ylabel("TT")
 
     #plot highres temp
     ax = fig.add_subplot(gs[0,1])
     img = b01.contourf(x01, y01, tt01, levels = levels, norm = bn, cmap = cMap)
     b01.drawcoastlines()
-    ax.set_title("dx = 0.1")
+    #ax.set_title("dx = 0.1")
 
     ax = fig.add_subplot(gs[0,2])
     img = b05.contourf(x05, y05, tmpCruI05, levels = levels, norm = bn, cmap = cMap)
     b05.drawcoastlines(ax = ax)
-    ax.set_title("CRU")
+    #ax.set_title("CRU")
 
 
     #divider = make_axes_locatable(ax)
@@ -166,7 +166,7 @@ def main():
 
     #plot tt05-tt01
     levels = np.arange(-3,4, 0.5)
-    cMap = cm.get_cmap("RdBu", len(levels) - 1)
+    cMap = cm.get_cmap("RdBu_r", len(levels) - 1)
 
 
 
@@ -175,7 +175,7 @@ def main():
     img = b05.contourf(x05, y05, tt05 - tt01I05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
-    ax.set_title("TT(dx = 0.5) - TT(dx = 0.1)")
+    #ax.set_title("TT(dx = 0.5) - TT(dx = 0.1)")
 
 
 
@@ -184,14 +184,14 @@ def main():
     img = b05.contourf(x05, y05, tt01I05 - tmpCruI05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
-    ax.set_title("TT(dx = 0.1) - CRU")
+    #ax.set_title("TT(dx = 0.1) - CRU")
 
 
 
     cax = fig.add_subplot(gs[0,6])
     cax.set_aspect(20)
     cb = fig.colorbar(img,  cax = cax, ticks = levels)
-    cax.set_title("${\\rm ^{\circ} C}$")
+    #cax.set_title("${\\rm ^{\circ} C}$")
 
 
 
@@ -214,7 +214,7 @@ def main():
     ax = fig.add_subplot(gs[1,0])
     img = b05.contourf(x05, y05, pr05, levels = levels, cmap = cMap)
     b05.drawcoastlines()
-    ax.set_ylabel("PR")
+    #ax.set_ylabel("PR")
 
     #plot highres temp
     ax = fig.add_subplot(gs[1,1])
@@ -226,7 +226,7 @@ def main():
     ax = fig.add_subplot(gs[1,2])
     img = b05.contourf(x05, y05, preCruI05, levels = levels, norm = bn, cmap = cMap)
     b05.drawcoastlines(ax = ax)
-    ax.set_title("CRU")
+    #ax.set_title("CRU")
 
 
 
@@ -253,7 +253,7 @@ def main():
     img = b05.contourf(x05, y05, pr05 - pr01I05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
-    ax.set_title("PR(dx = 0.5) - PR(dx = 0.1)")
+    #ax.set_title("PR(dx = 0.5) - PR(dx = 0.1)")
 
 
     #plot tt01I05-Cru
@@ -261,7 +261,7 @@ def main():
     img = b05.contourf(x05, y05, pr01I05 - preCruI05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
-    ax.set_title("PR(dx = 0.1) - CRU")
+    #ax.set_title("PR(dx = 0.1) - CRU")
 
 
 
@@ -282,7 +282,7 @@ def main():
 
 
 if __name__ == "__main__":
-    plot_utils.apply_plot_params(width_pt=None, width_cm=50, height_cm=20, font_size=12)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=50, height_cm=20, font_size=14)
     import application_properties
     application_properties.set_current_directory()
     main()

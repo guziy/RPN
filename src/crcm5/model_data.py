@@ -908,6 +908,62 @@ class Crcm5ModelDataManager:
 
 
 
+    def get_monthly_climatology_of_3d_field(self, var_name = "I1", file_name_prefix = "pm",
+                                            start_year = None, end_year = None
+                                            ):
+
+        """
+        assumes that each file contains month of data
+        """
+        filePaths = [ os.path.join( self.samples_folder, name)
+                        for name in os.listdir(self.samples_folder)
+                            if name.startswith(file_name_prefix)    ]
+
+        month_to_means = {}
+
+
+
+        levels = None
+
+        for thePath in filePaths:
+            r = RPN(thePath)
+            r.suppress_log_messages()
+            data = r.get_4d_field(name = var_name)
+            r.close()
+
+
+
+
+            if levels is None:
+                levels = list( sorted( data.items()[0][1].keys() ) )
+                print "levels = {0}".format(",".join([str(lev) for lev in levels]))
+
+
+
+
+
+            dates_sorted = list( sorted( data.keys() ) )
+            the_month = dates_sorted[0].month
+            if not month_to_means.has_key(the_month):
+                month_to_means[the_month] = []
+
+            the_year = dates_sorted[0].year
+
+            if start_year is not None:
+                if the_year < start_year:
+                    continue
+
+            if end_year is not None:
+                if the_year > end_year:
+                    continue
+
+
+            return
+
+
+
+
+
     def get_mean_field(self,start_year, end_year, months = None, file_name_prefix = "pm",
                        var_name = "STFL", level = -1, level_kind = level_kinds.ARBITRARY):
         if self.all_files_in_one_folder:
@@ -1528,10 +1584,83 @@ class Crcm5ModelDataManager:
 
 
 
+
+
+    def get_dataless_model_points_for_stations(self, station_list):
+        """
+        returns a map {station => modelpoint} for comparison modeled streamflows with observed
+
+        this uses exactly the same method for searching model points as one in diagnose_point (nc-version)
+
+        """
+        model_acc_area = self.accumulation_area_km2
+        model_acc_area_1d = model_acc_area.flatten()
+
+
+        nx, ny = model_acc_area.shape
+        t0 = time.time()
+        npoints = 1
+        result = {}
+        for s in station_list:
+            #list of model points which could represent the station
+
+            assert isinstance(s, Station)
+            x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
+            dists, inds = self.kdtree.query((x,y,z), k = npoints)
+
+
+            if npoints == 1:
+                dists = np.array([dists])
+                inds = np.array([inds], dtype=int)
+
+                deltaDaMin = np.min( np.abs( model_acc_area_1d[inds] - s.drainage_km2) )
+
+                #this returns a  list of numpy arrays
+                imin = np.where(np.abs( model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
+
+                deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
+
+                ij = np.where( deltaDa2D == deltaDaMin )
+
+
+                ix, jy = ij[0][0], ij[1][0]
+
+                #check if it is not global lake cell
+                if self.lake_fraction[ix, jy] >= 0.6:
+                    continue
+
+                #check if the gridcell is not too far from the station
+                if dists[imin] > 2 * self.characteristic_distance:
+                    continue
+
+                #check if difference in drainage areas is not too big less than 10 %
+                if deltaDaMin / s.drainage_km2 > 0.1: continue
+
+                mp = ModelPoint()
+                mp.accumulation_area = self.accumulation_area_km2[ix, jy]
+                mp.lake_fraction = self.lake_fraction[ix, jy]
+                mp.ix = ix
+                mp.jy = jy
+                mp.longitude = self.lons2D[mp.ix, mp.jy]
+                mp.latitude = self.lats2D[mp.ix, mp.jy]
+                mp.distance_to_station = dists[imin]
+
+                #flow in mask
+                mp.flow_in_mask = self.get_mask_for_cells_upstream(ix, jy)
+                result[s] = mp
+            else:
+                raise Exception("npoints = {0}, is not yet implemented ...")
+        return result
+
+
+        pass
+
+
+
     def get_model_points_for_stations(self, station_list, sim_name = "", nc_path = "",
                                       npoints = 1, nc_sim_folder = None):
         """
-        returns a map {station => modelpoint} for comparison modeled streamflows with observed
+        returns a map {station => [modelpoint1, ...]} for comparison modeled streamflows with observed
         modelpoint.data - contains series of data in time for the modelpoint
         modelpoint.time - contains times corresponding to modelpoint.data
         """

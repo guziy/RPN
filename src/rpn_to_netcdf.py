@@ -1,3 +1,4 @@
+from multiprocessing.pool import Pool
 import os.path
 
 __author__="huziy"
@@ -46,7 +47,7 @@ def extract_field(name = "VF", level = 3, in_file = "", out_file = None, margin 
 
     pass
 
-def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p'):
+def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p', outDir = None):
     surface_runoff_name = 'TRAF'
     subsurface_runoff_name = 'TDRA'
     level_tdra = 5
@@ -63,6 +64,8 @@ def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p'):
     subSurfRunoff = rpnObj.get_first_record_for_name_and_level(subsurface_runoff_name, level = level_tdra)
 
     nx, ny = surfRunoff.shape
+
+
     ncFile = nc.Dataset(filePath + '.nc', 'w', format = 'NETCDF3_CLASSIC')
     ncFile.createDimension('lon', nx)
     ncFile.createDimension('lat', ny)
@@ -91,6 +94,79 @@ def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
                 continue
             filePath = os.path.join(monthFolderPath, fileName)
             extract_runoff_to_netcdf_file(filePath)
+
+
+
+def extract_runoff_to_nc_process(args):
+    inPath, outPath = args
+
+    #print "in: {0}".format( inPath )
+    #print "out: {0}".format( outPath )
+
+    traf_name = "TRAF"
+    tdra_name = "TDRA"
+
+    r = RPN(inPath)
+    r.suppress_log_messages()
+    traf_data = r.get_all_time_records_for_name(varname = traf_name)
+    tdra_data = r.get_all_time_records_for_name(varname = tdra_name)
+    r.close()
+
+
+    nx, ny = traf_data.items()[0][1].shape
+
+
+    ds = nc.Dataset(outPath, "w", format="NETCDF3_CLASSIC")
+    ds.createDimension("lon", nx)
+    ds.createDimension("lat", ny)
+    ds.createDimension("time", None)
+
+    varTraf = ds.createVariable(traf_name, "f4", dimensions=("time", "lon", "lat"))
+    varTraf.units = "kg/( m**2 * s )"
+
+    varTdra = ds.createVariable(tdra_name, "f4", dimensions=("time", "lon", "lat"))
+    varTdra.units = "kg/( m**2 * s )"
+
+
+    timeVar = ds.createVariable("time", "f4", dimensions=("time",))
+
+
+    sorted_dates = list( sorted(traf_data.keys()) )
+
+    timeVar.units = "hours since {0}".format(sorted_dates[0])
+    timeVar[:] = nc.date2num(sorted_dates, timeVar.units)
+
+
+    varTraf[:] = np.array(
+        [ traf_data[d] for d in sorted_dates ]
+    )
+
+    varTdra[:] = np.array(
+        [ tdra_data[d] for d in sorted_dates ]
+    )
+    ds.close()
+
+
+
+
+def runoff_to_netcdf_parallel(inDir, outDir):
+    if not os.path.isdir(outDir):
+        os.mkdir(outDir)
+
+    inNames = [ x for x in os.listdir(inDir) if x.startswith("pm") and x.endswith("p") ]
+
+    inPaths = [os.path.join(inDir, name) for name in inNames]
+
+    print inPaths
+
+    outPaths = [ os.path.join(outDir, inName + ".nc") for inName in inNames ]
+
+
+    ppool = Pool(processes=10)
+    ppool.map(extract_runoff_to_nc_process, zip(inPaths, outPaths) )
+
+
+
 
 
 def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = ""):
@@ -169,7 +245,11 @@ if __name__ == "__main__":
 
 #
 #    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_86x86_0.5deg.v3")
-    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_260x260_3")
+#    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_260x260_3")
 
+
+    #extract_sand_and_clay_from_rpn(rpn_path= "/b2_fs2/huziy/OMSC26_MPI_long_new_v01/geo_Arctic_198x186",
+    #    outpath="/home/huziy/skynet3_rech1/runoff_arctic_nc/geo_Arctic_198x186.nc")
+    runoff_to_netcdf_parallel("/b2_fs2/huziy/OMSC26_Can_long_new_v01/", "/skynet3_rech1/huziy/runoff_arctic_nc/CanESM")
 
     print "Hello World"
