@@ -5,7 +5,7 @@ import numpy as np
 import netCDF4 as nc
 
 def main():
-    ds = nc.Dataset("/skynet3_rech1/huziy/temp/grid_arctic.nc")
+    ds = nc.Dataset("../../grid_arctic.nc")
     data = ds.variables["tas"][:].squeeze()
     lon2d_nc = ds.variables["lon"][:]
     lat2d_nc = ds.variables["lat"][:]
