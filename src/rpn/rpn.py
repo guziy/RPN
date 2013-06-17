@@ -354,8 +354,7 @@ class RPN():
         in_nomvar = create_string_buffer(var_name)
 
         key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), c_int(-1), etiket,
-                                       ip1, ip2, ip3, in_typvar, in_nomvar
-        )
+                                       ip1, ip2, ip3, in_typvar, in_nomvar)
 
         if key < 0:
             return None
@@ -372,6 +371,7 @@ class RPN():
         :param level_kind:
         #TODO: make sure it works, read on datev and ip2 parameters
         """
+        from termcolor import colored
         ip1 = c_int(-1)
         ip2 = c_int(forecast_hour)
         ip3 = c_int(-1)
@@ -390,13 +390,18 @@ class RPN():
         while key >= 0:
             data = self._get_data_by_key(key)
             lev = self.get_current_level(level_kind=level_kind)
-            res[lev] = data
-            key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), c_int(-1), etiket,
-                                           ip1, ip2, ip3, in_typvar, in_nomvar)
 
+            if lev in res.keys():
+                msg = "WARNING: this file contains more than one field {0} for the level {1}, " \
+                      "eading only the first one".format(var_name, lev)
+                print colored(msg, color="red")
+                break
+
+            res[lev] = data
+            key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
         print in_typvar.value
 
-        # if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
+        #  if key < 0: raise Exception('varname = {0}, at level {1} is not found  in {2}.'.format(varname, level, self.path))
 
         return res
 
@@ -421,7 +426,6 @@ class RPN():
         in_nomvar = create_string_buffer(self.VARNAME_DEFAULT)
         key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), c_int(-1), etiket,
                                        ip1, ip2, ip3, in_typvar, in_nomvar)
-
 
         names = []
         while key >= 0:
@@ -470,8 +474,7 @@ class RPN():
         #             int ip1, int ip2, int ip3, char *in_typvar, char *in_nomvar)
 
         key = self._dll.fstinf_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk), datev, etiket,
-                                       ip1, ip2, ip3, in_typvar, in_nomvar
-        )
+                                       ip1, ip2, ip3, in_typvar, in_nomvar)
 
         if key < 0:
             raise Exception("key value is not valid {0}".format(key))

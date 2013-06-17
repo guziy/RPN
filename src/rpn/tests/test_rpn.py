@@ -6,7 +6,7 @@ __author__ = 'huziy'
 
 
 
-##TODO: learn how to test properly
+## TODO: learn how to test properly
 
 
 class TestRpn(RPN):
@@ -22,7 +22,6 @@ class TestRpn(RPN):
         field = self.get_first_record_for_name("I5")
         print(self.get_dateo_of_last_read_record())
         print(self._dateo_to_string(-1274695862))
-
 
     def test2(self):
         """
@@ -67,9 +66,14 @@ def test_get_records_for_foreacst_hour():
 
     print nRecords
 
-    #res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour=0)
+    res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour=0)
+    ok_(len(res) == 1, msg="SWE has only one vertical level ..., not {0} ".format(len(res)))
 
-    ok_(nRecords == 1874, msg="The number of records is not what I've expected")
+    res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour=10)
+    ok_(len(res) == 0)
+
+
+    ok_(nRecords == 1874, msg="The number of records is not what I've expected ")
 
     #assert_(len(res) == 1, msg="Only one record in the file for the forecast_hour = 0")
 
