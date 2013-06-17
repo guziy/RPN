@@ -58,7 +58,7 @@ class RotatedLatLon():
         rpnObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level = 0, ip = range(100, 103),
             lon1=self.lon1, lat1 = self.lat1, lon2 = self.lon2, lat2 = self.lat2, label = "")
 
-        info = rpnObj.get_current_info()
+        info = rpnObj.get_current_info
         ip_xy = map(lambda x: x.value, info["ip"])
         ig = ip_xy + [0]
         return ig

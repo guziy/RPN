@@ -17,8 +17,8 @@ def main():
 
     basemap = Basemap(projection="rotpole", o_lon_p=rplon, o_lat_p=rplat,
                     lon_0 = lon_0 - 180,
-                    llcrnrlon=lon2d_nc[0,0], llcrnrlat=lat2d_nc[0,0],
-                    urcrnrlon=lon2d_nc[-1,-1], urcrnrlat=lat2d_nc[-1, -1],
+                    llcrnrlon=lon2d_nc[-1,-1], llcrnrlat=lat2d_nc[-1,-1],
+                    urcrnrlon=lon2d_nc[0,0], urcrnrlat=lat2d_nc[0, 0],
                     resolution="l"
     )
 
@@ -27,8 +27,8 @@ def main():
     basemap.contourf( x, y, data)
     basemap.colorbar()
     basemap.drawcoastlines()
-    basemap.drawmeridians(np.arange(-180, 180, 50))
-    basemap.drawparallels(np.arange(-90, 90, 30))
+    basemap.drawmeridians(np.arange(-180, 180, 30))
+    basemap.drawparallels(np.arange(-90, 90, 40))
     plt.show()
 
     pass

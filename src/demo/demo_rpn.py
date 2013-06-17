@@ -1,3 +1,4 @@
+import os
 from rpn.rpn import RPN
 
 __author__ = 'huziy'
@@ -46,6 +47,29 @@ def main():
     times = list( sorted( ts.keys() ) )
     print times[:20]
     print times[0], times[-1]
+    r.close()
+
+
+
+
+    folderPath = "/b2_fs2/huziy/OMSC26_ERA40I_long_new_v02/"
+    for fName in os.listdir(folderPath):
+        if not fName.startswith("pm"): continue
+
+        fPath = os.path.join(folderPath, fName)
+
+        r = RPN(fPath)
+        r.suppress_log_messages()
+
+        data = r.get_all_time_records_for_name(varname="TDRA")
+        r.close()
+
+        print fName
+        print sorted(data.keys())[:5]
+        print 25 * "*"
+        raw_input("press any key")
+
+
 
 
 if __name__ == "__main__":

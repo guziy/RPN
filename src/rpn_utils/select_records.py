@@ -18,7 +18,7 @@ def select_last_year(inPath, outPath = None, label = "last 6 year", npas_range =
         data = rObjIn.get_next_record()
         if data is None:
             break
-        info = rObjIn.get_current_info()
+        info = rObjIn.get_current_info
 
         nbits = info["nbits"].value
         deet = info["dt_seconds"].value

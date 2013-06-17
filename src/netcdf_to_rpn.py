@@ -72,7 +72,7 @@ def convert(nc_path = 'directions_africa_dx0.44deg.nc', out_path = None, gc = No
     rObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level = 0, ip = range(100, 103),
             lon1=lon1, lat1 = lat1, lon2 = lon2, lat2 = lat2, label = "Routing")
 
-    info = rObj.get_current_info()
+    info = rObj.get_current_info
     ip_xy = map(lambda x: x.value, info["ip"])
     ig = ip_xy + [0]
     print "ig = ", ig

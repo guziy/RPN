@@ -35,6 +35,14 @@ class Station:
         self.mean_temp_upstream_monthly_clim = None
         self.mean_prec_upstream_monthly_clim = None
 
+        ##specifically for the GRDC stations
+        self.grdc_monthly_clim_min = None
+        self.grdc_monthly_clim_mean = None
+        self.grdc_monthly_clim_max = None
+
+        self.river_name = ""
+
+
 
 
     def get_mean_value(self):
@@ -575,6 +583,92 @@ def read_hydat_station_data(folder_path = "", start_date = None, end_date = None
     return stations
 
 
+def _prep_line(line):
+    n = len(line)
+
+    counter = 0
+    new_line = ""
+    for i in range(n):
+        counter += int(line[i] == "\"")
+        if line[i] == " " and counter % 2 == 1:
+            new_line += "_"
+        else:
+            new_line += line[i]
+
+    return new_line
+
+
+def read_grdc_stations(st_id_list = None, data_file_patt = "/skynet3_rech1/huziy/GRDC_streamflow_data/Data{0}.txt",
+                       descriptor_file_path = "/skynet3_rech1/huziy/GRDC_all_stations/GRDC663Sites.txt"):
+
+
+
+    """
+    extracts station coordinates and monthly climatology
+    """
+    res = []
+
+    descr_file = open(descriptor_file_path)
+    lines = descr_file.readlines()
+    descr_file.close()
+
+
+    fields = lines[0].split()
+    print fields
+    print fields[3], fields[-2], fields[-1], fields[4], fields[6]
+
+    for line in lines[1:]:
+        line = line.strip()
+        if line == "": continue
+
+        line = _prep_line(line)
+
+
+        fields = line.split()
+        the_id = fields[3].strip()
+
+
+        if the_id not in st_id_list:
+            continue
+
+        lon = float( fields[-2] )
+        lat = float( fields[-1] )
+
+        s = Station()
+        s.id = the_id
+        s.longitude = lon
+        s.latitude = lat
+        s.river_name = fields[5].replace("_", " ").replace("\"", "")
+        s.drainage_km2 = float(fields[20])
+
+        #print "found {0}".format(the_id) , s.river_name
+        #print "DA(GRDC) = {0}; DA(STNCatchment) = {1}".format(s.drainage_km2, fields[20])
+        #load data
+        #load min, mean and max
+        data_path = data_file_patt.format(the_id)
+
+        s.grdc_monthly_clim_min = []
+        s.grdc_monthly_clim_mean = []
+        s.grdc_monthly_clim_max = []
+
+
+        lines = open(data_path).readlines()
+        for line in lines[1:]:
+            fields = line.split()
+            s.grdc_monthly_clim_max.append(float(fields[-2]))
+            s.grdc_monthly_clim_mean.append(float(fields[-1]))
+            s.grdc_monthly_clim_min.append(float(fields[-3]))
+
+        res.append(s)
+
+
+
+    return res
+
+    pass
+
+
+
 def load_from_hydat_db(path = "/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite", natural = True,
                        province = "QC"
                        ):
@@ -586,48 +680,86 @@ def load_from_hydat_db(path = "/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     province = province.upper()
 
-    #shortcuts
+    #shortcuts for table names
     stations_table = "STATIONS"
+    station_regulation_table = "STN_REGULATION"
+
+    #shortcuts for field names
     station_number_field = "STATION_NUMBER"
+    province_field = "PROV_TERR_STATE_LOC"
+    lon_field = "LONGITUDE"
+    lat_field = "LATITUDE"
+
+
 
     regulation_table = "STN_REGULATION"
-    daily_streamflow_table = "DLY_FLOWS" #streamflow is in m**3
+    daily_streamflow_table = "DLY_FLOWS"  # streamflow is in m**3
 
 
     tables_of_interest = [stations_table, regulation_table, daily_streamflow_table]
 
     connect = sqlite3.connect(path)
     assert isinstance(connect, sqlite3.Connection)
+    connect.row_factory = sqlite3.Row
+
+
 
 
     cur = connect.cursor()
     assert isinstance(cur, sqlite3.Cursor)
 
     cur.execute("select * from Version;")
-    row = cur.fetchone()
-
-    print
-    print "using hydat version {0} generated on {1}".format(row[0], row[1])
-
-
-
-
+    for row in cur:
+        print row.keys()
+    print "using hydat version {0} generated on {1}".format(row["Version"], datetime.fromtimestamp(row["Date"] / 1000.0))
 
 
     cur.execute("select name from sqlite_master where type = 'table';")
 
     table_names = cur.fetchall()
 
+    print table_names
 
 
-    for table_name in table_names:
-        cur.execute("select sql from sqlite_master where type = 'table' and name = ?;", table_name)
+    for table_data in table_names:
+        #print "Table: {0}".format(table_data["name"])
 
-        if table_name[0] not in tables_of_interest: continue
+        assert isinstance(table_data, sqlite3.Row)
+        #print table_data.keys()
+        #print table_data["name"]
+
+        if table_data["name"] not in tables_of_interest:
+            continue  # skip tables which are not interesting
+
+
+        #determine table layout
+        cur.execute("select sql from sqlite_master where type = 'table' and name = ?;", (table_data["name"],))
 
         scheme = cur.fetchone()
-        print scheme
-        print "++++" * 20
+        #print scheme
+        #print "++++" * 20
+
+
+    #create station objects using data from sqlite db
+    cur.execute("select * from {0} where {1}=? or {1}=?;".format(stations_table, province_field), (province, province.lower()))
+
+    data = cur.fetchall()
+
+    print data[0].keys()
+
+    print "Fetched the following station: "
+    print "There are {0} stations in {1}.".format(len(data), province)
+
+    #row = cur.fetchone()
+
+
+
+
+
+    #print row[province_field]
+
+
+
 
 
 
@@ -659,5 +791,11 @@ if __name__ == "__main__":
     #print np.max(s.dates)
 
     load_from_hydat_db()
+    #slist = read_grdc_stations(st_id_list=["2903430", "2909150", "2912600", "4208025"],
+    #    descriptor_file_path="/skynet3_rech1/huziy/GRDC_all_stations/GRDC663Sites.txt")
+    #
+    #for s in slist:
+    #    assert isinstance(s, Station)
+    #    print s.drainage_km2
 
     print "Hello World"

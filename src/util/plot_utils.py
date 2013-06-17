@@ -37,10 +37,6 @@ def get_closest_tick_value(nticks, lower_limit):
         tick_value += d
 
 
-
-
-
-
 def apply_plot_params(font_size = 20, width_pt = 1000, aspect_ratio = 1, height_cm = None, width_cm = None):
     """
     aspect_ratio = height / (width * golden_mean)

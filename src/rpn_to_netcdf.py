@@ -1,5 +1,6 @@
 from multiprocessing.pool import Pool
 import os.path
+from crcm5.model_data import Crcm5ModelDataManager
 
 __author__="huziy"
 __date__ ="$Jul 25, 2011 4:56:03 PM$"
@@ -100,6 +101,8 @@ def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
 def extract_runoff_to_nc_process(args):
     inPath, outPath = args
 
+    if os.path.isfile(outPath): return #skip files that already exist
+
     #print "in: {0}".format( inPath )
     #print "out: {0}".format( outPath )
 
@@ -157,12 +160,10 @@ def runoff_to_netcdf_parallel(inDir, outDir):
 
     inPaths = [os.path.join(inDir, name) for name in inNames]
 
-    print inPaths
-
     outPaths = [ os.path.join(outDir, inName + ".nc") for inName in inNames ]
 
 
-    ppool = Pool(processes=10)
+    ppool = Pool(processes=20)
     ppool.map(extract_runoff_to_nc_process, zip(inPaths, outPaths) )
 
 
@@ -182,8 +183,6 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = "
     nx, ny = sandField[1].shape
     nz = len(sandField)
 
-    print nx, ny, nz
-    print sandField[1].shape
 
     sand = np.zeros((nx, ny, nz))
     clay = np.zeros((nx, ny, nz))
@@ -194,16 +193,11 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = "
         sand[:, :, i] = sandField[ i + 1 ][:,:]
         clay[:, :, i] = clayField[ i + 1 ][:,:]
 
-        print 'SAND:',i, np.min(sand[:, :, i]), np.max(sand[:, :, i])
-        print 'CLAY:',i, np.min(clay[:, :, i]), np.max(clay[:, :, i])
 
     ncFile.createDimension('lon', nx)
     ncFile.createDimension('lat', ny)
     ncFile.createDimension('level', nz)
 
-    sandVar = ncFile.createVariable('SAND', 'f', ('lon','lat','level'))
-    clayVar = ncFile.createVariable('CLAY', 'f', ('lon','lat','level'))
-    dpthVar = ncFile.createVariable('DPTH_TO_BEDROCK', 'f', ('lon','lat'))
 
     sandVar[:] = sand
     clayVar[:] = clay

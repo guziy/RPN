@@ -68,16 +68,21 @@ class Animator():
         #prepare figure and subplot for animation
         fig = plt.figure()
         self.figure = fig
-        gs = gridspec.GridSpec(1,3, width_ratios=[1,1,1])
+        gs = gridspec.GridSpec(2,2, width_ratios=[1,1])
 
 
         axesDict = {}
         for i, vName in enumerate(self.var_names):
-            axesDict[vName] = fig.add_subplot(gs[0,i])
+            if vName == "STFL":
+                axesDict[vName] = fig.add_subplot(gs[0,0:2])
+            elif vName == "TT":
+                axesDict[vName] = fig.add_subplot(gs[1,0])
+            elif vName == "PR":
+                axesDict[vName] = fig.add_subplot(gs[1,1])
 
         axesDict["TT"].set_title("Temperature (${\\rm ^\circ C}$)")
         axesDict["PR"].set_title("Precip (mm/day)")
-        axesDict["STFL"].set_title("Streamflow (${\\rm m^3/s}$)")
+        axesDict["STFL"].set_title("{0}-{1:02d} ({2})".format(t.year, t.month, self.seasons[0 if t.month == 12 else (t.month // 3)]))
 
         assert isinstance(fig, Figure)
 
@@ -88,7 +93,7 @@ class Animator():
         imgs = []
 
 
-        fig.suptitle("{0}-{1:02d} ({2})".format(t.year, t.month, self.seasons[0 if t.month == 12 else (t.month // 3)]))
+        #fig.suptitle()
         #fig.suptitle("({0} - {1})".format(start_year, end_year))
         #plot Temp
         levels = [-40, -30, -20, -10, -5, 0,5, 10, 15, 20, 25, 30]
@@ -146,8 +151,12 @@ class Animator():
             basemap.drawcoastlines(ax = the_ax)
             divider = make_axes_locatable(the_ax)
 
-            cax = divider.append_axes("right", "10%", pad="3%")
+            cax = divider.append_axes("right", "5%", pad="3%")
             cb = plt.colorbar(the_img, cax = cax, ticks = ax_to_levels[the_ax])
+
+            if the_ax == axesDict["STFL"]:
+                cb.ax.set_ylabel("Streamflow (${\\rm m^3/s}$)")
+
 
         #self.redraw_colorbars = False
 
@@ -169,7 +178,7 @@ class Animator():
 
     def saveFrame(self, tmp_folder = "", prefix = "tt_pr_stf_anim_"):
         self.figure.tight_layout()
-        self.figure.savefig(os.path.join(tmp_folder, prefix + "{0:08d}.jpeg".format(self.current_frame_index)))
+        self.figure.savefig(os.path.join(tmp_folder, prefix + "{0:08d}.png".format(self.current_frame_index)))
         pass
 
 
@@ -182,7 +191,7 @@ def main():
     start_year = 1979
     end_year = 1988
 
-    sim_name = "crcm5-hcd-r"
+    sim_name = "crcm5-r"
 
     #dmManager = Crcm5ModelDataManager(samples_folder_path=rpn_folder, file_name_prefix="dm", all_files_in_samples_folder=True)
     pmManager = Crcm5ModelDataManager(samples_folder_path=rpn_folder, file_name_prefix="pm", all_files_in_samples_folder=True)
@@ -224,6 +233,7 @@ def main():
 
     for d in month_dates:
         aniObj.animate(d)
+
         aniObj.saveFrame(tmp_folder=temp_folder)
 
     #fa.save("animate_stfl_pr_tt.mpg", writer= writer)
@@ -233,7 +243,7 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     from util import plot_utils
-    plot_utils.apply_plot_params(width_pt=None, width_cm=45, height_cm=15)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=30, height_cm=30, font_size=26)
     main()
     print "Hello world"
   

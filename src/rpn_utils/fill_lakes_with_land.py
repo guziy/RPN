@@ -42,7 +42,7 @@ def main():
 
     lonsTarget, latsTarget = inRpnObj.get_longitudes_and_latitudes_for_the_last_read_rec()
 
-    targetInfo = inRpnObj.get_current_info()
+    targetInfo = inRpnObj.get_current_info
 
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lonsTarget.flatten(), latsTarget.flatten())
 
@@ -59,7 +59,7 @@ def main():
     print lonsG.min(), lonsG.max(), lonsG.mean()
     sandg1 = sand_glob[1]
     print "min: {0}; max: {1}; mean: {2}".format(sandg1.min(), sandg1.max(), sandg1.mean())
-    info = inRpnObj.get_current_info()
+    info = inRpnObj.get_current_info
     print info[RPN.GRID_TYPE].value
 
 
@@ -73,7 +73,7 @@ def main():
         data = inRpnObj.get_next_record()
         if data is None:
             break
-        info = inRpnObj.get_current_info()
+        info = inRpnObj.get_current_info
 
         nbits = info["nbits"].value
         data_type = info["data_type"].value

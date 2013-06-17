@@ -25,7 +25,7 @@ def main():
         data = rObjIn.get_next_record()
         if data is None:
             break
-        info = rObjIn.get_current_info()
+        info = rObjIn.get_current_info
 
         nbits = info["nbits"].value
         data_type = info["data_type"].value

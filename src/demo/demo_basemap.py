@@ -1,4 +1,5 @@
 from mpl_toolkits.basemap import Basemap
+from domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
 
 __author__ = 'huziy'
@@ -36,7 +37,12 @@ def demo_north_pole():
     #basemap.shadedrelief()
     plt.show()
 
+def demo_arctic_proj():
+    rll = RotatedLatLon(lon1=60, lat1=90, lon2=-30, lat2=0)
 
+    print rll.get_north_pole_coords(), rll.get_true_pole_coords_in_rotated_system()
+
+    pass
 
 
 
@@ -45,17 +51,17 @@ def main():
     #TODO: implement
 
 
-    basemap = Basemap(projection = "npstere", boundinglat=60, lon_0=-100, round=True)
-    basemap.shadedrelief()
-    plt.show()
-
+    #basemap = Basemap(projection = "npstere", boundinglat=60, lon_0=-100, round=True)
+    #basemap.shadedrelief()
+    #plt.show()
+    demo_arctic_proj()
 
     pass
 
 if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
-    #main()
-    demo_north_pole()
+    main()
+    #demo_north_pole()
     print "Hello world"
   

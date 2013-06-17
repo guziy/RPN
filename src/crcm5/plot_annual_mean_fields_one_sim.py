@@ -19,20 +19,27 @@ end_year = 1988
 
 field_names = ["TT", "PR", "AU", "AV", "STFL","STFA", "TRAF", "TDRA", "AH"]
 file_name_prefixes = ["dm", "pm", "pm", "pm", "pm", "pm", "pm", "pm", "pm"]
-sim_name = "crcm5-hcd-rl-intfl"
-rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup2/Samples_all_in_one".format(sim_name)
+
+field_names = ["TT", "PR", "AV", "STFL", "AH"]
+file_name_prefixes = ["dm", "pm", "pm", "pm", "pm"]
+
+
+sim_name = "crcm5-r"
+rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name)
+
+
 nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
-export_to_nc = True
+export_to_nc = False
 
 
-def export_monthly_means_to_ncdb(data_manager, varname, level = -1, level_kind = -1):
+def export_monthly_means_to_ncdb(data_manager, varname, level = -1, level_kind = -1, rewrite = False):
     assert isinstance(data_manager, Crcm5ModelDataManager)
 
     data_manager.export_monthly_mean_fields( sim_name = sim_name, in_file_prefix = data_manager.file_name_prefix,
                                        start_year = start_year, end_year = end_year,
                                        varname = varname, nc_db_folder = nc_db_folder,
-                                       level = level, level_kind = level_kind)
+                                       level = level, level_kind = level_kind, rewrite = rewrite)
     pass
 
 def plot_fields():
@@ -67,7 +74,8 @@ def main():
 
 
             if varname == "STFA": continue
-            export_monthly_means_to_ncdb(manager, varname, level= level, level_kind= level_kind)
+            export_monthly_means_to_ncdb(manager, varname, level= level,
+                level_kind= level_kind, rewrite = True)
     #plot results
     assert isinstance(pmManager, Crcm5ModelDataManager)
     lons, lats = pmManager.lons2D, pmManager.lats2D
@@ -134,12 +142,12 @@ def main():
     ah = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     ds.close()
 
-    levels = np.arange(60, 160, 10)# np.linspace(au.min(), au.max(), 10)
+    levels = np.arange(-60, 160, 20)# np.linspace(au.min(), au.max(), 10)
     cmap = cm.get_cmap("jet", len(levels) - 1)
     bn = BoundaryNorm(levels, cmap.N)
     ax = fig.add_subplot(gs[1,0])
     ax.set_title("Sensible heat flux (${\\rm W/m^2}$)")
-    img = basemap.contourf(x, y, ah,  cmap = cmap)
+    img = basemap.contourf(x, y, ah,  cmap = cmap, norm = bn, levels = levels)
     all_axes.append(ax)
     imgs.append(img)
     ax_to_levels[ax] = levels
@@ -151,13 +159,14 @@ def main():
     sel = np.where((start_year <= years) & (years <= end_year))[0]
     av = ds.variables[varname][sel,:,:,:].mean(axis = 0).mean(axis = 0)
     ds.close()
-    levels = np.array( [0,0.1,0.2,0.4, 0.6, 0.8, 1,1.2, 1.4, 1.6, 1.8, 2] )
-    levels *= 1e-2
+    coef = 3600* 3
+    levels = np.arange(-40, 220, 20)
     cmap = cm.get_cmap("jet", len(levels) - 1)
     bn = BoundaryNorm(levels, cmap.N)
     ax = fig.add_subplot(gs[1,1])
     ax.set_title("Latent heat flux (${\\rm W/m^2}$)")
-    img = basemap.contourf(x, y, av, levels = levels, cmap = cmap, norm = bn)
+
+    img = basemap.contourf(x, y, av * coef, levels = levels, cmap = cmap, norm = bn)
     all_axes.append(ax)
     imgs.append(img)
     ax_to_levels[ax] = levels
@@ -192,9 +201,9 @@ def main():
     for the_ax, the_img in zip(all_axes, imgs):
         basemap.drawcoastlines(ax = the_ax)
         divider = make_axes_locatable(the_ax)
-        cax = divider.append_axes("right", "10%", pad="3%")
+        cax = divider.append_axes("right", "5%", pad="3%")
 
-        cb = plt.colorbar(the_img, cax = cax)
+        cb = plt.colorbar(the_img, cax = cax, ticks = ax_to_levels[the_ax])
         assert isinstance(cax, Axes)
         title = cax.get_title()
 

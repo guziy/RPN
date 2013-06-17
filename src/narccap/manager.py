@@ -88,7 +88,7 @@ class NarccapDataManager():
         dates_sel = num2date(t_sel, t_units, calendar=t_calendar)
 
         bool_vect = np.array( map(lambda x: x.month in months, dates_sel), dtype=np.bool )
-        data_sel = mfds.variables[varname][ (t_start <= t) & (t < t_end),:,:]
+        data_sel = mfds.variables[varname][ np.where( (t_start <= t) & (t < t_end) )[0],:,:]
 
 
         #save results to a cache file for reuse

@@ -3,6 +3,7 @@ from netCDF4 import Dataset
 from matplotlib.axes import Axes
 from matplotlib.cm import get_cmap
 from matplotlib.colors import BoundaryNorm
+from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import ScalarFormatter
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
@@ -16,12 +17,10 @@ __author__ = 'huziy'
 import numpy as np
 from scipy import stats
 
-start_year = 1979
-end_year = 1988
 
 
 field_names = ["TT", "PR", "AH", "AV", "STFL", "TRAF", "TDRA"]
-#field_names = ["STFL"]
+field_names = ["TT"]
 
 #field_names = ["TRAF", "TDRA"]
 
@@ -30,7 +29,7 @@ field_name_to_long_name = {
     "PR": "Precip.",
     "AH": "Sensible heat flux",
     "AV": "Latent heat flux",
-    "STFL" :"Streamflow",
+    "STFL" : "Streamflow",
     "TRAF" :"Surface runoff",
     "TDRA" : "Subsurface runoff"
 }
@@ -41,7 +40,7 @@ field_name_to_units = {
     "PR": "mm/day",
     "AH": "${\\rm W/m^2}$",
     "AV": "${\\rm W/m^2}$",
-    "STFL" :"${\\rm m^3/s}$",
+    "STFL" : "${\\rm m^3/s}$",
     "TRAF" : "mm/day",
     "TDRA" : "mm/day"
 
@@ -60,22 +59,21 @@ field_name_to_clevels = {
 
 
 
-sim_name1 = "crcm5-hcd-rl"
-sim_name2 = "crcm5-hcd-rl-intfl"
+sim_name1 = "crcm5-r"
+sim_name2 = "crcm5-hcd-r"
 nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
 #needed for basemap
-rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup2/Samples_all_in_one".format(sim_name2)
+rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name2)
 
 
-def _get_values(sim_name, varname, months = None):
+def _get_values(sim_name, varname, start_year, end_year, months = None):
     print varname, sim_name
 
     if months is None:
-        months = np.array(range(12))
+        months_local = np.array(range(12))
     else:
-        months = np.array(months) - 1
-
+        months_local = np.array(months) - 1
 
 
     nc_data_folder = os.path.join(nc_db_folder, sim_name)
@@ -84,8 +82,9 @@ def _get_values(sim_name, varname, months = None):
     ds = Dataset(path)
     years = ds.variables["year"][:]
     sel = np.where( (start_year <= years) & (years <= end_year) )[0]
-    tt = ds.variables[varname][sel,months,:,:]
-    print tt.shape
+
+
+    tt = ds.variables[varname][sel,months_local,:,:]
     ds.close()
     return tt
 
@@ -93,6 +92,10 @@ def _get_values(sim_name, varname, months = None):
 
 
 def main(months = None):
+    start_year = 1979
+    end_year = 1988
+
+
     import matplotlib.pyplot as plt
     fig = plt.figure()
 
@@ -126,14 +129,6 @@ def main(months = None):
 
     ax = None
     for var_name in field_names:
-        levels = field_name_to_clevels[var_name]
-        if var_name == "TT":
-            #cmap = get_cmap("RdBu_r",len(levels) - 1)
-            cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/BlueRed.rgb", ncolors=10)
-        else:
-            cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/BlueRed.rgb", ncolors=10)
-            #cmap = get_cmap("RdBu", len(levels) - 1)
-
 
 
         coef = 1
@@ -141,10 +136,12 @@ def main(months = None):
             coef = 24 * 60 * 60 * 1000
         elif var_name in ["TDRA", "TRAF"]:
             coef = 24 * 60 * 60
+        elif var_name == "AV":
+            coef = 3 * 60 * 60
         #cmap.set_bad("0.6")
         print var_name
-        v1 = _get_values(sim_name1, var_name, months = months)
-        v2 = _get_values(sim_name2, var_name, months = months)
+        v1 = _get_values(sim_name1, var_name, start_year, end_year, months = months)
+        v2 = _get_values(sim_name2, var_name, start_year, end_year, months = months)
 
         #calculate annual means, for each year
         v1 = v1.mean(axis=1)
@@ -160,22 +157,27 @@ def main(months = None):
 
         t, p = stats.ttest_ind(v1, v2)
 
+
         if var_name in ["STFL"]:
             dv = np.ma.masked_where((lkfr >= 0.6), dv)
-            dv = np.ma.masked_where((lkfr >= 0.6), dv)
-            print "lf_max = {0}".format(lkfr[lkfr < 0.6].max())
-            print "lf_susp = {0}".format(lkfr[np.where(dv == dv.min())])
+
+            print months
+
+            i_interest, j_interest = np.where(dv > 53)
+            print i_interest, j_interest
             dv = maskoceans(lons, lats, dv)
+            print 10 * "*"
         elif var_name in ["TDRA", "TRAF"]:
             dv = maskoceans(lons, lats, dv)
         else:
             pass
 
-        dv = np.ma.masked_where(p > 0.1, dv) #mask changes not significant to the 10 % level
+        dv = np.ma.masked_where(p > 1, dv) #mask changes not significant to the 10 % level
 
         if not np.all(dv.mask):
             print "{0}: min = {1}; max = {2}".format(var_name, dv.min(), dv.max())
-            max_abs = np.max(np.abs(dv))
+            print ""
+            max_abs = np.ma.max(np.abs(dv))
             delta = max_abs
             the_power = np.log10(delta)
 
@@ -188,9 +190,28 @@ def main(months = None):
             while delta > 2 * max_abs:
                 delta /= 2.0
 
+
+            while 0.8 * delta > max_abs:
+                delta *= 0.8
+
+
+
             step = delta / 5.0 #10 ** (the_power - 1)  * 2 if the_power >= 0 else 10 ** the_power * 2
+
+
+
+            if var_name == "TT":
+                step = 0.06
+                delta = 0.66
+
+
             levels = np.arange(-delta, delta + step, step)
-            bn = BoundaryNorm(levels, len(levels)) if len(levels) > 0 else None
+
+            cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/BlueRed.rgb", ncolors=len(levels) - 1)
+
+
+
+            bn = BoundaryNorm(levels, cmap.N) if len(levels) > 0 else None
 
             print "delta={0}; step={1}; the_power={2}".format(delta, step, the_power)
 
@@ -200,27 +221,29 @@ def main(months = None):
 
             #add colorbar
             divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", "15%", pad="5%")
-            cb = plt.colorbar(the_img,cax = cax, ticks = levels, format = fmt)
+            cax = divider.append_axes("right", "5%", pad="3%")
+            cb = plt.colorbar(the_img,cax = cax, format = fmt)
 
 
         #coast lines
         basemap.drawcoastlines(ax = ax, linewidth=0.5)
+        assert isinstance(ax, Axes)
+        ax.set_title( "$\Delta$ " + field_name_to_long_name[var_name] + "\n" + "({0})".format(field_name_to_units[var_name]))
 
-        ax.set_title( "$\Delta$ " + field_name_to_long_name[var_name] + " ({0})".format(field_name_to_units[var_name]))
 
 
-    assert isinstance(ax, Axes)
     bbox_props = dict(boxstyle="rarrow,pad=0.3", fc="wheat", ec="b", lw=2)
-    label = "-".join(map(lambda d: d.strftime("%b"), month_dates)) + " ({0}-{1})".format(start_year, end_year)
-    ax.annotate(label, xy = (0.1, 0.9), xycoords = "figure fraction", bbox = bbox_props)
+    label = "-".join(map(lambda d: d.strftime("%b"), month_dates)) + "\n({0}-{1})".format(start_year, end_year)
+    ax.annotate(label, xy = (0.1, 0.85), xycoords = "figure fraction", bbox = bbox_props,
+        font_properties = FontProperties(size=15, weight="bold"))
 
 
-    fig.tight_layout()
+    #fig.tight_layout()
     if months is None:
         fig.savefig("annual_mean_diffs_{0}_minus_{1}.jpeg".format(sim_name2, sim_name1))
     else:
-        fig.savefig("seasonal_mean_{0}_diffs_{1}_minus_{2}.jpeg".format("_".join(map(str, months)),
+        print month_dates, months
+        fig.savefig("seasonal_mean_{0}_diffs_{1}_minus_{2}.png".format("_".join(map(str, months)),
             sim_name2, sim_name1) )
     pass
 
@@ -228,9 +251,12 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     from util import plot_utils
-    plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=30, font_size= 16)
-    #main(months=[12,1,2])
-    main(months=range(6,7))
+    plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=40, font_size= 12)
+    #main(months=[12, 1, 2])
+    #main(months=[3, 4, 5])
+
+    for m in range(1,13):
+        main(months= list( range(m,m+1) ))
     #main(months=range(6,9))
     #main(months=range(9,12))
     print "Hello world"

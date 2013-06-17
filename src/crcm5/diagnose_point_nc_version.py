@@ -71,7 +71,7 @@ def plot_hydrographs(ax, station, sim_name_to_station_to_model_point,
 
             label = "{0}: {1:.2f} \n ann.mean = {2:.1f}".format( sim_name,
                             mp.mean_upstream_lake_fraction, np.mean(values))
-            h = ax.plot(dates, values , label = label)
+            h = ax.plot(dates, values , label = label, lw = 3)
 
             handles.append(h[0])
             labels.append(label)
@@ -139,7 +139,7 @@ def plot_swe_1d_compare_with_obs(ax, station,  sim_name_to_station_to_model_poin
             dates, values = mp.get_daily_climatology_for_complete_years(stamp_dates=day_stamps, varname = "I5")
             label = "{0}: {1:.2f} \n ann.mean = {2:.1f}".format( sim_name,  mp.mean_upstream_lake_fraction
                             , np.mean(values))
-            h = ax.plot(dates, values , label = label )
+            h = ax.plot(dates, values , label = label, lw = 3 )
 
             handles.append(h[0])
             labels.append(label)
@@ -185,7 +185,7 @@ def plot_temp_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_poin
         for mp in mps:
             dates, values = mp.get_monthly_climatology_for_complete_years(varname = "TT")
             label = "{0}".format( sim_name )
-            h = ax.plot(dates, values , label = label )
+            h = ax.plot(dates, values , label = label, lw = 3 )
 
             handles.append(h[0])
             labels.append(label)
@@ -240,7 +240,7 @@ def plot_precip_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_po
         for mp in mps:
             dates, values = mp.get_monthly_climatology_for_complete_years(varname = "PR")
             label = "{0}".format( sim_name )
-            h = ax.plot(dates, values * multiplier , label = label )
+            h = ax.plot(dates, values * multiplier , label = label, lw = 3 )
 
             handles.append(h[0])
             labels.append(label)
@@ -283,7 +283,7 @@ def plot_surf_runoff(ax, station, sim_name_to_station_to_model_point, sim_names 
              the_area = mp.accumulation_area * 1.0e6
              dates, values = mp.get_daily_climatology_for_complete_years(stamp_dates=day_stamps, varname = "TRAF")
              label = "{0}".format( sim_name, np.mean(values))
-             h = ax.plot(dates, values * the_area * coef, label = label )
+             h = ax.plot(dates, values * the_area * coef, label = label, lw = 3 )
 
              handles.append(h[0])
              labels.append(label)
@@ -324,7 +324,7 @@ def plot_subsurf_runoff(ax, station, sim_name_to_station_to_model_point, sim_nam
              the_area = mp.accumulation_area * 1.0e6
              dates, values = mp.get_daily_climatology_for_complete_years(stamp_dates=day_stamps, varname = "TDRA")
              label = "{0}".format( sim_name, np.mean(values))
-             h = ax.plot(dates, values * the_area * coef, label = label )
+             h = ax.plot(dates, values * the_area * coef, label = label, lw = 3 )
 
              handles.append(h[0])
              labels.append(label)
@@ -366,7 +366,7 @@ def plot_total_runoff(ax, station, sim_name_to_station_to_model_point, sim_names
 
              values = traf + tdra
              label = "{0}".format( sim_name, np.mean(values))
-             h = ax.plot(dates, values * the_area * coef, label = label )
+             h = ax.plot(dates, values * the_area * coef, label = label, lw = 3 )
 
              handles.append(h[0])
              labels.append(label)
@@ -562,8 +562,14 @@ def validate_daily_climatology():
     start_year = 1979
     end_year = 1988
 
-    sim_name_list = ["crcm5-hcd-rl", "crcm5-hcd-rl-intfl"]
-    rpn_folder_path_form = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup"
+    #sim_name_list = ["crcm5-r",  "crcm5-hcd-r", "crcm5-hcd-rl"]
+    sim_name_list = ["crcm5-hcd-rl","crcm5-hcd-rl-intfl" ]
+
+    rpn_folder_paths = [
+        "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup".format(sim_name_list[0]),
+        "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0}_spinup2/Samples_all_in_one_folder".format(sim_name_list[1])
+    ]
+
     nc_db_folder = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
 
 
@@ -571,9 +577,14 @@ def validate_daily_climatology():
     selected_ids = None
     selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
                      "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
+
+    selected_ids = [ "074903", ]
+
+
     start_date = datetime(start_year, 1, 1)
     end_date = datetime(end_year, 12, 31)
 
+    selected_ids = None
     stations = cehq_station.read_station_data(selected_ids = selected_ids,
             start_date=start_date, end_date=end_date
     )
@@ -601,8 +612,7 @@ def validate_daily_climatology():
 
     cell_manager = None
 
-    for sim_name in sim_name_list:
-        rpn_folder = rpn_folder_path_form.format(sim_name)
+    for sim_name, rpn_folder in zip( sim_name_list, rpn_folder_paths ):
 
         dmManager = Crcm5ModelDataManager(samples_folder_path=rpn_folder, file_name_prefix="dm",
             all_files_in_samples_folder=True, need_cell_manager = cell_manager is None)
@@ -739,7 +749,7 @@ if __name__ == "__main__":
     t0 = time.time()
     import application_properties
     from util import plot_utils
-    plot_utils.apply_plot_params(font_size=14, width_pt=None, height_cm=25, width_cm=39)
+    plot_utils.apply_plot_params(font_size=18, width_pt=None, height_cm=25, width_cm=39)
     application_properties.set_current_directory()
     main()
     print "Execution time {0} seconds".format(time.time() - t0)

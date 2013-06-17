@@ -55,7 +55,7 @@ def main():
         data = inRObj.get_next_record()
         if data is None:
             break
-        info = inRObj.get_current_info()
+        info = inRObj.get_current_info
 
         ips =  map(lambda x: x.value, info["ip"])
 

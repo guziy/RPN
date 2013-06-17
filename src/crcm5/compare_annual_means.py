@@ -27,7 +27,7 @@ from matplotlib.cm import get_cmap
 
 
 ncdb_path = "/home/huziy/skynet3_rech1/crcm_data_ncdb"
-start_year = 1979
+start_year = 1980
 end_year = 1988
 
 do_export = False
@@ -69,6 +69,8 @@ def get_cru_obs_mean_fields(target_lon_2d, target_lat_2d, nneighbours = 1, month
 
 
 def main():
+    colorbar_aspect_ratio = 1.0 / 40.0
+
     if do_export:
         export_means_to_netcdf(varname="PR", file_prefix="pm", level=-1)
 
@@ -108,11 +110,6 @@ def main():
 
 
     lon01, lat01 = ds.variables["lon"][:], ds.variables["lat"][:]
-
-    plt.pcolormesh(lon01.transpose())
-    plt.colorbar()
-    plt.show()
-
     x01, y01 = b01(lon01, lat01)
 
 
@@ -125,10 +122,10 @@ def main():
 
     #plt.suptitle("({0} - {1})".format(start_year, end_year))
 
-    nrows = 2
-    ncols = 7
-    gs = gridspec.GridSpec(nrows = nrows, ncols = ncols, width_ratios=[1,1,1,0.1,1,1,0.1],
-        height_ratios=[1,1], left=0.05)
+    nrows = 4
+    ncols = 5
+    gs = gridspec.GridSpec(nrows = nrows, ncols = ncols, width_ratios=[1,1,1,1,1],
+        height_ratios=[1,0.05,1, 0.05], left=0.001, right=0.99, top=0.99, wspace=0.1)
 
 
 
@@ -159,9 +156,9 @@ def main():
 
     #divider = make_axes_locatable(ax)
     #cax = divider.append_axes("right", "5%", pad="3%")
-    cax = fig.add_subplot(gs[0,3])
-    cax.set_aspect(20)
-    cb = fig.colorbar(img,  cax = cax, ticks = levels)
+    cax = fig.add_subplot(gs[1,0:3])
+    cax.set_aspect(colorbar_aspect_ratio)
+    cb = fig.colorbar(img,  cax = cax, ticks = levels, orientation = "horizontal")
     cax.set_title(" ${\\rm ^{\circ} C}$")
 
     #plot tt05-tt01
@@ -171,7 +168,7 @@ def main():
 
 
     tt01I05 = case_data_manager.interpolate_data_to(tt01, lon05, lat05, nneighbours=25)
-    ax = fig.add_subplot(gs[0,4])
+    ax = fig.add_subplot(gs[0,3])
     img = b05.contourf(x05, y05, tt05 - tt01I05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
@@ -180,7 +177,7 @@ def main():
 
 
     #plot tt01I05-Cru
-    ax = fig.add_subplot(gs[0,5])
+    ax = fig.add_subplot(gs[0,4])
     img = b05.contourf(x05, y05, tt01I05 - tmpCruI05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
@@ -188,10 +185,10 @@ def main():
 
 
 
-    cax = fig.add_subplot(gs[0,6])
-    cax.set_aspect(20)
-    cb = fig.colorbar(img,  cax = cax, ticks = levels)
-    #cax.set_title("${\\rm ^{\circ} C}$")
+    cax = fig.add_subplot(gs[1,3:5])
+    cax.set_aspect(colorbar_aspect_ratio)
+    cb = fig.colorbar(img,  cax = cax, ticks = levels, orientation = "horizontal")
+    cax.set_title("${\\rm ^{\circ} C}$")
 
 
 
@@ -201,7 +198,7 @@ def main():
     #plot precip
     convert_factor = 1000.0 * 24 * 60 * 60  #m/s to mm/day
     units = "mm/day \n"
-    levels = np.arange(0,7,0.5)
+    levels = np.arange(0,7.5,0.5)
     cMap = get_cmap("jet", len(levels) - 1 )
     bn = BoundaryNorm(levels, cMap.N)
 
@@ -211,19 +208,19 @@ def main():
 
 
     #plot lowres temp
-    ax = fig.add_subplot(gs[1,0])
+    ax = fig.add_subplot(gs[2,0])
     img = b05.contourf(x05, y05, pr05, levels = levels, cmap = cMap)
     b05.drawcoastlines()
     #ax.set_ylabel("PR")
 
     #plot highres temp
-    ax = fig.add_subplot(gs[1,1])
+    ax = fig.add_subplot(gs[2,1])
     img = b01.contourf(x01, y01, pr01, levels = levels, cmap = cMap)
     b01.drawcoastlines()
 
 
 
-    ax = fig.add_subplot(gs[1,2])
+    ax = fig.add_subplot(gs[2,2])
     img = b05.contourf(x05, y05, preCruI05, levels = levels, norm = bn, cmap = cMap)
     b05.drawcoastlines(ax = ax)
     #ax.set_title("CRU")
@@ -233,9 +230,9 @@ def main():
 
     #divider = make_axes_locatable(ax)
     #cax = divider.append_axes("right", "5%", pad="3%")
-    cax = fig.add_subplot(gs[1,3])
-    cax.set_aspect(20)
-    cb = fig.colorbar(img,  cax = cax, ticks = levels)
+    cax = fig.add_subplot(gs[3,0:3])
+    cax.set_aspect(colorbar_aspect_ratio)
+    cb = fig.colorbar(img,  cax = cax, ticks = levels, orientation = "horizontal")
     cax.set_title(units)
 
 
@@ -249,15 +246,15 @@ def main():
 
 
     pr01I05 = case_data_manager.interpolate_data_to(pr01, lon05, lat05, nneighbours=25)
-    ax = fig.add_subplot(gs[1,4])
+    ax = fig.add_subplot(gs[2,3])
     img = b05.contourf(x05, y05, pr05 - pr01I05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
     #ax.set_title("PR(dx = 0.5) - PR(dx = 0.1)")
 
 
-    #plot tt01I05-Cru
-    ax = fig.add_subplot(gs[1,5])
+    #plot pr01I05-Cru
+    ax = fig.add_subplot(gs[2,4])
     img = b05.contourf(x05, y05, pr01I05 - preCruI05, cmap = cMap, levels = levels)
     b05.drawcoastlines()
     b05.drawmapboundary(fill_color="0.75")
@@ -265,9 +262,9 @@ def main():
 
 
 
-    cax = fig.add_subplot(gs[1,6])
-    cax.set_aspect(20)
-    cb = fig.colorbar(img,  cax = cax, ticks = levels, extend = "both")
+    cax = fig.add_subplot(gs[3,3:5])
+    cax.set_aspect(colorbar_aspect_ratio)
+    cb = fig.colorbar(img,  cax = cax, ticks = levels, orientation = "horizontal")
     cax.set_title("mm/day \n")
 
 
@@ -282,7 +279,7 @@ def main():
 
 
 if __name__ == "__main__":
-    plot_utils.apply_plot_params(width_pt=None, width_cm=50, height_cm=20, font_size=14)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=60, height_cm=35, font_size=20)
     import application_properties
     application_properties.set_current_directory()
     main()

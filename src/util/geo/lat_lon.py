@@ -63,7 +63,7 @@ def cartesian_to_lon_lat(x):
 
     lon = np.arctan2(x[1], x[0])
     lon = np.degrees(lon)
-    lat = np.arcsin(x[2]/ (np.dot(x, x)))
+    lat = np.arcsin(x[2]/ (np.dot(x, x)) ** 0.5)
     lat = np.degrees(lat)
     return lon, lat
 

@@ -8,11 +8,12 @@ PROJECT_DIR = 'RPN'
 
 
 def set_current_directory():
-    dir = os.getcwd()
-    global is_set
-    while not dir.endswith(PROJECT_DIR):
+    the_dir = os.getcwd()
+    while not the_dir.endswith(PROJECT_DIR):
         os.chdir('..')
-        dir = os.getcwd()
+        the_dir = os.getcwd()
+        if the_dir == "/":
+            raise EnvironmentError("Was not able to set {0} as a current directory.".format(PROJECT_DIR))
 
 
 if __name__ == "__main__":
