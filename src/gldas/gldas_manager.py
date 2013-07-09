@@ -10,8 +10,9 @@ __author__ = 'huziy'
 
 import numpy as np
 
+
 class GldasManager():
-    def __init__(self, folder_path = "/home/huziy/skynet3_exec1/gldas_data"):
+    def __init__(self, folder_path="/home/huziy/skynet3_exec1/gldas_data"):
         """
         Data access interface to the folder of netcdf files
         runoff units: kg/m^2/s = mm/s
@@ -24,24 +25,22 @@ class GldasManager():
         self._init_date_to_path_dict()
         self._init_kd_tree()
 
-
-
         pass
 
 
-
-    def plot_subsrof_ts(self, i = 0, j = 0):
-        all_dates = list( sorted( self.date_to_path.keys() ) )
-        vals = map(lambda x: self.get_field_for_date(x, var_name=self.subsurface_rof_varname)[i,j], all_dates)
-        vals1 = map(lambda x: self.get_field_for_date(x, var_name=self.surface_rof_varname)[i,j], all_dates)
+    def plot_subsrof_ts(self, i=0, j=0):
+        all_dates = list(sorted(self.date_to_path.keys()))
+        vals = map(lambda x: self.get_field_for_date(x, var_name=self.subsurface_rof_varname)[i, j], all_dates)
+        vals1 = map(lambda x: self.get_field_for_date(x, var_name=self.surface_rof_varname)[i, j], all_dates)
 
         print min(vals), max(vals)
         dates_num = date2num(all_dates)
         print min(dates_num), max(dates_num)
         import matplotlib.pyplot as plt
+
         plt.figure()
-        plt.plot(dates_num, vals, label = "subsurf rof")
-        plt.plot(dates_num, vals1, label = "surf rof")
+        plt.plot(dates_num, vals, label="subsurf rof")
+        plt.plot(dates_num, vals1, label="surf rof")
         plt.legend()
         #plt.xticks(rotation='vertical')
         plt.show()
@@ -73,44 +72,44 @@ class GldasManager():
             lons1d = ds.variables["g0_lon_1"][:]
             lats1d = ds.variables["g0_lat_0"][:]
 
-
             self.lats2d, self.lons2d = np.meshgrid(lats1d, lons1d)
 
             x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
             self.kdtree = KDTree(zip(x, y, z))
             return
 
-
         pass
 
 
-    def get_field_for_month_and_year(self, var_name = "", month = None, year = None):
+    def get_field_for_month_and_year(self, var_name="", month=None, year=None):
         d1 = datetime(year=year, month=month, day=1)
         path = self.date_to_path[d1]
         ds = Dataset(path)
         return ds.variables[var_name][:]
 
-    def get_field_for_date(self, the_date, var_name = ""):
+    def get_field_for_date(self, the_date, var_name=""):
         path = self.date_to_path[the_date]
         ds = Dataset(path)
-        data = ds.variables[var_name][:].transpose() #transpose because I allways use (lon, lat) order of coordinates
+        data = ds.variables[var_name][:].transpose()  # transpose because I allways use (lon, lat) order of coordinates
         ds.close()
         return data
 
 
     def get_srof_spat_integrals_over_points_in_time(self, lons2d_target, lats2d_target, mask,
-                                              areas2d, start_date = None, end_date = None):
+                                                    areas2d, start_date=None, end_date=None):
         return self._get_spatial_integrals_over_points_in_time(lons2d_target, lats2d_target, mask, areas2d,
-            start_date=start_date, end_date=end_date, var_name=self.surface_rof_varname)
+                                                               start_date=start_date, end_date=end_date,
+                                                               var_name=self.surface_rof_varname)
 
     def get_subsrof_spat_integrals_over_points_in_time(self, lons2d_target, lats2d_target, mask,
-                                              areas2d, start_date = None, end_date = None):
+                                                       areas2d, start_date=None, end_date=None):
         return self._get_spatial_integrals_over_points_in_time(lons2d_target, lats2d_target, mask, areas2d,
-            start_date=start_date, end_date=end_date, var_name=self.subsurface_rof_varname)
+                                                               start_date=start_date, end_date=end_date,
+                                                               var_name=self.subsurface_rof_varname)
 
 
     def _get_spatial_integrals_over_points_in_time(self, lons2d_target, lats2d_target, mask,
-                                          areas2d, start_date = None, end_date = None, var_name = ""):
+                                                   areas2d, start_date=None, end_date=None, var_name=""):
         """
         i)  Interpolate to the grid (lons2d_target, lats2d_target)
         ii) Apply the mask to the interpoated fields and sum with coefficients from areas2d
@@ -122,7 +121,7 @@ class GldasManager():
 
 
         #interpolation
-        x1, y1, z1 = lat_lon.lon_lat_to_cartesian( lons2d_target.flatten(), lats2d_target.flatten() )
+        x1, y1, z1 = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
 
         dists, indices = self.kdtree.query(zip(x1, y1, z1))
 
@@ -138,19 +137,20 @@ class GldasManager():
                 if end_date < the_date: continue
 
             data = self.get_field_for_date(the_date, var_name=var_name)
-            result[the_date] = np.sum( data.flatten()[indices][mask1d == 1] * areas1d[mask1d == 1] )
+            result[the_date] = np.sum(data.flatten()[indices][mask1d == 1] * areas1d[mask1d == 1])
 
-        times = list( sorted(result.keys()) )
-        values = map( lambda x: result[x], times)
+        times = list(sorted(result.keys()))
+        values = map(lambda x: result[x], times)
         print "nvals, min, max", len(values), min(values), max(values)
-        return TimeSeries( time = times, data= values )
+        return TimeSeries(time=times, data=values)
 
 
 def main():
     gm = GldasManager()
-    gm.plot_subsrof_ts(i = 112, j = 112)
+    gm.plot_subsrof_ts(i=112, j=112)
     #TODO: implement
     pass
+
 
 if __name__ == "__main__":
     main()

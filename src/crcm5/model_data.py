@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
-import functools
 import itertools
 from multiprocessing import Pool
 from netCDF4 import Dataset, date2num
 import pickle
 import shelve
+import time
+
 from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
@@ -16,7 +17,7 @@ from mpl_toolkits.basemap import Basemap
 from netcdftime import num2date
 from numpy.lib.function_base import meshgrid
 from scipy.spatial.ckdtree import cKDTree
-import time
+
 import application_properties
 from model_point import ModelPoint
 from data import cehq_station
@@ -24,10 +25,10 @@ from data.cehq_station import Station
 from data.cell_manager import CellManager
 from data.timeseries import DateValuePair, TimeSeries
 from domains.rotated_lat_lon import RotatedLatLon
-from permafrost import draw_regions
 from rpn import level_kinds
 from util import plot_utils, scores
 from util.geo import lat_lon
+
 
 __author__ = 'huziy'
 
@@ -348,8 +349,6 @@ class Crcm5ModelDataManager:
 
     def get_spatial_integral_over_mask_of_dyn_field(self, mask, weights_2d, path_to_folder="", var_name="",
                                                     level=-1, level_kind=level_kinds.ARBITRARY, file_prefix="dm"):
-
-
         """
         returns a timeseries object
         """
@@ -468,7 +467,7 @@ class Crcm5ModelDataManager:
 
 
     @staticmethod
-    def hdf_get_daily_climatological_fields(hdf_db_path, var_name, level = None):
+    def hdf_get_daily_climatological_fields(hdf_db_path="", var_name="", level=None):
         import tables as tb
 
         hdf = tb.openFile(hdf_db_path)
@@ -479,23 +478,22 @@ class Crcm5ModelDataManager:
         stamp_year = 2001  # Just select the stamp year arbitrarily  (preferably not a leap year)
         the_date = datetime(stamp_year, 1, 1)
         daily_dates = []
-        day = timedelta(days = 1)
+        day = timedelta(days=1)
 
         daily_fields = []
-
+        t0 = time.clock()
         while the_date.year == stamp_year:
             if level is not None:
-                lev_expr = "level == {0}".format(level)
-                result = np.mean([row["field"] for row in varTable.where(lev_expr)
-                                  if row["month"] == the_date.month and row["day"] == the_date.day], axis=0)
+                expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level, the_date.month, the_date.day)
+                result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
             else:
-                result = np.mean([row["field"] for row in varTable
-                                  if row["month"] == the_date.month and row["day"] == the_date.day], axis=0)
+                expr = "(month == {0}) & (day == {1})".format(the_date.month, the_date.day)
+                result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
 
             daily_fields.append(result)
             daily_dates.append(the_date)
             the_date = the_date + day
-
+            print the_date, "{0} seconds spent".format(time.clock() - t0)
         hdf.close()
 
         return daily_dates, daily_fields
@@ -613,8 +611,6 @@ class Crcm5ModelDataManager:
 
         projTable = h5file.createTable("/", "projection_params", RotatedLatlonTable)
         row = projTable.row
-
-
 
         h5file.close()
         pass
@@ -1010,8 +1006,7 @@ class Crcm5ModelDataManager:
 
 
     def get_monthly_climatology_of_3d_field(self, var_name="I1", file_name_prefix="pm",
-                                            start_year=None, end_year=None
-    ):
+                                            start_year=None, end_year=None):
 
         """
         assumes that each file contains month of data
