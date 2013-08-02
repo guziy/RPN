@@ -5,3 +5,7 @@
 *.jpeg
 *.bin
 .idea/*
+*.svg
+*.log
+*.nc
+*.rpn
