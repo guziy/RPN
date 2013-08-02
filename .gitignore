@@ -4,3 +4,4 @@
 *.png
 *.jpeg
 *.bin
+.idea/*
