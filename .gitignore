@@ -1,6 +1,6 @@
 *.iml
 *.pyc
-./*.pdf
-./*.png
-./*.jpeg
+*.pdf
+*.png
+*.jpeg
 *.bin
