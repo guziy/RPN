@@ -188,6 +188,7 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = "
     clay = np.zeros((nx, ny, nz))
 
 
+
     for i in xrange(nz):
         print i
         sand[:, :, i] = sandField[ i + 1 ][:,:]
@@ -197,6 +198,12 @@ def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = "
     ncFile.createDimension('lon', nx)
     ncFile.createDimension('lat', ny)
     ncFile.createDimension('level', nz)
+
+
+
+    sandVar = ncFile.createVariable("SAND", "f4", ("lon", "lat", "level"))
+    clayVar = ncFile.createVariable("CLAY", "f4", ("lon", "lat", "level"))
+    dpthVar = ncFile.createVariable("DEPTH_TO_BEDROCK", "f4", ("lon", "lat"))
 
 
     sandVar[:] = sand
@@ -231,9 +238,9 @@ def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_rec
 if __name__ == "__main__":
     application_properties.set_current_directory()
 #    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
-#    extract_sand_and_clay_from_rpn(rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
-#        outpath="africa_0.44deg_sand_clay_dpth.nc"
-#    )
+    extract_sand_and_clay_from_rpn(rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
+        outpath="africa_0.44deg_sand_clay_dpth.nc"
+    )
 #    delete_files_with_nrecords()
 #    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
 
@@ -244,6 +251,6 @@ if __name__ == "__main__":
 
     #extract_sand_and_clay_from_rpn(rpn_path= "/b2_fs2/huziy/OMSC26_MPI_long_new_v01/geo_Arctic_198x186",
     #    outpath="/home/huziy/skynet3_rech1/runoff_arctic_nc/geo_Arctic_198x186.nc")
-    runoff_to_netcdf_parallel("/b2_fs2/huziy/OMSC26_Can_long_new_v01/", "/skynet3_rech1/huziy/runoff_arctic_nc/CanESM")
+    #runoff_to_netcdf_parallel("/b2_fs2/huziy/OMSC26_Can_long_new_v01/", "/skynet3_rech1/huziy/runoff_arctic_nc/CanESM")
 
     print "Hello World"

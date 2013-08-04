@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 def calculate_daily_mean_fields():
     time, clim_fields = Crcm5ModelDataManager.hdf_get_daily_climatological_fields(
         hdf_db_path="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
-        var_name="PR", level=None)
+        var_name="STFL", level=None, use_grouping=True)
 
 
     ts = np.mean(clim_fields, axis=1).mean(axis=1)
     plt.plot(time, ts)
-    plt.savefig("test_hdf_ts.png")
+    plt.savefig("test_hdf_ts_no_grouping.png")
 
     pass
 

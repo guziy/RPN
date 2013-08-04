@@ -466,11 +466,134 @@ class Crcm5ModelDataManager:
         return TimeSeries(data=map(lambda t: data[t], dates), time=dates).get_ts_of_monthly_means()
 
 
-    @staticmethod
-    def hdf_get_daily_climatological_fields(hdf_db_path="", var_name="", level=None):
+    @classmethod
+    def _get_saved_daily_climatology(cls, hdf_handle, var_name="", level=None):
+        """
+        :param hdf_handle:
+        :param var_name:
+        :param level:
+        :return cached daily climatology or None if the cache has not been created yet
+
+         Daily climatology layout:
+
+         /daily_climatology
+            /varname
+                /level/single (3D array) (if level is None) or /level/1 -> 3D array with the fields for level 1
+                                            /level/2 -> 3D array ... for level 2
+                the first dimensions of these 3D arrays correspond to the times stored in date_info table
+
+        Scheme of the date_info table for each level is:
+        (Month): from 1 to 12
+        (DayOfMonth): from 1 to (28|29|30|31 depending on month)
+        """
         import tables as tb
 
-        hdf = tb.openFile(hdf_db_path)
+        assert isinstance(hdf_handle, tb.File)
+
+        level_string = "{0}".format("single" if level is None else level)
+
+        query_path = "/{0}/{1}/level/{2}".format("daily_climatology", var_name, level_string)
+        if not query_path in hdf_handle:
+            return None
+
+
+        date_query = "/daily_climatology/date_info"
+        if date_query not in hdf_handle:
+            return None
+
+
+        #read the daily fields
+        fields = hdf_handle.getNode(query_path).read()
+
+        #read corresponding day and month
+        date_info = hdf_handle.getNode(date_query)
+        stamp_year = 2001
+        daily_dates = [
+            datetime(stamp_year, row["month"], row["day_of_month"]) for row in date_info
+        ]
+        date_info.close()
+
+        return daily_dates, fields
+
+    @classmethod
+    def _save_daily_climatology(cls, hdf_handle, daily_dates=None, daily_clim_fields=None, var_name="", level=None):
+        """
+        paired with the method  `_get_saved_daily_climatology`, it saves the data for the former to get.
+        :param hdf_handle: handle for the hdf file
+
+        Puts the data in the following format
+
+        /daily_climatology
+            /date_info (table)
+            /varname
+                /level
+                    /single or /level_value (array)
+
+        """
+        import tables as tb
+
+        daily_clim_group_name = "daily_climatology"
+
+        assert isinstance(hdf_handle, tb.File)
+        #Check and create the groups if the con't exist
+        if not "/{0}".format(daily_clim_group_name) in hdf_handle:
+            daily_clim_group = hdf_handle.createGroup("/", daily_clim_group_name, "Daily Climatology data")
+        else:
+            daily_clim_group = hdf_handle.getNode("/{0}".format(daily_clim_group_name))
+
+        if not var_name in daily_clim_group:
+            var_group = hdf_handle.createGroup(daily_clim_group, var_name)
+            level_group = hdf_handle.createGroup(var_group, "level")
+        else:
+            level_group = hdf_handle.getNode(daily_clim_group, var_name).level
+
+
+        #create an array for each level which will be holding actual data (time, x, y)
+        level_string = "{0}".format("single" if level is None else level)
+        if level_string in level_group:
+            hdf_handle.remove_node(level_group, level_string)
+            print("Warning overwriting {0}/{1}".format(level_group, level_string))
+
+        hdf_handle.createArray(level_group, level_string, daily_clim_fields)
+
+        if "date_info" not in daily_clim_group:
+            date_table = hdf_handle.create_table(daily_clim_group, "date_info", {
+                "month": tb.IntCol(pos = 0),
+                "day_of_month": tb.IntCol(pos = 1)})
+
+            data = [
+                (aDate.month, aDate.day) for aDate in daily_dates
+            ]
+
+            assert isinstance(date_table, tb.Table)
+            date_table.append(data)
+
+
+    @classmethod
+    def hdf_get_daily_climatological_fields(cls, hdf_db_path="", var_name="", level=None,
+                                            use_grouping=True, use_caching=True):
+        """
+        use_grouping=True is much more efficient than querying data for each day of each month
+        :param hdf_db_path: path to the hdf file
+        :param var_name: variable name
+        :param level:
+        :param use_grouping:
+        :param use_caching: bool, when it is true, then the daily mean climatology is calculated only once
+            and saved to the group called daily_climatology in the `hdf_db_path`
+        :return:
+        """
+        import tables as tb
+
+        #Try to read cached climatology
+        if use_caching:
+            #with guarantees that the file will be closed upon exit no matter what happens inside the with block
+            with tb.openFile(hdf_db_path) as hdf:
+                climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level)
+                if climatology is not None:
+                    return climatology
+
+        hdf = tb.openFile(hdf_db_path, "a" if use_caching else "r")
+        assert isinstance(hdf, tb.File)
 
         varTable = hdf.getNode("/", var_name)
         assert isinstance(varTable, tb.Table)
@@ -482,20 +605,79 @@ class Crcm5ModelDataManager:
 
         daily_fields = []
         t0 = time.clock()
-        while the_date.year == stamp_year:
-            if level is not None:
-                expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level, the_date.month, the_date.day)
-                result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
-            else:
-                expr = "(month == {0}) & (day == {1})".format(the_date.month, the_date.day)
-                result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
 
-            daily_fields.append(result)
-            daily_dates.append(the_date)
-            the_date = the_date + day
-            print the_date, "{0} seconds spent".format(time.clock() - t0)
+        if use_grouping:
+            #grouping function
+            def day_selector(row):
+
+                aMonth = row["month"]
+                aDay = row["day"]
+                aLevel = row["level"]
+
+                if level is None:
+                    return aMonth, aDay, None
+                else:
+                    return aMonth, aDay, aLevel
+
+
+            date_to_mean_field = {}
+            date_to_count = {}
+
+            #calculate mean using chunks of grouped data
+            for group_keys, grouped_rows in itertools.groupby(varTable, day_selector):
+                aMonth, aDayOfMonth, aLevel = group_keys
+
+
+                # ignore the 29th of February
+                if aMonth == 2 and aDayOfMonth == 29:
+                    continue
+
+                if aLevel != level:
+                    continue
+                data = [
+                    row["field"] for row in grouped_rows
+                ]
+                data = np.asarray(data)
+
+                d = datetime(stamp_year, aMonth, aDayOfMonth)
+                if d not in date_to_count:
+                    date_to_count[d] = float(data.shape[0])
+                    date_to_mean_field[d] = data.mean(axis=0)
+                else:
+                    n0 = date_to_count[d]
+                    x0 = date_to_mean_field[d]
+
+                    n1 = float(data.shape[0])
+                    x1 = data.mean(axis=0)
+
+                    date_to_count[d] += n1
+                    date_to_mean_field[d] = (n1 * x1 + n0 * x0) / (n0 + n1)
+
+            ##Sort the results by date
+            daily_dates = sorted(date_to_mean_field.keys())
+            daily_fields = [date_to_mean_field[aDate] for aDate in daily_dates]
+
+        else:
+            #Use query for each day of month
+            while the_date.year == stamp_year:
+                if level is not None:
+                    expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level, the_date.month, the_date.day)
+                    result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
+                else:
+                    expr = "(month == {0}) & (day == {1})".format(the_date.month, the_date.day)
+                    result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
+
+                daily_fields.append(result)
+                daily_dates.append(the_date)
+                the_date = the_date + day
+                print the_date, "{0} seconds spent".format(time.clock() - t0)
+
+        if use_caching:
+            #save calculated climatologies to the file
+            cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
+                                        var_name=var_name, level=level)
+
         hdf.close()
-
         return daily_dates, daily_fields
 
 
@@ -513,28 +695,30 @@ class Crcm5ModelDataManager:
 
         hdf = tb.openFile(hdf_db_path)
 
-        varTable = hdf.getNode("/", var_name)
+        varTable = hdf.getNode("/", "data_table")
         assert isinstance(varTable, tb.Table)
         if months is None:
             months = range(1, 13)
 
         if level is not None:
             lev_expr = "level == {0}".format(level)
-            result = np.mean([row["field"] for row in varTable.where(lev_expr) if row["month"] in months], axis=0)
+            result = np.mean([row[var_name] for row in varTable.where(lev_expr) if row["month"] in months], axis=0)
         else:
-            result = np.mean([row["field"] for row in varTable if row["month"] in months], axis=0)
+            result = np.mean([row[var_name] for row in varTable if row["month"] in months], axis=0)
 
         hdf.close()
 
         return result
 
 
-    def export_to_hdf(self, var_list=None, file_path=""):
+    def export_to_hdf(self, var_list=None, file_path="", mode="w"):
         """
         If var_list is None, then convert all the variables to hdf
+        file -> Table(year, month, day, hour, minute, second, level, field1, field2, ..., fieldn)
+        mode can be w (to create a new file) or a (for append)
 
+        Note: assume that all the fields are on the same grid and the same projection
 
-        file -> varname -> leveltype -> Table(year, month, day, hour, minute, second, level, field)
         """
         import tables as tb
 
@@ -546,47 +730,51 @@ class Crcm5ModelDataManager:
             rpn_path_list.extend(
                 [os.path.join(self.samples_folder, fName) for fName in os.listdir(self.samples_folder)])
 
-        h5file = tb.openFile(file_path, mode="w", title="created from the data in {0}".format(self.samples_folder))
+        h5file = tb.openFile(file_path, mode=mode, title="created from the data in {0}".format(self.samples_folder))
 
 
         #table row description
-        class FieldDataTable(tb.IsDescription):
-            year = tb.IntCol()
-            month = tb.IntCol()
-            day = tb.IntCol()
-            hour = tb.IntCol()
-            minute = tb.IntCol()
-            second = tb.IntCol()
-
-            level = tb.FloatCol()
-            field = tb.FloatCol(shape=self.lons2D.shape)
+        field_data_table_scheme = {
+            "year": tb.IntCol(), "month": tb.IntCol(), "day": tb.IntCol(), "hour": tb.IntCol(), "minute": tb.IntCol(),
+            "second": tb.IntCol(), "level": tb.FloatCol(), "field": tb.FloatCol(shape=self.lons2D.shape)
+        }
 
 
-        class RotatedLatlonTable(tb.IsDescription):
-            name = tb.StringCol(256)
-            lon1 = tb.FloatCol()
-            lat1 = tb.FloatCol()
-            lon2 = tb.FloatCol()
-            lat2 = tb.FloatCol()
+        #table for storing projection parameters
+        projection_table_scheme = {
+            "name": tb.StrngCol(256),
+            "value": tb.FloatCol()
+        }
 
+        varNameToTable = {}
 
-        for varName in var_list:
-            varTable = h5file.createTable("/", varName, FieldDataTable)
+        projectionParams = None  # holds projection parameters
 
-            for fPath in rpn_path_list:
-                rObj = RPN(fPath)
-                rObj.suppress_log_messages()
+        for aVarName in var_list:
+            varNameToTable[aVarName] = h5file.createTable("/", aVarName, field_data_table_scheme)
+
+        for fPath in rpn_path_list:
+            rObj = RPN(fPath)  # open current rpn file for reading
+            rObj.suppress_log_messages()
+
+            for aVarName in var_list:
+
+                dataTable = varNameToTable[aVarName]
+
                 try:
-                    data = rObj.get_4d_field(name=varName)
+                    data = rObj.get_4d_field(name=aVarName)
+
+                    #read projection parameters
+                    if projectionParams is None:
+                        projectionParams = rObj.get_proj_parameters_for_the_last_read_rec()
+
                 except Exception:
                     #the variable not found or some other problem occurred
-                    rObj.close()
                     continue
 
                 #add the data to hdf table
-                row = varTable.row
+                row = dataTable.row
                 for t, vals in data.iteritems():
-                    # row = [ (t.year, t.month, t.day, t.hour, t.minute, t.second, level, field) for level, field in vals.iteritems() ]
                     for level, field in vals.iteritems():
                         row["year"] = t.year
                         row["month"] = t.month
@@ -598,19 +786,24 @@ class Crcm5ModelDataManager:
                         row["field"] = field
 
                         row.append()
-                        #close the file
-                rObj.close()
 
-        #TODO: insert also lon and lat data
-        #TODO      and projection properties like /projection -> Table( name => "rotpole", "lon1" =>..., "lon2" =>)
-        #TODO
-        #TODO
+            #close the file
+            rObj.close()
 
+        # insert also lon and lat data
         h5file.createArray("/", "longitude", self.lons2D)
         h5file.createArray("/", "latitude", self.lats2D)
 
-        projTable = h5file.createTable("/", "projection_params", RotatedLatlonTable)
+        # add projection properties like /projection -> rotpole(  "lon1" =>..., "lon2" =>)
+        # the name of the table corresponds to the projection name
+        projTable = h5file.createTable("/", "rotpole", projection_table_scheme)
         row = projTable.row
+        for aName, aValue in projectionParams.iteritems():
+            row["name"] = aName
+            row["value"] = aValue
+            row.append()
+
+        projTable.close()
 
         h5file.close()
         pass
@@ -990,9 +1183,11 @@ class Crcm5ModelDataManager:
 
         for time, field in self.name_to_date_to_field[var_name].iteritems():
             if start_date is not None:
-                if time < start_date: continue
+                if time < start_date:
+                    continue
             if end_date is not None:
-                if time > end_date: continue
+                if time > end_date:
+                    continue
 
             value = field[ix, iy] * weight
             dv.append(DateValuePair(date=time, value=value))
