@@ -14,10 +14,15 @@ from util.geo import lat_lon
 
 __author__ = 'huziy'
 
+
 class SweDataManager(CRUDataManager):
-    def __init__(self, path = "data/swe_ross_brown/swe.nc", var_name = ""):
+    def __init__(self, path="data/swe_ross_brown/swe.nc", var_name=""):
+        self.lons2d, self.lats2d = None, None
+        self.times = None
+        self.var_data = None
         CRUDataManager.__init__(self, path=path, var_name=var_name)
         print self.nc_dataset.variables.keys()
+
         pass
 
     def _init_fields(self, nc_dataset):
@@ -28,30 +33,26 @@ class SweDataManager(CRUDataManager):
         lons = nc_vars["longitude"][:]
         lats = nc_vars["latitude"][:]
 
-
         self.lons2d, self.lats2d = lons, lats
-
 
         time_units_s = nc_vars["time"].units
         self.times = num2date(times, time_units_s)
         self.var_data = nc_vars[self.var_name][:]
 
-
-        x_in,y_in,z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
+        x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
         self.kdtree = KDTree(zip(x_in, y_in, z_in))
-
 
         print "SWE obs time limits: ", self.times[0], self.times[-1]
         pass
 
-    def get_mean_for_year_and_months(self, year, months = None):
-        bool_vector = np.array( map( lambda x: (x.year == year) and (x.month in months), self.times) )
-        return np.mean(self.var_data[bool_vector,:,:], axis = 0)
+    def get_mean_for_year_and_months(self, year, months=None):
+        bool_vector = np.array(map(lambda x: (x.year == year) and (x.month in months), self.times))
+        return np.mean(self.var_data[bool_vector, :, :], axis=0)
 
 
-    def save_period_means_to_file(self, months = None, year_range = xrange(1980,1997),
+    def save_period_means_to_file(self, months=None, year_range=xrange(1980, 1997),
                                   path="djf_swe_ross_brown.nc"):
-        ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
+        ds = Dataset(path, mode="w", format="NETCDF3_CLASSIC")
         ds.createDimension('year', len(year_range))
         ds.createDimension('lon', self.lons2d.shape[0])
         ds.createDimension('lat', self.lons2d.shape[1])
@@ -60,25 +61,24 @@ class SweDataManager(CRUDataManager):
         latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
         yearVariable = ds.createVariable("year", "i4", ("year",))
 
-        altVariable = ds.createVariable("SWE", "f4", ('year','lon', 'lat'))
+        altVariable = ds.createVariable("SWE", "f4", ('year', 'lon', 'lat'))
         altVariable.units = "mm"
 
-
         for i, the_year in enumerate(year_range):
-            altVariable[i,:,:] = self.get_mean_for_year_and_months(the_year, months=months)
+            altVariable[i, :, :] = self.get_mean_for_year_and_months(the_year, months=months)
 
-        lonVariable[:,:] = self.lons2d[:,:]
-        latVariable[:,:] = self.lats2d[:,:]
+        lonVariable[:, :] = self.lons2d[:, :]
+        latVariable[:, :] = self.lats2d[:, :]
         yearVariable[:] = year_range
 
         ds.close()
 
 
-    def save_projected_means_to_file(self, months = None, year_range = xrange(1980,1997),
-                                      path="djf_swe_ross_brown_on_cordex.nc",
-                                      dest_lons2d = None, dest_lats2d = None):
+    def save_projected_means_to_file(self, months=None, year_range=xrange(1980, 1997),
+                                     path="djf_swe_ross_brown_on_cordex.nc",
+                                     dest_lons2d=None, dest_lats2d=None):
 
-        ds = Dataset(path, mode = "w", format="NETCDF3_CLASSIC")
+        ds = Dataset(path, mode="w", format="NETCDF3_CLASSIC")
         ds.createDimension('year', len(year_range))
         ds.createDimension('lon', dest_lons2d.shape[0])
         ds.createDimension('lat', dest_lons2d.shape[1])
@@ -87,73 +87,67 @@ class SweDataManager(CRUDataManager):
         latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
         yearVariable = ds.createVariable("year", "i4", ("year",))
 
-        altVariable = ds.createVariable("SWE", "f4", ('year','lon', 'lat'))
+        altVariable = ds.createVariable("SWE", "f4", ('year', 'lon', 'lat'))
         altVariable.units = "mm"
-
 
         for i, the_year in enumerate(year_range):
             data = self.get_mean_for_year_and_months(the_year, months=months)
-            altVariable[i,:,:] = self.interpolate_data_to(data, dest_lons2d, dest_lats2d, nneighbours=1)
+            altVariable[i, :, :] = self.interpolate_data_to(data, dest_lons2d, dest_lats2d, nneighbours=1)
 
-        lonVariable[:,:] = dest_lons2d[:,:]
-        latVariable[:,:] = dest_lats2d[:,:]
+        lonVariable[:, :] = dest_lons2d[:, :]
+        latVariable[:, :] = dest_lats2d[:, :]
         yearVariable[:] = year_range
 
         ds.close()
 
-
         pass
-
 
 
 def main():
     from permafrost import draw_regions
+
     dm = SweDataManager(var_name="SWE")
 
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
 
     x, y = b(dm.lons2d, dm.lats2d)
 
-
     fig = plt.figure()
 
     start_year = 1981
     end_year = 1997
 
-
-    levels = [10,] + range(20, 120, 20) + [150,200, 300,500,1000]
-    cmap = mpl.cm.get_cmap(name="jet_r", lut = len(levels))
+    levels = [10, ] + range(20, 120, 20) + [150, 200, 300, 500, 1000]
+    cmap = mpl.cm.get_cmap(name="jet_r", lut=len(levels))
     norm = colors.BoundaryNorm(levels, cmap.N)
 
-
-    gs = gridspec.GridSpec(1,2)
-    ax = fig.add_subplot(gs[0,0])
-    data = dm.get_mean(start_year, end_year, months = [3])
-    img = b.contourf(x, y, data.copy(), ax = ax, cmap = cmap, norm = norm, levels = levels)
+    gs = gridspec.GridSpec(1, 2)
+    ax = fig.add_subplot(gs[0, 0])
+    data = dm.get_mean(start_year, end_year, months=[3])
+    img = b.contourf(x, y, data.copy(), ax=ax, cmap=cmap, norm=norm, levels=levels)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
-    cb = fig.colorbar(img,  cax = cax)
-    b.drawcoastlines(ax = ax)
+    cb = fig.colorbar(img, cax=cax)
+    b.drawcoastlines(ax=ax)
     ax.set_title("SWE (not interp.), \n DJF period: {0} - {1}".format(start_year, end_year))
 
-
-    ax = fig.add_subplot(gs[0,1])
+    ax = fig.add_subplot(gs[0, 1])
     data_projected = dm.interpolate_data_to(data, lons2d, lats2d, nneighbours=1)
     x, y = b(lons2d, lats2d)
-    img = b.contourf(x, y, data_projected, ax = ax, levels = img.levels)
+    img = b.contourf(x, y, data_projected, ax=ax, levels=img.levels)
 
     #add pretty colorbar
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
-    cb = fig.colorbar(img,  cax = cax)
+    cb = fig.colorbar(img, cax=cax)
 
-    b.drawcoastlines(ax = ax)
+    b.drawcoastlines(ax=ax)
     ax.set_title("SWE ( interp.), \n DJF period: {0} - {1}".format(start_year, end_year))
 
     plt.savefig("swe_rb_djf.png")
 
-
     pass
+
 
 def test1():
     dm = SweDataManager(var_name="SWE")

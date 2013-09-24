@@ -1,12 +1,16 @@
 __author__ = 'huziy'
 
-import numpy as np
+
 
 def main():
-    #TODO: implement
+
+    #TODO get CEHQ station data
+
+    #TODO: get HYDAT station data
+
     pass
+
+
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
-  

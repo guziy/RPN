@@ -58,6 +58,9 @@ class ModelPoint:
         self.continuous_data_years = None
         self.mean_upstream_lake_fraction = None
 
+        self.longitude = None
+        self.latitude = None
+
 
 
 

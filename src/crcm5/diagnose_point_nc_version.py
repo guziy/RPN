@@ -598,8 +598,10 @@ def validate_daily_climatology():
 
 
         #In general there are several model points corresponding to a given station
-        st_to_mp = dmManager.get_model_points_for_stations(stations, sim_name=sim_name, nc_path=nc_path,
-                                                           nc_sim_folder=nc_sim_folder)
+        st_to_mp = dmManager.get_model_points_for_stations(stations, sim_name=sim_name,
+                                                           nc_path=nc_path,
+                                                           nc_sim_folder=nc_sim_folder,
+                                                           set_data_to_model_points=True)
 
         print "got model points for stations"
 
