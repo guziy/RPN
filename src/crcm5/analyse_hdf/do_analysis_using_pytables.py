@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 __author__ = 'huziy'
 
@@ -79,6 +79,8 @@ def get_daily_means_for_a_point(path = "", var_name = "STFL", level = None,
                                 years_of_interest = None,
                                 i_index = None, j_index = None):
     """
+
+    :rtype : tuple
     :param years_of_interest: is a list of years used for calculating daily climatologies
     """
     h = tb.open_file(path)
@@ -98,9 +100,9 @@ def get_daily_means_for_a_point(path = "", var_name = "STFL", level = None,
 
     selByYear = "|".join(["(year == {0})".format(y) for y in years_of_interest])
 
-    if level is not  None:
+    if level is not None:
         selForYearsAndLevel = varTable.where(
-            "({0}) & ({1}) & ~((month == 2) & (day == 29))".format(selByLevel, selByYear) )
+            "({0}) & ({1}) & ~((month == 2) & (day == 29))".format(selByLevel, selByYear))
     else:
         print "({0}) & ((month != 2) | (day != 29))".format(selByYear)
         selForYearsAndLevel = varTable.where(
@@ -124,7 +126,7 @@ def get_daily_means_for_a_point(path = "", var_name = "STFL", level = None,
         date_to_count[d] = n0 + n1
 
     h.close()
-    sorted_dates = list( sorted(date_to_mean.keys()) )
+    sorted_dates = list(sorted(date_to_mean.keys()))
     return sorted_dates, [date_to_mean[d] for d in sorted_dates]
 
 
@@ -133,6 +135,87 @@ def get_daily_climatology(path_to_hdf_file = "", var_name = "STFL", level = None
     return Crcm5ModelDataManager.hdf_get_daily_climatological_fields(
         hdf_db_path=path_to_hdf_file, start_year=start_year, end_year=end_year, var_name=var_name,
         level=level, use_grouping=True)
+
+
+def get_daily_climatology_of_3d_field(path_to_hdf_file = "", var_name = "STFL", start_year = None,
+                                      end_year = None):
+    h = tb.open_file(path_to_hdf_file, "a")
+
+    clim_3d_node = "/daily_climatology_3d"
+    data_node_path = "{0}/{1}".format(clim_3d_node, var_name)
+    levels_node_path = "{0}/{1}_levels".format(clim_3d_node, var_name)
+    if data_node_path in h:
+        var_arr = h.get_node(data_node_path)
+        d0 = datetime(2001, 1, 1)
+        dt = timedelta(days = 1)
+        dates = [
+            d0 + i * dt for i in range(365)
+        ]
+        levels = h.get_node(levels_node_path)
+        levels = levels[:]
+        var_arr = var_arr[:]
+        h.close()
+        return dates, levels, var_arr
+
+
+    var_table = h.get_node("/", var_name)
+
+    def grouping_func(myrow):
+        return myrow["month"], myrow["day"], myrow["level"]
+
+    date_to_level_to_mean = {}
+    date_to_level_to_count = {}
+
+
+    sel_by_year = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+    selection = var_table.where(sel_by_year)
+
+    for gKey, selrows in itertools.groupby(selection, grouping_func):
+        the_month, the_day, the_level = gKey
+        if the_day == 29 and the_month == 2:
+            continue
+
+        d = datetime(2001, the_month, the_day)
+        n0 = 0
+        x0 = 0
+        if d in date_to_level_to_count:
+            if the_level in date_to_level_to_count[d]:
+                n0 = date_to_level_to_count[d][the_level]
+                x0 = date_to_level_to_mean[d][the_level]
+        else:
+            date_to_level_to_count[d] = {}
+            date_to_level_to_mean[d] = {}
+
+        x1 = [
+            row["field"] for row in selrows
+        ]
+        x1 = np.asarray(x1)
+
+
+        n1 = x1.shape[0]
+        x1 = x1.mean(axis = 0)
+        x1 = (n1 * x1 + n0 * x0) / float(n0 + n1)
+        date_to_level_to_mean[d][the_level] = x1
+        date_to_level_to_count[d][the_level] = n0 + n1
+
+
+    sorted_dates = list(sorted(date_to_level_to_mean.keys()))
+
+    sorted_levels = list(sorted(date_to_level_to_mean.items()[0][1].keys()))
+
+
+    data = np.asarray(
+        [[date_to_level_to_mean[d][lev] for lev in sorted_levels] for d in sorted_dates]
+    )
+
+    #save cache
+    if clim_3d_node not in h:
+        h.create_group("/", clim_3d_node[1:])
+
+    h.create_array(clim_3d_node, var_name, data)
+    h.create_array(clim_3d_node, "{0}_levels".format(var_name), sorted_levels)
+    h.close()
+    return sorted_dates, sorted_levels, data
 
 
 
