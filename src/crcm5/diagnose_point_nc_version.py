@@ -216,13 +216,13 @@ def plot_precip_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_po
     label = "Obs: ann.mean = {0:.1f}".format(obs_ann_mean)
 
     days_in_months = np.array([monthrange(d.year, d.month)[1] for d in time])
-    h = ax.plot(time, obs_data / days_in_months, "k", lw=2, label=label) #convert mm/month to mm/day
+    h = ax.plot(time, obs_data / days_in_months, "k", lw=2, label=label)  # convert mm/month to mm/day
 
     handles.append(h[0])
     labels.append(label)
 
     ax.set_title("Precip mm/day ")
-    multiplier = 1000 * 24 * 60 * 60 #to convert from m/s to mm/day
+    multiplier = 1000 * 24 * 60 * 60  # to convert from m/s to mm/day
     for sim_name in sim_names:
         if not sim_name_to_station_to_model_point[sim_name].has_key(station):
             continue
@@ -357,8 +357,7 @@ def plot_total_runoff(ax, station, sim_name_to_station_to_model_point, sim_names
 
 
 def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_model_point,
-                                              sim_name_to_manager=None
-):
+                                              sim_name_to_manager=None):
     assert isinstance(ax, Axes)
     assert isinstance(s, Station)
     assert isinstance(sim_name_to_station_to_model_point, dict)

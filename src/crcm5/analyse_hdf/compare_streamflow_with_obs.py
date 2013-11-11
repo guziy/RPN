@@ -277,7 +277,7 @@ def _plot_upstream_subsurface_runoff(ax, model_point, model_data_dict=None,
     basin_area_km2 = np.tensordot(cell_area_km2, upstream_mask)
     area_matrix = upstream_mask * cell_area_km2
 
-    ax.set_ylabel("Subsurf. r-off: mm/day")
+    ax.set_ylabel("Drainage: mm/day")
     ax.yaxis.set_label_position("right")
 
     for label in simlabel_list:
@@ -298,14 +298,14 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
     application_properties.set_current_directory()
 
     start_date = datetime(1979, 1, 1)
-    end_date = datetime(1985, 12, 31)
+    end_date = datetime(1981, 12, 31)
 
     # Station ids to get from the CEHQ database
     #selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
     #                "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
 
     selected_ids = [
-        "061905", "074903", "090613", "092715", "093801", "093806", "081002"
+        "074903", "061905", "090613", "092715", "093801", "093806", "081002"
     ]
 
     #selected_ids = ["081002", ]
@@ -319,10 +319,15 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
     #selected_ids = ["090613", ]
 
     sim_name_to_file_name = {
-        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
-        "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
+        #"CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
+        #"CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
         "CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
         "CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
+        "SANI=1000, ignore THFC":
+        "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
+
+        #"CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
+        #"SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
         #"CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
     }
 
@@ -412,7 +417,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
         year_list = the_station.get_list_of_complete_years()
         year_list = list(itertools.ifilter(lambda y: start_date.year <= y <= end_date.year, year_list))
 
-        if len(year_list) <= 3:
+        if len(year_list) < 1:
             continue
 
         fig = plt.figure()
@@ -476,7 +481,9 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
         ax.set_ylabel(r"Streamflow: ${\rm m^3/s}$")
         assert isinstance(ax, Axes)
         assert isinstance(fig, Figure)
-        ax.text(0.1, 0.9, the_station.id, transform=ax.transAxes, bbox=dict(facecolor="white"))
+        station_info = "{0}\nDA={1}".format(the_station.id, the_station.drainage_km2) + r"${\rm km^2}$"
+        ax.text(0.1, 0.9, station_info, transform=ax.transAxes, bbox=dict(facecolor="white"))
+        print station_info
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
         ax.xaxis.set_minor_locator(MonthLocator())
@@ -568,6 +575,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
         fig.savefig(imPath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
         plt.close(fig)
         #return  # temporary plot only one point
+    label_list = sim_name_to_file_name.keys()
     figure_stfl.savefig(os.path.join(images_folder, "comp_point_with_obs_{0}.jpeg".format("_".join(label_list))),
                         dpi=cpp.FIG_SAVE_DPI,
                         bbox_inches="tight")

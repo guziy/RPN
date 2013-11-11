@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 import time
 import os
+import brewer2mpl
 from matplotlib import cm
 from matplotlib.axes import Axes
+from matplotlib.colors import BoundaryNorm
 from matplotlib.dates import date2num, DateFormatter, MonthLocator
 from crcm5 import infovar
 from crcm5.model_point import ModelPoint
@@ -55,6 +57,8 @@ def main():
     lake_fractions = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_LAKE_FRACTION_NAME)
     cell_areas = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_CELL_AREA_NAME)
     acc_areakm2 = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
+    depth_to_bedrock = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_DEPTH_TO_BEDROCK_NAME)
+
 
     cell_manager = CellManager(fldirs, lons2d=lons2d, lats2d=lats2d, accumulation_area_km2=acc_areakm2)
 
@@ -105,14 +109,28 @@ def main():
         selected_ids=selected_station_ids
     )
 
-    diff = sm_intfl - sm_nointfl
-    diff *= soil_layer_widths[np.newaxis, :, np.newaxis, np.newaxis] * 1000  # to convert in mm
 
+    print "sm_noinfl, min, max = {0}, {1}".format(sm_nointfl.min(), sm_nointfl.max())
+    print "sm_infl, min, max = {0}, {1}".format(sm_intfl.min(), sm_intfl.max())
+    diff = (sm_intfl - sm_nointfl)
+    #diff *= soil_layer_widths[np.newaxis, :, np.newaxis, np.newaxis] * 1000  # to convert in mm
+
+    #print "number of nans", np.isnan(diff).astype(int).sum()
+
+    print "cell area min,max = {0}, {1}".format(cell_areas.min(), cell_areas.max())
+    print "acc area min,max = {0}, {1}".format(acc_areakm2.min(), acc_areakm2.max())
+
+    assert np.all(lake_fractions >= 0)
+    print "lake fractions (min, max): ", lake_fractions.min(), lake_fractions.max()
 
     #Non need to go very deep
-    nlayers = 10
+    nlayers = 3
     z, t = np.meshgrid(soil_tops[:nlayers], date2num(daily_dates))
     station_to_mp = cell_manager.get_model_points_for_stations(stations)
+
+
+    plotted_global = False
+
     for the_station, mp in station_to_mp.iteritems():
         assert isinstance(mp, ModelPoint)
         assert isinstance(the_station, Station)
@@ -120,14 +138,25 @@ def main():
         umask = cell_manager.get_mask_of_cells_connected_with_by_indices(mp.ix, mp.jy)
 
         #exclude lake cells from the profiles
-        umask *= (1.0 - lake_fractions)
+        sel = (umask == 1) & (depth_to_bedrock > 3) & (acc_areakm2 >= 0)
+
+        umaskf = umask.astype(float)
+        umaskf *= (1.0 - lake_fractions) * cell_areas
+        umaskf[~sel] = 0.0
 
 
-        profiles = np.tensordot(diff, umask)
-        print profiles.shape
+        profiles = np.tensordot(diff, umaskf) / umaskf.sum()
+        print profiles.shape, profiles.min(), profiles.max(), umaskf.sum(), umaskf.min(), umaskf.max()
 
-        img = plt.contourf(t, z, profiles[:, :nlayers], cmap = cm.get_cmap("RdBu", 10))
-        plt.colorbar(img)
+        d = np.abs(profiles).max()
+        print "d = {0}".format(d)
+        clevs = np.round(np.linspace(-d, d, 12), decimals=5)
+
+        diff_cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=len(clevs) - 1)
+        bn = BoundaryNorm(clevs, len(clevs) - 1)
+
+        img = plt.contourf(t, z, profiles[:, :nlayers], cmap = diff_cmap, levels = clevs, norm = bn)
+        plt.colorbar(img, ticks = clevs)
         ax = plt.gca()
         assert isinstance(ax, Axes)
 
@@ -142,10 +171,37 @@ def main():
 
 
 
+        if not plotted_global:
+            plotted_global = True
+            fig = plt.figure()
+            sel = (depth_to_bedrock >= 0.1) & (acc_areakm2 >= 0)
+
+            umaskf = (1.0 - lake_fractions) * cell_areas
+            umaskf[~sel] = 0.0
 
 
+            profiles = np.tensordot(diff, umaskf) / umaskf.sum()
+            print profiles.shape, profiles.min(), profiles.max(), umaskf.sum(), umaskf.min(), umaskf.max()
+
+            d = np.abs(profiles).max()
+            print "d = {0}".format(d)
+            clevs = np.round(np.linspace(-d, d, 12), decimals=5)
+
+            diff_cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=len(clevs) - 1)
+            bn = BoundaryNorm(clevs, len(clevs) - 1)
+
+            img = plt.contourf(t, z, profiles[:, :nlayers], cmap = diff_cmap, levels = clevs, norm = bn)
+            plt.colorbar(img, ticks = clevs)
+            ax = plt.gca()
+            assert isinstance(ax, Axes)
+
+            ax.invert_yaxis()
+            ax.xaxis.set_major_formatter(DateFormatter("%b"))
+            ax.xaxis.set_major_locator(MonthLocator())
 
 
+            fig.savefig(os.path.join(images_folder, "global_mean.jpeg"),
+                        dpi = cpp.FIG_SAVE_DPI, bbox_inches = "tight")
 
 
     pass

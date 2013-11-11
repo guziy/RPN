@@ -132,9 +132,39 @@ def get_daily_means_for_a_point(path = "", var_name = "STFL", level = None,
 
 
 def get_daily_climatology(path_to_hdf_file = "", var_name = "STFL", level = None, start_year = None, end_year = None):
-    return Crcm5ModelDataManager.hdf_get_daily_climatological_fields(
-        hdf_db_path=path_to_hdf_file, start_year=start_year, end_year=end_year, var_name=var_name,
-        level=level, use_grouping=True)
+    if var_name.endswith("_min"):
+        return get_daily_min_climatology(path_to_hdf_file=path_to_hdf_file, var_name=var_name, level=level,
+                                         start_year=start_year, end_year=end_year)
+    elif var_name.endswith("_max"):
+        return get_daily_max_climatology(path_to_hdf_file=path_to_hdf_file, var_name=var_name, level=level,
+                                         start_year=start_year, end_year=end_year)
+    else:
+        return Crcm5ModelDataManager.hdf_get_daily_climatological_fields(hdf_db_path=path_to_hdf_file,
+                                                                         start_year=start_year,
+                                                                         end_year=end_year,
+                                                                         var_name=var_name,
+                                                                         level=level,
+                                                                         use_grouping=True)
+
+
+def get_daily_max_climatology(path_to_hdf_file = "", var_name = "STFL", level = None,
+                              start_year = None, end_year = None):
+    var_name_max = "{0}_max".format(var_name)
+
+    return Crcm5ModelDataManager.hdf_get_daily_extreme_climatological_fields(
+        hdf_db_path=path_to_hdf_file,
+        start_year=start_year, end_year=end_year, var_name=var_name_max,
+        level=level, maximum=True)
+
+
+def get_daily_min_climatology(path_to_hdf_file = "", var_name = "STFL", level = None,
+                              start_year = None, end_year = None):
+    var_name_min = "{0}_min".format(var_name)
+
+    return Crcm5ModelDataManager.hdf_get_daily_extreme_climatological_fields(
+        hdf_db_path=path_to_hdf_file,
+        start_year=start_year, end_year=end_year, var_name=var_name_min,
+        level=level, maximum=False)
 
 
 def get_daily_climatology_of_3d_field(path_to_hdf_file = "", var_name = "STFL", start_year = None,
@@ -277,7 +307,6 @@ def calculate_daily_mean_fields():
     plt.tight_layout()
     plt.savefig("intfl_diff.png")
 
-    pass
 
 def get_seasonal_climatology(hdf_path = "", start_year = None, end_year = None, var_name = "", level = None, months = None):
     #get seasonal climatology, uses daily climatology function which is cached for performance

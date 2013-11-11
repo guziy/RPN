@@ -58,21 +58,23 @@ def correct_proj_table():
 
 def main():
 
+    from_guillimin_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/"
+
     #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-r_spinup"
     #interflow experiment (crcm5-hcd-rl-intfl)
     #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl_spinup3/all_files_in_one_folder"
 
     #(crcm5-hcd-rl) lakes and rivers interacting no interflow
-    data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl_spinup"
+    #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl_spinup"
 
     #lakes are full of land (crcm5-r)
-    data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-r_spinup"
-    hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
+    #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-r_spinup"
+    #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
 
 
     #lakes and rivers not interacting
-    #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-r_spinup2/all_files"
-    #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
+    data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-r_spinup2/all_files"
+    hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
 
     #Lake residence time decreased 5 times
     #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl-kd5_spinup/all_files_in_one_folder"
@@ -84,11 +86,26 @@ def main():
     #interflow and ecoclimap
     #data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap/all_files_in_one_dir"
 
+    #ecoclimap and era075
+    #data_folder = "quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075/all_files_in_one_dir"
+    #data_folder = os.path.join(from_guillimin_folder, data_folder)
+    #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
+
+    #soil anisotropy 10000
+    #data_folder = os.path.join(from_guillimin_folder, "quebec_0.1_crcm5-hcd-rl-intfl_sani-10000/all_files_in_one_dir")
+    #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
+
+    #soil anisotropy 10000 and do not care about bulk field capacity
+    data_folder = os.path.join(from_guillimin_folder,
+                               "quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc/all_files_in_one_dir")
+    hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
+
+
     dm = Crcm5ModelDataManager(samples_folder_path = data_folder, all_files_in_samples_folder=True)
-    #var_names = ["STFL", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV"]
+    var_names = ["STFL", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV", "AS"]
     #var_names = [ "I0", "I1", "I2", "IMAV"]
     #var_names = ["AS", ]
-    var_names = ["I0", "I1"]
+    #var_names = ["QQ", ]
     dm.export_to_hdf(var_list = var_names, file_path= hdf_file_path, mode="a")
     export_static_fields_to_hdf(
         hdf_file= hdf_file_path, data_folder=data_folder

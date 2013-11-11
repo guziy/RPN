@@ -5,6 +5,7 @@ from netCDF4 import Dataset, date2num
 import pickle
 import shelve
 import time
+import numexpr
 import tables as tb
 
 from matplotlib import gridspec, cm
@@ -98,7 +99,6 @@ class Crcm5ModelDataManager:
             self.month_folder_name_format = "%s_%d%02d"
             self._set_month_folder_prefix()
 
-
         self.var_name = var_name
 
         self._file_paths = None
@@ -127,6 +127,11 @@ class Crcm5ModelDataManager:
         self.gw_res_time = None
         self.mg = None
         self.lkou = None
+
+        self.vertical_soil_hydraulic_conductivity = None
+        self.soil_anisotropy_ratio = None
+        self.clapp_and_hornberger_hydraulic_coef_b = None
+        self.interflow_c_constant = None #introduced by Clapp and Hornberger (1978) c = 2 * b + 3
 
         #fill the above fields with data
         self._read_static_data()
@@ -239,7 +244,7 @@ class Crcm5ModelDataManager:
         lonVar = ds.createVariable("lon", "f8", dimensions=("lon", "lat"))
         latVar = ds.createVariable("lat", "f8", dimensions=("lon", "lat"))
 
-        monthVar = ds.createVariable("month", "i4", dimensions=("month"))
+        monthVar = ds.createVariable("month", "i4", dimensions=("month", ))
 
         lonVar[:, :] = self.lons2D[:, :]
         latVar[:, :] = self.lats2D[:, :]
@@ -248,7 +253,8 @@ class Crcm5ModelDataManager:
 
         if self.all_files_in_one_folder:
             for fName in os.listdir(self.samples_folder):
-                if not fName.startswith(in_file_prefix): continue
+                if not fName.startswith(in_file_prefix):
+                    continue
 
                 rObj = RPN(os.path.join(self.samples_folder, fName))
                 rObj.suppress_log_messages()
@@ -280,7 +286,8 @@ class Crcm5ModelDataManager:
         returns pandas.Series withe year as an index, and 2d fields of annual means as values
         {year:mean_field}
         """
-        if varname is None: varname = self.var_name
+        if varname is None:
+            varname = self.var_name
 
         result = pandas.TimeSeries()
         paths = self._get_relevant_file_paths()
@@ -309,7 +316,9 @@ class Crcm5ModelDataManager:
         data_dict = {}
         for kg in keys_and_groups:
             key = kg[0]
-            if not ( start_year <= key <= end_year): continue
+            if not (start_year <= key <= end_year):
+                continue
+
             the_group = kg[1]
 
             print type(the_group)
@@ -332,7 +341,9 @@ class Crcm5ModelDataManager:
                 os.remove(self.shelve_path)
             d = shelve.open(self.shelve_path)
             for fName in os.listdir(self.samples_folder):
-                if not fName.startswith(self.file_name_prefix): continue
+                if not fName.startswith(self.file_name_prefix):
+                    continue
+
                 fPath = os.path.join(self.samples_folder, fName)
                 rObj = RPN(fPath)
                 data = rObj.get_all_time_records_for_name(varname=var_name)
@@ -489,8 +500,8 @@ class Crcm5ModelDataManager:
 
     @classmethod
     def _get_saved_daily_climatology(cls, hdf_handle, var_name="", level=None,
-                                     start_year = None, end_year = None
-                                     ):
+                                     start_year=None, end_year=None
+    ):
         """
         :param hdf_handle:
         :param var_name:
@@ -517,11 +528,10 @@ class Crcm5ModelDataManager:
         level_string = "{0}".format("single" if level is None else level)
 
         query_path = "/{0}/{1}/period_{2}_{3}/level/{4}".format("daily_climatology", var_name,
-                                                         start_year, end_year,
-                                                         level_string)
+                                                                start_year, end_year,
+                                                                level_string)
         if not query_path in hdf_handle:
             return None
-
 
         date_query = "/daily_climatology/date_info"
         if date_query not in hdf_handle:
@@ -539,11 +549,11 @@ class Crcm5ModelDataManager:
         ]
         date_info.close()
 
-        return daily_dates, fields
+        return daily_dates, np.asarray(fields)
 
     @classmethod
     def _save_daily_climatology(cls, hdf_handle, daily_dates=None, daily_clim_fields=None, var_name="",
-                                level=None, start_year = None, end_year = None):
+                                level=None, start_year=None, end_year=None):
         """
         paired with the method  `_get_saved_daily_climatology`, it saves the data for the former to get.
         :param hdf_handle: handle for the hdf file
@@ -579,7 +589,16 @@ class Crcm5ModelDataManager:
             var_group = hdf_handle.getNode(daily_clim_group, var_name)
             period_str = "period_{0}_{1}".format(start_year, end_year)
             if period_str in var_group:
-                level_group = hdf_handle.getNode(var_group, period_str).level
+
+                period_group = hdf_handle.getNode(var_group, period_str)
+                #sometimes an array is put in here, deleting it but why that happens has to be investigated
+                if isinstance(period_group, tb.Array):
+                    print "Removing existing leaf: ", period_group
+                    hdf_handle.remove_node(var_group, period_str)
+                    period_group = hdf_handle.createGroup(var_group, period_str)
+                    level_group = hdf_handle.create_group(period_group, "level")
+                else:
+                    level_group = period_group.level
             else:
                 period_group = hdf_handle.createGroup(var_group, period_str)
                 level_group = hdf_handle.createGroup(period_group, "level")
@@ -595,8 +614,8 @@ class Crcm5ModelDataManager:
 
         if "date_info" not in daily_clim_group:
             date_table = hdf_handle.create_table(daily_clim_group, "date_info", {
-                "month": tb.IntCol(pos = 0),
-                "day_of_month": tb.IntCol(pos = 1)})
+                "month": tb.IntCol(pos=0),
+                "day_of_month": tb.IntCol(pos=1)})
 
             data = [
                 (aDate.month, aDate.day) for aDate in daily_dates
@@ -611,9 +630,8 @@ class Crcm5ModelDataManager:
     @classmethod
     def hdf_get_daily_climatological_fields(cls, hdf_db_path="", var_name="", level=None,
                                             use_grouping=True, use_caching=True,
-                                            start_year = None,
-                                            end_year = None
-                                            ):
+                                            start_year=None,
+                                            end_year=None):
         """
         use_grouping=True is much more efficient than querying data for each day of each month
         :param hdf_db_path: path to the hdf file
@@ -624,7 +642,7 @@ class Crcm5ModelDataManager:
             and saved to the group called daily_climatology in the `hdf_db_path`
         :return:
         """
-        import tables as tb
+        #import tables as tb
 
         assert start_year is not None
         assert end_year is not None
@@ -724,12 +742,12 @@ class Crcm5ModelDataManager:
                                         var_name=var_name, level=level, start_year=start_year, end_year=end_year)
 
         hdf.close()
-        return daily_dates, daily_fields
+        return daily_dates, np.asarray(daily_fields)
 
 
     @classmethod
-    def hdf_get_seasonal_means(cls, path_to_hdf = "", months = None, var_name = "", level = None,
-                               start_year = None, end_year = None):
+    def hdf_get_seasonal_means(cls, path_to_hdf="", months=None, var_name="", level=None,
+                               start_year=None, end_year=None):
         """
         Seasonal meanth over the specified months for each year
         :param path_to_hdf:
@@ -738,7 +756,6 @@ class Crcm5ModelDataManager:
         :param start_year:
         :param end_year:
         """
-        import tables as tb
         year_to_count = {}
         year_to_mean = {}
 
@@ -767,12 +784,12 @@ class Crcm5ModelDataManager:
 
             x1 = [row["field"] for row in selected_rows]
             n1 = len(x1)
-            x1 = np.mean(x1, axis = 0)
+            x1 = np.mean(x1, axis=0)
 
             n = float(n0 + n1)
 
             year_to_count[aYear] = n
-            year_to_mean[aYear] = (x0 * n0 + x1 * n1) / n
+            year_to_mean[aYear] = numexpr.evaluate("(x0 * n0 + x1 * n1) / n")
 
         h.close()
         return [year_to_mean[the_year] for the_year in range(start_year, end_year + 1)]
@@ -780,7 +797,7 @@ class Crcm5ModelDataManager:
 
     @staticmethod
     def hdf_get_climatology_for_season(months=None, hdf_db_path="", var_name="",
-                                       level=None, start_year = None, end_year = None):
+                                       level=None, start_year=None, end_year=None):
         """
 
         :param months: months of interest
@@ -801,7 +818,6 @@ class Crcm5ModelDataManager:
         if months is None:
             months = range(1, 13)
 
-
         years_expr = "((year >= {0}) & (year <= {1}))".format(start_year, end_year)
         month_expr = "({0})".format("|".join(["(month == {0})".format(the_month) for the_month in months]))
 
@@ -819,9 +835,10 @@ class Crcm5ModelDataManager:
         return result
 
     @classmethod
-    def export_grid_properties_to_hdf(cls, file_path="", grid_params = None, table_scheme = None):
+    def export_grid_properties_to_hdf(cls, file_path="", grid_params=None, table_scheme=None):
         # Adds a table to the hdf file which contains projection params
         import tables as tb
+
         h = tb.open_file(file_path, mode="a")
         if "/rotpole" in h:
             h.remove_node("/", "rotpole")
@@ -841,31 +858,41 @@ class Crcm5ModelDataManager:
         h.close()
 
 
-    def export_static_fields_to_hdf(self, file_path = ""):
+    def export_static_fields_to_hdf(self, file_path="", overwrite=False):
         """
         :param file_path: path to the result hdf file
         """
 
         h = tb.open_file(file_path, mode="a")
         name_to_field = {
-            "flow_direction" : self.flow_directions,
+            "flow_direction": self.flow_directions,
             "accumulation_area_km2": self.accumulation_area_km2,
-            "slope" : self.slope,
-            "cell_area_km2" : self.cell_area,
-            "sand" : self.sand,
+            "slope": self.slope,
+            "cell_area_km2": self.cell_area,
+            "sand": self.sand,
             "clay": self.clay,
-            "depth_to_bedrock" : self.depth_to_bedrock_m,
-            "lake_fraction" : self.lake_fraction,
-            "drainage_density_inv_meters": self.drainage_density_inv_meters
+            "depth_to_bedrock": self.depth_to_bedrock_m,
+            "lake_fraction": self.lake_fraction,
+            "drainage_density_inv_meters": self.drainage_density_inv_meters,
+            "soil_hydraulic_conductivity": self.vertical_soil_hydraulic_conductivity,
+            "soil_anisotropy_ratio": self.soil_anisotropy_ratio,
+            "interflow_c_coef": self.interflow_c_constant
 
         }
 
         root_g = h.getNode("/")
 
         for name, field in name_to_field.iteritems():
-            if name not in root_g and field is not None:
-                h.create_array(root_g, name, obj = field)
+            if field is None:
+                continue
 
+            if name in root_g:
+                if overwrite:
+                    h.remove_node(root_g, name)
+                else:
+                    continue
+
+            h.create_array(root_g, name, obj=field)
 
         h.close()
 
@@ -879,8 +906,6 @@ class Crcm5ModelDataManager:
         Note: assume that all the fields are on the same grid and the same projection
 
         """
-
-
 
         rpn_path_list = []
 
@@ -911,7 +936,7 @@ class Crcm5ModelDataManager:
 
         for aVarName in var_list:
             varNameToTable[aVarName] = h5file.createTable("/", aVarName, field_data_table_scheme,
-                                                          filters = tb.Filters(complevel=5))
+                                                          filters=tb.Filters(complevel=5))
 
         for fPath in rpn_path_list:
             rObj = RPN(fPath)  # open current rpn file for reading
@@ -948,23 +973,27 @@ class Crcm5ModelDataManager:
             rObj.close()
 
         # insert also lon and lat data
-        h5file.createArray("/", "longitude", self.lons2D)
-        h5file.createArray("/", "latitude", self.lats2D)
+        if "/longitude" not in h5file:
+            h5file.createArray("/", "longitude", self.lons2D)
+
+        if "/latitude" not in h5file:
+            h5file.createArray("/", "latitude", self.lats2D)
 
         # add projection properties like /projection -> rotpole(  "lon1" =>..., "lon2" =>)
         # the name of the table corresponds to the projection name
-        projTable = h5file.createTable("/", "rotpole", projection_table_scheme)
-        row = projTable.row
-        for aName, aValue in projectionParams.iteritems():
-            if type(aValue) == str:
-                print "Warning: rotpole table cannot have string in a value column, skipping:" \
-                      " {0} => {1}".format(aName, aValue)
-                continue
-            row["name"] = aName
-            row["value"] = aValue
-            row.append()
+        if "/rotpole" not in h5file:
+            proj_table = h5file.createTable("/", "rotpole", projection_table_scheme)
+            row = proj_table.row
+            for aName, aValue in projectionParams.iteritems():
+                if type(aValue) == str:
+                    print "Warning: rotpole table cannot have string in a value column, skipping:" \
+                          " {0} => {1}".format(aName, aValue)
+                    continue
+                row["name"] = aName
+                row["value"] = aValue
+                row.append()
 
-        projTable.close()
+            proj_table.close()
 
         h5file.close()
         self.export_static_fields_to_hdf(file_path=file_path)
@@ -1645,6 +1674,16 @@ class Crcm5ModelDataManager:
             varname = "DD"
             self.drainage_density_inv_meters = _read_static_field(rpnObj, varname)
 
+            varname = "HT"
+            self.vertical_soil_hydraulic_conductivity = _read_static_field(rpnObj, varname)
+
+            varname = "C6"
+            self.clapp_and_hornberger_hydraulic_coef_b = _read_static_field(rpnObj, varname)
+            if self.clapp_and_hornberger_hydraulic_coef_b is not None:
+                self.interflow_c_constant = 2 * self.clapp_and_hornberger_hydraulic_coef_b + 3
+
+            varname = "SANI"
+            self.soil_anisotropy_ratio = _read_static_field(rpnObj, varname)
 
             if self.need_cell_manager:
                 nx, ny = self.flow_directions.shape
@@ -1935,9 +1974,8 @@ class Crcm5ModelDataManager:
             raise Exception("Not yet implemented")
 
 
-
     def _init_model_point(self, station, ix, jy, dist_to_station, timeArr,
-                          nc_sim_folder, set_data_to_model_points = True):
+                          nc_sim_folder, set_data_to_model_points=True):
         """
 
         :param station:
@@ -1951,7 +1989,6 @@ class Crcm5ModelDataManager:
         :return:
         """
         assert isinstance(station, Station)
-
 
         mp = ModelPoint()
         mp.accumulation_area = self.accumulation_area_km2[ix, jy]
@@ -1968,15 +2005,12 @@ class Crcm5ModelDataManager:
         mp.continuous_data_years = station.get_list_of_complete_years()
         mp.mean_upstream_lake_fraction = self.lake_fraction[mp.flow_in_mask == 1].mean()
 
-
-
         if set_data_to_model_points:
 
             #variables to be read and correspondong levels
             varnames = ["STFL", "I5", "TT", "PR", "TRAF", "TDRA"]
             levels = [0, 0, 0, 0, 4, 4] #zero-based
             mean_upstream = [False, True, True, True, True, True]
-
 
             inObject = InputForProcessPool()
             inObject.mp_ix = mp.ix
@@ -2085,7 +2119,7 @@ class Crcm5ModelDataManager:
 
     def get_model_points_for_stations(self, station_list, sim_name="", nc_path="",
                                       npoints=1, nc_sim_folder=None,
-                                      set_data_to_model_points = False):
+                                      set_data_to_model_points=False):
         """
         returns a map {station => [modelpoint1, ...]} for comparison modeled streamflows with observed
         modelpoint.data - contains series of data in time for the modelpoint
@@ -2150,16 +2184,16 @@ class Crcm5ModelDataManager:
                 if deltaDaMin / s.drainage_km2 > 0.1:
                     continue
 
-
                 mp = self._init_model_point(s, ij[0][0], ij[1][0], dists[imin], timeArr, nc_sim_folder,
-                    set_data_to_model_points = set_data_to_model_points
+                                            set_data_to_model_points=set_data_to_model_points
                 )
                 mp_list_for_station.append(mp)
 
             else:
                 for d, i in zip(dists, inds):
                     if set_data_to_model_points:
-                        mp = self._init_model_point(s, ix_indices_flat[i], jy_indices_flat[i], d, timeArr, nc_sim_folder)
+                        mp = self._init_model_point(s, ix_indices_flat[i], jy_indices_flat[i], d, timeArr,
+                                                    nc_sim_folder)
                     mp_list_for_station.append(mp)
 
             #if no model points found for the station, do not put it in the result dictionary
@@ -2192,6 +2226,54 @@ class Crcm5ModelDataManager:
 
         pass
 
+    @classmethod
+    def hdf_get_daily_extreme_climatological_fields(cls, hdf_db_path, start_year=None,
+                                                    end_year=None, var_name="STFL_max", level=None, maximum = True):
+        hdf = tb.open_file(hdf_db_path, mode="a")
+        climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
+                                                       start_year=start_year,
+                                                       end_year=end_year)
+        if climatology is not None:
+            return climatology
+
+
+
+        #get the original variable name (i.e. without min or max)
+        var_name_ori = var_name.split("_")[0]
+
+        var_table = hdf.get_node("/", var_name_ori)
+        #index columns for speed
+        var_table.cols.year.createIndex()
+        var_table.cols.month.createIndex()
+        var_table.cols.day.createIndex()
+        var_table.cols.hour.createIndex()
+
+        d0 = datetime(2001, 1, 1)
+        daily_dates = [d0 + timedelta(days = i) for i in range(365)]
+        daily_fields = []
+
+        sel_year = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+        for d in daily_dates:
+            sel_day = "(day == {0}) & (month = {1})".format(d.day, d.month)
+            rows = list(var_table.where("{0} & {1}".format(sel_year, sel_day)))
+
+            rows = list(sorted(rows, key = lambda r: r["year"]))
+
+            data_store = []
+            for year, sel_rows in itertools.groupby(rows, key = lambda r: r["year"]):
+                if maximum:
+                    data_store.append(np.max([r1["field"] for r1 in sel_rows], axis=0))
+                else:
+                    data_store.append(np.min([r1["field"] for r1 in sel_rows], axis=0))
+
+            daily_fields.append(np.mean(data_store, axis=0))
+
+
+
+        #save calculated climatologies to the file
+        cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
+                                    var_name=var_name, level=level, start_year=start_year, end_year=end_year)
+        return daily_dates, np.asarray(daily_fields)
 
 
 def _read_static_field(rpnObj, varname):
@@ -2201,7 +2283,7 @@ def _read_static_field(rpnObj, varname):
     msg = "{0} variable was not found in the dataset"
     res = None
     try:
-        if varname in ["SAND", "CLAY"]:
+        if varname in ["SAND", "CLAY", "C8", "HT"]:
             #these are 3d fields
             sand_dict = rpnObj.get_2D_field_on_all_levels(name=varname)
             res = np.asarray([sand_dict[the_level] for the_level in sorted(sand_dict.keys())])
@@ -2226,12 +2308,11 @@ def do_test_seasonal_mean():
     basemap = Basemap(projection="omerc", no_rot=True, lon_1=-68, lat_1=52, lon_2=16.65, lat_2=0,
                       llcrnrlon=manager.lons2D[0, 0], llcrnrlat=manager.lats2D[0, 0],
                       urcrnrlon=manager.lons2D[-1, -1], urcrnrlat=manager.lats2D[-1, -1],
-                      resolution="l"
-    )
+                      resolution="l")
 
     [x, y] = basemap(manager.lons2D, manager.lats2D)
 
-    colormap = cm.get_cmap("Blues") #my_colormaps.get_red_blue_colormap(10)
+    colormap = cm.get_cmap("Blues")  # my_colormaps.get_red_blue_colormap(10)
 
     month_clim = manager.get_monthly_climatology(varname="STFL")
     the_mean = np.mean(month_clim, axis=0)

@@ -121,7 +121,7 @@ def plot_at_indices(ix,jy):
                 end_year=end_year)
             _cache_monthly_mean_fields(monthly_means_solid, label, start_year, end_year, var_name_solid)
 
-        profiles = [monthly_means_liquid[i][ix,jy, :] + monthly_means_solid[i][ix,jy, :] for i
+        profiles = [monthly_means_liquid[i][ix,jy, :] + monthly_means_solid[i][ix, jy, :] for i
                     in range(12)]
 
         sim_label_to_profiles[label] = np.array(profiles)
@@ -135,6 +135,7 @@ def plot_at_indices(ix,jy):
     plt.colorbar()
 
     #fig.tight_layout()
+
     fig.savefig("soil_profile_at_ix={0};jy={1}.pdf".format(ix, jy))
 
 

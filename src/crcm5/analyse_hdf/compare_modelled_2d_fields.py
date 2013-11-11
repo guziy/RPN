@@ -284,16 +284,16 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     season_list = season_to_months.keys()
 
     # crcm5-r vs crcm5-hcd-r
-    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
-    #control_label = "CRCM5-R"
-    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf", ]
-    #labels = ["CRCM5-HCD-R"]
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
+    control_label = "CRCM5-R"
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf", ]
+    labels = ["CRCM5-HCD-R"]
 
     # crcm5-hcd-rl vs crcm5-hcd-r
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
-    control_label = "CRCM5-HCD-R"
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf", ]
-    labels = ["CRCM5-HCD-RL"]
+    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
+    #control_label = "CRCM5-HCD-R"
+    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf", ]
+    #labels = ["CRCM5-HCD-RL"]
 
 
 
@@ -306,6 +306,15 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     #labels = ["CRCM5-HCD-RL-INTFL"]
 
 
+    #very high hydr cond
+    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    #control_label = "CRCM5-HCD-RL-INTFL"
+    ##
+    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf", ]
+    #labels = ["CRCM5-HCD-RL-INTFL-sani=10000"]
+
+
+
     row_labels = [
         r"$\Delta_{\rm " + s + "}$" for s in labels
     ]
@@ -313,21 +322,21 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
 
 
     varnames = ["STFL", "TT", "PR", "AV", "AH", "TRAF",
-                "TDRA", "I5", "AS"]
-    levels = [None, None, None, None, None, 1, 1, None, None]
+                "TDRA", "I5", "AS", "IMAV"]
+    levels = [None, None, None, None, None, 1, 1, None, None, None]
 
 
     #varnames = ["TRAF", "TDRA", "I5"]
     #levels = [1, 1, None]
 
 
-    #varnames = ["AS", ]
-    #levels = [None, ]
+    varnames = ["QQ", ]
+    levels = [None, ]
 
     assert len(levels) == len(varnames)
 
     start_year = 1979
-    end_year = 1985
+    end_year = 1980
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=control_path)
     x, y = basemap(lons2d, lats2d)

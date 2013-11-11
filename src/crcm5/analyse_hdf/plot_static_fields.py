@@ -3,7 +3,7 @@ from matplotlib import gridspec
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.figure import Figure
-from matplotlib.ticker import LinearLocator, MultipleLocator, LogLocator, MaxNLocator, ScalarFormatter
+from matplotlib.ticker import LinearLocator, MultipleLocator, LogLocator, MaxNLocator, ScalarFormatter, FuncFormatter
 from mpl_toolkits.basemap import maskoceans
 import os
 from crcm5 import infovar
@@ -26,11 +26,10 @@ def _plot_lake_fraction(ax, basemap, x, y, field, title="", cmap=None):
     if cmap is not None:
         bn = BoundaryNorm(np.arange(0, 1.1, 0.1), cmap.N)
         im = basemap.pcolormesh(x, y, field, ax=ax, cmap=cmap, norm=bn, zorder=5)
-        basemap.colorbar(im)
     else:
         im = basemap.pcolormesh(x, y, field, ax=ax)
-        basemap.colorbar(im)
-    basemap.drawcoastlines(ax=ax)
+
+    basemap.colorbar(im)
 
 
 def _plot_sand_clay_percentages(ax, basemap, x, y, field, title="", cmap=None):
@@ -38,11 +37,10 @@ def _plot_sand_clay_percentages(ax, basemap, x, y, field, title="", cmap=None):
     if cmap is not None:
         bn = BoundaryNorm(np.arange(0, 110, 10), cmap.N)
         im = basemap.pcolormesh(x, y, field, ax=ax, cmap=cmap, norm=bn)
-        basemap.colorbar(im)
     else:
         im = basemap.pcolormesh(x, y, field, ax=ax)
-        basemap.colorbar(im)
-    basemap.drawcoastlines(ax=ax)
+
+    basemap.colorbar(im)
 
 
 def _plot_slope(ax, basemap, x, y, field, title="", cmap=None):
@@ -50,11 +48,10 @@ def _plot_slope(ax, basemap, x, y, field, title="", cmap=None):
     if cmap is not None:
         the_norm = LogNorm(vmin=1.0e-5, vmax=1)
         im = basemap.pcolormesh(x, y, field, ax=ax, cmap=cmap, norm=the_norm)
-        basemap.colorbar(im)
     else:
         im = basemap.pcolormesh(x, y, field, ax=ax)
-        basemap.colorbar(im)
-    basemap.drawcoastlines(ax=ax)
+
+    basemap.colorbar(im)
 
 
 def _plot_accumulation_area(ax, basemap, x, y, field, title="", cmap=None):
@@ -67,7 +64,29 @@ def _plot_accumulation_area(ax, basemap, x, y, field, title="", cmap=None):
     else:
         im = basemap.pcolormesh(x, y, field, ax=ax)
         basemap.colorbar(im, format="%.1f")
-    basemap.drawcoastlines(ax=ax)
+
+
+
+def _plot_soil_hydraulic_conductivity(ax, basemap, x, y, field, title="", cmap=None):
+    ax.set_title(title)
+    if cmap is not None:
+        levels = np.linspace(field.min(), field.max(), cmap.N + 1)
+        levels = np.round(levels, decimals=6)
+        bn = BoundaryNorm(levels, cmap.N)
+        im = basemap.pcolormesh(x, y, field, ax=ax, cmap=cmap, norm = bn)
+        fmt = ScalarFormatter(useMathText=True)
+        fmt.set_powerlimits([-2, 3])
+
+
+        cb = basemap.colorbar(im, ticks=levels, format=fmt)
+        cax = cb.ax
+        cax.yaxis.get_offset_text().set_position((-3, 5))
+
+
+
+    else:
+        im = basemap.pcolormesh(x, y, field, ax=ax)
+        basemap.colorbar(im, format="%.1f")
 
 
 def _plot_field(ax, basemap, x, y, field, title="", cmap=None):
@@ -78,7 +97,7 @@ def _plot_field(ax, basemap, x, y, field, title="", cmap=None):
     else:
         im = basemap.pcolormesh(x, y, field, ax=ax)
         basemap.colorbar(im, format="%.1f")
-    basemap.drawcoastlines(ax=ax)
+    basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
 
 def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"):
@@ -228,13 +247,14 @@ def main():
 
     #plot the control
 
-    #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup3.hdf"
-    path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
+    #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
+    path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
 
     slope = analysis.get_array_from_file(path=path, var_name="slope")
     #slope = np.ma.masked_where(slope <= 0, slope)
 
-
+    cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME)
     label = "crcm5-hcd-rl-intfl".upper()
     fig.suptitle(label)
     soil_layer_depths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
@@ -243,6 +263,8 @@ def main():
 
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=path)
     x, y = basemap(lons, lats)
+
+    print basemap.proj4string
 
     slope = maskoceans(lons, lats, slope)
     slope = np.ma.masked_less(slope, 0)
@@ -259,14 +281,22 @@ def main():
     assert isinstance(ax, Axes)
     all_axes = [ax]
     lake_fraction = analysis.get_array_from_file(path=path, var_name="lake_fraction")
-    lake_fraction = np.ma.masked_where(lake_fraction <= 0, lake_fraction)
+    lake_fraction = np.ma.masked_where(slope.mask & (lake_fraction <= 0), lake_fraction)
 
-    _plot_lake_fraction(ax, basemap, x, y, lake_fraction, title="Lake fraction", cmap=cmap)
+    _plot_lake_fraction(ax, basemap, x, y, lake_fraction, title="a) Lake fraction", cmap=cmap)
 
+    where_lakes = lake_fraction > 0
+    where_glob_lakes = lake_fraction >= 0.6
+    where_land = (lake_fraction > 0) | ~slope.mask
+    percetage_lakes = np.sum(np.sum(where_glob_lakes.astype(float))) / np.sum(where_lakes.astype(float)) * 100
+    print "percentage of global lakes: {0}".format(percetage_lakes)
+
+    #plt.show()
 
     #slope
     ax = fig.add_subplot(gs[2, 0])
-    _plot_slope(ax, basemap, x, y, slope, title="Slope", cmap=cmap)
+    _plot_slope(ax, basemap, x, y, slope, title="g) Slope", cmap=cmap)
+    all_axes.append(ax)
 
 
 
@@ -274,15 +304,15 @@ def main():
     ax = fig.add_subplot(gs[0, 1])
     all_axes.append(ax)
     depth_to_bedrock = analysis.get_array_from_file(path=path, var_name="depth_to_bedrock")
-    #depth_to_bedrock = np.ma.masked_where(slope.mask, depth_to_bedrock)
-    _plot_field(ax, basemap, x, y, depth_to_bedrock, title="Depth to bedrock (m)", cmap=cmap)
-
+    depth_to_bedrock = np.ma.masked_where(slope.mask, depth_to_bedrock)
+    _plot_field(ax, basemap, x, y, depth_to_bedrock, title="b) Depth to bedrock (m)", cmap=cmap)
 
 
 
     #sand (calculate mean sand content in the soil above bedrock)
     ax = fig.add_subplot(gs[1, 0])
     sand = analysis.get_array_from_file(path=path, var_name="sand")
+
     print "sand variable shape: {0} ".format(",".join([str(length) for length in sand.shape]))
     print "layer depths shape: ", soil_layer_depths.shape
     sand[sand < 0] = 0.0
@@ -291,7 +321,8 @@ def main():
     #sand_height[depth_to_bedrock <= 0] = 0.0
     sand_height /= soil_layer_depths.sum()
     sand_height = np.ma.masked_where(slope.mask, sand_height)
-    _plot_sand_clay_percentages(ax, basemap, x, y, sand_height, title="Sand", cmap=cmap)
+    _plot_sand_clay_percentages(ax, basemap, x, y, sand_height, title="d) Sand", cmap=cmap)
+    all_axes.append(ax)
 
     #clay
     ax = fig.add_subplot(gs[1, 1])
@@ -303,15 +334,15 @@ def main():
     #clay_height[depth_to_bedrock <= 0] = 0.0
     clay_height = np.ma.masked_where(slope.mask, clay_height)
     clay_height /= soil_layer_depths.sum()
-    _plot_sand_clay_percentages(ax, basemap, x, y, clay_height, title="Clay", cmap=cmap)
-
+    _plot_sand_clay_percentages(ax, basemap, x, y, clay_height, title="e) Clay", cmap=cmap)
+    all_axes.append(ax)
 
     #drainage density
     ax = fig.add_subplot(gs[2, 1])
     all_axes.append(ax)
     drainage_density = analysis.get_array_from_file(path=path, var_name="drainage_density_inv_meters")
     drainage_density = np.ma.masked_where(slope.mask, drainage_density)
-    _plot_field(ax, basemap, x, y, drainage_density * 1000.0, title="Drainage density (${\\rm km^{-1}}$)", cmap=cmap)
+    _plot_field(ax, basemap, x, y, drainage_density * 1000.0, title="h) DD (${\\rm km^{-1}}$)", cmap=cmap)
 
 
     #drainage area
@@ -319,7 +350,24 @@ def main():
     all_axes.append(ax)
     field = analysis.get_array_from_file(path=path, var_name="accumulation_area_km2")
     field = np.ma.masked_where(slope.mask, field)
-    _plot_accumulation_area(ax, basemap, x, y, field, title="Drainage area (${\\rm km^{2}}$)", cmap=cmap)
+    _plot_accumulation_area(ax, basemap, x, y, field, title="c) Drainage area (${\\rm km^{2}}$)", cmap=cmap)
+
+
+    #vertical hydraulic conductivity
+    ax = fig.add_subplot(gs[1, 2])
+    all_axes.append(ax)
+    field = analysis.get_array_from_file(path=path, var_name=infovar.HDF_VERT_SOIL_HYDR_COND_NAME)
+    field = np.ma.masked_where(slope.mask, field[0, :, :])
+    print field.shape
+    _plot_soil_hydraulic_conductivity(ax, basemap, x, y, field, title="f) Kv, m/s", cmap=cmap)
+
+    #soil anisotropy ratio
+    ax = fig.add_subplot(gs[2, 2])
+    all_axes.append(ax)
+    field = analysis.get_array_from_file(path=path, var_name=infovar.HDF_SOIL_ANISOTROPY_RATIO_NAME)
+    field = np.ma.masked_where(slope.mask, field)
+    _plot_field(ax, basemap, x, y, field, title="i) Soil anisotropy", cmap=cmap)
+
 
     for the_ax in all_axes:
         basemap.drawcoastlines(linewidth=common_plot_params.COASTLINE_WIDTH, ax=the_ax)

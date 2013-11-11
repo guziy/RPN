@@ -16,6 +16,18 @@ def configure():
     application_properties.set_current_directory()
 
 
+def explore_seasonal_interflow():
+    import explore_interflow_field
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=17)
+    #hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
+
+    explore_interflow_field.calculate_and_plot_seasonal_means(
+        hdf_path=hdf_path,
+        start_year=1979,
+        end_year=1980)
+
+
 def compare_simulations():
     import compare_modelled_2d_fields
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=34, height_cm=30)
@@ -31,6 +43,7 @@ def compare_obs_and_model_at_points():
 
 def do_plot_static_fields():
     import plot_static_fields
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=17)
     p = Process(target=plot_static_fields.main)
     p.start()
 
@@ -57,7 +70,7 @@ def validate_seasonal_mean_atm_fields():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=15)
     import validate_model_fields
     p = Process(target=validate_model_fields.do_4_seasons, kwargs=dict(
-        start_year = 1980, end_year = 1988))
+        start_year = 1980, end_year = 1985))
     p.start()
 
 
@@ -72,10 +85,11 @@ if __name__ == "__main__":
     #compare_2d_seasonal_means_from_simulations()
     #compare_obs_and_model_at_points()
     #compare_simulations()
-    #validate_seasonal_mean_atm_fields()
+    validate_seasonal_mean_atm_fields()
     #plot_static_fields_histograms()
 
     #compare_quantiles()
 
-    plot_vertical_soil_moisture_cross_section()
+    #plot_vertical_soil_moisture_cross_section()
 
+    #explore_seasonal_interflow()

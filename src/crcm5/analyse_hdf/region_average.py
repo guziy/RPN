@@ -24,10 +24,10 @@ def main():
     # Change the default colors
     mpl.rcParams["axes.color_cycle"] = bmap.mpl_colors
 
-    varnames = ["TT", "PR"]
+    varnames = ["STFL", "TRAF"]
     units = [r"${\rm ^{\circ} C}$", "mm/d"]
-    factors = [1, 60 * 60 * 24 * 1000]
-    levels = [1, None]
+    factors = [60 * 60 * 24 * 1000, 60 * 60 * 24 * 1000]
+    levels = [None, 1]
     start_year = 1979
     end_year = 1985
 
@@ -35,17 +35,17 @@ def main():
     if not os.path.isdir(images_folder):
         os.mkdir(images_folder)
 
-    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
-    label1 = "CRCM5-R"
+    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+    label1 = "CRCM5-HCD-RL"
 
-    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
-    label2 = "CRCM5-HCD-R"
+    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    label2 = "CRCM5-HCD-RL-INTFL"
 
     #region specification
     ll_crnr_i = 0
     ll_crnr_j = 0
-    ur_crnr_i = ll_crnr_i + 60
-    ur_crnr_j = ll_crnr_j + 60
+    ur_crnr_i = ll_crnr_i + 200
+    ur_crnr_j = ll_crnr_j + 200
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=path1)
     x, y = basemap(lons2d, lats2d)
