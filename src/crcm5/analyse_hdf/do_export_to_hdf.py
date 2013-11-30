@@ -102,10 +102,11 @@ def main():
 
 
     dm = Crcm5ModelDataManager(samples_folder_path = data_folder, all_files_in_samples_folder=True)
-    var_names = ["STFL", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV", "AS"]
+    #var_names = ["STFL", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV", "AS", "INTF"]
     #var_names = [ "I0", "I1", "I2", "IMAV"]
     #var_names = ["AS", ]
     #var_names = ["QQ", ]
+    var_names = ["INTF", ]
     dm.export_to_hdf(var_list = var_names, file_path= hdf_file_path, mode="a")
     export_static_fields_to_hdf(
         hdf_file= hdf_file_path, data_folder=data_folder

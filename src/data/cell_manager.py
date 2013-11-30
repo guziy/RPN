@@ -10,9 +10,9 @@ __author__ = 'huziy'
 
 import numpy as np
 
-#responsible for creating conected cells, and for quering subregions
-class CellManager:
 
+class CellManager:
+    #responsible for creating conected cells, and for quering subregions
     def __init__(self, flow_dirs, nx = None, ny = None,
                  lons2d = None,
                  lats2d = None,
@@ -21,41 +21,92 @@ class CellManager:
         self.cells = []
         self.lons2d = lons2d
         self.lats2d = lats2d
+        self.flow_directions = flow_dirs
 
         self.accumulation_area_km2 = accumulation_area_km2
 
         #calculate characteristic distance
-        v1 = lat_lon.lon_lat_to_cartesian(self.lons2d[0, 0], self.lats2d[0, 0])
-        v2 = lat_lon.lon_lat_to_cartesian(self.lons2d[1, 1], self.lats2d[1, 1])
-        dv = np.array(v2) - np.array(v1)
-        self.characteristic_distance = np.sqrt(np.dot(dv, dv))
+        if None not in [self.lats2d, self.lons2d]:
+            v1 = lat_lon.lon_lat_to_cartesian(self.lons2d[0, 0], self.lats2d[0, 0])
+            v2 = lat_lon.lon_lat_to_cartesian(self.lons2d[1, 1], self.lats2d[1, 1])
+            dv = np.array(v2) - np.array(v1)
+            self.characteristic_distance = np.sqrt(np.dot(dv, dv))
 
-        x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-        self.kdtree = cKDTree(zip(x, y, z))
+            x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
+            self.kdtree = cKDTree(zip(x, y, z))
 
         if not None in [nx, ny]:
             self.nx = nx
             self.ny = ny
         else:
-            nx, ny  = flow_dirs.shape
+            nx, ny = flow_dirs.shape
             self.nx, self.ny = flow_dirs.shape
 
         for i in range(nx):
-            self.cells.append(list([Cell(i = i, j = j, flow_dir_value = flow_dirs[i,j]) for j in range(ny)]))
+            self.cells.append(list([Cell(i = i, j = j, flow_dir_value = flow_dirs[i, j]) for j in range(ny)]))
 
         self._without_next_mask = np.zeros((nx, ny), dtype=np.int)
-        self._wo_next_wo_prev_mask = np.zeros((nx, ny), dtype=np.int) #mask of the potential outlets
+        self._wo_next_wo_prev_mask = np.zeros((nx, ny), dtype=np.int)  # mask of the potential outlets
         for i in range(nx):
             for j in range(ny):
-                i_next, j_next = direction_and_value.to_indices(i,j, flow_dirs[i][j])
+                i_next, j_next = direction_and_value.to_indices(i, j, flow_dirs[i][j])
                 next_cell = None
                 if 0 <= i_next < nx:
                     if 0 <= j_next < ny:
                         next_cell = self.cells[i_next][j_next]
 
 
-                self._without_next_mask[i,j] = int(next_cell is None)
+                self._without_next_mask[i, j] = int(next_cell is None)
                 self.cells[i][j].set_next(next_cell)
+
+
+
+    def get_outlet_mask_array(self, lower_accumulation_index_limit = 5):
+        """
+        returns a mask 2d bool array which is True where accumulation index is greater then (>)
+        lower_accumulation_index_limit
+        """
+
+        is_outlet_candidate = (self.flow_directions <= 0) | (self.flow_directions >= 129)
+
+        not_valid_dir_value = (self.flow_directions != 1)
+        for i in range(1, 8):
+            not_valid_dir_value &= self.flow_directions != 2 ** i
+
+        is_outlet_candidate |= not_valid_dir_value
+
+        return (self.get_accumulation_index() > lower_accumulation_index_limit) & is_outlet_candidate
+
+
+    def get_model_points_of_outlets(self, lower_accumulation_index_limit = 5):
+        """
+        Does the same thing as self.get_oulet_mask_array, except the result is a list of ModelPoint objects
+        :param lower_accumulation_index_limit:
+        """
+        omask = self.get_outlet_mask_array(lower_accumulation_index_limit = lower_accumulation_index_limit)
+        return [ModelPoint(ix=i, jy=j, longitude=self.lons2d[i, j], latitude=self.lats2d[i, j])
+                for i, j in zip(*np.where(omask))]
+
+
+    def get_accumulation_index(self):
+        #returns a field of the number of cells flowing into a given cell
+        #(based on the list of cells representing current domain)
+        result = np.zeros((self.nx, self.ny))
+
+        for i in range(self.nx):
+            for j in range(self.ny):
+                the_cell = self.cells[i][j]
+                assert isinstance(the_cell, Cell)
+                if the_cell.next is not None:
+                    continue
+
+                result[i, j] = the_cell.get_number_of_upstream_cells()
+                for acell in the_cell.get_upstream_cells():
+                    result[acell.i, acell.j] = acell.get_number_of_upstream_cells()
+
+        return result
+
+
 
 
 
@@ -72,13 +123,13 @@ class CellManager:
 
 
 
-    def get_mask_of_cells_connected_with(self, aCell):
+    def get_mask_of_cells_connected_with(self, acell):
         """
         returns 2d array indicating 1 where there is a cell connected to aCell and 0 where it is not
-        :type aCell: Cell
+        :type acell: Cell
         """
-        assert isinstance(aCell, Cell)
-        all_upstream = aCell.get_upstream_cells()
+        assert isinstance(acell, Cell)
+        all_upstream = acell.get_upstream_cells()
         the_mask = np.zeros((self.nx, self.ny)).astype(int)
         for uc in all_upstream:
             the_mask[uc.i, uc.j] = 1
@@ -99,15 +150,14 @@ class CellManager:
             return self._without_next_mask
 
 
-        pass
 
     def get_coherent_rout_domain_mask(self, outlet_mask):
         """
         ignore the cells which only have 1 previous cell (i.e. itself)
         """
-        i,j = np.where(outlet_mask == 1)
+        i, j = np.where(outlet_mask == 1)
         rout_mask = np.zeros(outlet_mask.shape).astype(int)
-        for io, jo in zip(i,j):
+        for io, jo in zip(i, j):
             upstream = self.cells[io][jo].get_upstream_cells()
             if len(upstream) <= 1:
                 continue
@@ -118,7 +168,7 @@ class CellManager:
 
             #do not consider outlets, since they contain ocean points, the runoff for which can be
             #negative, and this is not accounted for in the routing scheme
-            rout_mask[io,jo] = 0
+            rout_mask[io, jo] = 0
 
         return rout_mask
 

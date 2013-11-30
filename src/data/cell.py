@@ -10,7 +10,19 @@ class Cell:
         self.i = i
         self.j = j
         self.flow_dir_value = flow_dir_value
+        self._number_of_upstream_cells = -1
         pass
+
+    def get_number_of_upstream_cells(self):
+        #returns number of upstream cells and sets it to the upstream cells
+        if self._number_of_upstream_cells < 0:
+            self._number_of_upstream_cells = 1  # account itself
+            for acell in self.previous:
+                assert isinstance(acell, Cell)
+                self._number_of_upstream_cells += acell.get_number_of_upstream_cells()
+
+        return self._number_of_upstream_cells
+
 
     def set_next(self, next_cell):
         """

@@ -4,7 +4,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, LogNorm
 from matplotlib.figure import Figure
 from matplotlib.ticker import LinearLocator, MultipleLocator, LogLocator, MaxNLocator, ScalarFormatter, FuncFormatter
-from mpl_toolkits.basemap import maskoceans
+from mpl_toolkits.basemap import maskoceans, Basemap
 import os
 from crcm5 import infovar
 from crcm5.analyse_hdf import common_plot_params
@@ -379,4 +379,6 @@ def main():
 if __name__ == "__main__":
     #plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf")
     main()
+
+    print Basemap(projection="npstere", lon_0=-115, boundinglat=60).proj4string
     print "Hello world"

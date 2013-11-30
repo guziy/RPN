@@ -187,6 +187,31 @@ class AnuSplinManager:
         return mean_field.flatten()[indices].reshape(lonsTarget.shape)
 
 
+    def get_daily_clim_fields_interpolated_to(self, start_year = None, end_year = None,
+                                              lons_target = None, lats_target = None
+                                              ):
+        #Return 365 fields
+        df = self.get_daily_climatology_fields(start_year = start_year, end_year = end_year)
+
+
+        assert isinstance(df, Panel)
+
+        lons1d, lats1d = lons_target.flatten(), lats_target.flatten()
+        xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons1d, lats1d)
+
+        dists, indices = self.kdtree.query(zip(xt, yt, zt))
+
+
+        clim_fields = [
+            df.loc[:, day, :].values.flatten()[indices].reshape(lons_target.shape) for day in df.major_axis
+        ]
+        clim_fields = np.asarray(clim_fields)
+        return df.major_axis, clim_fields
+
+
+
+
+
 
 def _reader(x):
     paths, day_of_month, nc_varname = x
@@ -267,10 +292,27 @@ def demo():
     plt.show()
 
 
+def demo_interolate_daily_clim():
+    import crcm5.analyse_hdf.do_analysis_using_pytables as analysis
+
+    #get target lons and lats for testing
+    lon, lat, basemap = analysis.get_basemap_from_hdf(
+        file_path="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf")
+
+
+    ans = AnuSplinManager()
+    dates, fileds = ans.get_daily_clim_fields_interpolated_to(start_year=1980, end_year=1982,
+                                                              lons_target=lon, lats_target=lat)
+    import matplotlib.pyplot as plt
+    plt.pcolormesh(fileds[5].transpose())
+
+    print dates
+    print fileds.mean(axis=1).mean(axis=1)
 
 
 if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     #demo()
-    demo_seasonal_mean()
+    #demo_seasonal_mean()
+    demo_interolate_daily_clim()

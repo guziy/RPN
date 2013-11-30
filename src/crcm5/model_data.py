@@ -131,7 +131,7 @@ class Crcm5ModelDataManager:
         self.vertical_soil_hydraulic_conductivity = None
         self.soil_anisotropy_ratio = None
         self.clapp_and_hornberger_hydraulic_coef_b = None
-        self.interflow_c_constant = None #introduced by Clapp and Hornberger (1978) c = 2 * b + 3
+        self.interflow_c_constant = None  # introduced by Clapp and Hornberger (1978) c = 2 * b + 3
 
         #fill the above fields with data
         self._read_static_data()
@@ -500,8 +500,7 @@ class Crcm5ModelDataManager:
 
     @classmethod
     def _get_saved_daily_climatology(cls, hdf_handle, var_name="", level=None,
-                                     start_year=None, end_year=None
-    ):
+                                     start_year=None, end_year=None):
         """
         :param hdf_handle:
         :param var_name:
@@ -1196,6 +1195,10 @@ class Crcm5ModelDataManager:
     def get_rotpole_basemap_using_lons_lats(cls, lons2d=None, lats2d=None, lon_1=-68, lat_1=52, lon_2=16.65,
                                             lat_2=0.0, resolution="l"):
 
+        """
+
+        :rtype : Basemap
+        """
         rll = RotatedLatLon(lon1=lon_1, lat1=lat_1, lon2=lon_2, lat2=lat_2)
         rplon, rplat = rll.get_north_pole_coords()
         lon_0, lat_0 = rll.get_true_pole_coords_in_rotated_system()
@@ -1207,8 +1210,7 @@ class Crcm5ModelDataManager:
                           lon_0=lon_0 - 180,
                           llcrnrlon=lons2d[0, 0], llcrnrlat=lats2d[0, 0],
                           urcrnrlon=lons2d[-1, -1], urcrnrlat=lats2d[-1, -1],
-                          resolution=resolution
-        )
+                          resolution=resolution)
         return basemap
         pass
 
@@ -2233,7 +2235,9 @@ class Crcm5ModelDataManager:
         climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                        start_year=start_year,
                                                        end_year=end_year)
+        climatology = None
         if climatology is not None:
+            hdf.close()
             return climatology
 
 
@@ -2242,20 +2246,28 @@ class Crcm5ModelDataManager:
         var_name_ori = var_name.split("_")[0]
 
         var_table = hdf.get_node("/", var_name_ori)
+        assert isinstance(var_table, tb.Table)
+
+
         #index columns for speed
-        var_table.cols.year.createIndex()
-        var_table.cols.month.createIndex()
-        var_table.cols.day.createIndex()
-        var_table.cols.hour.createIndex()
+        if not var_table.cols.year.is_indexed:
+            var_table.cols.year.createIndex()
+            var_table.cols.month.createIndex()
+            var_table.cols.day.createIndex()
+            var_table.cols.hour.createIndex()
 
         d0 = datetime(2001, 1, 1)
         daily_dates = [d0 + timedelta(days = i) for i in range(365)]
         daily_fields = []
 
-        sel_year = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+        if level is None:
+            sel_year_level = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+        else:
+            sel_year_level = "(year >= {0}) & (year <= {1}) & (level == {2})".format(start_year, end_year, level)
+
         for d in daily_dates:
-            sel_day = "(day == {0}) & (month = {1})".format(d.day, d.month)
-            rows = list(var_table.where("{0} & {1}".format(sel_year, sel_day)))
+            sel_day = "(day == {0}) & (month == {1})".format(d.day, d.month)
+            rows = var_table.read_where("{0} & {1}".format(sel_year_level, sel_day))
 
             rows = list(sorted(rows, key = lambda r: r["year"]))
 
@@ -2273,6 +2285,9 @@ class Crcm5ModelDataManager:
         #save calculated climatologies to the file
         cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
                                     var_name=var_name, level=level, start_year=start_year, end_year=end_year)
+        hdf.close()
+
+        assert len(daily_fields) == 365, "There should be 365 daily fileds and not {0}".format(len(daily_fields))
         return daily_dates, np.asarray(daily_fields)
 
 
@@ -2895,5 +2910,6 @@ if __name__ == "__main__":
 
     #testStuff()
     #doTestRotPole()
-    main()
+    #main()
+
     print "Hello world"

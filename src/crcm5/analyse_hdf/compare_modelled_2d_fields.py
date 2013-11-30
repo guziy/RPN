@@ -284,10 +284,10 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     season_list = season_to_months.keys()
 
     # crcm5-r vs crcm5-hcd-r
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
-    control_label = "CRCM5-R"
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf", ]
-    labels = ["CRCM5-HCD-R"]
+    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
+    #control_label = "CRCM5-R"
+    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf", ]
+    #labels = ["CRCM5-HCD-R"]
 
     # crcm5-hcd-rl vs crcm5-hcd-r
     #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
@@ -313,6 +313,13 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf", ]
     #labels = ["CRCM5-HCD-RL-INTFL-sani=10000"]
 
+    #ignore bulk fieald capacity
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    control_label = "CRCM5-HCD-RL-INTFL"
+    ##
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf", ]
+    labels = ["ignore bulk field capacity"]
+
 
 
     row_labels = [
@@ -330,8 +337,8 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     #levels = [1, 1, None]
 
 
-    varnames = ["QQ", ]
-    levels = [None, ]
+    #varnames = ["QQ", ]
+    #levels = [None, ]
 
     assert len(levels) == len(varnames)
 

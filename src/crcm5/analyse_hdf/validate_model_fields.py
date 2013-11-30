@@ -132,7 +132,7 @@ def validate_temperature(
     """
 
     model_level = 1
-    reasonable_error_mm_deg = 2
+    reasonable_error_deg = 2
 
     assert isinstance(obs_manager, AnuSplinManager)
     fig = plt.figure()
@@ -194,7 +194,7 @@ def validate_temperature(
         im = basemap.pcolormesh(x, y, season_to_field[season], vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
-        small_error = (np.abs(season_to_field[season]) < reasonable_error_mm_deg).astype(int)
+        small_error = (np.abs(season_to_field[season]) < reasonable_error_deg).astype(int)
         nlevs = 1
         #ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
         cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
@@ -253,8 +253,8 @@ def do_4_seasons(start_year=1979, end_year=1988):
     simlabel_to_path = {
         "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
         "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
-        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
-        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
+#        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
+#        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
     }
 
     print "Period of interest: {0}-{1}".format(start_year, end_year)
@@ -264,12 +264,13 @@ def do_4_seasons(start_year=1979, end_year=1988):
     tmin_obs_manager = AnuSplinManager(variable="stmn")
 
     for simlabel, path in simlabel_to_path.iteritems():
-        #validate precipitations
+        #Validate precipitations
         validate_precip(model_file=path, obs_manager=pcp_obs_manager,
                         season_to_months=season_to_months, simlabel=simlabel,
                         season_to_plot_indices=season_to_plot_indices,
                         start_year=start_year, end_year=end_year)
 
+        # Validate daily maximum temperature
         validate_temperature(model_file=path, obs_manager=tmax_obs_manager,
                              season_to_months=season_to_months, simlabel=simlabel,
                              season_to_plot_indices=season_to_plot_indices,
@@ -290,8 +291,10 @@ def do_4_seasons(start_year=1979, end_year=1988):
 
 def main():
     obs_varname = "pcp"
-    anusplin = AnuSplinManager(variable=obs_varname)
-    validate_precip(obs_manager=anusplin)
+    #anusplin = AnuSplinManager(variable=obs_varname)
+    #validate_precip(obs_manager=anusplin)
 
 
+if __name__ == "__main__":
+    do_4_seasons(start_year=1980, end_year=1985)
 

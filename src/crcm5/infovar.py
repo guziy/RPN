@@ -37,11 +37,12 @@ HDF_CELL_AREA_NAME = "cell_area_km2"
 HDF_LAKE_FRACTION_NAME = "lake_fraction"
 HDF_DEPTH_TO_BEDROCK_NAME = "depth_to_bedrock"
 HDF_SOIL_ANISOTROPY_RATIO_NAME = "soil_anisotropy_ratio"
+HDF_SLOPE_NAME = "slope"
 
 hdf_varname_to_description = {
     HDF_FLOW_DIRECTIONS_NAME: "flow directions in the format 1,2,4,8,16,32,64,128",
     HDF_ACCUMULATION_AREA_NAME: "flow accumulation area in km**2",
-    "slope": "Channel slope of a river, non dimensional value",
+    HDF_SLOPE_NAME: "Channel slope of a river, non dimensional value",
     HDF_CELL_AREA_NAME: "Area of a grid cell in m^2",
     "sand": "sand percentage in soil 3d field sand(level, x, y)",
     "clay": "",
@@ -49,7 +50,7 @@ hdf_varname_to_description = {
     HDF_LAKE_FRACTION_NAME: "",
     "drainage_density_inv_meters": "",
     "soil_hydraulic_conductivity": "",
-    HDF_SOIL_ANISOTROPY_RATIO_NAME: "Soil anisotropy ratio Kh/kv",
+    HDF_SOIL_ANISOTROPY_RATIO_NAME: "Soil anisotropy ratio Kh/Kv",
     "interflow_c_coef": ""
 
 }

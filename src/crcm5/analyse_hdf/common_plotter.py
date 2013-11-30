@@ -20,8 +20,8 @@ def explore_seasonal_interflow():
     import explore_interflow_field
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=17)
     #hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
-    hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
-
+    #hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
+    hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
     explore_interflow_field.calculate_and_plot_seasonal_means(
         hdf_path=hdf_path,
         start_year=1979,
@@ -39,6 +39,11 @@ def compare_obs_and_model_at_points():
     import compare_streamflow_with_obs
     p = Process(target=compare_streamflow_with_obs.main)
     p.start()
+
+
+def compare_obs_and_model_at_river_outlet_points():
+    import compare_streamflow_with_obs
+    compare_streamflow_with_obs.point_comparisons_at_outlets()
 
 
 def do_plot_static_fields():
@@ -83,9 +88,12 @@ if __name__ == "__main__":
     #
     #do_plot_static_fields()
     #compare_2d_seasonal_means_from_simulations()
+
+    #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
     #compare_obs_and_model_at_points()
+
     #compare_simulations()
-    validate_seasonal_mean_atm_fields()
+    #validate_seasonal_mean_atm_fields()
     #plot_static_fields_histograms()
 
     #compare_quantiles()
@@ -93,3 +101,6 @@ if __name__ == "__main__":
     #plot_vertical_soil_moisture_cross_section()
 
     #explore_seasonal_interflow()
+
+    #Compare observed and modelled streamflow and upstream caracteristics for river outlets
+    compare_obs_and_model_at_river_outlet_points()

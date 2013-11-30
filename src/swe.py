@@ -87,12 +87,14 @@ class SweDataManager(CRUDataManager):
         latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
         yearVariable = ds.createVariable("year", "i4", ("year",))
 
-        altVariable = ds.createVariable("SWE", "f4", ('year', 'lon', 'lat'))
-        altVariable.units = "mm"
+        sweVariable = ds.createVariable("SWE", "f4", ('year', 'lon', 'lat'))
+        sweVariable.units = "mm"
 
         for i, the_year in enumerate(year_range):
             data = self.get_mean_for_year_and_months(the_year, months=months)
-            altVariable[i, :, :] = self.interpolate_data_to(data, dest_lons2d, dest_lats2d, nneighbours=1)
+            swe = self.interpolate_data_to(data, dest_lons2d, dest_lats2d, nneighbours=1)
+            sweVariable[i, :, :] = swe
+
 
         lonVariable[:, :] = dest_lons2d[:, :]
         latVariable[:, :] = dest_lats2d[:, :]

@@ -197,7 +197,7 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=15, font_size=14)
-    plot_lake_fraction_field()
-    #main()
+    #plot_lake_fraction_field()
+    main()
     print "Hello world"
   

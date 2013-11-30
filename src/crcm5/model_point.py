@@ -17,8 +17,21 @@ if __name__ == "__main__":
     main()
     print "Hello world"
 
+
+
+def set_model_point_ids(mp_list):
+    if mp_list[0].point_id is not None:
+        return
+
+    #assing ids to model_points
+    for i, mp in enumerate(mp_list):
+        assert isinstance(mp, ModelPoint)
+        mp.point_id = i
+
+
 class ModelPoint:
-    def __init__(self):
+    def __init__(self, point_id = None, ix = None, jy = None, longitude = None, latitude = None):
+        self.point_id = point_id
         #Data manger for the simulation dataset corresponding the the data of this model point
         #some variables are averaged over upstream points sum(ai * xi)/sum(ai), where ai - are the areas of the gridcells
         self.data_manager = None
@@ -29,8 +42,8 @@ class ModelPoint:
         self.distance_to_station = None
 
         self.accumulation_area = None
-        self.ix = None
-        self.jy = None
+        self.ix = ix
+        self.jy = jy
         #2d mask, which is True for the grid points that enter self by rivers
         self.flow_in_mask = None
 
@@ -58,8 +71,8 @@ class ModelPoint:
         self.continuous_data_years = None
         self.mean_upstream_lake_fraction = None
 
-        self.longitude = None
-        self.latitude = None
+        self.longitude = longitude
+        self.latitude = latitude
 
 
 
@@ -71,7 +84,7 @@ class ModelPoint:
         #index of climatology_data_frame is (day, month)
         monthly_clim = self.climatology_data_frame.groupby(by=lambda x: x[1]).mean()
         if stamp_dates is None:
-            stamp_dates = [ datetime(1985, m, 15) for m in range(1,13) ]
+            stamp_dates = [datetime(1985, m, 15) for m in range(1, 13)]
 
         vals = [monthly_clim.ix[d.month, varname] for d in stamp_dates]
         return stamp_dates, np.array(vals)
