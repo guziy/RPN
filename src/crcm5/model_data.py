@@ -2235,7 +2235,6 @@ class Crcm5ModelDataManager:
         climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                        start_year=start_year,
                                                        end_year=end_year)
-        climatology = None
         if climatology is not None:
             hdf.close()
             return climatology

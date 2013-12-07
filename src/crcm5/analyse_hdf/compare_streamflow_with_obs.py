@@ -539,7 +539,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
         #plot mean upstream subsurface runoff
-        ax = fig.add_subplot(gs[1, 2:], sharex=streamflow_axes)
+        ax = fig.add_subplot(gs[1, 2:], sharex=streamflow_axes, sharey = ax)
         _plot_upstream_subsurface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
                                          upstream_mask=upstream_mask,
                                          daily_dates=daily_dates,
@@ -649,12 +649,12 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
     end_date = datetime(1981, 12, 31)
 
     # Station ids to get from the CEHQ database
-    #selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
-    #                "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
+    selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
+                    "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
 
-    selected_ids = [
-        "074903", "061905", "090613", "092715", "093801", "093806", "081002"
-    ]
+    # selected_ids = [
+    #     "074903", "061905", "090613", "092715", "093801", "093806", "081002"
+    # ]
 
     #selected_ids = ["081002", ]
 
@@ -663,15 +663,15 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
     #selected_ids = ["090613", ]
 
     sim_name_to_file_name = {
-        #"CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
-        #"CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
-        "CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
-        "CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
+        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
+        "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
+        #"CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
+        #"CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
         #"SANI=10000, ignore THFC":
         #    "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf",
 
         #"CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
-        "SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
+        #"SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
         #"CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
     }
 

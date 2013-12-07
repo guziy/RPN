@@ -93,7 +93,7 @@ if __name__ == "__main__":
     #compare_obs_and_model_at_points()
 
     #compare_simulations()
-    #validate_seasonal_mean_atm_fields()
+    validate_seasonal_mean_atm_fields()
     #plot_static_fields_histograms()
 
     #compare_quantiles()
@@ -103,4 +103,4 @@ if __name__ == "__main__":
     #explore_seasonal_interflow()
 
     #Compare observed and modelled streamflow and upstream caracteristics for river outlets
-    compare_obs_and_model_at_river_outlet_points()
+    #compare_obs_and_model_at_river_outlet_points()

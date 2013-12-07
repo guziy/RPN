@@ -151,7 +151,7 @@ def get_daily_max_climatology(path_to_hdf_file="", var_name="STFL", level=None,
 
 def get_daily_min_climatology(path_to_hdf_file="", var_name="STFL", level=None,
                               start_year=None, end_year=None):
-    var_name_min = "{0}_min".format(var_name)
+    var_name_min = "{0}".format(var_name)
 
     return Crcm5ModelDataManager.hdf_get_daily_extreme_climatological_fields(
         hdf_db_path=path_to_hdf_file,

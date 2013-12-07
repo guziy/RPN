@@ -247,9 +247,9 @@ def main():
 
     #plot the control
 
-    #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
     #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
-    path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
+    #path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
 
     slope = analysis.get_array_from_file(path=path, var_name="slope")
     #slope = np.ma.masked_where(slope <= 0, slope)
@@ -362,17 +362,17 @@ def main():
     _plot_soil_hydraulic_conductivity(ax, basemap, x, y, field, title="f) Kv, m/s", cmap=cmap)
 
     #soil anisotropy ratio
-    ax = fig.add_subplot(gs[2, 2])
-    all_axes.append(ax)
-    field = analysis.get_array_from_file(path=path, var_name=infovar.HDF_SOIL_ANISOTROPY_RATIO_NAME)
-    field = np.ma.masked_where(slope.mask, field)
-    _plot_field(ax, basemap, x, y, field, title="i) Soil anisotropy", cmap=cmap)
+    #ax = fig.add_subplot(gs[2, 2])
+    #all_axes.append(ax)
+    #field = analysis.get_array_from_file(path=path, var_name=infovar.HDF_SOIL_ANISOTROPY_RATIO_NAME)
+    #field = np.ma.masked_where(slope.mask, field)
+    #_plot_field(ax, basemap, x, y, field, title="i) Soil anisotropy", cmap=cmap)
 
 
     for the_ax in all_axes:
         basemap.drawcoastlines(linewidth=common_plot_params.COASTLINE_WIDTH, ax=the_ax)
 
-    figpath = os.path.join(images_folder, "static_fields_ecoclimap.jpeg")
+    figpath = os.path.join(images_folder, "static_fields.jpeg")
     fig.savefig(figpath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 

@@ -36,6 +36,8 @@ class SweDataManager(CRUDataManager):
         self.lons2d, self.lats2d = lons, lats
 
         time_units_s = nc_vars["time"].units
+        self.timesVar = nc_vars["time"]
+        self.times_num = nc_vars["time"][:]
         self.times = num2date(times, time_units_s)
         self.var_data = nc_vars[self.var_name][:]
 
@@ -83,26 +85,31 @@ class SweDataManager(CRUDataManager):
         ds.createDimension('lon', dest_lons2d.shape[0])
         ds.createDimension('lat', dest_lons2d.shape[1])
 
-        lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
-        latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
-        yearVariable = ds.createVariable("year", "i4", ("year",))
+        lon_variable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+        lat_variable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+        year_variable = ds.createVariable("year", "i4", ("year",))
 
-        sweVariable = ds.createVariable("SWE", "f4", ('year', 'lon', 'lat'))
-        sweVariable.units = "mm"
+        swe_variable = ds.createVariable("SWE", "f4", ('year', 'lon', 'lat'))
+        swe_variable.units = "mm"
 
         for i, the_year in enumerate(year_range):
             data = self.get_mean_for_year_and_months(the_year, months=months)
             swe = self.interpolate_data_to(data, dest_lons2d, dest_lats2d, nneighbours=1)
-            sweVariable[i, :, :] = swe
+            swe_variable[i, :, :] = swe
 
-
-        lonVariable[:, :] = dest_lons2d[:, :]
-        latVariable[:, :] = dest_lats2d[:, :]
-        yearVariable[:] = year_range
+        lon_variable[:, :] = dest_lons2d[:, :]
+        lat_variable[:, :] = dest_lats2d[:, :]
+        year_variable[:] = year_range
 
         ds.close()
 
         pass
+
+    def getMeanFieldForMonthsInterpolatedTo(self, months=None,
+                                            lons_target=None, lats_target=None,
+                                            start_year=None, end_year=None):
+        mean_field = self.get_mean(start_year, end_year, months = months)
+        return self.interpolate_data_to(mean_field, lons_target, lats_target, nneighbours=1)
 
 
 def main():

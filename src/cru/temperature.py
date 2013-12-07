@@ -21,6 +21,10 @@ import matplotlib.pyplot as plt
 
 class CRUDataManager:
     def __init__(self, path="data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc", var_name="tmp", lazy=False):
+        self.timesVar = None
+        self.kdtree = None
+        self.times_num = None
+
         self.lazy = lazy
         ds = Dataset(path)
         self.var_name = var_name
@@ -72,8 +76,8 @@ class CRUDataManager:
 
         sel_dates = num2date(sel_dates, self.timesVar.units)
 
-        bool_vector = np.where(map(lambda x: (x.month in months), sel_dates))[0]
-        return np.mean(sel_data[bool_vector, :, :], axis=0)
+        ind_vector = np.where(map(lambda x: (x.month in months), sel_dates))[0]
+        return np.mean(sel_data[ind_vector, :, :], axis=0)
 
 
     def get_daily_climatology(self, start_year, end_year, stamp_year=2001):

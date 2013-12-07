@@ -6,6 +6,7 @@ from matplotlib.ticker import MaxNLocator
 import os
 from crcm5 import infovar
 from data.anusplin import AnuSplinManager
+from swe import SweDataManager
 
 __author__ = 'huziy'
 
@@ -61,8 +62,8 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
         model_field *= 1000.0 * 60 * 60 * 24
 
         obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lonsTarget=lon, latsTarget=lat,
-                                                                    start_year=start_year, end_year=end_year
-        )
+                                                                    start_year=start_year, end_year=end_year)
+
         #calculate the difference between the modelled and observed fields
         the_diff = model_field - obs_field
         current_min = np.min(the_diff)
@@ -218,12 +219,93 @@ def validate_temperature(
     fig.savefig(os.path.join(images_folder, out_filename), dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 
-def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_plot_indices, start_year, end_year):
+def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_plot_indices, start_year, end_year,
+                 lake_fraction = None):
     model_var_name = "I5"
+    model_level = None
+    reasonable_error_mm = 1.0
+    assert isinstance(obs_manager, SweDataManager)
+
     fig = plt.figure()
+    obs_manager.name = "Obs."
+    fig.suptitle("({0}) - ({1})".format(simlabel, obs_manager.name))
+
     #TODO: implement
     #1. read model results
     #2. plot the differences (model - obs)
+
+    lon, lat, basemap = analysis.get_basemap_from_hdf(file_path=model_file)
+
+    #do calculations and only after that do the plotting
+    season_to_field = {}
+
+    #calculate global min and max for plotting
+    vmin = None
+    vmax = None
+
+    for season, months in season_to_months.iteritems():
+        model_field = analysis.get_seasonal_climatology(start_year=start_year, end_year=end_year,
+                                                        months=months,
+                                                        level=model_level,
+                                                        var_name=model_var_name, hdf_path=model_file)
+
+        obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lons_target=lon, lats_target=lat,
+                                                                    start_year=start_year, end_year=end_year)
+
+        #calculate the difference between the modelled and observed fields
+        the_diff = model_field - obs_field
+        current_min = np.min(the_diff)
+        current_max = np.max(the_diff)
+
+        if vmin is not None:
+            vmin = current_min if current_min < vmin else vmin
+            vmax = current_max if current_max > vmax else vmax
+        else:
+            vmin = current_min
+            vmax = current_max
+
+        season_to_field[season] = the_diff
+
+    ncolors = 10
+    gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.05])
+
+    cmap = brewer2mpl.get_map("RdBu", "diverging", 10, reverse=True).get_mpl_colormap(N=ncolors)
+    x, y = basemap(lon, lat)
+    im = None
+
+    d = min(abs(vmin), abs(vmax))
+    vmin = -d
+    vmax = d
+    bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors)
+
+    print "bounds: ", bounds
+
+    cs = None
+    for season, field in season_to_field.iteritems():
+        row, col = season_to_plot_indices[season]
+        ax = fig.add_subplot(gs[row, col])
+        ax.set_title(season)
+
+        to_plot = np.ma.masked_where(lake_fraction > 0.9, season_to_field[season])
+        im = basemap.pcolormesh(x, y, to_plot, vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
+        basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
+
+        small_error = ((np.abs(season_to_field[season]) < reasonable_error_mm) | to_plot.mask).astype(int)
+        nlevs = 1
+        #ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
+        cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
+
+
+    #artists, labels = cs.legend_elements()
+    #plt.legend(artists, labels, handleheight=2)
+
+    cax = fig.add_subplot(gs[:, 2])
+
+    units_str = r"${\rm mm}$"
+    var_str = r"SWE"
+    cax.set_title("{0}, {1}".format(var_str, units_str))
+    plt.colorbar(im, cax=cax)
+
 
     seasons_str = "_".join(sorted([str(s) for s in season_to_months.keys()]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
@@ -259,9 +341,14 @@ def do_4_seasons(start_year=1979, end_year=1988):
 
     print "Period of interest: {0}-{1}".format(start_year, end_year)
 
+    lake_fraction = analysis.get_array_from_file(simlabel_to_path.items()[-1][1],
+                                                 var_name=infovar.HDF_LAKE_FRACTION_NAME)
+
     pcp_obs_manager = AnuSplinManager(variable="pcp")
     tmax_obs_manager = AnuSplinManager(variable="stmx")
     tmin_obs_manager = AnuSplinManager(variable="stmn")
+
+    swe_obs_manager = SweDataManager(var_name="SWE")
 
     for simlabel, path in simlabel_to_path.iteritems():
         #Validate precipitations
@@ -283,10 +370,10 @@ def do_4_seasons(start_year=1979, end_year=1988):
 
 
         #validate swe
-        #validate_swe(model_file=path, obs_manager=pcpObsManager,
-        #             season_to_months=season_to_months, simlabel=simlabel,
-        #             season_to_plot_indices=season_to_plot_indices,
-        #             start_year=start_year, end_year=end_year)
+        validate_swe(model_file=path, obs_manager=swe_obs_manager,
+                     season_to_months=season_to_months, simlabel=simlabel,
+                     season_to_plot_indices=season_to_plot_indices,
+                     start_year=start_year, end_year=end_year, lake_fraction = lake_fraction)
 
 
 def main():
