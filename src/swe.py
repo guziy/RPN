@@ -1,4 +1,6 @@
 from netCDF4 import num2date, Dataset
+import os
+import pickle
 from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.spatial.kdtree import KDTree
@@ -105,11 +107,54 @@ class SweDataManager(CRUDataManager):
 
         pass
 
+
+    def get_mean(self, start_year, end_year, months=None):
+        """
+        Get mean using pandas, overriden, not implemented for the lazy case
+        :param start_year:
+        :param end_year:
+        :param months:
+        :return:
+        """
+        import pandas as pd
+        #Use cache file for performance
+        cache_file = "swe_obs_{0}-{1}_".format(start_year, end_year) + "-".join([str(x) for x in months]) + ".cache"
+        if os.path.isfile(cache_file):
+            print "Using cached SWE data from {0}".format(cache_file)
+            return pickle.load(open(cache_file))
+
+        if self.lazy:
+            #TODO: implement
+            raise NotImplementedError()
+        else:
+            nx, ny = self.lons2d.shape
+            data_panel = pd.Panel(data=self.nc_vars[self.var_name][:], items=self.times,
+                                  major_axis=range(nx), minor_axis=range(ny))
+            data_panel = data_panel.select(
+                lambda d: (d.month in months) and (d.year >= start_year) and d.year <= end_year)
+            df = data_panel.mean(axis="items")
+        mean_field = df.values
+        pickle.dump(mean_field, open(cache_file, "w"))
+        return mean_field
+
     def getMeanFieldForMonthsInterpolatedTo(self, months=None,
                                             lons_target=None, lats_target=None,
                                             start_year=None, end_year=None):
+        """
+        Get mean over months and interpolate the result to the target longitudes and latitudes
+        :param months:
+        :param lons_target:
+        :param lats_target:
+        :param start_year:
+        :param end_year:
+        :return:
+        """
+
         mean_field = self.get_mean(start_year, end_year, months = months)
-        return self.interpolate_data_to(mean_field, lons_target, lats_target, nneighbours=1)
+        assert mean_field.shape == self.lons2d.shape, "data shape: ({0}, {1})".format(*mean_field.shape) + \
+                                                      "coordinates shape: ({0}, {1})".format(*self.lons2d.shape)
+        interp_field = self.interpolate_data_to(mean_field, lons_target, lats_target, nneighbours=1)
+        return interp_field
 
 
 def main():

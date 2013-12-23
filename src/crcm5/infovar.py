@@ -131,7 +131,7 @@ def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False):
         locator = MaxNLocator(ncolors)
         bounds = np.asarray(locator.tick_values(vmin, vmax))
     elif exclude_zero:
-        locator = MaxNLocator(nbins=ncolors - 1, symmetric=True)
+        locator = MaxNLocator(nbins=ncolors, symmetric=True)
         bounds = np.asarray(locator.tick_values(vmin, vmax))
         bounds = bounds[bounds != 0]
     else:

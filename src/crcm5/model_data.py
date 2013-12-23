@@ -912,14 +912,23 @@ class Crcm5ModelDataManager:
         if self.all_files_in_one_folder:
             rpn_path_list.extend(
                 [os.path.join(self.samples_folder, fName) for fName in os.listdir(self.samples_folder)])
+        else:
+            raise NotImplementedError("This method is not yet implemented for the case when the rpn files are in"
+                                      " different month folders")
 
         h5file = tb.openFile(file_path, mode=mode, title="created from the data in {0}".format(self.samples_folder))
 
 
         #table row description
         field_data_table_scheme = {
-            "year": tb.IntCol(), "month": tb.IntCol(), "day": tb.IntCol(), "hour": tb.IntCol(), "minute": tb.IntCol(),
-            "second": tb.IntCol(), "level": tb.FloatCol(), "field": tb.FloatCol(shape=self.lons2D.shape)
+            "year": tb.Int32Col(pos = 1),
+            "month": tb.Int32Col(pos = 2),
+            "day": tb.Int32Col(pos = 3),
+            "hour": tb.Int32Col(pos = 4),
+            "minute": tb.Int32Col(pos = 5),
+            "second": tb.Int32Col(pos = 6),
+            "level": tb.Float32Col(pos = 7),
+            "field": tb.Float32Col(shape=self.lons2D.shape, pos = 8)
         }
 
 
@@ -937,39 +946,70 @@ class Crcm5ModelDataManager:
             varNameToTable[aVarName] = h5file.createTable("/", aVarName, field_data_table_scheme,
                                                           filters=tb.Filters(complevel=5))
 
+
+        ##record array type
+        rectype = [
+            ("year", "i4"), ("month", "i4"), ("day", "i4"),
+            ("hour", "i4"), ("minute", "i4"), ("second", "i4"),
+            ("level", "f4")
+        ]
+
+
         for fPath in rpn_path_list:
             rObj = RPN(fPath)  # open current rpn file for reading
-            rObj.suppress_log_messages()
 
             for aVarName in var_list:
 
                 dataTable = varNameToTable[aVarName]
                 try:
                     data = rObj.get_4d_field(name=aVarName)
-                    #read projection parameters
-                    if projectionParams is None:
-                        projectionParams = rObj.get_proj_parameters_for_the_last_read_rec()
-
-                except Exception:
+                except Exception, exc:
                     #the variable not found or some other problem occurred
+                    print exc
                     continue
 
-                #add the data to hdf table
-                row = dataTable.row
-                for t, vals in data.iteritems():
-                    for level, field in vals.iteritems():
-                        row["year"] = t.year
-                        row["month"] = t.month
-                        row["day"] = t.day
-                        row["hour"] = t.hour
-                        row["minute"] = t.minute
-                        row["second"] = t.second
-                        row["level"] = level
-                        row["field"] = field
-                        row.append()
 
-            #close the file
+
+                #read projection parameters
+                if projectionParams is None and data is not None:
+                    the_field = data.items()[0][1].items()[0][1]
+                    rectype.append(("field", the_field.dtype, the_field.shape))
+                    rectype = np.dtype(rectype)
+                    projectionParams = rObj.get_proj_parameters_for_the_last_read_rec()
+                    print "projParams = ", projectionParams
+
+
+
+                #add the data to hdf table
+                #row = dataTable.row
+                #for t, vals in data.iteritems():
+                #    for level, field in vals.iteritems():
+                #        row["year"] = t.year
+                #        row["month"] = t.month
+                #        row["day"] = t.day
+                #        row["hour"] = t.hour
+                #        row["minute"] = t.minute
+                #        row["second"] = t.second
+                #        row["level"] = level
+                #        row["field"] = field
+                #        row.append()
+
+                new_rows = []
+                for t, vals in data.iteritems():
+                    new_rows += [(t.year, t.month, t.day, t.hour, t.minute, t.second, level, field)
+                                 for level, field in vals.iteritems()]
+
+                new_rows = np.array(new_rows, dtype=rectype)
+                recarr = new_rows.view(np.recarray)
+                dataTable.append(recarr)
+                #close the file
             rObj.close()
+
+
+        dataTable.cols.year.create_index()
+        dataTable.cols.month.create_index()
+        dataTable.cols.day.create_index()
+        dataTable.cols.hour.create_index()
 
         # insert also lon and lat data
         if "/longitude" not in h5file:
@@ -1628,9 +1668,13 @@ class Crcm5ModelDataManager:
             varname = "FLDR"
             self.flow_directions = _read_static_field(rpnObj, varname)
 
-            varname = "ML"
+            varname = "LM"
             self.lake_fraction = _read_static_field(rpnObj, varname)
             print np.min(self.lake_fraction), np.max(self.lake_fraction)
+            if self.lake_fraction is None or self.lake_fraction.max() < 0.01:
+                # Try to read lake fraction field from the routing data
+                varname = "LF1"
+                self.lake_fraction = _read_static_field(rpnObj, varname)
 
             varname = "STBM"
             self.bankfull_storage_m3 = _read_static_field(rpnObj, varname)
@@ -1643,6 +1687,8 @@ class Crcm5ModelDataManager:
 
             varname = "LKAR"
             self.lake_area = _read_static_field(rpnObj, varname)
+
+
 
             #try to read cell areas from the input file
             varname = "DX"
@@ -2230,7 +2276,7 @@ class Crcm5ModelDataManager:
 
     @classmethod
     def hdf_get_daily_extreme_climatological_fields(cls, hdf_db_path, start_year=None,
-                                                    end_year=None, var_name="STFL_max", level=None, maximum = True):
+                                                    end_year=None, var_name="STFL_max", level=None, maximum=True):
         hdf = tb.open_file(hdf_db_path, mode="a")
         climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                        start_year=start_year,
@@ -2256,7 +2302,7 @@ class Crcm5ModelDataManager:
             var_table.cols.hour.createIndex()
 
         d0 = datetime(2001, 1, 1)
-        daily_dates = [d0 + timedelta(days = i) for i in range(365)]
+        daily_dates = [d0 + timedelta(days=i) for i in range(365)]
         daily_fields = []
 
         if level is None:
@@ -2268,10 +2314,10 @@ class Crcm5ModelDataManager:
             sel_day = "(day == {0}) & (month == {1})".format(d.day, d.month)
             rows = var_table.read_where("{0} & {1}".format(sel_year_level, sel_day))
 
-            rows = list(sorted(rows, key = lambda r: r["year"]))
+            rows = list(sorted(rows, key=lambda r: r["year"]))
 
             data_store = []
-            for year, sel_rows in itertools.groupby(rows, key = lambda r: r["year"]):
+            for year, sel_rows in itertools.groupby(rows, key=lambda r: r["year"]):
                 if maximum:
                     data_store.append(np.max([r1["field"] for r1 in sel_rows], axis=0))
                 else:
