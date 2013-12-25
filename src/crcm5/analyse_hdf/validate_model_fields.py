@@ -4,6 +4,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 import os
+from mpl_toolkits.basemap import maskoceans
 from crcm5 import infovar
 from data.anusplin import AnuSplinManager
 from swe import SweDataManager
@@ -223,14 +224,16 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
                  lake_fraction = None):
     model_var_name = "I5"
     model_level = None
-    reasonable_error_mm = 1.0
+    reasonable_error_mm = 100.0
     assert isinstance(obs_manager, SweDataManager)
+
+    print "lake fraction ranges: {0}, {1}".format(lake_fraction.min(), lake_fraction.max())
 
     fig = plt.figure()
     obs_manager.name = "Obs."
     fig.suptitle("({0}) - ({1})".format(simlabel, obs_manager.name))
 
-    #TODO: implement
+
     #1. read model results
     #2. plot the differences (model - obs)
 
@@ -243,6 +246,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     vmin = None
     vmax = None
 
+    season_to_obs_field = {}
     for season, months in season_to_months.iteritems():
         model_field = analysis.get_seasonal_climatology(start_year=start_year, end_year=end_year,
                                                         months=months,
@@ -252,6 +256,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
         obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lons_target=lon, lats_target=lat,
                                                                     start_year=start_year, end_year=end_year)
 
+        season_to_obs_field[season] = obs_field
         #calculate the difference between the modelled and observed fields
         the_diff = model_field - obs_field
         current_min = np.min(the_diff)
@@ -266,17 +271,25 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
         season_to_field[season] = the_diff
 
-    ncolors = 10
+
+    ncolors = 11
     gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.05])
 
-    cmap = brewer2mpl.get_map("RdBu", "diverging", 10, reverse=True).get_mpl_colormap(N=ncolors)
     x, y = basemap(lon, lat)
     im = None
 
     d = min(abs(vmin), abs(vmax))
+
+    d = 100  # limit module of the difference to 200 mm
+
     vmin = -d
     vmax = d
-    bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors)
+    #bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
+
+    bounds = [-100, -80, -50, -20, -10, -1]
+    bounds += [-b for b in reversed(bounds)]
+    bn = BoundaryNorm(bounds, ncolors=len(bounds) - 1)
+    cmap = brewer2mpl.get_map("RdBu", "diverging", ncolors, reverse=True).get_mpl_colormap(N=len(bounds) - 1)
 
     print "bounds: ", bounds
 
@@ -286,7 +299,11 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
 
-        to_plot = np.ma.masked_where(lake_fraction > 0.9, season_to_field[season])
+        negligible_snow = season_to_obs_field[season] < 1
+
+        basemap.drawmapboundary(fill_color="gray")
+        to_plot = np.ma.masked_where((lake_fraction > 0.9), season_to_field[season])
+        to_plot = maskoceans(lon, lat, to_plot)
         im = basemap.pcolormesh(x, y, to_plot, vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
@@ -303,8 +320,8 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
     units_str = r"${\rm mm}$"
     var_str = r"SWE"
-    cax.set_title("{0}, {1}".format(var_str, units_str))
-    plt.colorbar(im, cax=cax)
+    cax.set_title("{0}, {1}\n".format(var_str, units_str))
+    plt.colorbar(im, cax=cax, ticks = bounds)
 
 
     seasons_str = "_".join(sorted([str(s) for s in season_to_months.keys()]))
@@ -352,22 +369,22 @@ def do_4_seasons(start_year=1979, end_year=1988):
 
     for simlabel, path in simlabel_to_path.iteritems():
         #Validate precipitations
-        validate_precip(model_file=path, obs_manager=pcp_obs_manager,
-                        season_to_months=season_to_months, simlabel=simlabel,
-                        season_to_plot_indices=season_to_plot_indices,
-                        start_year=start_year, end_year=end_year)
-
-        # Validate daily maximum temperature
-        validate_temperature(model_file=path, obs_manager=tmax_obs_manager,
-                             season_to_months=season_to_months, simlabel=simlabel,
-                             season_to_plot_indices=season_to_plot_indices,
-                             start_year=start_year, end_year=end_year, model_var_name="TT_max")
-
-        validate_temperature(model_file=path, obs_manager=tmin_obs_manager,
-                             season_to_months=season_to_months, simlabel=simlabel,
-                             season_to_plot_indices=season_to_plot_indices,
-                             start_year=start_year, end_year=end_year, model_var_name="TT_min")
-
+        # validate_precip(model_file=path, obs_manager=pcp_obs_manager,
+        #                 season_to_months=season_to_months, simlabel=simlabel,
+        #                 season_to_plot_indices=season_to_plot_indices,
+        #                 start_year=start_year, end_year=end_year)
+        #
+        # # Validate daily maximum temperature
+        # validate_temperature(model_file=path, obs_manager=tmax_obs_manager,
+        #                      season_to_months=season_to_months, simlabel=simlabel,
+        #                      season_to_plot_indices=season_to_plot_indices,
+        #                      start_year=start_year, end_year=end_year, model_var_name="TT_max")
+        #
+        # validate_temperature(model_file=path, obs_manager=tmin_obs_manager,
+        #                      season_to_months=season_to_months, simlabel=simlabel,
+        #                      season_to_plot_indices=season_to_plot_indices,
+        #                      start_year=start_year, end_year=end_year, model_var_name="TT_min")
+        #
 
         #validate swe
         validate_swe(model_file=path, obs_manager=swe_obs_manager,

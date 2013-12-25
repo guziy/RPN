@@ -113,6 +113,17 @@ def main():
     )
     pass
 
+def skynet3_test():
+    #To test dictionary to recarray to pytables implementation
+    data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl-kd5_spinup/all_files_in_one_folder"
+    hdf_file_path = "/skynet3_rech1/huziy/hdf_store/test.hdf"
+     
+    var_names = ["INTF", ]
+    dm = Crcm5ModelDataManager(samples_folder_path = data_folder, all_files_in_samples_folder=True)
+    dm.export_to_hdf(var_list = var_names, file_path= hdf_file_path, mode="w")
+ 
+
+
 if __name__ == "__main__":
 
     import application_properties
@@ -129,7 +140,8 @@ if __name__ == "__main__":
 
     #
     #correct_proj_table()
-    main()
+    #main()
     #multiply_table_column_by()
+    skynet3_test()
     print "Elapsed time {0} seconds".format(time.clock() - t0)
     print "Hello world"

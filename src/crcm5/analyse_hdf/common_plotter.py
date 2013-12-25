@@ -75,7 +75,7 @@ def validate_seasonal_mean_atm_fields():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=15)
     import validate_model_fields
     p = Process(target=validate_model_fields.do_4_seasons, kwargs=dict(
-        start_year = 1980, end_year = 1985))
+        start_year = 1979, end_year = 1981))
     p.start()
 
 
@@ -90,10 +90,10 @@ if __name__ == "__main__":
     #compare_2d_seasonal_means_from_simulations()
 
     #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    #compare_obs_and_model_at_points()
+    compare_obs_and_model_at_points()
 
     #compare_simulations()
-    validate_seasonal_mean_atm_fields()
+    #validate_seasonal_mean_atm_fields()
     #plot_static_fields_histograms()
 
     #compare_quantiles()

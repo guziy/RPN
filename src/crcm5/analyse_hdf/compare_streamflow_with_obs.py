@@ -237,8 +237,8 @@ def _apply_running_mean(index, values, averaging_period="5D"):
     :return: df - resampled pandas.DataFrame
     """
     df = pandas.DataFrame(index=index, data=values, columns=["values"])
-    df = pandas.rolling_mean(df, window=1, freq=averaging_period)
-    return df[:-1]
+    df = df.resample(averaging_period, how = np.mean)
+    return df
 
 
 #noinspection PyNoneFunctionAssignment
@@ -379,18 +379,19 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     if ncols * nrows < len(mp_list):
         nrows += 1
 
-    figure_stfl, axes_stfl = plt.subplots(nrows, ncols, sharex=True, sharey=True, squeeze=False)
+    figure_stfl = plt.figure()
+    gs = gridspec.GridSpec(nrows=nrows, ncols = ncols)
     #  a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
     legend_added = False
 
-    print axes_stfl.shape
-    ax_stfl_list = axes_stfl.flatten()
 
     label_list = list(sim_name_to_file_name.keys())  # Needed to keep the order the same for all subplots
-
+    ax_stfl = None
     all_years = [y for y in range(start_year, end_year + 1)]
     for i, the_model_point in enumerate(mp_list):
-        ax_stfl = ax_stfl_list[i]
+
+        ax_stfl = figure_stfl.add_subplot(gs[i // ncols, i % ncols],
+                                          sharex = ax_stfl)
         assert isinstance(the_model_point, ModelPoint)
 
         ##Check the number of years accessible for the station if the list of stations is given
