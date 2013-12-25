@@ -921,14 +921,14 @@ class Crcm5ModelDataManager:
 
         #table row description
         field_data_table_scheme = {
-            "year": tb.Int32Col(pos = 1),
-            "month": tb.Int32Col(pos = 2),
-            "day": tb.Int32Col(pos = 3),
-            "hour": tb.Int32Col(pos = 4),
-            "minute": tb.Int32Col(pos = 5),
-            "second": tb.Int32Col(pos = 6),
-            "level": tb.Float32Col(pos = 7),
-            "field": tb.Float32Col(shape=self.lons2D.shape, pos = 8)
+            "year": tb.Int32Col(pos=1),
+            "month": tb.Int32Col(pos=2),
+            "day": tb.Int32Col(pos=3),
+            "hour": tb.Int32Col(pos=4),
+            "minute": tb.Int32Col(pos=5),
+            "second": tb.Int32Col(pos=6),
+            "level": tb.Float32Col(pos=7),
+            "field": tb.Float32Col(shape=self.lons2D.shape, pos=8)
         }
 
 
@@ -938,13 +938,13 @@ class Crcm5ModelDataManager:
             "value": tb.FloatCol()
         }
 
-        varNameToTable = {}
+        var_name_to_table = {}
 
-        projectionParams = None  # holds projection parameters
+        projection_params = None  # holds projection parameters
 
         for aVarName in var_list:
-            varNameToTable[aVarName] = h5file.createTable("/", aVarName, field_data_table_scheme,
-                                                          filters=tb.Filters(complevel=5))
+            var_name_to_table[aVarName] = h5file.createTable("/", aVarName, field_data_table_scheme,
+                                                             filters=tb.Filters(complevel=5))
 
 
         ##record array type
@@ -954,45 +954,29 @@ class Crcm5ModelDataManager:
             ("level", "f4")
         ]
 
-
         for fPath in rpn_path_list:
             rObj = RPN(fPath)  # open current rpn file for reading
 
             for aVarName in var_list:
 
-                dataTable = varNameToTable[aVarName]
+                data_table = var_name_to_table[aVarName]
                 try:
                     data = rObj.get_4d_field(name=aVarName)
                 except Exception, exc:
                     #the variable not found or some other problem occurred
-                    print exc
+                    #print exc
                     continue
 
 
 
                 #read projection parameters
-                if projectionParams is None and data is not None:
+                if projection_params is None and data is not None:
                     the_field = data.items()[0][1].items()[0][1]
                     rectype.append(("field", the_field.dtype, the_field.shape))
                     rectype = np.dtype(rectype)
-                    projectionParams = rObj.get_proj_parameters_for_the_last_read_rec()
-                    print "projParams = ", projectionParams
+                    projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
+                    print "projParams = ", projection_params
 
-
-
-                #add the data to hdf table
-                #row = dataTable.row
-                #for t, vals in data.iteritems():
-                #    for level, field in vals.iteritems():
-                #        row["year"] = t.year
-                #        row["month"] = t.month
-                #        row["day"] = t.day
-                #        row["hour"] = t.hour
-                #        row["minute"] = t.minute
-                #        row["second"] = t.second
-                #        row["level"] = level
-                #        row["field"] = field
-                #        row.append()
 
                 new_rows = []
                 for t, vals in data.iteritems():
@@ -1001,15 +985,16 @@ class Crcm5ModelDataManager:
 
                 new_rows = np.array(new_rows, dtype=rectype)
                 recarr = new_rows.view(np.recarray)
-                dataTable.append(recarr)
+                data_table.append(recarr)
                 #close the file
             rObj.close()
 
+        for v_name, data_table in var_name_to_table.iteritems():
+            data_table.cols.year.create_index()
+            data_table.cols.month.create_index()
+            data_table.cols.day.create_index()
+            data_table.cols.hour.create_index()
 
-        dataTable.cols.year.create_index()
-        dataTable.cols.month.create_index()
-        dataTable.cols.day.create_index()
-        dataTable.cols.hour.create_index()
 
         # insert also lon and lat data
         if "/longitude" not in h5file:
@@ -1023,7 +1008,7 @@ class Crcm5ModelDataManager:
         if "/rotpole" not in h5file:
             proj_table = h5file.createTable("/", "rotpole", projection_table_scheme)
             row = proj_table.row
-            for aName, aValue in projectionParams.iteritems():
+            for aName, aValue in projection_params.iteritems():
                 if type(aValue) == str:
                     print "Warning: rotpole table cannot have string in a value column, skipping:" \
                           " {0} => {1}".format(aName, aValue)
