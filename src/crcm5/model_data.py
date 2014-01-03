@@ -1653,7 +1653,7 @@ class Crcm5ModelDataManager:
             varname = "FLDR"
             self.flow_directions = _read_static_field(rpnObj, varname)
 
-            varname = "LM"
+            varname = "ML"
             self.lake_fraction = _read_static_field(rpnObj, varname)
             print np.min(self.lake_fraction), np.max(self.lake_fraction)
             if self.lake_fraction is None or self.lake_fraction.max() < 0.01:
