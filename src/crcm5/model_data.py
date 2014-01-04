@@ -949,8 +949,8 @@ class Crcm5ModelDataManager:
 
         ##record array type
         rectype = [
-            ("year", "i4"), ("month", "i4"), ("day", "i4"),
-            ("hour", "i4"), ("minute", "i4"), ("second", "i4"),
+            ("year", "i4"), ("month", "i1"), ("day", "i1"),
+            ("hour", "i1"), ("minute", "i1"), ("second", "i1"),
             ("level", "f4")
         ]
 
