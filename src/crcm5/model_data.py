@@ -922,11 +922,11 @@ class Crcm5ModelDataManager:
         #table row description
         field_data_table_scheme = {
             "year": tb.Int32Col(pos=1),
-            "month": tb.Int32Col(pos=2),
-            "day": tb.Int32Col(pos=3),
-            "hour": tb.Int32Col(pos=4),
-            "minute": tb.Int32Col(pos=5),
-            "second": tb.Int32Col(pos=6),
+            "month": tb.Int8Col(pos=2),
+            "day": tb.Int8Col(pos=3),
+            "hour": tb.Int8Col(pos=4),
+            "minute": tb.Int8Col(pos=5),
+            "second": tb.Int8Col(pos=6),
             "level": tb.Float32Col(pos=7),
             "field": tb.Float32Col(shape=self.lons2D.shape, pos=8)
         }
