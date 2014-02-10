@@ -79,17 +79,17 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
 
         season_to_field[season] = the_diff
 
-    ncolors = 10
+    ncolors = 11
     gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.05])
 
-    cmap = brewer2mpl.get_map("RdBu", "diverging", 10, reverse=True).get_mpl_colormap(N=ncolors)
+    cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=ncolors)
     x, y = basemap(lon, lat)
     im = None
 
     d = min(abs(vmin), abs(vmax))
     vmin = -d
     vmax = d
-    bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors)
+    bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
 
     print "bounds: ", bounds
 
@@ -98,6 +98,7 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
         row, col = season_to_plot_indices[season]
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
+        basemap.drawmapboundary(fill_color="gray", ax = ax)
         im = basemap.pcolormesh(x, y, season_to_field[season], vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
@@ -111,8 +112,8 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     #plt.legend(artists, labels, handleheight=2)
 
     cax = fig.add_subplot(gs[:, 2])
-    cax.set_title("mm/day")
-    plt.colorbar(im, cax=cax)
+    cax.set_title("mm/day\n")
+    plt.colorbar(im, cax=cax, extend = "both")
     seasons_str = "_".join(sorted([str(s) for s in season_to_field.keys()]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
@@ -210,7 +211,7 @@ def validate_temperature(
     units_str = r"${\rm ^\circ}$"
     var_str = r"$T_{\max}$" if model_var_name.endswith("_max") else r"$T_{\min}$"
     cax.set_title("{0}, {1}".format(var_str, units_str))
-    plt.colorbar(im, cax=cax)
+    plt.colorbar(im, cax=cax, extend = "both")
     seasons_str = "_".join(sorted([str(s) for s in season_to_field.keys()]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
@@ -286,7 +287,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     vmax = d
     #bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
 
-    bounds = [-100, -80, -50, -20, -10, -1]
+    bounds = [-100, -80, -50, -20, -10, -5]
     bounds += [-b for b in reversed(bounds)]
     bn = BoundaryNorm(bounds, ncolors=len(bounds) - 1)
     cmap = brewer2mpl.get_map("RdBu", "diverging", ncolors, reverse=True).get_mpl_colormap(N=len(bounds) - 1)
@@ -321,7 +322,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     units_str = r"${\rm mm}$"
     var_str = r"SWE"
     cax.set_title("{0}, {1}\n".format(var_str, units_str))
-    plt.colorbar(im, cax=cax, ticks = bounds)
+    plt.colorbar(im, cax=cax, ticks = bounds, extend = "both")
 
 
     seasons_str = "_".join(sorted([str(s) for s in season_to_months.keys()]))
@@ -333,7 +334,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     fig.savefig(os.path.join(images_folder, out_filename), dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 
-def do_4_seasons(start_year=1979, end_year=1988):
+def do_4_seasons(start_year=1980, end_year=2010):
     #Creates one file per simulation containing biases for 4 seasons
     season_to_months = {
         "Winter": [12, 1, 2],
@@ -350,8 +351,8 @@ def do_4_seasons(start_year=1979, end_year=1988):
     }
 
     simlabel_to_path = {
-        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
-        "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
+        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
+        "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5",
 #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
 #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
     }
@@ -369,22 +370,22 @@ def do_4_seasons(start_year=1979, end_year=1988):
 
     for simlabel, path in simlabel_to_path.iteritems():
         #Validate precipitations
-        # validate_precip(model_file=path, obs_manager=pcp_obs_manager,
-        #                 season_to_months=season_to_months, simlabel=simlabel,
-        #                 season_to_plot_indices=season_to_plot_indices,
-        #                 start_year=start_year, end_year=end_year)
+        validate_precip(model_file=path, obs_manager=pcp_obs_manager,
+                        season_to_months=season_to_months, simlabel=simlabel,
+                        season_to_plot_indices=season_to_plot_indices,
+                        start_year=start_year, end_year=end_year)
         #
         # # Validate daily maximum temperature
-        # validate_temperature(model_file=path, obs_manager=tmax_obs_manager,
-        #                      season_to_months=season_to_months, simlabel=simlabel,
-        #                      season_to_plot_indices=season_to_plot_indices,
-        #                      start_year=start_year, end_year=end_year, model_var_name="TT_max")
-        #
-        # validate_temperature(model_file=path, obs_manager=tmin_obs_manager,
-        #                      season_to_months=season_to_months, simlabel=simlabel,
-        #                      season_to_plot_indices=season_to_plot_indices,
-        #                      start_year=start_year, end_year=end_year, model_var_name="TT_min")
-        #
+        validate_temperature(model_file=path, obs_manager=tmax_obs_manager,
+                             season_to_months=season_to_months, simlabel=simlabel,
+                             season_to_plot_indices=season_to_plot_indices,
+                             start_year=start_year, end_year=end_year, model_var_name="TT_max")
+
+        validate_temperature(model_file=path, obs_manager=tmin_obs_manager,
+                             season_to_months=season_to_months, simlabel=simlabel,
+                             season_to_plot_indices=season_to_plot_indices,
+                             start_year=start_year, end_year=end_year, model_var_name="TT_min")
+
 
         #validate swe
         validate_swe(model_file=path, obs_manager=swe_obs_manager,

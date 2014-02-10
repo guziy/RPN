@@ -16,6 +16,8 @@ def set_current_directory():
             raise EnvironmentError("Was not able to set {0} as a current directory.".format(PROJECT_DIR))
 
 
+
+
 if __name__ == "__main__":
     set_current_directory()
     print os.getcwd()

@@ -27,13 +27,11 @@ def plot_one_to_one_line(the_ax):
 
 
 def main():
-    start_year = 1979
-    end_year = 1985
+    start_year = 1980
+    end_year = 2010
 
-
-    selected_station_ids = [
-        "061905", "074903", "090613", "092715", "093801", "093806"
-    ]
+    selected_station_ids = ["092715", "074903", "080104", "081007", "061905",
+                            "093806", "090613", "081002", "093801", "080718", "104001"]
 
     #Get the list of stations to do the comparison with
     stations = cehq_station.read_station_data(
@@ -42,21 +40,18 @@ def main():
         selected_ids=selected_station_ids
     )
 
-
-    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
+    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
     label1 = "CRCM5-HCD-R"
 
-    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     label2 = "CRCM5-HCD-RL"
-
 
     fldirs = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(path1)
 
     lake_fractions = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_LAKE_FRACTION_NAME)
     #cell_areas = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_CELL_AREA_NAME)
-    acc_area = analysis.get_array_from_file(path = path1, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
-
+    acc_area = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
 
     cell_manager = CellManager(fldirs, lons2d=lons2d, lats2d=lats2d, accumulation_area_km2=acc_area)
 
@@ -70,11 +65,11 @@ def main():
         if len(compl_years) < 3:
             continue
 
-        t, stfl1 = analysis.get_daily_means_for_a_point(path = path1, years_of_interest=compl_years,
-                                                        i_index=the_mp.ix, j_index=the_mp.jy)
+        t, stfl1 = analysis.get_daily_climatology_for_a_point(path=path1, years_of_interest=compl_years,
+                                                              i_index=the_mp.ix, j_index=the_mp.jy, var_name="STFA")
 
-        _, stfl2 = analysis.get_daily_means_for_a_point(path = path2, years_of_interest=compl_years,
-                                                        i_index=the_mp.ix, j_index=the_mp.jy)
+        _, stfl2 = analysis.get_daily_climatology_for_a_point(path=path2, years_of_interest=compl_years,
+                                                              i_index=the_mp.ix, j_index=the_mp.jy, var_name="STFA")
 
         _, stfl_obs = the_station.get_daily_climatology_for_complete_years(stamp_dates=t, years=compl_years)
 
@@ -82,29 +77,28 @@ def main():
         q90_obs = np.percentile(stfl_obs, 90)
         the_ax = axes[0]
         #the_ax.annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
-        the_ax.scatter(q90_obs, np.percentile(stfl1, 90), label = label1, c = "b")
-        the_ax.scatter(q90_obs, np.percentile(stfl2, 90), label = label2, c = "r")
+        the_ax.scatter(q90_obs, np.percentile(stfl1, 90), label=label1, c="b")
+        the_ax.scatter(q90_obs, np.percentile(stfl2, 90), label=label2, c="r")
 
         #Q10
         q10_obs = np.percentile(stfl_obs, 10)
         the_ax = axes[1]
         #the_ax.annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
-        h1 = the_ax.scatter(q10_obs, np.percentile(stfl1, 10), label = label1, c = "b")
-        h2 = the_ax.scatter(q10_obs, np.percentile(stfl2, 10), label = label2, c = "r")
-
+        h1 = the_ax.scatter(q10_obs, np.percentile(stfl1, 10), label=label1, c="b")
+        h2 = the_ax.scatter(q10_obs, np.percentile(stfl2, 10), label=label2, c="r")
 
     for the_ax in axes:
         plot_one_to_one_line(the_ax)
         the_ax.set_xlabel(r"Obs. ${\rm m^3/s}$")
         the_ax.set_ylabel(r"Mod. ${\rm m^3/s}$")
 
-    fig.legend([h1, h2], [label1, label2], loc = "upper center")
+    fig.legend([h1, h2], [label1, label2], loc="upper center")
     figpath = os.path.join(images_folder, "percentiles_comparison.jpeg")
-    fig.savefig(figpath, dpi = cpp.FIG_SAVE_DPI, bbox_inches = "tight")
-
+    fig.savefig(figpath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 
 if __name__ == "__main__":
     import application_properties
+
     application_properties.set_current_directory()
     main()

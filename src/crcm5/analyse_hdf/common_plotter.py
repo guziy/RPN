@@ -1,3 +1,4 @@
+from datetime import datetime
 from util import plot_utils
 
 __author__ = 'huziy'
@@ -75,13 +76,22 @@ def validate_seasonal_mean_atm_fields():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=15)
     import validate_model_fields
     p = Process(target=validate_model_fields.do_4_seasons, kwargs=dict(
-        start_year = 1979, end_year = 1981))
+        start_year = 1980, end_year = 2010))
     p.start()
 
 
 def compare_quantiles():
     import lake_effect_on_streamflow_quantiles as lkeff
     lkeff.main()
+
+
+def compare_obs_and_model_lake_levels_at_points():
+    import compare_lake_levels_with_obs
+    start_date = datetime(1980, 1, 1)
+    end_date = datetime(1988, 12, 31)
+
+    compare_lake_levels_with_obs.main(start_date=start_date, end_date=end_date)
+
 
 if __name__ == "__main__":
     configure()
@@ -90,7 +100,7 @@ if __name__ == "__main__":
     #compare_2d_seasonal_means_from_simulations()
 
     #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    compare_obs_and_model_at_points()
+    #compare_obs_and_model_at_points()
 
     #compare_simulations()
     #validate_seasonal_mean_atm_fields()
@@ -104,3 +114,7 @@ if __name__ == "__main__":
 
     #Compare observed and modelled streamflow and upstream caracteristics for river outlets
     #compare_obs_and_model_at_river_outlet_points()
+
+
+    #Compare modelled and observed lake level anomalies at points
+    compare_obs_and_model_lake_levels_at_points()

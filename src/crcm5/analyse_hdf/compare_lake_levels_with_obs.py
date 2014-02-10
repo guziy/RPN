@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import datetime
 import itertools
+import shutil
 from matplotlib import cm
 import brewer2mpl
 from matplotlib.axes import Axes
@@ -121,6 +122,13 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     assert isinstance(the_model_point, ModelPoint)
 
     good_points = (upstream_mask == 1) & (~obs_tmin_clim_fields[0].mask)
+    ngood_points = good_points.astype(int).sum()
+    success = ngood_points > 0
+    if not success:
+        return success
+
+    print "Number of good upstream points is {0}".format(ngood_points)
+
     basin_area_km2 = np.sum(cell_area_km2[good_points])
     area_matrix = cell_area_km2 * upstream_mask
 
@@ -159,6 +167,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.yaxis.set_label_position("right")
     ax.grid()
+    return True  # True means successful termination of the function
 
 
 #noinspection PyNoneFunctionAssignment
@@ -313,6 +322,21 @@ def _plot_upstream_subsurface_runoff(ax, the_model_point, model_data_dict=None,
     ax.grid()
 
 
+def _remove_previous_images(the_station):
+    """
+
+    :param the_station: Remove all previous plots for this and other stations which could be
+    in the folder from other runs
+    """
+    if the_station is not None:
+        im_folder_path = os.path.join(images_folder, the_station.source + "_levels")
+    else:
+        im_folder_path = os.path.join(images_folder, "outlets_point_comp_levels")
+
+    im_paths = [os.path.join(im_folder_path, fname) for fname in os.listdir(im_folder_path)]
+    [os.remove(the_path) for the_path in im_paths if os.path.isfile(the_path)]
+
+
 def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_name=None, hdf_folder=None,
                           start_year=None, end_year=None, cell_manager=None):
     """
@@ -359,7 +383,8 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     if stations is not None:
         #Get the list of the corresponding model points
         station_to_modelpoint = cell_manager.get_model_points_for_stations(station_list=stations,
-                                                                           lake_fraction=lake_fraction)
+                                                                           lake_fraction=None,
+                                                                           drainaige_area_reldiff_limit=0.2)
         station_list = list(station_to_modelpoint.keys())
         station_list.sort(key=lambda st1: st1.latitude, reverse=True)
         mp_list = [station_to_modelpoint[st] for st in station_list]
@@ -370,18 +395,16 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         mp_list.sort(key=lambda mpt: mpt.latitude, reverse=True)
 
 
+    assert len(mp_list) > 0, "The number of model points should not be {0}".format(len(mp_list))
+
     #set ids to the model points so they can be distinguished easier
     model_point.set_model_point_ids(mp_list)
-
 
 
     # brewer2mpl.get_map args: set name  set type  number of colors
     bmap = brewer2mpl.get_map("Set1", "qualitative", 9)
     # Change the default colors
     mpl.rcParams["axes.color_cycle"] = bmap.mpl_colors
-
-
-
 
 
     #For the streamflow only plot
@@ -391,12 +414,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         nrows += 1
 
     figure_stfl = plt.figure()
-    gs_stfl = gridspec.GridSpec(nrows=nrows, ncols=ncols)
+    gs_panel = gridspec.GridSpec(nrows=nrows, ncols=ncols)
     #  a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
     legend_added = False
 
     label_list = list(sim_name_to_file_name.keys())  # Needed to keep the order the same for all subplots
-    ax_stfl = None
+    ax_panel = None
     all_years = [y for y in range(start_year, end_year + 1)]
 
     if station_list is not None:
@@ -418,8 +441,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         start_year=start_year, end_year=end_year,
         lons_target=lons2d, lats_target=lats2d)
 
-
-
     _, obs_tmax_fields = anusplin_tmax.get_daily_clim_fields_interpolated_to(
         start_year=start_year, end_year=end_year,
         lons_target=lons2d, lats_target=lats2d)
@@ -437,12 +458,15 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
 
+    #clear the folder with images (to avoid confusion of different versions)
+    _remove_previous_images(processed_stations[0])
+
 
 
     for i, the_model_point in enumerate(mp_list):
 
-        ax_stfl = figure_stfl.add_subplot(gs_stfl[i // ncols, i % ncols],
-                                          sharex=ax_stfl)
+        ax_panel = figure_stfl.add_subplot(gs_panel[i // ncols, i % ncols],
+                                           sharex=ax_panel)
 
 
         assert isinstance(the_model_point, ModelPoint)
@@ -454,8 +478,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             year_list = the_station.get_list_of_complete_years()
             year_list = list(itertools.ifilter(lambda yi: start_year <= yi <= end_year, year_list))
 
+
+
             if len(year_list) < 1:
                 continue
+
+            print "Working on station: {0}".format(the_station.id)
         else:
             year_list = all_years
 
@@ -494,24 +522,24 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
             #read modelled surface runoff and calculate daily climatologic fields
             _, model_daily_clim_surf_runoff[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TRAF", level=5, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="TRAF", level=1, start_year=start_year, end_year=end_year)
 
             #read modelled subsurface runoff and calculate daily climatologic fields
             _, model_daily_clim_subsurf_runoff[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TDRA", level=5, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="TDRA", level=1, start_year=start_year, end_year=end_year)
 
             #read modelled swe and calculate daily climatologic fields
             _, model_daily_clim_swe[label] = analysis.get_daily_climatology(
                 path_to_hdf_file=fpath, var_name="I5", level=None, start_year=start_year, end_year=end_year)
 
             dates, values_model = analysis.get_daily_climatology_for_a_point(path=fpath,
-                                                                             var_name="STFA",
+                                                                             var_name="CLDP",
                                                                              years_of_interest=year_list,
                                                                              i_index=the_model_point.ix,
                                                                              j_index=the_model_point.jy)
 
-            ax.plot(dates, values_model, label=label, lw=2)
-            ax_stfl.plot(dates, values_model, label=label, lw=2)
+            ax.plot(dates, values_model - np.mean(values_model), label=label, lw=2)
+            ax_panel.plot(dates, values_model - np.mean(values_model), label=label, lw=2)
 
         if the_station is not None:
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
@@ -519,10 +547,10 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
             #To keep the colors consistent for all the variables, the obs Should be plotted last
-            ax.plot(dates, values_obs, label="Obs.", lw=2)
-            ax_stfl.plot(dates, values_obs, label="Obs.", lw=2)
+            ax.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2)
+            ax_panel.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2)
 
-        ax.set_ylabel(r"Streamflow: ${\rm m^3/s}$")
+        ax.set_ylabel(r"Level variation: ${\rm m}$")
         assert isinstance(ax, Axes)
         assert isinstance(fig, Figure)
 
@@ -534,7 +562,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             point_info = "{0}".format(the_model_point.point_id)
 
         ax.text(0.6, 0.9, point_info, transform=ax.transAxes, bbox=dict(facecolor="white"))
-        ax_stfl.text(0.6, 0.85, point_info, transform=ax_stfl.transAxes, bbox=dict(facecolor="white"))
+        ax_panel.text(0.6, 0.85, point_info, transform=ax_panel.transAxes, bbox=dict(facecolor="white"))
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
@@ -544,15 +572,15 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         streamflow_axes = ax  # save streamflow axes for later use
 
         if not legend_added:
-            ax_stfl.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
-            ax_stfl.xaxis.set_major_formatter(DateFormatter("%b"))
-            ax_stfl.xaxis.set_minor_locator(MonthLocator())
-            ax_stfl.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 3)))
-            ax_stfl.set_ylabel(r"Streamflow ${\rm m^3/s}$")
+            ax_panel.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
+            ax_panel.xaxis.set_major_formatter(DateFormatter("%b"))
+            ax_panel.xaxis.set_minor_locator(MonthLocator())
+            ax_panel.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 3)))
+            ax_panel.set_ylabel(r"Level variation ${\rm m}$")
             legend_added = True
 
-        ax_stfl.yaxis.set_major_locator(MaxNLocator(nbins=5))
-        ax_stfl.grid()
+        ax_panel.yaxis.set_major_locator(MaxNLocator(nbins=5))
+        ax_panel.grid()
 
 
 
@@ -607,11 +635,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             im_name = "comp_point_with_obs_{0}_{1}_{2}.jpeg".format(the_station.id,
                                                                     the_station.source,
                                                                     "_".join(label_list))
-            im_folder_path = os.path.join(images_folder, the_station.source)
+            im_folder_path = os.path.join(images_folder, the_station.source + "_levels")
         else:
             im_name = "comp_point_with_obs_{0}_{1}.jpeg".format(the_model_point.point_id,
                                                                 "_".join(label_list))
-            im_folder_path = os.path.join(images_folder, "outlets_point_comp")
+            im_folder_path = os.path.join(images_folder, "outlets_point_comp_levels")
 
 
         #create a folder for a given source of observed streamflow if it does not exist yet
@@ -628,7 +656,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     assert isinstance(figure_stfl, Figure)
     figure_stfl.tight_layout()
-    figure_stfl.savefig(os.path.join(images_folder, "comp_point_with_obs_{0}.jpeg".format("_".join(label_list))),
+    figure_stfl.savefig(os.path.join(images_folder, "comp_lake-levels_at_point_with_obs_{0}.jpeg".format("_".join(label_list))),
                         dpi=cpp.FIG_SAVE_DPI,
                         bbox_inches="tight")
     plt.close(figure_stfl)
@@ -643,7 +671,7 @@ def plot_point_positions_with_upstream_areas(processed_stations, processed_model
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
-    impath = os.path.join(images_folder, "station_positions.jpeg")
+    impath = os.path.join(images_folder, "lake-level-station_positions.jpeg")
     fig.savefig(impath, dpi=cpp.FIG_SAVE_DPI, bbox_inches = "tight")
     plt.close(fig)
 
@@ -703,9 +731,7 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
                           start_year=start_year, end_year=end_year, cell_manager=cell_manager)
 
 
-def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
-    start_date = datetime(1980, 1, 1)
-    end_date = datetime(2010, 12, 31)
+def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date = None, end_date = None):
 
     # Station ids to get from the CEHQ database
     # selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
@@ -725,11 +751,11 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
     #selected_ids = ["090613", ]
 
     sim_labels = [
-        "CRCM5-R", "CRCM5-HCD-R"
+        "CRCM5-HCD-R", "CRCM5-HCD-RL"
     ]
 
     sim_file_names = [
-        "quebec_0.1_crcm5-r.hdf5", "quebec_0.1_crcm5-hcd-r.hdf5"
+        "quebec_0.1_crcm5-hcd-r.hdf5", "quebec_0.1_crcm5-hcd-rl.hdf5"
     ]
 
     sim_name_to_file_name = OrderedDict()
@@ -755,12 +781,18 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
 
     #Get the list of stations to do the comparison with
     stations = cehq_station.read_station_data(
-        start_date=start_date, end_date=end_date, selected_ids=selected_ids
+        folder="/home/huziy/skynet3_rech1/CEHQ",
+        start_date=start_date, end_date=end_date,
+        min_number_of_complete_years=1
     )
 
-    print "Initial list of stations:"
+    #debug:
     for s in stations:
-        print "{0}".format(s)
+        assert isinstance(s, Station)
+        print s.get_list_of_complete_years()
+        print s.drainage_km2
+
+    assert len(stations)
 
 
     #Commented hydat station for performance during testing
@@ -779,7 +811,8 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
 
     draw_model_comparison(model_points=None, sim_name_to_file_name=sim_name_to_file_name,
                           hdf_folder=hdf_folder,
-                          start_year=start_date.year, end_year=end_date.year, stations=stations)
+                          start_year=start_date.year,
+                          end_year=end_date.year, stations=stations)
 
 
 if __name__ == "__main__":

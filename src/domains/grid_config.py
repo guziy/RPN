@@ -1,3 +1,5 @@
+from mpl_toolkits.basemap import Basemap
+
 __author__ = 'huziy'
 
 import numpy as np
@@ -6,7 +8,7 @@ class GridConfig():
     #params
     dx = 0.1
     dy = 0.1
-    iref = 142 #no need to do -1, doing it later in the formulas
+    iref = 142  # no need to do -1, doing it later in the formulas
     jref = 122
     xref = 180 #rotated longitude
     yref = 0   #rotated latitude
@@ -20,6 +22,9 @@ class GridConfig():
 
     ni = 260
     nj = 260
+
+    projection = "rotpole"
+
 
 
     def __init__(self):
@@ -44,7 +49,8 @@ class GridConfig():
         return obj
 
 
-
+    def get_basemap(self):
+        return Basemap()
 
 
 

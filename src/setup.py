@@ -10,7 +10,8 @@ setup (
 
   # Declare your packages' dependencies here, for eg:
   install_requires=["matplotlib", "numpy", "netCDF4", "mpl_toolkits", "osgeo", "descartes", "shapely", "Ngl", "scipy",
-                    "GChartWrapper", "mayavi", "pykml", "lxml", "pandas", "pyresample", "fiona", "tables", "brewer2mpl",],
+                    "GChartWrapper", "mayavi", "pykml", "lxml", "pandas", "pyresample", "fiona", "tables", "brewer2mpl",
+                    'iris',],
 
   # Fill in these to make your Egg ready for upload to
   # PyPI

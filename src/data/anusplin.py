@@ -206,6 +206,7 @@ class AnuSplinManager:
             df.loc[:, day, :].values.flatten()[indices].reshape(lons_target.shape) for day in df.major_axis
         ]
         clim_fields = np.asarray(clim_fields)
+        clim_fields = np.ma.masked_where(np.isnan(clim_fields), clim_fields)
         return df.major_axis, clim_fields
 
 

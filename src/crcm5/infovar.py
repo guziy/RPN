@@ -72,10 +72,10 @@ def get_to_plot(varname, data, lake_fraction=None, mask_oceans=True, lons=None, 
         assert lons is not None and lats is not None
 
     #This one is used if something is to be masked or changed before plotting
-    if varname == "STFL":
+    if varname in ["STFL", "STFA"]:
 
         if lake_fraction is None or np.sum(lake_fraction) <= 0.01:
-            data1 = np.ma.masked_where(data <= 0.1, data) if not difference else data
+            data1 = np.ma.masked_where(data < 0, data) if not difference else data
             return maskoceans(lonsin=lons, latsin=lats, datain=data1)
         else:
             data1 = np.ma.masked_where((data <= 0.1) | (lake_fraction >= GLOBAL_LAKE_FRACTION), data)
@@ -95,7 +95,7 @@ def get_to_plot(varname, data, lake_fraction=None, mask_oceans=True, lons=None, 
 
 
 def get_colorbar_formatter(varname):
-    if varname == "STFL":
+    if varname in ["STFL", "STFA"]:
         return None
     else:
         #format the colorbar tick labels
@@ -126,12 +126,33 @@ def get_boundary_norm_using_all_vals(to_plot, ncolors):
     return BoundaryNorm(bounds, ncolors=ncolors), bounds, bounds[0], bounds[-1]
 
 
-def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False):
+def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False, varname = None, difference = False):
+
+    if varname == "AS" and difference:  # Shortwave, visible
+        bounds = [-60, -30, -15, -10, -5, -1, 1, 5, 10, 15, 30, 60]
+        assert len(bounds) - 1 == ncolors
+        return BoundaryNorm(bounds, ncolors=len(bounds) - 1), bounds, bounds[0], bounds[-1]
+
+    if varname == "AV" and difference:  # Latent heat flux W/m^2
+        bounds = [-30, -20, -15, -10, -5, -1, 1, 10, 30, 50, 120, 150]
+        assert len(bounds) - 1 == ncolors
+        return BoundaryNorm(bounds, ncolors=len(bounds) - 1), bounds, bounds[0], bounds[-1]
+
+    if varname == "STFA" and difference:  # Streamflow in m^3/s
+
+        print vmax <= 500 and vmin >= -500
+        if vmax <= 500 and vmin >= -500:
+            bounds = [-450, -300, -150, -50, -20, -10, 10, 20, 50, 100, 150, 250]
+            assert len(bounds) - 1 == ncolors
+            return BoundaryNorm(bounds, ncolors=len(bounds) - 1), bounds, bounds[0], bounds[-1]
+
+
+
     if vmin * vmax >= 0:
         locator = MaxNLocator(ncolors)
         bounds = np.asarray(locator.tick_values(vmin, vmax))
     elif exclude_zero:
-        locator = MaxNLocator(nbins=ncolors, symmetric=True)
+        locator = MaxNLocator(nbins=ncolors)
         bounds = np.asarray(locator.tick_values(vmin, vmax))
         bounds = bounds[bounds != 0]
     else:
@@ -154,7 +175,7 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
     if None in [vmin, vmax]:
         vmin, vmax = to_plot.min(), to_plot.max()
 
-    if var_name == "STFL":
+    if var_name in ["STFL", "STFA"]:
         upper = 1000
         bounds = [0, 100, 200, 500, 1000]
         while upper <= vmax:

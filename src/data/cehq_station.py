@@ -237,8 +237,8 @@ class Station:
                 groups = re.findall(r"-\d+|\d+", line_lower.replace(' ', '').replace('(nad83)', ''))
                 groups = map(float, groups)
 
-                self.latitude = self._get_degrees(groups[0:3])
-                self.longitude = self._get_degrees(groups[3:])
+                self.latitude = _get_degrees(groups[0:3])
+                self.longitude = _get_degrees(groups[3:])
 
             if 'date' in line_lower and 'remarque' in line_lower and 'station' in line_lower:
                 start_reading_data = True
@@ -268,16 +268,6 @@ class Station:
         return '%s: lon=%3.1f; lat = %3.1f; drainage(km**2) = %f ' % (self.id,
                                                                       self.longitude, self.latitude,
                                                                       self.drainage_km2)
-
-
-    def _get_degrees(self, group):
-        """
-        Converts group (d,m,s) -> degrees
-        """
-        [d, m, s] = group
-        koef = 1.0 / 60.0
-        sign = 1.0 if d >= 0 else -1.0
-        return d + sign * koef * m + sign * koef ** 2 * s
 
 
     #override hashing methods to use in dictionary
@@ -422,7 +412,7 @@ class Station:
 
 
     def __str__(self):
-        return "Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
+        return u"Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
                                                                                         self.longitude,
                                                                                         self.latitude,
                                                                                         self.drainage_km2)
@@ -510,6 +500,16 @@ class Station:
         pass
 
 
+def _get_degrees(group):
+    """
+    Converts group (d,m,s) -> degrees
+    """
+    [d, m, s] = group
+    koef = 1.0 / 60.0
+    sign = 1.0 if d >= 0 else -1.0
+    return d + sign * koef * m + sign * koef ** 2 * s
+
+
 def print_info_of(station_ids):
     for the_id in station_ids:
         s = Station()
@@ -526,8 +526,7 @@ def read_station_data(folder='data/cehq_measure_data',
                       only_natural=True,
                       start_date=None,
                       end_date=None,
-                      selected_ids=None
-):
+                      selected_ids=None, min_number_of_complete_years = 3):
     """
     :return type: list of data.cehq_station.Station
     if start_date is not None then delete values for t < start_date
@@ -535,10 +534,10 @@ def read_station_data(folder='data/cehq_measure_data',
 
     """
     stations = []
-    for file in os.listdir(folder):
-        if not file.endswith(".txt"):
+    for the_file in os.listdir(folder):
+        if not the_file.endswith(".txt"):
             continue
-        path = os.path.join(folder, file)
+        path = os.path.join(folder, the_file)
         s = Station()
 
         s_id = re.findall(r"\d+", os.path.basename(path))[0]
@@ -554,6 +553,11 @@ def read_station_data(folder='data/cehq_measure_data',
         if end_date is not None:
             s.delete_data_after_date(end_date)
 
+
+        #If there is less than 3 years of continuous data, discard the station
+        if len(s.get_list_of_complete_years()) <= min_number_of_complete_years:
+            continue
+
         #only save stations with nonzero timeseries length
         if s.get_timeseries_length():
             if only_natural:
@@ -564,6 +568,8 @@ def read_station_data(folder='data/cehq_measure_data',
 
     if selected_ids is not None:
         stations = map(lambda x: _get_station_for_id(x, stations), selected_ids)
+
+    print u"Got {0} stations from {1}".format(len(stations), folder)
     return stations
 
 
@@ -572,8 +578,8 @@ def read_hydat_station_data(folder_path="", start_date=None, end_date=None):
     Read files downloaded from EC website (csv)
     """
     stations = []
-    for file in os.listdir(folder_path):
-        path = os.path.join(folder_path, file)
+    for the_file in os.listdir(folder_path):
+        path = os.path.join(folder_path, the_file)
         s = Station()
 
         s.parse_from_hydat(path)
@@ -669,9 +675,12 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
 
 def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
                        natural=True,
-                       province="QC", start_date = None, end_date = None):
+                       province="QC", start_date = None, end_date = None, datavariable = "streamflow"):
     """
     loads stations from sqlite db
+
+    :param datavariable can be "streamflow" or "level"
+
     """
     import sqlite3
 
@@ -696,9 +705,15 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     lat_field = "LATITUDE"
 
     regulation_table = "STN_REGULATION"
-    daily_streamflow_table = "DLY_FLOWS"  # streamflow is in m**3
 
-    tables_of_interest = [stations_table, regulation_table, daily_streamflow_table]
+    if datavariable.lower() == "streamflow":
+        daily_var_table = "DLY_FLOWS"  # streamflow is in m**3
+    elif datavariable.lower() == "level":
+        daily_var_table = "DLY_LEVELS"
+    else:
+        raise NotImplementedError("datavariable = {0} is not implemented yet".format(datavariable))
+
+    tables_of_interest = [stations_table, regulation_table, daily_var_table]
 
     connect = sqlite3.connect(path)
     assert isinstance(connect, sqlite3.Connection)
@@ -774,7 +789,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
 
         #read streamflows for the station
-        query = "select * from {0} where STATION_NUMBER = ?".format(daily_streamflow_table)
+        query = "select * from {0} where STATION_NUMBER = ?".format(daily_var_table)
         cur.execute(query, (s.id, ))
 
         data_for_station = cur.fetchall()

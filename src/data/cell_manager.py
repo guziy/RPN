@@ -172,7 +172,7 @@ class CellManager:
 
         return rout_mask
 
-    def get_model_points_for_stations(self, station_list, lake_fraction = None):
+    def get_model_points_for_stations(self, station_list, lake_fraction = None, drainaige_area_reldiff_limit = 0.1):
         """
         returns a map {station => modelpoint} for comparison modeled streamflows with observed
         :rtype   dict
@@ -186,7 +186,7 @@ class CellManager:
         for s in station_list:
             assert isinstance(s, Station)
             x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
-            dists, inds = self.kdtree.query((x, y, z), k = 8)
+            dists, inds = self.kdtree.query((x, y, z), k = 16)
 
 
             deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
@@ -209,7 +209,8 @@ class CellManager:
                 continue
 
             #check if difference in drainage areas is not too big less than 10 %
-            if deltaDaMin / s.drainage_km2 > 0.1:
+            if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
+                print deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2
                 continue
 
             mp = ModelPoint()
@@ -223,6 +224,7 @@ class CellManager:
             mp.distance_to_station = dists[imin]
 
             station_to_model_point[s] = mp
+            print u"Found model point for the station {0}".format(s)
 
         return station_to_model_point
 

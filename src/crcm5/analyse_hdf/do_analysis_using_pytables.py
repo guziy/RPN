@@ -69,9 +69,9 @@ def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,
                                                         start_year=start_year, end_year=end_year)
 
 
-def get_daily_means_for_a_point(path="", var_name="STFL", level=None,
-                                years_of_interest=None,
-                                i_index=None, j_index=None):
+def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
+                                      years_of_interest=None,
+                                      i_index=None, j_index=None):
     """
 
     :rtype : tuple
@@ -79,7 +79,7 @@ def get_daily_means_for_a_point(path="", var_name="STFL", level=None,
     """
     h = tb.open_file(path)
 
-    varTable = h.get_node("/", var_name)
+    var_table = h.get_node("/", var_name)
 
     def grouping_func(row):
         return row["month"], row["day"], row["level"]
@@ -95,14 +95,14 @@ def get_daily_means_for_a_point(path="", var_name="STFL", level=None,
     selByYear = "|".join(["(year == {0})".format(y) for y in years_of_interest])
 
     if level is not None:
-        selForYearsAndLevel = varTable.where(
+        sel_for_years_and_level = var_table.where(
             "({0}) & ({1}) & ~((month == 2) & (day == 29))".format(selByLevel, selByYear))
     else:
         print "({0}) & ((month != 2) | (day != 29))".format(selByYear)
-        selForYearsAndLevel = varTable.where(
+        sel_for_years_and_level = var_table.where(
             "({0}) & ((month != 2) | (day != 29))".format(selByYear))
 
-    for gKey, selrows in itertools.groupby(selForYearsAndLevel, grouping_func):
+    for gKey, selrows in itertools.groupby(sel_for_years_and_level, grouping_func):
         the_month, the_day, the_level = gKey
         d = datetime(2001, the_month, the_day)
         n0 = 0
