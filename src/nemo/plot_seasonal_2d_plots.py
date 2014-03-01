@@ -16,16 +16,34 @@ from iris import analysis, coord_categorisation
 import matplotlib.pyplot as plt
 import numpy as np
 import cartopy
+from matplotlib import cm
 
-EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP00/"
+#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP00/"
+#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP01/"
+EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/"
 
-T_FILE_PATH = EXP_DIR + "GLK_1d_19580101_19581231_grid_T.nc"
-U_FILE_PATH = EXP_DIR + "GLK_1d_19580101_19581231_grid_U.nc"
-V_FILE_PATH = EXP_DIR + "GLK_1d_19580101_19581231_grid_V.nc"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis"
+
+T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
+
+import application_properties
+application_properties.set_current_directory()
+
+for fname in os.listdir(EXP_DIR):
+    if fname.endswith("_grid_T.nc"):
+        T_FILE_PATH = os.path.join(EXP_DIR, fname)
+    elif fname.endswith("_grid_U.nc"):
+        U_FILE_PATH = os.path.join(EXP_DIR, fname)
+    elif fname.endswith("_grid_V.nc"):
+        V_FILE_PATH = os.path.join(EXP_DIR, fname)
 
 import nemo_commons
 
-NEMO_IMAGES_DIR = "nemo"
+EXP_NAME = os.path.basename(EXP_DIR)
+NEMO_IMAGES_DIR = os.path.join("nemo", EXP_NAME)
+
+if not os.path.isdir(NEMO_IMAGES_DIR):
+    os.mkdir(NEMO_IMAGES_DIR)
 
 
 def draw_for_date():
@@ -76,7 +94,31 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
     b, lons, lats = nemo_commons.get_basemap_and_coordinates_from_file(T_FILE_PATH)
     x, y = b(lons, lats)
     gs = gridspec.GridSpec(ncols=ncols, nrows=nrows)  # +1 for the colorbar
-    the_mask = nemo_commons.get_mask()
+    the_mask = nemo_commons.get_mask(path=os.path.join(EXP_DIR, "bathy_meter.nc"))
+
+
+    vmin = None
+    vmax = None
+
+    for i, season in zip(range(nplots), cube_seasonal.coord("season").points):
+
+        data = cube_seasonal.extract(iris.Constraint(season=season)).data
+        the_min = data[the_mask].min()
+        the_max = data[the_mask].max()
+
+        if vmin is None:
+            vmin, vmax = the_min, the_max
+        else:
+            vmin = min(the_min, vmin)
+            vmax = max(the_max, vmax)
+
+    clevs, cmap = nemo_commons.get_clevs_and_cmap_for_name(name=var_name)
+    if clevs is not None:
+        bn = BoundaryNorm(clevs, len(clevs) - 1)
+    else:
+        bn = None
+
+    print "{0}: ".format(var_name), vmin, vmax
 
     for i, season in zip(range(nplots), cube_seasonal.coord("season").points):
         print season
@@ -87,18 +129,18 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
         data = cube_seasonal.extract(iris.Constraint(season=season)).data
 
         #plot only upper level of the 3d field if given
-        if len(data.shape) > 2:
+        if data.ndim > 2:
             if data.shape[1:] == x.shape:
                 data = data[0, :, :]
             else:
                 data = data[:, :, 0]
 
         to_plot = np.ma.masked_where(~the_mask, data)
-        cs = b.contourf(x, y, to_plot, ax=ax, levels=nemo_commons.varname_to_colorlevels.get(var_name, None))
+        cs = b.pcolormesh(x, y, to_plot, ax=ax, vmin = vmin, vmax = vmax, norm = bn, cmap = cmap)
         b.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
-        b.drawparallels(np.arange(-90, 90, 10))
-        b.drawmeridians(np.arange(-180, 180, 10))
-        b.colorbar(cs)
+        b.drawparallels(np.arange(-90, 90, 2))
+        b.drawmeridians(np.arange(-180, 180, 2))
+        b.colorbar(cs, ticks = clevs)
 
     fname = "{0}_{1}.jpeg".format(cube_seasonal.var_name, "-".join(cube_seasonal.coord("season").points))
     if not os.path.isdir(NEMO_IMAGES_DIR):
@@ -177,24 +219,22 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
     v_annual = np.ma.masked_where(~the_mask, v_annual)
 
     fig.suptitle("Annual")
-    b.quiver(x[::5, ::5], y[::5, ::5], u_annual[::5, ::5], v_annual[::5, ::5], scale = 1, linewidth = 0.01)
+    b.quiver(x[::5, ::5], y[::5, ::5], u_annual[::5, ::5], v_annual[::5, ::5], scale = 4, linewidth = 0.01)
     b.drawcoastlines()
     fig.tight_layout()
     fig.savefig(os.path.join(NEMO_IMAGES_DIR, fname), bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
 
 
 if __name__ == "__main__":
-    import application_properties
 
-    application_properties.set_current_directory()
-
-    #draw_seasonal_means_panel(path=T_FILE_PATH)
-    #draw_seasonal_means_panel(path=T_FILE_PATH, var_name="sossheig")
+    draw_seasonal_means_panel(path=T_FILE_PATH)
+    draw_seasonal_means_panel(path=T_FILE_PATH, var_name="sossheig")
+    draw_seasonal_means_panel(path=T_FILE_PATH, var_name="somixhgt")
 
 
     #zonal and meridional currents
     # draw_seasonal_means_panel(path=U_FILE_PATH, var_name="vozocrtx")
     # draw_seasonal_means_panel(path=V_FILE_PATH, var_name="vomecrty")
 
-    plot_vector_fields(u_path=U_FILE_PATH, v_path=V_FILE_PATH)
+    #plot_vector_fields(u_path=U_FILE_PATH, v_path=V_FILE_PATH)
     #draw_for_date()

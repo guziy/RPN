@@ -7,7 +7,7 @@ from math import atan2
 from util.geo.GeoPoint import GeoPoint
 import numpy as np
 
-EARTH_RADIUS_METERS = 6371000.0
+EARTH_RADIUS_METERS = 0.637122e7  # mean earth radius used in the CRCM5 model for area calculation
 
 #longitude and latitude are in radians
 def get_nvector(rad_lon, rad_lat):
@@ -20,12 +20,11 @@ def get_distance_in_meters(*arg):
     arg = point1, point2
     arg = lon1, lat1, lon2, lat2
     """
-    if len(arg) == 2: #if we have 2 geopoints as an argument
+    if len(arg) == 2:  # if we have 2 geopoints as an argument
         [p1, p2] = arg
         n1 = p1.get_nvector()
         n2 = p2.get_nvector()
-    elif len(arg) == 4: #if we have the coordinates of two points in degrees
-        print arg
+    elif len(arg) == 4:  # if we have the coordinates of two points in degrees
         x = np.radians(arg)
         n1 = get_nvector(x[0], x[1])
         n2 = get_nvector(x[2], x[3])
@@ -49,7 +48,7 @@ def lon_lat_to_cartesian(lon, lat, R = EARTH_RADIUS_METERS):
     lon_r = np.radians(lon)
     lat_r = np.radians(lat)
 
-    x =  R * np.cos(lat_r) * np.cos(lon_r)
+    x = R * np.cos(lat_r) * np.cos(lon_r)
     y = R * np.cos(lat_r) * np.sin(lon_r)
     z = R * np.sin(lat_r)
     return x,y,z
@@ -79,6 +78,15 @@ def get_coefs_between(nvectors1, nvectors2):
 def test():
     p1 = GeoPoint(-86.67,36.12)
     p2 = GeoPoint(-118.4, 33.94)
+
+
+    from geopy import distance
+
+    print EARTH_RADIUS_METERS, distance.EARTH_RADIUS
+    distance.EARTH_RADIUS = EARTH_RADIUS_METERS / 1000.0
+    print distance.GreatCircleDistance((-86.67, 36.12)[::-1], (-118.4, 33.94)[::-1]).m
+
+
     print get_distance_in_meters(p1, p2)
     print get_distance_in_meters(p1.longitude, p1.latitude, p2.longitude, p2.latitude)
     print 'Theoretical distance: %f km' % 2887.26

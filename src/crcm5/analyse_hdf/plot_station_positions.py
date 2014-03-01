@@ -91,7 +91,7 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
         #ax.text(x_station, y_station, point_info, bbox=dict(facecolor="white"))
         darkness += delta
 
-    ax.legend(artists, labels, handleheight = 2, ncol = 3, loc=4)
+    ax.legend(artists, labels, handleheight = 1, ncol = 3, loc=2)
     basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
     basemap.drawrivers(cpp.COASTLINE_WIDTH)
 

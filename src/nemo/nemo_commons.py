@@ -1,24 +1,43 @@
 from netCDF4 import Dataset
+from matplotlib import cm
 from mpl_toolkits.basemap import Basemap
+from domains.rotated_lat_lon import RotatedLatLon
 
 __author__ = 'huziy'
 
+mean_earth_radius_m_crcm5 = 0.637122e7  # mean earth radius used in the CRCM5 model for area calculation
+mean_earth_radius_km_crcm5 = mean_earth_radius_m_crcm5 * 1.0e-3
 
 varname_to_colorlevels = {
-    "sosstsst": [0, 1, 4, 8, 12, 16, 20, 24, 28, 30]
+    "sosstsst": [0, 1, 2, 3, 4, 8, 10, 12, 13, 14, 15, 18, 20, 25, 30]
 }
 
+varname_to_cmapname = {
+    "sosstsst": "coolwarm"
+}
+import generate_grid.nemo_domain_properties as domprops
 
-def get_mask(path = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP01/bathy_meter.nc"):
+
+def get_clevs_and_cmap_for_name(name=""):
+    clevs = varname_to_colorlevels.get(name, None)
+    cmap = varname_to_cmapname.get(name, None)
+
+    if cmap is not None:
+        return clevs, cm.get_cmap(cmap, len(clevs) - 1)
+    return None, None
+
+
+def get_mask(path="/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP01/bathy_meter.nc"):
     ds = Dataset(path)
     mask = ds.variables["Bathymetry"][:]
     ds.close()
     if hasattr(mask, "mask"):
         return ~mask.mask
     else:
-        return (mask > 0) & (mask < 1e20)
+        return (mask > 0.1) & (mask < 1e20)
 
-def get_basemap_and_coordinates_from_file(path = ""):
+
+def get_basemap_and_coordinates_from_file(path=""):
     """
     Returns default basemap, lons and lats from given path
     :param path:
@@ -29,8 +48,17 @@ def get_basemap_and_coordinates_from_file(path = ""):
     return basemap, lons, lats
 
 
-
 def get_default_basemap_for_glk(lons, lats):
+    rll = RotatedLatLon(lon1=domprops.lon1, lat1 = domprops.lat1, lon2=domprops.lon2, lat2=domprops.lat2)
+    lonp, latp = rll.get_north_pole_coords()
+    lon0, _ = rll.get_true_pole_coords_in_rotated_system()
+    return Basemap(
+        projection="rotpole", llcrnrlon=lons[0, 0], llcrnrlat=lats[0, 0],
+        urcrnrlon=lons[-1, -1], urcrnrlat=lats[-1, -1],
+        lon_0=lon0 - 180, o_lon_p = lonp, o_lat_p = latp
+    )
+
+def get_default_basemap_for_glk_2km(lons, lats):
     marginy = 1  # margin of the map in degrees
     marginx = 2
 
@@ -54,8 +82,13 @@ def get_2d_lons_lats_from_nemo(path):
         return CACHE_COORDINATES[path]
 
     ds = Dataset(path)
-    lons = ds.variables["nav_lon"][:]
-    lats = ds.variables["nav_lat"][:]
+    if "nav_lon" in ds.variables:
+        lons = ds.variables["nav_lon"][:]
+        lats = ds.variables["nav_lat"][:]
+    else:
+        lons = ds.variables["lon"][:]
+        lats = ds.variables["lat"][:]
+
     ds.close()
 
     CACHE_COORDINATES[path] = (lons, lats)

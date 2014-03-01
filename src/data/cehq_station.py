@@ -464,9 +464,11 @@ class Station:
 
         self.date_to_value = dict(zip(self.dates, self.values))
 
-    def read_data_from_hydat_db_results(self, data, start_date = None, end_date = None):
+    def read_data_from_hydat_db_results(self, data, start_date = None, end_date = None, variable = "streamflow"):
         """
         read data from results of request to hydat database
+
+        :param variable can be either streamflow or level
 
         :param data: list of dictionaries the values of interest are under the following keys
             YEAR, MONTH, NO_DAYS, FLOW1, FLOW2, FLOW3, ..., FLOW31
@@ -480,7 +482,15 @@ class Station:
             month = row["MONTH"]
 
             month_dates = [datetime(year, month, i) for i in range(1, ndays + 1)]
-            month_vals = [row["FLOW{0}".format(i)] for i in range(1, ndays + 1)]
+
+            if variable.lower() == "streamflow":
+                prefix = "FLOW"
+            elif variable.lower() == "level":
+                prefix = "LEVEL"
+            else:
+                raise Exception("Unknown variable: {0}".format(variable))
+
+            month_vals = [row["{0}{1}".format(prefix, i)] for i in range(1, ndays + 1)]
 
             df_month = pandas.DataFrame(data=month_vals, index=month_dates, columns=["value"])
             df = df.append(df_month)
@@ -797,7 +807,8 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
             #skip the stations with no data
             continue
 
-        s.read_data_from_hydat_db_results(data_for_station, start_date=start_date, end_date=end_date)
+        s.read_data_from_hydat_db_results(data_for_station, start_date=start_date,
+                                          end_date=end_date, variable=datavariable)
 
         if len(s.get_list_of_complete_years()) < 10:
             #also ignore the stations with less than 10 complete years of data

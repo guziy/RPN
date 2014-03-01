@@ -4,7 +4,7 @@ import os
 __author__ = 'huziy'
 
 import numpy as np
-
+import nemo.generate_grid.nemo_domain_properties as domain_props
 
 def create_file_with_field(folder = "", fname = "", var_name = "", data = None):
     fpath = os.path.join(folder, fname)
@@ -22,15 +22,15 @@ def create_file_with_field(folder = "", fname = "", var_name = "", data = None):
 
 
 def main():
-    dest_folder = "/home/huziy/skynet3_rech1/NEMO/WORK_GRTLKS"
+    dest_folder = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg"
     t_file_name = "IC_T.nc"
     t_var_name = "votemper"
 
     s_file_name = "IC_S.nc"
     s_var_name = "vosaline"
 
-    the_shape = 35, 455, 355
-
+    #the_shape = 35, 455, 355
+    the_shape = 35, domain_props.ny, domain_props.nx
     initial_temperature = 4.0 * np.ones(the_shape)
     initial_salinity = 0.0 * np.ones(the_shape)
 

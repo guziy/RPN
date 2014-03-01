@@ -60,7 +60,7 @@ def main(months= None, season="DJF"):
             start_year_current, end_year_current, start_year_future, end_year_future, label)
 
 
-
+        #os.remove(cache_file)
         if not os.path.isfile(cache_file):
             time_str = ds.variables["time"][:]
             times = [ datetime.strptime("".join(t_s), TIME_FORMAT) for t_s in time_str]
@@ -91,7 +91,8 @@ def main(months= None, season="DJF"):
             mean_future = seasonal_means_future.values.mean(axis = 0)
 
             ##axis0 - time, axis1 -  cell index
-            mean_change = change.mean(axis=0) * 100.0 / mean_current
+
+            mean_change = change.mean(axis=0)
 
             #print change[:,mean_change > 200000], seasonal_means_future.values[:,mean_change > 200000], seasonal_means_current.values[:,mean_change > 200000]
 
@@ -121,8 +122,9 @@ def main(months= None, season="DJF"):
 
         #change_arr_significant = np.ma.masked_where(pvalue > 1, mean_change)
 
-        levels = list( range(-150, 180, 30) )
-        mean_change[mean_change > levels[-1]] = levels[-1] + 10
+        levels = [-3500, -2000, -1500, -750, -500, -100, -50, -1]
+        levels += [-the_lev for the_lev in reversed(levels)]
+        #mean_change[mean_change > levels[-1]] = levels[-1] + 10
 
 
         to_plot[x_index, y_index] = mean_change
@@ -134,9 +136,9 @@ def main(months= None, season="DJF"):
         x, y = b(lons2d, lats2d)
 
 
-        #cmap = cm.get_cmap(name="jet", lut = len(levels) - 1)
-        cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/BlueRed.rgb", ncolors=len(levels) - 1)
-        cmap.set_over(cmap(levels[-1]))
+        cmap = cm.get_cmap(name="bwr", lut = len(levels) - 1)
+        #cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/BlueRed.rgb", ncolors=len(levels) - 1)
+        #cmap.set_over(cmap(levels[-1]))
 
         bn = BoundaryNorm(levels, cmap.N)
 
@@ -146,21 +148,21 @@ def main(months= None, season="DJF"):
         #b.pcolormesh(x, y, to_plot)
         #img = b.pcolormesh(x, y, to_plot, vmin = -100, vmax = 100)
 
-        b.contourf(x, y, to_plot, cmap = cmap,levels = levels, vmax = levels[-1], vmin = levels[0], extend = "max")
+        img = b.pcolormesh(x, y, to_plot, cmap = cmap, vmax = levels[-1], vmin = levels[0], norm = bn)
 
-        #b.colorbar(img, extend = "both")
-        cb = plt.colorbar(ticks = levels)
-        cb.ax.set_title("%")
+        cb = b.colorbar(img, extend = "both", ticks = levels)
+        #cb = plt.colorbar(ticks = levels)
+        cb.ax.set_title(r"${\rm m^3/s}$")
 
 
         b.drawcoastlines(linewidth=0.1)
 
         b.drawmeridians(meridians=np.arange(-180, 180, 60))
-        b.drawparallels(circles=np.arange(0,90, 30))
+        b.drawparallels(circles=np.arange(0, 90, 30))
 
-        b.readshapefile("data/shp/wri_basins2/wribasin", "basin", color = "0.75", linewidth=2)
+        b.readshapefile("data/shp/wri_basins2/wribasin", "basin", color = "k", linewidth=1)
         plt.tight_layout()
-        plt.savefig("offline_rout_{0}_mean_change_map_{1}.pdf".format(season, label))
+        plt.savefig("offline_rout_{0}_mean_abschange_map_{1}.jpeg".format(season, label), dpi = 800)
 
 
 
@@ -172,7 +174,7 @@ if __name__ == "__main__":
     plot_utils.apply_plot_params(width_pt=None, width_cm=20, height_cm=20, font_size=26)
 
     season_months = [
-        [12,1,2], [3,4,5], [6,7,8], [9,10,11]
+        [12, 1, 2], [3,4,5], [6,7,8], [9,10,11]
     ]
 
     season_names = [

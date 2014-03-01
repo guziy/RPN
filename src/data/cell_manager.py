@@ -172,11 +172,67 @@ class CellManager:
 
         return rout_mask
 
-    def get_model_points_for_stations(self, station_list, lake_fraction = None, drainaige_area_reldiff_limit = 0.1):
+
+    def get_lake_model_points_for_stations(self, station_list, lake_fraction = None,
+                                           nneighbours = 8):
+
+        """
+        For lake levels we have a bit different search algorithm since accumulation area is not a very sensible param to compare
+        :return {station: list of corresponding model points}
+
+        :param station_list:
+        :param lake_fraction:
+        :param drainaige_area_reldiff_limit:
+        :param nneighbours:
+        :return: :raise Exception:
+        """
+
+        station_to_model_point_list = {}
+        nx, ny = self.lons2d.shape
+        i1d, j1d = range(nx), range(ny)
+        j2d, i2d = np.meshgrid(j1d, i1d)
+        i_flat, j_flat = i2d.flatten(), j2d.flatten()
+
+        for s in station_list:
+            mp_list = []
+
+            assert isinstance(s, Station)
+            x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
+            dists, inds = self.kdtree.query((x, y, z), k = nneighbours)
+            if nneighbours == 1:
+                dists = [dists]
+                inds = [inds]
+
+            for d, i in zip(dists, inds):
+                ix = i_flat[i]
+                jy = j_flat[i]
+                mp = ModelPoint(ix = ix, jy = jy)
+
+                mp.longitude = self.lons2d[ix, jy]
+                mp.latitude = self.lats2d[ix, jy]
+
+                mp.distance_to_station = d
+                if lake_fraction is not None:
+                    if lake_fraction[ix, jy] <= 0.001:  # skip the model point if almost no lakes inisde
+                        continue
+                    mp.lake_fraction = lake_fraction[ix, jy]
+                mp_list.append(mp)
+
+            station_to_model_point_list[s] = mp_list
+            print u"Found model point for the station {0}".format(s)
+
+        return station_to_model_point_list
+
+
+    def get_model_points_for_stations(self, station_list, lake_fraction = None,
+                                      drainaige_area_reldiff_limit = 0.1, nneighbours = 8):
         """
         returns a map {station => modelpoint} for comparison modeled streamflows with observed
         :rtype   dict
         """
+
+        if nneighbours == 1:
+            raise Exception("Searching over 1 neighbor is not very secure and not implemented yet")
 
         station_to_model_point = {}
         model_acc_area = self.accumulation_area_km2
@@ -184,9 +240,14 @@ class CellManager:
 
 
         for s in station_list:
+            if s.drainage_km2 < self.characteristic_distance ** 2 * 1e-12:
+                print "skipping {0}, because drainage area is too small: {1} km**2".format(s.id, s.drainage_km2)
+                continue
+
+
             assert isinstance(s, Station)
             x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
-            dists, inds = self.kdtree.query((x, y, z), k = 16)
+            dists, inds = self.kdtree.query((x, y, z), k = nneighbours)
 
 
             deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
@@ -211,6 +272,13 @@ class CellManager:
             #check if difference in drainage areas is not too big less than 10 %
             if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
                 print deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2
+                continue
+
+
+            #check if the accumulation area of the selected model point is of reasonable size
+            if self.accumulation_area_km2[ix, jy] < self.characteristic_distance ** 2 * 1e-12:
+                print "skipping the station {0}, because the upstream area " \
+                      "for the corresponding model point is too small".format(s.id)
                 continue
 
             mp = ModelPoint()
