@@ -197,7 +197,7 @@ def main(use_half_of_cols=True):
         print "cl = {0}".format(cl)
         inpath = os.path.join(folder_path, in_fname_pattern.format(cl))
         if cl == 1:  # generate lon/lat
-            params, lon2d, lat2d = _get_source_lon_lat(path=inpath, use_half_of_cols=use_half_of_cols)
+            params, lon2d, lat2d = _get_source_lon_lat(path=inpath)
             nx, ny = lon2d.shape
             ds.createDimension("x", nx)
             ds.createDimension("y", ny)
