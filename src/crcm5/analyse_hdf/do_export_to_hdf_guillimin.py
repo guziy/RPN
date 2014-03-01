@@ -101,9 +101,19 @@ def main():
     
     #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
 
-    #On guillimin
-    data_folder = "/sb/project/xgk-345-ab/huziy/Output/quebec_0.1_crcm5-r/all_files_in_one_dir"
-    hdf_file_path = "/sb/project/xgk-345-ab/huziy/PythonProjects/hdf_store/quebec_0.1_crcm5-r.hdf5"
+    #On guillimin: crcm5-r
+    #data_folder = "/sb/project/xgk-345-ab/huziy/Output/quebec_0.1_crcm5-r/all_files_in_one_dir"
+    #hdf_file_path = "/sb/project/xgk-345-ab/huziy/PythonProjects/hdf_store/quebec_0.1_crcm5-r.hdf5"
+
+    #On guillimin: crcm5-hcd-r
+    #data_folder = "/sb/project/xgk-345-ab/huziy/Output/quebec_0.1_crcm5-hcd-r/all_files_in_one_dir"
+    #hdf_file_path = "/sb/project/xgk-345-ab/huziy/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+
+    #On guillimin: crcm5-hcd-rl
+    data_folder = "/sb/project/xgk-345-ab/huziy/Output/quebec_0.1_crcm5-hcd-rl/all_files_in_one_dir"
+    hdf_file_path = "/sb/project/xgk-345-ab/huziy/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+
+  
 
     dm = Crcm5ModelDataManager(samples_folder_path = data_folder, all_files_in_samples_folder=True)
     var_names = ["STFA", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV", 
