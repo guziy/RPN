@@ -223,6 +223,6 @@ if __name__ == "__main__":
     import time
 
     t0 = time.time()
-    interpolate_slopes(in_path_template="/home/huziy/skynet3_rech1/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
+    interpolate_slopes(in_path_template="/gs/project/ugh-612-aa/huziy/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
                        in_path_rpn_geophy="/gs/project/ugh-612-aa/huziy/geophysics_fields/geophys_Quebec_0.1deg_260x260_with_dd_v6")
     print "Execution time is {0} seconds.".format(time.time() - t0)

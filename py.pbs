@@ -1,15 +1,16 @@
 #!/bin/bash
-#PBS -l nodes=1:ppn=52
+#PBS -l nodes=1:ppn=12
 #PBS -o $PBS_JOBNAME$PBS_JOBID.out
 #PBS -e $PBS_JOBNAME$PBS_JOBID.err
 #PBS -V
 #PBS -N py_script 
-#PBS -l walltime=00:20:00:00
+#PBS -l walltime=00:00:30:00
 cd $PBS_O_WORKDIR
 
-export OMP_NUM_THREADS=52
+#export OMP_NUM_THREADS=52
 #./run.sh >& ddm.out
+
 
 . ~/.profile_python_default
 export PYTHONPATH=./src:$PYTHONPATH
-python src/fao_un/interp_and_convert_slope_data_to_rpn.py >& slope_int.log  
+python src/fao_un/interp_and_convert_slope_data_to_rpn_guillimin.py >& slope_int.log  
