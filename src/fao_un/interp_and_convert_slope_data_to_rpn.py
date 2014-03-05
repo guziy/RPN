@@ -163,7 +163,7 @@ def interpolate_slopes(in_path_template="",
         (lats2d_target[0, 0], lons2d_target[0, 0]),
         (lats2d_target[-1, -1], lons2d_target[-1, -1])).km ** 2 / np.prod(lons2d_target.shape)
 
-    nnegihbours = min(int(a_target / a_source), 2)
+    nnegihbours = max(int(a_target / a_source), 2)
     print "nneighbours = {0}".format(nnegihbours)
 
     dists, inds = ktree.query(zip(xt, yt, zt), k=nnegihbours)
