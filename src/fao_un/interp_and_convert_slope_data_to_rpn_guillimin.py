@@ -163,11 +163,12 @@ def interpolate_slopes(in_path_template="",
         (lats2d_target[0, 0], lons2d_target[0, 0]),
         (lats2d_target[-1, -1], lons2d_target[-1, -1])).km ** 2 / np.prod(lons2d_target.shape)
 
-    nnegihbours = min(int(a_target / a_source), 2)
+    nnegihbours = max(int(a_target / a_source), 2)
     print "nneighbours = {0}".format(nnegihbours)
+    print "a_target = {0} km**2; a_source = {1} km**2".format(a_target, a_source)    
 
     dists, inds = ktree.query(zip(xt, yt, zt), k=nnegihbours)
-    interpolated_slopes = mat.toarray().flatten()[inds].mean(axis=0).reshape(lons2d_target.shape)
+    interpolated_slopes = mat.flatten()[inds].mean(axis=0).reshape(lons2d_target.shape)
 
     r_obj_out.write_2D_field(name="ITFS",
                              data=interpolated_slopes, ip=ips_for_sl,
