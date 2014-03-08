@@ -18,7 +18,12 @@ def get_years_from_name(fname):
     import re
 
     groups = re.findall(r"\d+", fname)
-    if "_to_" not in fname:
+    groups1 = re.findall(r"\d+-\d+", fname)
+
+    if len(groups1):
+        s_year, e_year = map(int, groups1[-1].split("-"))
+        return range(s_year, e_year + 1)
+    elif "_to_" not in fname:
         return [int(groups[-1])]
     else:
         s_year = int(groups[-2])

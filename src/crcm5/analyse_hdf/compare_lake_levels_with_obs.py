@@ -38,6 +38,7 @@ import do_analysis_using_pytables as analysis
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
 
+
 def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_point):
     assert the_station is None or isinstance(the_station, Station)
     assert isinstance(the_model_point, ModelPoint)
@@ -504,13 +505,14 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         model_daily_clim_surf_runoff = {}
         model_daily_clim_subsurf_runoff = {}
         model_daily_clim_swe = {}
+        model_daily_clim_evap = {}
 
         #get model data for the list of years
         for label in label_list:
             fname = sim_name_to_file_name[label]
             fpath = os.path.join(hdf_folder, fname)
             #read temperature data and calculate daily climatologic fileds
-            _, model_daily_temp_clim[label] = analysis.get_daily_climatology(
+            dates, model_daily_temp_clim[label] = analysis.get_daily_climatology(
                 path_to_hdf_file=fpath, var_name="TT", level=1, start_year=start_year, end_year=end_year)
 
             #read modelled precip and calculate daily climatologic fields
@@ -531,20 +533,60 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
             values_model = None
 
+            lf_total = 0
             for the_model_point in station_to_modelpoint_list[the_station]:
-                dates, temp = analysis.get_daily_climatology_for_a_point(path=fpath,
+
+                if the_model_point.lake_fraction is not None:
+                    mult = 1.0
+                else:
+                    mult = the_model_point.lake_fraction
+                lf_total += mult
+
+                #Calculate lake depth variation for this simulation, since I forgot to uncomment it in the model
+                if label.lower() != "crcm5-hcd-r":
+                    assert isinstance(the_model_point, ModelPoint)
+                    _, temp = analysis.get_daily_climatology_for_a_point(path=fpath,
                                                                          var_name="CLDP",
                                                                          years_of_interest=year_list,
                                                                          i_index=the_model_point.ix,
                                                                          j_index=the_model_point.jy)
 
-                values_model = np.asarray(temp) if values_model is None else temp + values_model
 
-            values_model /= float(len(station_to_modelpoint_list[the_station]))
+                    if values_model is None:
+                        values_model = mult * np.asarray(temp)
+                    else:
+                        values_model = mult * np.asarray(temp) + values_model
+                else:
+
+                    _, pcp = analysis.get_daily_climatology_for_a_point(path=fpath,
+                                                                        var_name="PR",
+                                                                        years_of_interest=year_list,
+                                                                        i_index=the_model_point.ix,
+                                                                        j_index=the_model_point.jy)
+
+                    _, evp = analysis.get_daily_climatology_for_a_point(path=fpath,
+                                                                        var_name="AV",
+                                                                        years_of_interest=year_list,
+                                                                        i_index=the_model_point.ix,
+                                                                        j_index=the_model_point.jy)
 
 
-            ax.plot(dates, values_model - np.mean(values_model), label=label, lw=2)
-            ax_panel.plot(dates, values_model - np.mean(values_model), label=label, lw=2)
+                    lv_const = 2260.0e3  # Heat of vaporization
+                    pme = np.asarray(pcp) - np.asarray(evp) / lv_const * 1.0e-3
+
+                    pme *= 24 * 60 * 60
+                    if values_model is None:
+                        values_model = mult * np.cumsum(pme)
+                    else:
+                        values_model += mult * np.cumsum(pme)
+                    print len(values_model), len(dates)
+
+            values_model /= float(lf_total)
+            values_model = values_model - np.mean(values_model)
+            print "lake level anomaly ranges for {0}:{1:.8g};{2:.8g}".format(label, values_model.min(),
+                                                                             values_model.max())
+            ax.plot(dates, values_model, label=label, lw=2)
+            ax_panel.plot(dates, values_model, label=label, lw=2)
 
         if the_station is not None:
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
@@ -557,7 +599,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
             #calculate nash sutcliff coefficient and skip if too small
-
 
         ax.set_ylabel(r"Level variation: ${\rm m}$")
         assert isinstance(ax, Axes)

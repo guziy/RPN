@@ -340,6 +340,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     file_scores = open("scores_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
                        "w")
+    file_correlations = open("corr_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
+                       "w")
+
+    file_annual_discharge = open("flow_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
+                       "w")
+
+    text_files = [file_scores, file_correlations, file_annual_discharge]
     #write the following columns to the scores file
     header_format = "{0:10s}\t{1:10s}\t{2:10s}\t" + "\t".join(["{" + str(i + 3) + ":10s}"
                                                                for i in range(len(sim_name_to_file_name))])
@@ -632,7 +639,10 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                         dpi=cpp.FIG_SAVE_DPI,
                         bbox_inches="tight")
     plt.close(figure_stfl)
-    file_scores.close()
+
+    #close information text files
+    for f in text_files:
+        f.close()
 
 
 

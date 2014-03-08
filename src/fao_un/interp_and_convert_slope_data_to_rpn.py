@@ -34,26 +34,45 @@ def _get_source_lon_lat(path=""):
 
     params["nrows"] = int(np.round(params["nrows"]))
     params["ncols"] = int(np.round(params["ncols"]))
+    params["NODATA_value"] = int(params["NODATA_value"])
 
     d = params["cellsize"]
     lon1d = [params["xllcorner"] + i * d for i in range(params["ncols"])]
 
     lat1d = [params["yllcorner"] + i * d for i in range(params["nrows"])]
-    lon2d, lat2d = np.meshgrid(lon1d, lat1d)
-    return params, lon2d, lat2d
+    return params, np.asarray(lon1d), np.asarray(lat1d)
 
 
 def _get_slope_data(path=""):
     """
     cols - the list of column indices to be read
     """
-    data = np.loadtxt(path, skiprows=6, dtype=np.uint8)
+    data = np.loadtxt(path, skiprows=6, dtype=np.uint8, usecols=range(100))
+    return np.flipud(data)[:100, :100]
+
+
+def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None):
+    # with open(path) as f:
+    #     lines = f.readlines()[6:][::-1]
+    #     data = [[int(lines[row].split()[col]) for row in rows] for col in cols]
+
+    """
+
+    :param path:
+    :return: numpy.ndarray
+    """
+    data = np.loadtxt(path, skiprows=6, dtype=np.uint8, usecols=cols)
+
+    if rows is not None:
+        rows = np.asarray(rows)
+        return np.flipud(data)[rows, :]
+
     return np.flipud(data)
 
 
 def interpolate_slopes(in_path_template="",
                        in_path_rpn_geophy="/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6",
-                       out_path_rpn_geophy=None, var_name_with_target_coords="Z0"):
+                       out_path_rpn_geophy=None, var_name_with_target_coords="Z0", delta_deg=0.05):
     """
     interpolate slope data at in_path_template (template because there are 8 files, 1 for each class),
     to a grid defined in a geophy file (rpn)
@@ -80,7 +99,6 @@ def interpolate_slopes(in_path_template="",
     data_type_for_sl = None
     typ_var_for_sl = None
     grid_type_for_sl = None
-
 
     while data is not None:
         data = r_obj_in.get_next_record()
@@ -128,47 +146,74 @@ def interpolate_slopes(in_path_template="",
     #get coordinates
     r_obj_in.get_first_record_for_name(var_name_with_target_coords)
     lons2d_target, lats2d_target = r_obj_in.get_longitudes_and_latitudes_for_the_last_read_rec()
-    #lons2d_target[lons2d_target >= 180] -= 360
+    lons2d_target[lons2d_target >= 180] -= 360
 
     #Interpolate and save interflow slopes
     mat = None
-    params, lons2d_source, lat2d_source = None, None, None
-    ktree = None
+    params = None
+
+    index_map = {}
+    imin, jmin = np.Inf, np.Inf
+    imax, jmax = -1, -1
+    lons1d_source, lats1d_source = None, None
     for sc, med in SLOPE_CLASS_TO_MEDIAN.iteritems():
         inpath = in_path_template.format(sc)
         if mat is None:
-            params, lons2d_source, lat2d_source = _get_source_lon_lat(path=inpath)
-            print lons2d_target.min(), lons2d_target.max()
-            print lons2d_source.shape
-            xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons2d_source.flatten(), lat2d_source.flatten())
-            print "processing slopes of class sc={0}".format(sc)
-            ktree = cKDTree(zip(xs, ys, zs))
-            print "created kdtree.."
+            params, lons1d_source, lats1d_source = _get_source_lon_lat(path=inpath)
+            print params
+            #build the map of closest indices
+            nx, ny = lons2d_target.shape
+            for i in range(nx):
+                for j in range(ny):
+                    lon_target, lat_target = lons2d_target[i, j], lats2d_target[i, j]
+                    dlon1 = np.abs(lons1d_source - lon_target)
+                    dlon2 = np.abs(lons1d_source - 360 - lon_target) if lon_target < 0 else \
+                        np.abs(lons1d_source + 360 - lon_target)
 
-        tmp_mat = med * _get_slope_data(path=inpath)
+                    dlat = np.abs(lats1d_source - lat_target)
+                    inds_i = np.where((dlon1 < delta_deg) |
+                                      (dlon2 < delta_deg))[0]
+
+                    inds_j = np.where(dlat < delta_deg)[0]
+                    assert len(inds_i) > 0 and len(inds_j) > 0
+
+                    imin, jmin = min(imin, inds_i.min()), min(jmin, inds_j.min())
+                    imax, jmax = max(imax, inds_i.max()), max(jmax, inds_j.max())
+
+                    inds_j, inds_i = np.meshgrid(inds_j, inds_i)
+
+                    index_map[(i, j)] = [inds_i.flatten(), inds_j.flatten()]
+                    #print i, j
+
+        tmp_mat = _get_slope_data_by_cols_and_rows(path=inpath,
+                                                   cols=range(jmin, jmax + 1),
+                                                   rows=range(imin, imax + 1))
+        tmp_mat = tmp_mat.astype(int)
+
+        nodata_pts = (tmp_mat == params["NODATA_value"])
+        tmp_mat = np.ma.masked_where(nodata_pts, tmp_mat)
+        print tmp_mat.shape
+        print tmp_mat.min(), tmp_mat.max(), tmp_mat[tmp_mat >= 0].mean()
         if mat is None:
-            mat = tmp_mat
+            mat = med * tmp_mat
         else:
-            mat += tmp_mat
+            mat += med * tmp_mat
 
     mat /= 100.0
-    xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
+
 
     #compare length scales
-    a_source = distance.GreatCircleDistance(
-        (lat2d_source[0, 0], lons2d_source[0, 0]),
-        (lat2d_source[-1, -1], lons2d_source[-1, -1])).km ** 2 / np.prod(lons2d_source.shape)
+    interpolated_slopes = np.zeros_like(lons2d_target)
 
-    a_target = distance.GreatCircleDistance(
-        (lats2d_target[0, 0], lons2d_target[0, 0]),
-        (lats2d_target[-1, -1], lons2d_target[-1, -1])).km ** 2 / np.prod(lons2d_target.shape)
+    for ij, inds in index_map.iteritems():
+        data = mat[inds[0] - imin, inds[1] - jmin]
+        print len(data[~data.mask]), np.prod(data.shape, dtype=np.float32), data.shape
+        if float(len(data[~data.mask])) / np.prod(data.shape, dtype=np.float32) < 0.4:
+            interpolated_slopes[ij[0], ij[1]] = -1
+        else:
+            interpolated_slopes[ij[0], ij[1]] = data[~data.mask].mean()
 
-    nnegihbours = max(int(a_target / a_source), 2)
-    print "nneighbours = {0}".format(nnegihbours)
-
-    dists, inds = ktree.query(zip(xt, yt, zt), k=nnegihbours)
-    interpolated_slopes = mat.toarray().flatten()[inds].mean(axis=0).reshape(lons2d_target.shape)
-
+    print "ITFS: ", interpolated_slopes.min(), interpolated_slopes.max()
     r_obj_out.write_2D_field(name="ITFS",
                              data=interpolated_slopes, ip=ips_for_sl,
                              ig=igs_for_sl,

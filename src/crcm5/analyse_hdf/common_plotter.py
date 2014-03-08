@@ -151,6 +151,6 @@ if __name__ == "__main__":
 
 
     #Compare modelled and observed lake level anomalies at points
-    #compare_obs_and_model_lake_levels_at_points()
+    compare_obs_and_model_lake_levels_at_points()
 
-    plot_veg_fractions_for_a_random_run()
+    #plot_veg_fractions_for_a_random_run()

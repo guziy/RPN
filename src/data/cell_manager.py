@@ -215,8 +215,19 @@ class CellManager:
                 if lake_fraction is not None:
                     if lake_fraction[ix, jy] <= 0.001:  # skip the model point if almost no lakes inisde
                         continue
+
                     mp.lake_fraction = lake_fraction[ix, jy]
                 mp_list.append(mp)
+
+
+            if lake_fraction is not None:
+                lf = 0.0
+                for mp in mp_list:
+                    lf += mp.lake_fraction
+
+                if lf <= 0.001:
+                    continue
+
 
             station_to_model_point_list[s] = mp_list
             print u"Found model point for the station {0}".format(s)

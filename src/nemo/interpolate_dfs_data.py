@@ -1,24 +1,27 @@
-
 #Author: Huziy
 #Object: interpolate forcing fields to the model grid
+import calendar
 
 import sys
 import os
 import shutil
 
-from netCDF4 import Dataset
+from netCDF4 import Dataset, num2date, date2num
+import itertools
+from datetime import timedelta, datetime
 import numpy as np
 from scipy.spatial.ckdtree import cKDTree
-
 
 from multiprocessing import Pool
 from util.geo.lat_lon import lon_lat_to_cartesian
 
+import pandas as pd
+
 
 def interpolate_bathymetry(in_data, kdtree,
-                           source_coords = None,
-                           target_coords = None,
-                           out_data_shape = None):
+                           source_coords=None,
+                           target_coords=None,
+                           out_data_shape=None):
     """
     Interpolate bathymetry data so no ocean points are lost
     :param in_data:
@@ -47,10 +50,8 @@ def interpolate_bathymetry(in_data, kdtree,
                  (ys2d[:, :-1] - ys2d[:, 1:]) ** 2 + \
                  (zs2d[:, :-1] - zs2d[:, 1:]) ** 2
 
-
     d_source_x = np.median(np.sqrt(d_source_x))
     d_source_y = np.median(np.sqrt(d_source_y))
-
 
     print d_source_x, d_source_y, d_target_x, d_target_y
     nneighbours = int((d_target_x * d_target_y) / (d_source_x * d_source_y))
@@ -62,19 +63,18 @@ def interpolate_bathymetry(in_data, kdtree,
         dists, inds = kdtree.query(zip(*target_coords))
         return in_data_flat[inds].reshape(out_data_shape)
     else:
-        dists, inds = kdtree.query(zip(*target_coords), k = nneighbours)
+        dists, inds = kdtree.query(zip(*target_coords), k=nneighbours)
         w = 1.0 / dists ** 2
         print w.shape
-        out_data_flat = np.sum(in_data_flat[inds] * w, axis=1) / w.sum(axis = 1)
+        out_data_flat = np.sum(in_data_flat[inds] * w, axis=1) / w.sum(axis=1)
 
         #count 0
         depth_lower_limit_m = 1e-8  # m
         valpoints = in_data_flat[inds] > depth_lower_limit_m
-        mask_apl = valpoints.astype(int).sum(axis = 1) >= max(1, nneighbours // 2)
+        mask_apl = valpoints.astype(int).sum(axis=1) >= max(1, nneighbours // 2)
         mask_apl = mask_apl.astype(int)
         out_data_flat *= mask_apl
         return out_data_flat.reshape(out_data_shape)
-
 
 
 class Interpolator(object):
@@ -83,16 +83,16 @@ class Interpolator(object):
     Does not reinterpolate if the output file already exists
     """
 
-    def __init__(self, coord_file = "coordinates.nc"):
+    def __init__(self, coord_file="coordinates.nc"):
         ds = Dataset(coord_file)
         self.target_lons = ds.variables["glamt"][:]
         self.target_lats = ds.variables["gphit"][:]
 
         print "target lons shape = ", self.target_lons.shape
         ds.close()
-    
-    
-    def interpolate_file(self, inpath, outpath):
+
+
+    def interpolate_file(self, inpath, outpath, skip_feb_29=True):
         """
         Interpolate data in the file, save the result to a new
         file in the same folder, with the name of the interpolated variable 
@@ -103,9 +103,10 @@ class Interpolator(object):
             print "{0} already exists, remove to recreate ...".format(outpath)
             return
 
-        ds_in = Dataset(inpath)
         print "working on {0}".format(inpath)
-      
+        ds_in = Dataset(inpath)
+
+
         lon_ncatts = {}
         lat_ncatts = {}
 
@@ -117,38 +118,38 @@ class Interpolator(object):
         elif "nav_lon" in ds_in.variables:
             in_lon_var_name = "nav_lon"
             in_lat_var_name = "nav_lat"
+        elif "lon0" in ds_in.variables:
+            in_lon_var_name = "lon0"
+            in_lat_var_name = "lat0"
         else:
             raise Exception("The file does not contain conventional lat/lon information: {0}".format(inpath))
-
 
         in_lon_var = ds_in.variables[in_lon_var_name]
         in_lat_var = ds_in.variables[in_lat_var_name]
 
-         
         source_lons, source_lats = in_lon_var[:], in_lat_var[:]
         if in_lon_var.ndim == 1:
-           source_lons, source_lats = np.meshgrid(source_lons, source_lats)
-
+            source_lons, source_lats = np.meshgrid(source_lons, source_lats)
 
         for attname in in_lon_var.ncattrs():
             lon_ncatts[attname] = in_lon_var.getncattr(attname)
 
         for attname in in_lat_var.ncattrs():
-           lat_ncatts[attname] = in_lat_var.getncattr(attname)
+            lat_ncatts[attname] = in_lat_var.getncattr(attname)
 
 
         #find the name of the field to be interpolated, and read it into memory
-        varnames = ds_in.variables.keys()        
-        
+        varnames = ds_in.variables.keys()
+
         #write interpolated data
-        ds_out = Dataset(outpath, "w", format = "NETCDF3_CLASSIC")
-        
+        ds_out = Dataset(outpath, "w", format="NETCDF3_CLASSIC")
+
         #copy and create dimensions
-        ds_out.createDimension("time", None)        
+        ds_out.createDimension("time", None)
         ds_out.createDimension("x", self.target_lons.shape[1])
         ds_out.createDimension("y", self.target_lons.shape[0])
 
- 
+
 
         #copy and interpolate variables
         lonVar = ds_out.createVariable(in_lon_var_name, "f4", ("y", "x"))
@@ -158,77 +159,118 @@ class Interpolator(object):
             lonVar.setncatts(lon_ncatts)
             latVar.setncatts(lat_ncatts)
 
-
-        good_points = np.abs(source_lons.flatten()) < 360        
+        good_points = np.abs(source_lons.flatten()) < 360
 
         xs, ys, zs = lon_lat_to_cartesian(source_lons.flatten(), source_lats.flatten())
         xt, yt, zt = lon_lat_to_cartesian(self.target_lons.flatten(), self.target_lats.flatten())
-        
-        ktree = cKDTree(data = zip(xs[good_points], ys[good_points], zs[good_points]))
-        dists, inds = ktree.query(zip(xt, yt, zt), k = 1)
-        
+
+        ktree = cKDTree(data=zip(xs[good_points], ys[good_points], zs[good_points]))
+        dists, inds = ktree.query(zip(xt, yt, zt), k=1)
+
+
+
+        #Handle time variable first
+        timename = None
+        time_data = None
+        for v in varnames:
+            if v.startswith("time"):
+                timename = v
+                break
+
+        ##
+        if timename is not None:
+            time_var_in = ds_in.variables[timename]
+            time_var_out = ds_out.createVariable(timename, "f4", ("time",))
+
+            time_vals = time_var_in[:]
+            if time_var_in.shape[0] > 365 and skip_feb_29:
+                if hasattr(time_var_in, "units") and time_var_in.units.strip().lower() != "unknown":
+                    time_data = num2date(time_vals, time_var_in.units)
+                    df = pd.DataFrame(data=time_data, index=time_data)
+                    time_vals = df.select(lambda d: not (d.day == 29 and d.month == 2)).values
+                else:
+                    ntimes = time_vals.shape[0]
+                    if ntimes % 366 == 0 and ntimes % 365 != 0:
+                        nperday = ntimes // 366
+                        dtseconds = 24 * 60 * 60 // nperday
+                        dt = timedelta(seconds=dtseconds)
+                        #dt0 = timedelta(seconds=int(time_vals[0] * 60 * 60))  # usually in seconds
+                        start_date = datetime(2008, 1, 1)
+                        time_data = [start_date + dt * i for i in range(ntimes)]
+                        assert time_data[0].year == time_data[-1].year
+                        df = pd.DataFrame(data=time_vals, index=time_data)
+                        time_vals = df.select(lambda d: not (d.day == 29 and d.month == 2)).values
+
+
+            time_var_out[:] = time_vals
+            if hasattr(time_var_in, "units"):
+                time_var_out.units = time_var_in.units
+
         for varname in varnames:
-            outVar = None
-            if varname.lower() in ["time", "time_counter"]:
-                time_var_in = ds_in.variables[varname] 
-                time_var_out = ds_out.createVariable(varname, "f4", ("time",))
-                time_var_out[:] = time_var_in[:]
-                if hasattr(time_var_in, "units"):
-                    time_var_out.units = time_var_in.units
-                continue
-            
-            inVar = ds_in.variables[varname]
+            out_var = None
+
+            in_var = ds_in.variables[varname]
             #Interpolate only 3d variables (time, lat, lon) and some 2d variables
-            if inVar.ndim == 3: 
-                outVar = ds_out.createVariable(varname, "f4", ("time", "y", "x"))
-                outVar.units = inVar.units
-                in_data = inVar[:]
+            if in_var.ndim == 3:
+                out_var = ds_out.createVariable(varname, "f4", ("time", "y", "x"))
+                if hasattr(out_var, "units"):
+                    out_var.units = in_var.units
+
+                in_data = in_var[:]
+                if time_data is not None:
+                    p = pd.Panel(data=in_data, items=time_data,
+                                 major_axis=range(in_data.shape[1]),
+                                 minor_axis=range(in_data.shape[2]))
+
+                    if in_data.shape[0] > 365 and skip_feb_29:
+                        p = p.select(lambda d: not (d.day == 29 and d.month == 2))
+
+                    in_data = p.values
+
                 #reshape to 2d
+                print in_data.shape, self.target_lons.shape
                 in_data.shape = (in_data.shape[0], -1)
                 out_data = in_data[:, inds]
-                out_data.shape = (inVar.shape[0], ) + self.target_lons.shape
+                out_data.shape = (out_data.shape[0], ) + self.target_lons.shape
                 #print out_data.shape
-                outVar[:] = out_data
+                out_var[:] = out_data
 
             elif varname.lower() == "bathymetry":
-                outVar = ds_out.createVariable(varname, "f4", ("y", "x"))
-                outVar[:] = interpolate_bathymetry(inVar[:], ktree, source_coords=(xs, ys, zs),
-                                                   target_coords=(xt, yt, zt),
-                                                   out_data_shape = self.target_lons.shape)
+                out_var = ds_out.createVariable(varname, "f4", ("y", "x"))
+                out_var[:] = interpolate_bathymetry(in_var[:], ktree, source_coords=(xs, ys, zs),
+                                                    target_coords=(xt, yt, zt),
+                                                    out_data_shape=self.target_lons.shape)
 
-            elif inVar.ndim == 2 and varname.lower() in ["socoefr"]:
-                outVar = ds_out.createVariable(varname, "f4", ("y", "x"))
+            elif in_var.ndim == 2 and varname.lower() in ["socoefr"]:
+                out_var = ds_out.createVariable(varname, "f4", ("y", "x"))
 
-                in_data = inVar[:]
+                in_data = in_var[:]
                 #reshape to 2d
                 in_data = in_data.flatten()
                 out_data = in_data[inds]
                 out_data.shape = self.target_lons.shape
                 #print out_data.shape
-                outVar[:] = out_data
+                out_var[:] = out_data
 
-            if outVar is not None:
+            if out_var is not None:
                 #Set attributes of the interpolated fields
-                if hasattr(outVar, "long_name"):
-                    outVar.long_name = inVar.long_name
+                if hasattr(out_var, "long_name"):
+                    out_var.long_name = in_var.long_name
 
-                if hasattr(inVar, "units"):
-                    outVar.units = inVar.units
+                if hasattr(in_var, "units"):
+                    out_var.units = in_var.units
 
-                if hasattr(inVar, "missing_value"):
-                    outVar.missing_value = inVar.missing_value
+                if hasattr(in_var, "missing_value"):
+                    out_var.missing_value = in_var.missing_value
 
-                if hasattr(inVar, "coordinates"):
-                    outVar.coordinates = inVar.coordinates
-
-
-
+                if hasattr(in_var, "coordinates"):
+                    out_var.coordinates = in_var.coordinates
 
         lonVar[:] = self.target_lons
         latVar[:] = self.target_lats
         #close netcdf files
         ds_out.close()
-        ds_in.close() 
+        ds_in.close()
 
 
 def ignore_copy_func(dirpath, files):
@@ -241,12 +283,12 @@ def apply_interpolator(arg):
     return 0
 
 
-def main(infolder = "DFS4.3", coord_file = "", outfolder = None):
+def main(infolder="DFS4.3", coord_file="", outfolder=None):
     if outfolder is None:
         outfolder = infolder + "_interpolated"
     if not os.path.isdir(outfolder):
         os.mkdir(outfolder)
- 
+
     worker = Interpolator(coord_file=coord_file)
     #in_file = "DFS4.3_interpolated/t2/t2_DFS4.3_1985_sht.nc" 
     #worker.interpolate_file(in_file)    
@@ -268,20 +310,18 @@ def main(infolder = "DFS4.3", coord_file = "", outfolder = None):
         root_name = os.path.basename(root)
         if root_name.lower() == "masks":
             continue
-     
+
         dir_paths = [os.path.join(outfolder, d) for d in dirs]
         out_root = root.replace(infolder, outfolder)
         for dpath in dir_paths:
             if not os.path.isdir(dpath):
                 os.mkdir(dpath)
 
-        ncfiles = filter(lambda f: f.endswith(".nc") and not f.startswith("interpolated"), files)
+        ncfiles = filter(lambda fname: fname.endswith(".nc") and not fname.startswith("interpolated"), files)
         in_ncpaths += [os.path.join(root, f) for f in ncfiles]
-        out_ncpaths += [os.path.join(out_root, f) for f in ncfiles] 
+        out_ncpaths += [os.path.join(out_root, f) for f in ncfiles]
 
-
-
-    print len(in_ncpaths), len(out_ncpaths) 
+    assert len(in_ncpaths) == len(out_ncpaths)
     pool = Pool()
     workers = [worker] * len(in_ncpaths)
     res = pool.map(apply_interpolator, zip(workers, in_ncpaths, out_ncpaths))
@@ -291,10 +331,14 @@ def main(infolder = "DFS4.3", coord_file = "", outfolder = None):
 
 
 def interpolate_10km_grid_glk():
-    main(infolder="/home/huziy/skynet3_rech1/NEMO/WORK_GRTLKS/DFS4.3",
-         coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx170_ny90_dx0.1_dy0.1.nc",
-         outfolder="/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/DFS4.3_interpolated")
+    #    main(infolder="/home/huziy/skynet3_rech1/NEMO/WORK_GRTLKS/DFS4.3",
+    #      coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx170_ny90_dx0.1_dy0.1.nc",
+    #      outfolder="/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/DFS4.3_interpolated")
 
-if __name__ == "__main__":    
+    main(infolder="/skynet3_rech1/huziy/NEMO_OFFICIAL/DFS5.2",
+         coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx170_ny90_dx0.1_dy0.1.nc")
+
+
+if __name__ == "__main__":
     #main()
     interpolate_10km_grid_glk()
