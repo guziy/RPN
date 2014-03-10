@@ -69,6 +69,20 @@ def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,
                                                         start_year=start_year, end_year=end_year)
 
 
+
+
+
+def get_timeseries_for_a_point(path="", var_name="STFL", level=None,
+                                      years_of_interest=None,
+                                      i_index=None, j_index=None):
+    """
+
+    :rtype : tuple
+    :param years_of_interest: is a list of years used for calculating daily climatologies
+    """
+    pass
+
+
 def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
                                       years_of_interest=None,
                                       i_index=None, j_index=None):

@@ -51,7 +51,8 @@ def _get_slope_data(path=""):
     return np.flipud(data)[:100, :100]
 
 
-def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None):
+def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None, missing_value = 255, 
+                                     nrows_total = None, ncols_total = None):
     # with open(path) as f:
     #     lines = f.readlines()[6:][::-1]
     #     data = [[int(lines[row].split()[col]) for row in rows] for col in cols]
@@ -61,11 +62,17 @@ def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None):
     :param path:
     :return: numpy.ndarray
     """
-    data = np.loadtxt(path, skiprows=6, dtype=np.uint8, usecols=cols)
+    imin = min(rows)
+    imax = max(rows)
+
+    data = np.genfromtxt(path, skip_header=nrows_total - (imax+1) + 6, 
+                         skip_footer = imin,
+                         dtype=np.uint8, usecols=cols, missing_values = missing_value, 
+                         usemask = True)
 
     if rows is not None:
         rows = np.asarray(rows)
-        return np.flipud(data)[rows, :]
+        return np.flipud(data)
 
     return np.flipud(data)
 
@@ -164,7 +171,9 @@ def interpolate_slopes(in_path_template="",
             #build the map of closest indices
             nx, ny = lons2d_target.shape
             for i in range(nx):
+                #if not (100 <= i <= 160): continue
                 for j in range(ny):
+                    #if not (100 <= j <= 160): continue
                     lon_target, lat_target = lons2d_target[i, j], lats2d_target[i, j]
                     dlon1 = np.abs(lons1d_source - lon_target)
                     dlon2 = np.abs(lons1d_source - 360 - lon_target) if lon_target < 0 else \
@@ -180,20 +189,23 @@ def interpolate_slopes(in_path_template="",
                     imin, jmin = min(imin, inds_i.min()), min(jmin, inds_j.min())
                     imax, jmax = max(imax, inds_i.max()), max(jmax, inds_j.max())
 
-                    inds_j, inds_i = np.meshgrid(inds_j, inds_i)
+                    inds_i, inds_j = np.meshgrid(inds_i, inds_j)
 
-                    index_map[(i, j)] = [inds_i.flatten(), inds_j.flatten()]
+                    index_map[(i, j)] = [inds_j.flatten(), inds_i.flatten()]
                     #print i, j
-
+        #i <-> longitude <-> columns in the file
+        #j <-> latitude <-> rows in the file
         tmp_mat = _get_slope_data_by_cols_and_rows(path=inpath,
-                                                   cols=range(jmin, jmax + 1),
-                                                   rows=range(imin, imax + 1))
-        tmp_mat = tmp_mat.astype(int)
+                                                   cols=range(imin, imax + 1),
+                                                   rows=range(jmin, jmax + 1),
+                                                   missing_value=params["NODATA_value"],
+                                                   ncols_total = params["ncols"], nrows_total = params["nrows"])
+        #tmp_mat = tmp_mat.astype(int)
 
-        nodata_pts = (tmp_mat == params["NODATA_value"])
-        tmp_mat = np.ma.masked_where(nodata_pts, tmp_mat)
+        #nodata_pts = (tmp_mat == params["NODATA_value"])
+        #tmp_mat = np.ma.masked_where(nodata_pts, tmp_mat)
         print tmp_mat.shape
-        print tmp_mat.min(), tmp_mat.max(), tmp_mat[tmp_mat >= 0].mean()
+        print tmp_mat.min(), tmp_mat.max(), tmp_mat.mean()
         if mat is None:
             mat = med * tmp_mat
         else:
@@ -206,7 +218,7 @@ def interpolate_slopes(in_path_template="",
     interpolated_slopes = np.zeros_like(lons2d_target)
 
     for ij, inds in index_map.iteritems():
-        data = mat[inds[0] - imin, inds[1] - jmin]
+        data = mat[inds[0] - jmin, inds[1] - imin]
         print len(data[~data.mask]), np.prod(data.shape, dtype=np.float32), data.shape
         if float(len(data[~data.mask])) / np.prod(data.shape, dtype=np.float32) < 0.4:
             interpolated_slopes[ij[0], ij[1]] = -1

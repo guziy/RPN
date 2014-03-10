@@ -24,8 +24,9 @@ from matplotlib import cm
 
 #EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis"
 
-EXP_DIR = "/skynet2_rech1/lduarte/NEMO/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_10KM/EXP00/"
+#EXP_DIR = "/skynet2_rech1/lduarte/NEMO/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_10KM/EXP00/"
 
+EXP_DIR = "/home/huziy/nemo_glk/test_fwb_my"
 
 T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
 
