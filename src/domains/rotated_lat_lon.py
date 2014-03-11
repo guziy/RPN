@@ -7,7 +7,7 @@ from util.geo import lat_lon
 
 
 class RotatedLatLon():
-    def __init__(self, lon1=180.0, lat1=0.0, lon2=180.0, lat2=0.0):
+    def __init__(self, lon1=180.0, lat1=0.0, lon2=180.0, lat2=0.0, **kwargs):
         """
         Basis vactors of the rotated coordinate system in the original coord system
         e1 = -p1/|p1|                   =>   row0
