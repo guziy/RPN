@@ -77,9 +77,28 @@ def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None, missing_valu
     return np.flipud(data)
 
 
+def fill_missing_values(route_slope, interpolated_slopes,
+                        lons2d = None, lats2d = None):
+
+
+    to_fill = (route_slope >= 0) & (interpolated_slopes < 0)
+    correct_slopes = interpolated_slopes >= 0
+
+    x, y, z = lat_lon.lon_lat_to_cartesian(lons2d[correct_slopes], lats2d[correct_slopes])
+    ktree = cKDTree(zip(x, y, z))
+
+
+
+    xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons2d[to_fill], lats2d[to_fill])
+    dists, inds = ktree.query(zip(xt, yt, zt))
+
+    interpolated_slopes[to_fill] = interpolated_slopes[correct_slopes][inds]
+
+
+
 def interpolate_slopes(in_path_template="",
                        in_path_rpn_geophy="/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6",
-                       out_path_rpn_geophy=None, var_name_with_target_coords="Z0", delta_deg=0.05):
+                       out_path_rpn_geophy=None, var_name_with_target_coords="SLOP", delta_deg=0.05):
     """
     interpolate slope data at in_path_template (template because there are 8 files, 1 for each class),
     to a grid defined in a geophy file (rpn)
@@ -106,6 +125,7 @@ def interpolate_slopes(in_path_template="",
     data_type_for_sl = None
     typ_var_for_sl = None
     grid_type_for_sl = None
+    route_slope = None
 
     while data is not None:
         data = r_obj_in.get_next_record()
@@ -136,6 +156,7 @@ def interpolate_slopes(in_path_template="",
             data_type_for_sl = data_type
             typ_var_for_sl = info["var_type"]
             grid_type_for_sl = info["grid_type"]
+            route_slope = data[:]
 
         r_obj_out.write_2D_field(name=info["varname"],
                                  data=data, ip=ips,
@@ -162,7 +183,6 @@ def interpolate_slopes(in_path_template="",
     index_map = {}
     imin, jmin = np.Inf, np.Inf
     imax, jmax = -1, -1
-    lons1d_source, lats1d_source = None, None
     for sc, med in SLOPE_CLASS_TO_MEDIAN.iteritems():
         inpath = in_path_template.format(sc)
         if mat is None:
@@ -226,6 +246,16 @@ def interpolate_slopes(in_path_template="",
             interpolated_slopes[ij[0], ij[1]] = data[~data.mask].mean()
 
     print "ITFS: ", interpolated_slopes.min(), interpolated_slopes.max()
+
+
+
+    fill_missing_values(route_slope, interpolated_slopes,
+                        lons2d = lons2d_target, lats2d = lats2d_target)
+
+
+
+
+
     r_obj_out.write_2D_field(name="ITFS",
                              data=interpolated_slopes, ip=ips_for_sl,
                              ig=igs_for_sl,
@@ -234,6 +264,7 @@ def interpolate_slopes(in_path_template="",
                              grid_type=grid_type_for_sl,
                              typ_var=typ_var_for_sl,
                              nbits=nbits_for_sl, data_type=data_type_for_sl)
+
 
     r_obj_in.close()
     r_obj_out.close()

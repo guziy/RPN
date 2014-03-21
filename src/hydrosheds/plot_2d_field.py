@@ -13,10 +13,9 @@ import matplotlib.pyplot as plt
 import application_properties
 
 
-import readers.read_infocell as infocell
 from math import *
 
-from plot2D.map_parameters import polar_stereographic
+from domains.map_parameters_amno import polar_stereographic
 from netCDF4 import Dataset
 
 
@@ -176,7 +175,7 @@ def plot_scatter(path = 'data/hydrosheds/corresponding_DA.nc', margin = 20):
     min_x = np.min(np.log10(v1))
 
     x = plt.xlim()
-    plt.xlim(min_x , x[1])
+    plt.xlim(min_x, x[1])
     plt.ylim(min_x, x[1])
     plt.plot([min_x , x[1]], [min_x, x[1]], color = 'k')
 

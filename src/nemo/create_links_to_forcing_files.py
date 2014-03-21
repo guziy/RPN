@@ -1,8 +1,11 @@
 __author__ = 'huziy'
 
-EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg_1958-2006"
-FORCING_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg_1958-2006/" \
-              "DFS4.3_interpolated"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg_1958-2006"
+#FORCING_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg_1958-2006/" \
+#              "DFS4.3_interpolated"
+
+EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+FORCING_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/DFS5.2_interpolated"
 
 start_year = 1958
 end_year = 2006

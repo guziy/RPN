@@ -264,14 +264,10 @@ def main():
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=path)
     x, y = basemap(lons, lats)
 
-    print basemap.proj4string
+    #print basemap.proj4string
 
     slope = maskoceans(lons, lats, slope)
     slope = np.ma.masked_less(slope, 0)
-
-
-
-
 
     #create the colormap object
     cmap = brewer2mpl.get_map("spectral", "diverging", 9, reverse=True).get_mpl_colormap(N=10)

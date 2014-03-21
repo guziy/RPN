@@ -1,4 +1,5 @@
 from mpl_toolkits.basemap import Basemap
+from domains.rotated_lat_lon import RotatedLatLon
 
 __author__ = 'huziy'
 
@@ -52,6 +53,26 @@ class GridConfig():
     def get_basemap(self):
         return Basemap()
 
+
+
+def get_rotpole_for_na_glaciers():
+
+    """
+    Glacier grid
+      Grd_typ_S     = 'LU'     ,
+      Grd_ni        =  196     ,  Grd_nj          =  140     ,
+      Grd_dx        =    0.1375,  Grd_dy          =    0.1375,
+      Grd_iref      =  106     ,  Grd_jref        =   70     ,
+      Grd_latr      =    0.0   ,  Grd_lonr        =  180.0   ,
+      Grd_xlat1     =   57.5   ,  Grd_xlon1       = -130.    ,
+      Grd_xlat2     =    0.    ,  Grd_xlon2       =  -40.    ,
+    :return:
+    """
+    params = dict(
+        lon1 = -130, lat1 = 57.5,
+        lon2 = -40.0, lat2 = 0.0
+    )
+    return RotatedLatLon(**params)
 
 
 def main():
