@@ -188,8 +188,7 @@ class AnuSplinManager:
 
 
     def get_daily_clim_fields_interpolated_to(self, start_year = None, end_year = None,
-                                              lons_target = None, lats_target = None
-                                              ):
+                                              lons_target = None, lats_target = None):
         #Return 365 fields
         df = self.get_daily_climatology_fields(start_year = start_year, end_year = end_year)
 

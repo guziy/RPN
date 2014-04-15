@@ -17,6 +17,20 @@ _varname_to_units = {
     "AH": "${\\rm W/m^2}$"
 }
 
+
+_varname_to_label = {
+    "I0": r"$T_{\rm soil}$",
+    "I1": r"$\theta_{\rm liq}$",
+    "I2": r"$\theta_{\rm ice}$",
+    "I1+I2": r"$\theta_{\rm liq} + \theta_{\rm ice}$"
+}
+
+
+def get_display_label_for_var(varname):
+    return _varname_to_label.get(varname, varname)
+
+
+
 _varname_to_long_name = {
     "STFL": "Streamflow",
     "TT": "Temperature",
@@ -67,7 +81,8 @@ soil_layer_widths_26_to_60 = np.asarray([0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5,
 
 
 
-def get_to_plot(varname, data, lake_fraction=None, mask_oceans=True, lons=None, lats=None, difference = False):
+def get_to_plot(varname, data, lake_fraction=None,
+                mask_oceans=True, lons=None, lats=None, difference = False):
     if mask_oceans:
         assert lons is not None and lats is not None
 
@@ -75,15 +90,16 @@ def get_to_plot(varname, data, lake_fraction=None, mask_oceans=True, lons=None, 
     if varname in ["STFL", "STFA"]:
 
         if lake_fraction is None or np.sum(lake_fraction) <= 0.01:
-            data1 = np.ma.masked_where(data < 0, data) if not difference else data
-            return maskoceans(lonsin=lons, latsin=lats, datain=data1)
+            #data1 = np.ma.masked_where(data < 0, data) if not difference else data
+            return maskoceans(lonsin=lons, latsin=lats, datain=data)
         else:
-            data1 = np.ma.masked_where((data <= 0.1) | (lake_fraction >= GLOBAL_LAKE_FRACTION), data)
+            data1 = np.ma.masked_where(lake_fraction >= GLOBAL_LAKE_FRACTION, data)
     elif varname == "PR":
         data1 = data * 24 * 60 * 60 * 1000  # convert m/s to mm/day
 
     elif varname == "I0":
         data1 = data - 273.15  # convert to deg C
+        data1 = np.ma.masked_where((data <= 0.1) | (lake_fraction >= GLOBAL_LAKE_FRACTION), data1)
     elif varname in ["TRAF", "TDRA"]:
         data1 = data * 24 * 60 * 60  # convert mm/s to mm/day
     else:
@@ -127,26 +143,6 @@ def get_boundary_norm_using_all_vals(to_plot, ncolors):
 
 
 def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False, varname = None, difference = False):
-
-    if varname == "AS" and difference:  # Shortwave, visible
-        bounds = [-60, -30, -15, -10, -5, -1, 1, 5, 10, 15, 30, 60]
-        assert len(bounds) - 1 == ncolors
-        return BoundaryNorm(bounds, ncolors=len(bounds) - 1), bounds, bounds[0], bounds[-1]
-
-    if varname == "AV" and difference:  # Latent heat flux W/m^2
-        bounds = [-30, -20, -15, -10, -5, -1, 1, 10, 30, 50, 120, 150]
-        assert len(bounds) - 1 == ncolors
-        return BoundaryNorm(bounds, ncolors=len(bounds) - 1), bounds, bounds[0], bounds[-1]
-
-    if varname == "STFA" and difference:  # Streamflow in m^3/s
-
-        print vmax <= 500 and vmin >= -500
-        if vmax <= 500 and vmin >= -500:
-            bounds = [-450, -300, -150, -50, -20, -10, 10, 20, 50, 100, 150, 250]
-            assert len(bounds) - 1 == ncolors
-            return BoundaryNorm(bounds, ncolors=len(bounds) - 1), bounds, bounds[0], bounds[-1]
-
-
 
     if vmin * vmax >= 0:
         locator = MaxNLocator(ncolors)

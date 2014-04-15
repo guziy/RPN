@@ -40,8 +40,8 @@ class GridConfig():
         obj = GridConfig()
         if res == 0.5:
             obj.dx = obj.dy = 0.5
-            obj.iref = 46 #starts from 1 not 0!!
-            obj.jref = 42  #starts from 1 not 0!!
+            obj.iref = 46  # starts from 1 not 0!!
+            obj.jref = 42  # starts from 1 not 0!!
             obj.ni = 86
             obj.nj = 86
         elif res == 0.1:
@@ -75,8 +75,8 @@ def get_rotpole_for_na_glaciers():
     return RotatedLatLon(**params)
 
 
+
 def main():
-    #TODO: implement
     pass
 
 if __name__ == "__main__":

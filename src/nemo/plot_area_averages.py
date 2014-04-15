@@ -120,8 +120,8 @@ def main():
 
     the_mask = nemo_commons.get_mask(path=os.path.join(EXP_DIR, "bathy_meter.nc"))
 
-    lower_left_indices = (90, 5)
-    dix, djy = 50, 15
+    lower_left_indices = (115, 5)
+    dix, djy = 15, 10
 
     draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
                     var_name="sossheig", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)

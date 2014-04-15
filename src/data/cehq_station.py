@@ -222,7 +222,6 @@ class Station:
                 [rest, self.name] = line.split(':')
                 self.source = "CEHQ"
 
-
             if 'bassin versant:' in line_lower:
                 group = re.findall(r"\d+", line)
                 self.drainage_km2 = float(group[0])
@@ -336,8 +335,6 @@ class Station:
 
         del self.dates[:index], self.values[:index]
 
-        pass
-
     def passes_rough_continuity_test(self, start_date, end_date):
         nyears = end_date.year - start_date.year + 1
         nentries = sum(map(lambda t: int(start_date <= t <= end_date), self.dates))
@@ -389,14 +386,22 @@ class Station:
         assert stamp_dates is not None
         assert years is not None
 
+
         df = pandas.DataFrame(data=self.values, index=self.dates, columns=["values", ])
-        df["year"] = df.index.map(lambda d: d.year)
+        df["year"] = df.index.map(lambda the_date: the_date.year)
 
         df = df[df["year"].isin(years)]
-        daily_clim = df.groupby(by=lambda d: (d.month, d.day)).mean()
+        stamp_year = stamp_dates[0].year
+        daily_clim = df.groupby(by=lambda the_date: (the_date.month, the_date.day)).mean()
 
-        #print daily_clim.describe()
 
+        print "--" * 10
+        print self.id
+        print "--" * 10
+        print daily_clim.describe()
+        print daily_clim
+        print self.values
+        print type(self.values)
 
         vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
         return stamp_dates, vals
@@ -413,9 +418,9 @@ class Station:
 
     def __str__(self):
         return u"Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
-                                                                                        self.longitude,
-                                                                                        self.latitude,
-                                                                                        self.drainage_km2)
+                                                                                         self.longitude,
+                                                                                         self.latitude,
+                                                                                         self.drainage_km2)
 
 
     def parse_from_hydat(self, path):
@@ -464,7 +469,7 @@ class Station:
 
         self.date_to_value = dict(zip(self.dates, self.values))
 
-    def read_data_from_hydat_db_results(self, data, start_date = None, end_date = None, variable = "streamflow"):
+    def read_data_from_hydat_db_results(self, data, start_date=None, end_date=None, variable="streamflow"):
         """
         read data from results of request to hydat database
 
@@ -474,7 +479,7 @@ class Station:
             YEAR, MONTH, NO_DAYS, FLOW1, FLOW2, FLOW3, ..., FLOW31
             NO_DAYS - number of days in a given month
         """
-        df = pandas.DataFrame(columns=["value"])
+        df_list = []
         for row in data:
             #Extracts data from a row, one month of data per row
             ndays = row["NO_DAYS"]
@@ -493,19 +498,22 @@ class Station:
             month_vals = [row["{0}{1}".format(prefix, i)] for i in range(1, ndays + 1)]
 
             df_month = pandas.DataFrame(data=month_vals, index=month_dates, columns=["value"])
-            df = df.append(df_month)
+            df_list.append(df_month)
 
+        df = pandas.concat(df_list, verify_integrity=True)
         df.sort(inplace=True)
         df = df.select(lambda d: start_date <= d <= end_date)
 
         if not len(df):
+            self.dates = []
+            self.values = []
+            self.date_to_value = {}
             return
 
-        print df.index[-1]
 
         self.dates = df.index
-        self.values = df.value
-        self.date_to_value = df.to_dict()["value"]
+        self.values = df.values.flatten()
+        self.date_to_value = dict(zip(self.dates, self.values))
 
         pass
 
@@ -536,7 +544,7 @@ def read_station_data(folder='data/cehq_measure_data',
                       only_natural=True,
                       start_date=None,
                       end_date=None,
-                      selected_ids=None, min_number_of_complete_years = 3):
+                      selected_ids=None, min_number_of_complete_years=3):
     """
     :return type: list of data.cehq_station.Station
     if start_date is not None then delete values for t < start_date
@@ -685,7 +693,8 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
 
 def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
                        natural=True,
-                       province="QC", start_date = None, end_date = None, datavariable = "streamflow"):
+                       province="QC", start_date=None, end_date=None, datavariable="streamflow",
+                       min_drainage_area_km2 = None):
     """
     loads stations from sqlite db
 
@@ -697,10 +706,10 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     assert natural
 
-#    cache_file = "hydat_stations_{0}_{1}.cache".format("natural" if natural else "regulated", province)
-#    os.remove(cache_file)
-#    if os.path.isfile(cache_file):
-#        return pickle.load(open(cache_file))
+    #    cache_file = "hydat_stations_{0}_{1}.cache".format("natural" if natural else "regulated", province)
+    #    os.remove(cache_file)
+    #    if os.path.isfile(cache_file):
+    #        return pickle.load(open(cache_file))
 
     province = province.upper()
 
@@ -717,7 +726,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     regulation_table = "STN_REGULATION"
 
     if datavariable.lower() == "streamflow":
-        daily_var_table = "DLY_FLOWS"  # streamflow is in m**3
+        daily_var_table = "DLY_FLOWS"  # streamflow is in m**3/s
     elif datavariable.lower() == "level":
         daily_var_table = "DLY_LEVELS"
     else:
@@ -733,10 +742,10 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     assert isinstance(cur, sqlite3.Cursor)
 
     cur.execute("SELECT * FROM Version;")
-    for row in cur:
-        print row.keys()
-    print "using hydat version {0} generated on " \
-          "{1}".format(row["Version"], datetime.fromtimestamp(row["Date"] / 1000.0))
+    for the_row in cur:
+        print the_row.keys()
+        print "using hydat version {0} generated on " \
+              "{1}".format(the_row["Version"], datetime.fromtimestamp(the_row["Date"] / 1000.0))
 
     cur.execute("SELECT name FROM sqlite_master WHERE type = 'table';")
 
@@ -771,7 +780,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
             " where ({0}.{2}=? or {0}.{2}=?) and {1}.REGULATED={3};".format(stations_table,
                                                                             station_regulation_table,
                                                                             province_field,
-                                                                            int(natural))
+                                                                            int(not natural))
     print "query = {0}".format(query)
     cur.execute(query, (province, province.lower()))
 
@@ -782,21 +791,23 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     print "Fetched the following station: "
     print "There are {0} non-regulated stations in {1}.".format(len(data), province)
 
-    #row = cur.fetchone()
+    #the_row = cur.fetchone()
 
     stations = []
-    for row in data:
+    for the_row in data:
         s = Station()
         s.source = "HYDAT"
-        s.longitude = row["LONGITUDE"]
-        s.latitude = row["LATITUDE"]
-        s.id = row["STATION_NUMBER"]
-        s.name = row["STATION_NAME"]
-        s.drainage_km2 = row["DRAINAGE_AREA_GROSS"]
+        s.longitude = the_row["LONGITUDE"]
+        s.latitude = the_row["LATITUDE"]
+        s.id = the_row["STATION_NUMBER"]
+        s.name = the_row["STATION_NAME"]
+        s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
         #Skip the stations without related infoormation
         if s.drainage_km2 is None:
             continue
 
+        if (min_drainage_area_km2 is not None) and (min_drainage_area_km2 >= s.drainage_km2):
+            continue
 
         #read streamflows for the station
         query = "select * from {0} where STATION_NUMBER = ?".format(daily_var_table)
@@ -816,7 +827,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
         stations.append(s)
 
-    #print row[province_field]
+    #print the_row[province_field]
     connect.close()
     return stations
     #pickle.dump(stations, open(cache_file, mode="w"))

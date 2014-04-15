@@ -177,7 +177,7 @@ def plot_scatter(path = 'data/hydrosheds/corresponding_DA.nc', margin = 20):
     x = plt.xlim()
     plt.xlim(min_x, x[1])
     plt.ylim(min_x, x[1])
-    plt.plot([min_x , x[1]], [min_x, x[1]], color = 'k')
+    plt.plot([min_x, x[1]], [min_x, x[1]], color = 'k')
 
     me = 1 - np.sum( np.power(v1 - v2, 2) ) / np.sum(np.power( v1 - np.mean(v1), 2 ))
     plt.title('ME = {0:.4f}'.format(me))

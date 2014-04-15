@@ -132,6 +132,7 @@ class Crcm5ModelDataManager:
         self.soil_anisotropy_ratio = None
         self.clapp_and_hornberger_hydraulic_coef_b = None
         self.interflow_c_constant = None  # introduced by Clapp and Hornberger (1978) c = 2 * b + 3
+        self.interflow_slope = None # slope used for interflow
 
         #fill the above fields with data
         self._read_static_data()
@@ -875,7 +876,8 @@ class Crcm5ModelDataManager:
             "drainage_density_inv_meters": self.drainage_density_inv_meters,
             "soil_hydraulic_conductivity": self.vertical_soil_hydraulic_conductivity,
             "soil_anisotropy_ratio": self.soil_anisotropy_ratio,
-            "interflow_c_coef": self.interflow_c_constant
+            "interflow_c_coef": self.interflow_c_constant,
+            "interflow_slope": self.interflow_slope
 
         }
 
@@ -1717,6 +1719,9 @@ class Crcm5ModelDataManager:
 
             varname = "SANI"
             self.soil_anisotropy_ratio = _read_static_field(rpnObj, varname)
+
+            varname = "ITFS"
+            self.interflow_slope = _read_static_field(rpnObj, varname)
 
             if self.need_cell_manager:
                 nx, ny = self.flow_directions.shape
