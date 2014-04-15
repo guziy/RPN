@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import brewer2mpl
 import common_plot_params
+from matplotlib import cm
 
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
@@ -142,7 +143,7 @@ def compare(paths=None, path_to_control_data=None, control_label="",
             else:
                 to_plot = thediff
 
-            if var_name == "PR":   # convert to mm/day
+            if var_name == "PR":  # convert to mm/day
                 to_plot = infovar.get_to_plot(var_name, to_plot, mask_oceans=False)
 
             vmin = np.ma.min(to_plot)
@@ -160,7 +161,7 @@ def compare(paths=None, path_to_control_data=None, control_label="",
 
             t, pval = ttest_ind(means_for_years, control_means, axis=0)
             sig = pval < 0.05
-            basemap.contourf(x, y, sig.astype(int), nlevels = 2, hatches = ["+", None], colors = "none")
+            basemap.contourf(x, y, sig.astype(int), nlevels=2, hatches=["+", None], colors="none")
 
 
             #cb.ax.set_ylabel(infovar.get_units(var_name))
@@ -173,11 +174,11 @@ def compare(paths=None, path_to_control_data=None, control_label="",
 
 
         #depends on the compared simulations and the months of interest
-        figFileName = "compare_{0}_{1}_{2}_months-{3}.jpeg".format(var_name, control_label,
-                                                                   "_".join(labels),
-                                                                   "-".join([str(m) for m in months_of_interest]))
-        figPath = os.path.join(images_folder, figFileName)
-        fig.savefig(figPath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+        fig_file_name = "compare_{0}_{1}_{2}_months-{3}.jpeg".format(var_name, control_label,
+                                                                     "_".join(labels),
+                                                                     "-".join([str(m) for m in months_of_interest]))
+        figpath = os.path.join(images_folder, fig_file_name)
+        fig.savefig(figpath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
         plt.close(fig)
 
 
@@ -207,12 +208,13 @@ class DomainProperties(object):
 
 
 def _plot_row(axes, data, sim_label, var_name, increments=False,
-              domain_props=None, season_list=None, significance = None):
+              domain_props=None, season_list=None, significance=None):
     #data is a dict of season -> field
     #the field is a control mean in the case of the control mean
     #and the difference between the modified simulation and the control mean in the case of the modified simulation
 
     assert isinstance(domain_props, DomainProperties)
+    print "plotting row for {0}; increments = ({1})".format(var_name, increments)
 
     lons2d, lats2d, basemap = domain_props.get_lon_lat_and_basemap()
     x, y = domain_props.x, domain_props.y
@@ -240,11 +242,11 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
                 field_cmap = brewer2mpl.get_map("YlGnBu", "sequential", 9, reverse=True).get_mpl_colormap(N=ncolors)
             field_norm, bounds, bounds_min, bounds_max = infovar.get_boundary_norm(vmin, vmax, ncolors,
                                                                                    exclude_zero=False,
-                                                                                   varname = var_name,
+                                                                                   varname=var_name,
                                                                                    difference=increments)
         else:
-            field_cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=ncolors + 1)
-            d = np.ma.max(np.abs([vmin, vmax]))
+            field_cmap = cm.get_cmap("RdBu_r", ncolors + 1)
+            d = max(abs(vmin), abs(vmax))
             field_norm, bounds, bounds_min, bounds_max = infovar.get_boundary_norm(-d, d, ncolors + 1,
                                                                                    exclude_zero=True, varname=var_name,
                                                                                    difference=increments)
@@ -262,29 +264,33 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
         if not increments:
             #since the increments go below
             ax.set_title(season)
+        else:
+            ax.set_title(r"$\Delta_{total} = " + "{0:.1f}".format(field.sum()) + " $")
 
-        basemap.drawmapboundary(ax = ax, fill_color="gray")
+        basemap.drawmapboundary(ax=ax, fill_color="gray")
         im = basemap.pcolormesh(x, y, field, norm=field_norm, cmap=field_cmap, ax=ax)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
         col += 1
 
+
+
         if significance is not None:
-            cs = basemap.contourf(x, y, significance[season], levels = [0, 0.5, 1],
-                                  colors = "none",
-                                  hatches = [None, ".."],
-                                  edgecolor = "g",
-                                  facecolor = "g",
-                                  ax = ax)
+            cs = basemap.contourf(x, y, significance[season], levels=[0, 0.5, 1],
+                                  colors="none",
+                                  hatches=[None, ".."],
+                                  edgecolor="g",
+                                  facecolor="g",
+                                  ax=ax)
             #basemap.contour(x, y, significance[season], levels = [0, 0.5, 1], ax = ax)
 
     #plot the common colorbar
     if isinstance(field_norm, LogNorm):
         plt.colorbar(im, cax=axes[-1])
     else:
-        plt.colorbar(im, cax=axes[-1], extend="both", ticks = bounds)
+        plt.colorbar(im, cax=axes[-1], extend="both", ticks=bounds)
 
 
-def plot_control_and_differences_in_one_panel_for_all_seasons():
+def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None, levels=None):
     #Used to plot control and differences
     season_to_months = OrderedDict([
         ("Winter", [12, 1, 2]),
@@ -336,29 +342,17 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     #labels = ["CRCM5-HCD-RL-INTFL-sani=10000"]
 
     #ignore bulk fieald capacity
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
-    control_label = "CRCM5-R"
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+    control_label = "CRCM5-HCD-RL"
     ##
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
-    labels = ["CRCM5-HCD-R"]
-
-
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5", ]
+    labels = ["ITFS"]
 
     row_labels = [
         r"$\Delta$({0})".format(s) for s in labels
     ]
     print labels
 
-
-    # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF",
-    #               "TDRA", "I5", "AS", "IMAV"]
-    #
-    #
-    # levels = [None, None, None, None, None, 1, 1, None, None, None]
-
-
-    varnames = ["AV"]
-    levels = [None]
 
 
     #varnames = ["QQ", ]
@@ -367,7 +361,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
     assert len(levels) == len(varnames)
 
     start_year = 1980
-    end_year = 2010
+    end_year = 1988
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=control_path)
     x, y = basemap(lons2d, lats2d)
@@ -386,7 +380,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
 
     ncolors = 10
     # +1 to include white
-    diff_cmap = brewer2mpl.get_map("RdBu", "diverging", ncolors + 1, reverse=True).get_mpl_colormap(N=ncolors + 1)
+    diff_cmap = cm.get_cmap("RdBu", ncolors + 1)
 
     #plot the plots one file per variable
     for var_name, level in zip(varnames, levels):
@@ -400,6 +394,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
         #Calculate the difference for each season, and save the results to dictionaries
         #to access later when plotting
         for season, months_of_interest in season_to_months.iteritems():
+            print "workin on season: {0}".format(season)
 
             control_means = analysis.get_mean_2d_fields_for_months(path=control_path, var_name=var_name,
                                                                    months=months_of_interest,
@@ -431,7 +426,9 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
                 modified_mean = infovar.get_to_plot(var_name, modified_mean,
                                                     lake_fraction=domain_props.lake_fraction, lons=lons2d, lats=lats2d)
 
-                label_to_season_to_difference[the_label][season] = modified_mean - control_mean
+                diff_vals = modified_mean - control_mean
+                print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
+                label_to_season_to_difference[the_label][season] = diff_vals
                 label_to_season_to_significance[the_label][season] = significance
 
         #Do the plotting for each variable
@@ -457,14 +454,15 @@ def plot_control_and_differences_in_one_panel_for_all_seasons():
                       season_list=season_list, significance=label_to_season_to_significance[the_label])
             the_row += 1
 
-        folderPath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}".format("_".join(labels),
-                                  control_label, "-".join(season_to_months.keys())))
-        if not os.path.isdir(folderPath):
-            os.mkdir(folderPath)
+        folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}".format("_".join(labels),
+                                                                                                control_label,
+                                                                                "-".join(season_to_months.keys())))
+        if not os.path.isdir(folderpath):
+            os.mkdir(folderpath)
 
-        imName = "{0}_{1}.jpeg".format(var_name, "_".join(labels + [control_label]))
-        imPath = os.path.join(folderPath, imName)
-        fig.savefig(imPath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
+        imname = "{0}_{1}.jpeg".format(var_name, "_".join(labels + [control_label]))
+        impath = os.path.join(folderpath, imname)
+        fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
 
 
 def study_lake_effect_on_atmosphere():

@@ -96,9 +96,14 @@ def main():
     #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
 
     #soil anisotropy 10000 and do not care about bulk field capacity
-    data_folder = os.path.join(from_guillimin_folder,
-                               "quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc/all_files_in_one_dir")
-    hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
+    #data_folder = os.path.join(from_guillimin_folder,
+    #                           "quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc/all_files_in_one_dir")
+    #hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
+
+
+
+    data_folder = os.path.join(from_guillimin_folder, "quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS")
+    hdf_file_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
 
 
     dm = Crcm5ModelDataManager(samples_folder_path = data_folder, all_files_in_samples_folder=True)
@@ -106,11 +111,12 @@ def main():
     #var_names = [ "I0", "I1", "I2", "IMAV"]
     #var_names = ["AS", ]
     #var_names = ["QQ", ]
-    var_names = ["INTF", ]
+    #var_names = ["INTF", ]
+    var_names = []
     dm.export_to_hdf(var_list = var_names, file_path= hdf_file_path, mode="a")
-    export_static_fields_to_hdf(
-        hdf_file= hdf_file_path, data_folder=data_folder
-    )
+    #export_static_fields_to_hdf(
+    #    hdf_file= hdf_file_path, data_folder=data_folder
+    #)
     pass
 
 def skynet3_test():
@@ -140,8 +146,8 @@ if __name__ == "__main__":
 
     #
     #correct_proj_table()
-    #main()
+    main()
     #multiply_table_column_by()
-    skynet3_test()
+    #skynet3_test()
     print "Elapsed time {0} seconds".format(time.clock() - t0)
     print "Hello world"

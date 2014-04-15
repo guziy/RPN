@@ -14,7 +14,6 @@ from multiprocessing import Process
 def configure():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=20)
     import application_properties
-
     application_properties.set_current_directory()
 
 
@@ -41,9 +40,10 @@ def compare_simulations():
 
 def compare_obs_and_model_at_points():
     import compare_streamflow_with_obs
+    start_date = datetime(1980, 1, 1)
+    end_date = datetime(2010, 12, 31)
 
-    p = Process(target=compare_streamflow_with_obs.main)
-    p.start()
+    compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
 
 
 def compare_obs_and_model_at_river_outlet_points():
@@ -76,8 +76,16 @@ def plot_static_fields_histograms():
 def compare_2d_seasonal_means_from_simulations():
     import compare_modelled_2d_fields as comp
 
+    varnames = ["STFL", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "AS"]
+    levels = [None, None, None, None, None, 1, 1, None, None, 1, None]
+
+
+    varnames = ["AS", "STFL", "AV", "AH"]
+    levels = [None, None, None, None]
+
+
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
-    comp.plot_control_and_differences_in_one_panel_for_all_seasons()
+    comp.plot_control_and_differences_in_one_panel_for_all_seasons(varnames=varnames, levels=levels)
 
 
 def validate_seasonal_mean_atm_fields():
@@ -89,9 +97,14 @@ def validate_seasonal_mean_atm_fields():
     p.start()
 
 
+def plot_soil_profiles():
+    import plot_soil_profile_in_time_mean_for_region
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
+    plot_soil_profile_in_time_mean_for_region.exp_plot_one_simulation()
+
+
 def compare_quantiles():
     import lake_effect_on_streamflow_quantiles as lkeff
-
     lkeff.main()
 
 
@@ -117,8 +130,6 @@ def plot_veg_fractions_for_a_random_run():
         fname="an_geop_gemgcm_zer40.rpn",
         label="CCCma", canopy_name="FCAN", depth_to_bedrock_name="DPTH")
 
-
-
     plot_veg_fractions.plot_depth_to_bedrock(b1,
                                              lons1, lats1, data1["BDRCK_DEPTH"], "USGS",
                                              lons2, lats2, data2["BDRCK_DEPTH"], "CCCma")
@@ -127,6 +138,11 @@ def plot_veg_fractions_for_a_random_run():
     plot_veg_fractions.plot_difference(b1, lons1, lats1, data1, "USGS", lons2, lats2, data2, "CCCma")
 
 
+def plot_diff_in_soil_profiles():
+    import plot_soil_profile_in_time_mean_for_region
+    plot_utils.apply_plot_params(font_size=7, width_pt=None, width_cm=20, height_cm=10)
+    plot_soil_profile_in_time_mean_for_region.main_compare_two_simulations()
+
 if __name__ == "__main__":
     configure()
     #
@@ -134,13 +150,14 @@ if __name__ == "__main__":
     #compare_2d_seasonal_means_from_simulations()
 
     #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    #compare_obs_and_model_at_points()
+    compare_obs_and_model_at_points()
 
     #compare_simulations()
     #validate_seasonal_mean_atm_fields()
     #plot_static_fields_histograms()
 
-    #compare_quantiles()
+    #Compares Q10 and Q90 calculated from observed and modelled climatologic hydrographs
+    compare_quantiles()
 
     #plot_vertical_soil_moisture_cross_section()
 
@@ -151,6 +168,12 @@ if __name__ == "__main__":
 
 
     #Compare modelled and observed lake level anomalies at points
-    compare_obs_and_model_lake_levels_at_points()
+    #compare_obs_and_model_lake_levels_at_points()
 
     #plot_veg_fractions_for_a_random_run()
+
+    #plot soil profiles
+    #plot_soil_profiles()
+
+    #plot differences in soil profiles between 2 simulations
+    #plot_diff_in_soil_profiles()

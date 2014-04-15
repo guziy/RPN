@@ -152,7 +152,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
         #plot max temperature
         df_tmax = _apply_running_mean(daily_dates, basin_tmax)
         print df_tmax.tail(20)
-        p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1)
+        p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1, color = "k")
 
         #plot min temperature
         df_tmin = _apply_running_mean(daily_dates, basin_tmin)
@@ -212,7 +212,7 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
 
         #running mean
         df = _apply_running_mean(daily_dates, basin_precip, averaging_period=resample_period)
-        ax.plot(df.index, df["values"], label="precip-obs", lw=2)
+        ax.plot(df.index, df["values"], label="precip-obs", lw=2, color = "k")
 
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.yaxis.set_label_position("right")
@@ -244,7 +244,7 @@ def _validate_swe_with_ross_brown(ax, the_model_point, model_data_dict=None,
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
         ax.plot(daily_dates, data, label=label, lw=2)
 
-    p = ax.plot(daily_dates, basin_swe, label="swe-obs", lw=2)
+    p = ax.plot(daily_dates, basin_swe, label="swe-obs", lw=2, color = "k")
 
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.grid()
@@ -388,7 +388,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         #Get the list of the corresponding model points
         station_to_modelpoint_list = cell_manager.get_lake_model_points_for_stations(station_list=stations,
                                                                                      lake_fraction=lake_fraction,
-                                                                                     nneighbours=4)
+                                                                                     nneighbours=1)
         station_list = list(station_to_modelpoint_list.keys())
         station_list.sort(key=lambda st1: st1.latitude, reverse=True)
         processed_stations = station_list
@@ -533,6 +533,9 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
             values_model = None
 
+            #lake level due to evap/precip
+            values_model_evp = None
+
             lf_total = 0
             for the_model_point in station_to_modelpoint_list[the_station]:
 
@@ -551,35 +554,23 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                                                          i_index=the_model_point.ix,
                                                                          j_index=the_model_point.jy)
 
-
                     if values_model is None:
                         values_model = mult * np.asarray(temp)
                     else:
                         values_model = mult * np.asarray(temp) + values_model
                 else:
+                    raise NotImplementedError("Cannot handle lake depth for {0}".format(label))
 
-                    _, pcp = analysis.get_daily_climatology_for_a_point(path=fpath,
-                                                                        var_name="PR",
-                                                                        years_of_interest=year_list,
-                                                                        i_index=the_model_point.ix,
-                                                                        j_index=the_model_point.jy)
+                if label.lower() == "crcm5-hcd-rl":
+                    _, temp = analysis.get_daily_climatology_for_a_point_cldp_due_to_precip_evap(
+                        path=fpath, i_index=the_model_point.ix, j_index=the_model_point.jy,
+                        year_list=year_list)
 
-                    _, evp = analysis.get_daily_climatology_for_a_point(path=fpath,
-                                                                        var_name="AV",
-                                                                        years_of_interest=year_list,
-                                                                        i_index=the_model_point.ix,
-                                                                        j_index=the_model_point.jy)
-
-
-                    lv_const = 2260.0e3  # Heat of vaporization
-                    pme = np.asarray(pcp) - np.asarray(evp) / lv_const * 1.0e-3
-
-                    pme *= 24 * 60 * 60
-                    if values_model is None:
-                        values_model = mult * np.cumsum(pme)
+                    if values_model_evp is None:
+                        values_model_evp = mult * np.asarray(temp)
                     else:
-                        values_model += mult * np.cumsum(pme)
-                    print len(values_model), len(dates)
+                        values_model_evp = mult * np.asarray(temp) + values_model_evp
+
 
             values_model /= float(lf_total)
             values_model = values_model - np.mean(values_model)
@@ -588,14 +579,26 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             ax.plot(dates, values_model, label=label, lw=2)
             ax_panel.plot(dates, values_model, label=label, lw=2)
 
+
+
+            if values_model_evp is not None:
+                # normalize cldp
+                values_model_evp /= float(lf_total)
+                #convert to m/s
+                values_model_evp /= 1000.0
+                values_model_evp = values_model_evp - np.mean(values_model_evp)
+                ax.plot(dates, values_model_evp, label=label + "-PE", lw=2)
+                ax_panel.plot(dates, values_model_evp, label=label + "-PE", lw=2)
+
+
         if the_station is not None:
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
                                                                                                  years=year_list)
 
 
             #To keep the colors consistent for all the variables, the obs Should be plotted last
-            ax.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2)
-            ax_panel.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2)
+            ax.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2, color = "k")
+            ax_panel.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2, color = "k")
 
 
             #calculate nash sutcliff coefficient and skip if too small
@@ -802,11 +805,11 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     #selected_ids = ["090613", ]
 
     sim_labels = [
-        "CRCM5-HCD-R", "CRCM5-HCD-RL"
+        "CRCM5-HCD-RL",
     ]
 
     sim_file_names = [
-        "quebec_0.1_crcm5-hcd-r.hdf5", "quebec_0.1_crcm5-hcd-rl.hdf5"
+        "quebec_0.1_crcm5-hcd-rl.hdf5",
     ]
 
     sim_name_to_file_name = OrderedDict()
@@ -827,7 +830,11 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     #}
 
 
+    skip_list = [
+        "061303",  # regulated
+        "061305", "061304", "051012", "050437", "050914", "030247", "030268"
 
+    ]
 
 
     #Get the list of stations to do the comparison with
@@ -837,6 +844,31 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
         min_number_of_complete_years=1
     )
 
+
+
+    #stations.extend(
+    #    cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, datavariable="level")
+    #)
+
+    #Commented hydat station for performance during testing
+    # province = "QC"
+    # stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
+    # if not len(stations_hd):
+    #     print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
+    #         str(start_date), str(end_date), province
+    #     )
+    # stations.extend(stations_hd)
+
+    #province = "ON"
+    #stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
+    #stations.extend(stations_hd)
+
+
+
+
+    #Do not process skip stations
+    stations = filter(lambda the_s: the_s.id not in skip_list, stations)
+
     #debug:
     for s in stations:
         assert isinstance(s, Station)
@@ -845,22 +877,6 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
 
     assert len(stations)
 
-    #stations.extend(
-    #    cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, datavariable="level")
-    #)
-
-    #Commented hydat station for performance during testing
-    #province = "QC"
-    #stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
-    #if not len(stations_hd):
-    #    print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
-    #        str(start_date), str(end_date), province
-    #    )
-    #stations.extend(stations_hd)
-    #
-    #province = "ON"
-    #stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
-    #stations.extend(stations_hd)
 
 
     draw_model_comparison(model_points=None, sim_name_to_file_name=sim_name_to_file_name,

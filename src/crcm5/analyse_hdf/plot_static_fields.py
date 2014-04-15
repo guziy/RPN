@@ -247,11 +247,14 @@ def main():
 
     #plot the control
 
-    path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    path1 = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
     #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
     #path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
 
+    path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
+
     slope = analysis.get_array_from_file(path=path, var_name="slope")
+    itf_slope = analysis.get_array_from_file(path=path, var_name="interflow_slope")
     #slope = np.ma.masked_where(slope <= 0, slope)
 
     cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME)
@@ -291,9 +294,13 @@ def main():
 
     #slope
     ax = fig.add_subplot(gs[2, 0])
-    _plot_slope(ax, basemap, x, y, slope, title="g) Slope", cmap=cmap)
+    _plot_slope(ax, basemap, x, y, slope, title="g) River slope", cmap=cmap)
     all_axes.append(ax)
 
+    #slope
+    ax = fig.add_subplot(gs[2, 1])
+    _plot_slope(ax, basemap, x, y, itf_slope, title="h) Interflow slope", cmap=cmap)
+    all_axes.append(ax)
 
 
     #depth to bedrock
@@ -334,11 +341,11 @@ def main():
     all_axes.append(ax)
 
     #drainage density
-    ax = fig.add_subplot(gs[2, 1])
+    ax = fig.add_subplot(gs[2, 2])
     all_axes.append(ax)
     drainage_density = analysis.get_array_from_file(path=path, var_name="drainage_density_inv_meters")
     drainage_density = np.ma.masked_where(slope.mask, drainage_density)
-    _plot_field(ax, basemap, x, y, drainage_density * 1000.0, title="h) DD (${\\rm km^{-1}}$)", cmap=cmap)
+    _plot_field(ax, basemap, x, y, drainage_density * 1000.0, title="i) DD (${\\rm km^{-1}}$)", cmap=cmap)
 
 
     #drainage area
@@ -352,7 +359,7 @@ def main():
     #vertical hydraulic conductivity
     ax = fig.add_subplot(gs[1, 2])
     all_axes.append(ax)
-    field = analysis.get_array_from_file(path=path, var_name=infovar.HDF_VERT_SOIL_HYDR_COND_NAME)
+    field = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_VERT_SOIL_HYDR_COND_NAME)
     field = np.ma.masked_where(slope.mask, field[0, :, :])
     print field.shape
     _plot_soil_hydraulic_conductivity(ax, basemap, x, y, field, title="f) Kv, m/s", cmap=cmap)

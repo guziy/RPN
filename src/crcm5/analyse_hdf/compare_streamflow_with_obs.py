@@ -136,7 +136,6 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     i_select, j_select = np.where(good_points)
 
     if not np.any(np.isnan(obs_tmax_clim_fields[0][upstream_mask == 1])):
-
         basin_tmax = np.sum(obs_tmax_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
                             axis=1) / basin_area_km2
         basin_tmin = np.sum(obs_tmin_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
@@ -200,7 +199,7 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
     if not np.any(np.isnan(obs_precip_clim_fields[0][upstream_mask == 1])):
         basin_precip = np.sum(
             obs_precip_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
-            axis = 1) / basin_area_km2
+            axis=1) / basin_area_km2
 
         #running mean
         df = _apply_running_mean(daily_dates, basin_precip, averaging_period=resample_period)
@@ -314,7 +313,7 @@ def _plot_upstream_subsurface_runoff(ax, the_model_point, model_data_dict=None,
 
 
 def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_name=None, hdf_folder=None,
-                          start_year=None, end_year=None, cell_manager=None):
+                          start_year=None, end_year=None, cell_manager=None, stfl_name="STFA"):
     """
 
     :param model_points: list of model point objects
@@ -340,18 +339,20 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     file_scores = open("scores_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
                        "w")
-    file_correlations = open("corr_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
-                       "w")
+    file_correlations = open(
+        "corr_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
+        "w")
 
-    file_annual_discharge = open("flow_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
-                       "w")
+    file_annual_discharge = open(
+        "flow_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
+        "w")
 
     text_files = [file_scores, file_correlations, file_annual_discharge]
     #write the following columns to the scores file
     header_format = "{0:10s}\t{1:10s}\t{2:10s}\t" + "\t".join(["{" + str(i + 3) + ":10s}"
                                                                for i in range(len(sim_name_to_file_name))])
     line_format = "{0:10s}\t{1:10.1f}\t{1:10.1f}\t" + "\t".join(["{" + str(i + 3) + ":10.1f}"
-                                                                for i in range(len(sim_name_to_file_name))])
+                                                                 for i in range(len(sim_name_to_file_name))])
 
     header = ("ID", "DAo", "DAm",) + tuple(["NS({0})".format(key) for key in sim_name_to_file_name])
     file_scores.write(header_format.format(*header) + "\n")
@@ -425,8 +426,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         start_year=start_year, end_year=end_year,
         lons_target=lons2d, lats_target=lats2d)
 
-
-
     _, obs_tmax_fields = anusplin_tmax.get_daily_clim_fields_interpolated_to(
         start_year=start_year, end_year=end_year,
         lons_target=lons2d, lats_target=lats2d)
@@ -441,16 +440,10 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                                                              lons2d_target=lons2d,
                                                                              lats2d_target=lats2d)
 
-
-
-
-
-
     for i, the_model_point in enumerate(mp_list):
 
         ax_stfl = figure_stfl.add_subplot(gs_stfl[i // ncols, i % ncols],
                                           sharex=ax_stfl)
-
 
         assert isinstance(the_model_point, ModelPoint)
 
@@ -512,7 +505,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                 path_to_hdf_file=fpath, var_name="I5", level=None, start_year=start_year, end_year=end_year)
 
             dates, values_model = analysis.get_daily_climatology_for_a_point(path=fpath,
-                                                                             var_name="STFA",
+                                                                             var_name=stfl_name,
                                                                              years_of_interest=year_list,
                                                                              i_index=the_model_point.ix,
                                                                              j_index=the_model_point.jy)
@@ -521,6 +514,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             ax_stfl.plot(dates, values_model, label=label, lw=2)
 
         if the_station is not None:
+            assert isinstance(the_station, Station)
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
                                                                                                  years=year_list)
 
@@ -536,12 +530,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         upstream_area_km2 = np.sum(cell_area_km2[upstream_mask == 1])
         #Put some information about the point
         if the_station is not None:
-            point_info = "{0}".format(the_station.id)
+            lf_upstream = lake_fraction[upstream_mask == 1]
+            point_info = "{0}\nlf-max={1:.2f}".format(the_station.id, lf_upstream.max())
         else:
             point_info = "{0}".format(the_model_point.point_id)
 
         ax.text(0.6, 0.9, point_info, transform=ax.transAxes, bbox=dict(facecolor="white"))
-        ax_stfl.text(0.6, 0.85, point_info, transform=ax_stfl.transAxes, bbox=dict(facecolor="white"))
+        ax_stfl.text(0.6, 0.85, point_info, transform=ax_stfl.transAxes, bbox=dict(facecolor="white"), fontsize=5)
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
@@ -645,8 +640,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         f.close()
 
 
-
-
 def plot_point_positions_with_upstream_areas(processed_stations, processed_model_points,
                                              basemap, cell_manager):
     #plot point positions with upstream areas
@@ -654,9 +647,8 @@ def plot_point_positions_with_upstream_areas(processed_stations, processed_model
     ax = fig.add_subplot(1, 1, 1)
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
     impath = os.path.join(images_folder, "station_positions.jpeg")
-    fig.savefig(impath, dpi=cpp.FIG_SAVE_DPI, bbox_inches = "tight")
+    fig.savefig(impath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
-
 
 
 def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
@@ -713,16 +705,21 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
                           start_year=start_year, end_year=end_year, cell_manager=cell_manager)
 
 
-def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
-    start_date = datetime(1980, 1, 1)
-    end_date = datetime(2010, 12, 31)
-
+def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_date=None,
+         min_station_accumulation_area_km2 = 400.0):
     # Station ids to get from the CEHQ database
     # selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
     #                 "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
 
+    ids_with_lakes_upstream = [
+        "104001", "093806", "093806", "081002", "081007"
+    ]
+
     selected_ids = ["092715", "074903", "080104", "081007", "061905",
-                     "093806", "090613", "081002", "093801", "080718", "104001"]
+                    "093806", "090613", "081002", "093801", "080718", "104001"]
+
+    selected_ids = ids_with_lakes_upstream
+    selected_ids = []  # Do not use CEHQ stations temporarily
 
     # selected_ids = [
     #     "074903", "061905", "090613", "092715", "093801", "093806", "081002"
@@ -735,18 +732,19 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
     #selected_ids = ["090613", ]
 
     sim_labels = [
-        "CRCM5-R", "CRCM5-HCD-R"
+        "CRCM5-HCD-R", "CRCM5-HCD-RL"
     ]
 
     sim_file_names = [
-        "quebec_0.1_crcm5-r.hdf5", "quebec_0.1_crcm5-hcd-r.hdf5"
+        "quebec_0.1_crcm5-hcd-r.hdf5",
+        "quebec_0.1_crcm5-hcd-rl.hdf5"
     ]
 
     sim_name_to_file_name = OrderedDict()
     for k, v in zip(sim_labels, sim_file_names):
         sim_name_to_file_name[k] = v
 
-    #sim_name_to_file_name = {
+        #sim_name_to_file_name = {
         #"CRCM5-R": "quebec_0.1_crcm5-r.hdf5",
         #"CRCM5-HCD-R": "quebec_0.1_crcm5-hcd-r.hdf5",
         #"CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
@@ -770,17 +768,20 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
 
     print "Initial list of stations:"
     for s in stations:
-        print "{0}".format(s)
+        print u"{0}".format(s)
 
 
     #Commented hydat station for performance during testing
-    #province = "QC"
-    #stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
-    #if not len(stations_hd):
-    #    print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
-    #        str(start_date), str(end_date), province
-    #    )
-    #stations.extend(stations_hd)
+    province = "QC"
+    stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date,
+                                                  province=province,
+                                                  min_drainage_area_km2=min_station_accumulation_area_km2)
+    if not len(stations_hd):
+        print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
+            str(start_date), str(end_date), province
+        )
+
+    stations.extend(stations_hd)
     #
     #province = "ON"
     #stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
@@ -789,7 +790,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):
 
     draw_model_comparison(model_points=None, sim_name_to_file_name=sim_name_to_file_name,
                           hdf_folder=hdf_folder,
-                          start_year=start_date.year, end_year=end_date.year, stations=stations)
+                          start_year=start_date.year, end_year=end_date.year, stations=stations, stfl_name="STFA")
 
 
 if __name__ == "__main__":

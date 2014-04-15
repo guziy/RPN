@@ -27,8 +27,8 @@ __author__ = 'huziy'
 
 #noinspection PyNoneFunctionAssignment
 def main():
-    start_year = 1979
-    end_year = 1985
+    start_year = 1980
+    end_year = 1988
 
     soil_layer_widths = infovar.soil_layer_widths_26_to_60
     soil_tops = np.cumsum(soil_layer_widths).tolist()[:-1]
@@ -43,7 +43,7 @@ def main():
     path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
     label1 = "CRCM5-HCD-RL"
 
-    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
     label2 = "CRCM5-HCD-RL-INTFL"
 
     ############
@@ -170,7 +170,7 @@ def main():
 
 
 
-
+        print u"processed: {0}".format(the_station)
         if not plotted_global:
             plotted_global = True
             fig = plt.figure()

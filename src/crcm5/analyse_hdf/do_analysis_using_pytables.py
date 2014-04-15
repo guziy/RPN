@@ -26,14 +26,14 @@ def get_basemap_from_hdf(file_path=""):
     lons = h.getNode("/", "longitude")[:]
     lats = h.getNode("/", "latitude")[:]
 
-    rotPoleTable = h.getNode("/", "rotpole")
+    rotpoletable = h.getNode("/", "rotpole")
 
-    assert isinstance(rotPoleTable, tb.Table)
+    assert isinstance(rotpoletable, tb.Table)
 
     params = {}
-    for row in rotPoleTable:
+    for row in rotpoletable:
         params[row["name"]] = row["value"]
-    rotPoleTable.close()
+    rotpoletable.close()
 
     basemap = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(
         lons2d=lons, lats2d=lats,
@@ -71,16 +71,61 @@ def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,
 
 
 
-
-def get_timeseries_for_a_point(path="", var_name="STFL", level=None,
-                                      years_of_interest=None,
-                                      i_index=None, j_index=None):
+def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=None):
     """
 
-    :rtype : tuple
-    :param years_of_interest: is a list of years used for calculating daily climatologies
+    :param path:
+    :param i_index:
+    :param j_index:
+    :return:
     """
-    pass
+    h = tb.open_file(path)
+    traf_table = h.get_node("/", "TRAF")
+    sel_rows = traf_table.where("level == 6")
+    dates = []
+    vals = []
+    for the_row in sel_rows:
+        dates.append(datetime(the_row["year"], the_row["month"], the_row["day"], the_row["hour"]))
+        vals.append(the_row["field"][i_index, j_index])
+
+    ts = pd.TimeSeries(data=vals, index=dates)
+    ts = ts.sort_index()
+
+    dt = ts.index[1] - ts.index[0]
+    print "dt = ", dt
+    ts_cldp = ts.cumsum() * dt.total_seconds()
+    return ts_cldp
+
+
+def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=None, j_index=None,
+                                                              year_list = None):
+    """
+
+    :param path:
+    :param i_index:
+    :param j_index:
+    :return:
+    """
+    ts = get_lake_level_timesries_due_to_precip_evap(path=path, i_index=i_index, j_index=j_index)
+
+
+    assert isinstance(ts, pd.TimeSeries)
+    ts = ts.select(lambda d: d.year in year_list)
+
+
+    ts_clim = ts.groupby(
+        lambda d: datetime(2001, d.month, d.day, 1) if not (d.month == 2 and d.day == 29) else
+        datetime(2001, d.month, d.day - 1, 1)).mean()
+
+    print type(ts_clim)
+    print dir(ts_clim)
+
+    assert isinstance(ts_clim, pd.Series)
+    ts_clim = ts_clim.sort_index()
+
+    #assert isinstance(ts_clim, pd.TimeSeries)
+    print ts_clim.index
+    return ts_clim.index, ts_clim.values
 
 
 def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
@@ -95,26 +140,26 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
 
     var_table = h.get_node("/", var_name)
 
-    def grouping_func(row):
-        return row["month"], row["day"], row["level"]
+    def grouping_func(the_row):
+        return the_row["month"], the_row["day"], the_row["level"]
 
     date_to_mean = {}
     date_to_count = {}
 
     if level is not None:
-        selByLevel = "(level == {0})".format(level)
+        selbylevel = "(level == {0})".format(level)
     else:
-        selByLevel = ""
+        selbylevel = ""
 
-    selByYear = "|".join(["(year == {0})".format(y) for y in years_of_interest])
+    selbyyear = "|".join(["(year == {0})".format(y) for y in years_of_interest])
 
     if level is not None:
         sel_for_years_and_level = var_table.where(
-            "({0}) & ({1}) & ~((month == 2) & (day == 29))".format(selByLevel, selByYear))
+            "({0}) & ({1}) & ~((month == 2) & (day == 29))".format(selbylevel, selbyyear))
     else:
-        print "({0}) & ((month != 2) | (day != 29))".format(selByYear)
+        print "({0}) & ((month != 2) | (day != 29))".format(selbyyear)
         sel_for_years_and_level = var_table.where(
-            "({0}) & ((month != 2) | (day != 29))".format(selByYear))
+            "({0}) & ((month != 2) | (day != 29))".format(selbyyear))
 
     for gKey, selrows in itertools.groupby(sel_for_years_and_level, grouping_func):
         the_month, the_day, the_level = gKey
@@ -175,6 +220,14 @@ def get_daily_min_climatology(path_to_hdf_file="", var_name="STFL", level=None,
 
 def get_daily_climatology_of_3d_field(path_to_hdf_file="", var_name="STFL", start_year=None,
                                       end_year=None):
+    """
+
+    :param path_to_hdf_file:
+    :param var_name:
+    :param start_year:
+    :param end_year:
+    :return: sorted_dates, sorted_levels, data (t, lev, x, y)
+    """
     h = tb.open_file(path_to_hdf_file, "a")
 
     clim_3d_node = "/daily_climatology_3d"
