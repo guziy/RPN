@@ -6,8 +6,8 @@ import pickle
 import shelve
 import time
 import numexpr
-import tables as tb
 
+import tables as tb
 from matplotlib import gridspec, cm
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
@@ -19,6 +19,7 @@ from mpl_toolkits.basemap import Basemap
 from netcdftime import num2date
 from numpy.lib.function_base import meshgrid
 from scipy.spatial.ckdtree import cKDTree
+from rpn import level_kinds
 
 import application_properties
 from model_point import ModelPoint
@@ -27,7 +28,6 @@ from data.cehq_station import Station
 from data.cell_manager import CellManager
 from data.timeseries import DateValuePair, TimeSeries
 from domains.rotated_lat_lon import RotatedLatLon
-from rpn import level_kinds
 from util import plot_utils, scores
 from util.geo import lat_lon
 
@@ -79,6 +79,12 @@ def _get_var_data_to_pandas(x):
 import pandas
 
 
+def _zero_negatives(arr):
+    x = arr.copy()
+    x[x < 0] = 0
+    return x
+
+
 class Crcm5ModelDataManager:
     def __init__(self, samples_folder_path="data/gemclim/quebec/Samples",
                  var_name="STFL", file_name_prefix="pm",
@@ -106,8 +112,8 @@ class Crcm5ModelDataManager:
         self.name_to_date_to_field = {}
         self._flat_index_to_2d_cache = {}
 
-        self.lon2D_rot = None
-        self.lat2D_rot = None
+        self.lon2d_rot = None
+        self.lat2d_rot = None
 
         self.shelve_path = "cache_db"
 
@@ -132,7 +138,7 @@ class Crcm5ModelDataManager:
         self.soil_anisotropy_ratio = None
         self.clapp_and_hornberger_hydraulic_coef_b = None
         self.interflow_c_constant = None  # introduced by Clapp and Hornberger (1978) c = 2 * b + 3
-        self.interflow_slope = None # slope used for interflow
+        self.interflow_slope = None  # slope used for interflow
 
         #fill the above fields with data
         self._read_static_data()
@@ -168,12 +174,6 @@ class Crcm5ModelDataManager:
         else:
             raise Exception("If you are using distributed storage, you need to implement option")
         return paths
-
-
-    def _zero_negatives(self, arr):
-        x = arr.copy()
-        x[x < 0] = 0
-        return x
 
 
     def interpolate_data_to(self, data_in, lons2d, lats2d, nneighbours=4):
@@ -367,18 +367,18 @@ class Crcm5ModelDataManager:
 
         in_shape = self.lons2D.shape
 
-        if None not in [self.lon2D_rot, self.lat2D_rot]:
-            return self.lon2D_rot, self.lat2D_rot
+        if None not in [self.lon2d_rot, self.lat2d_rot]:
+            return self.lon2d_rot, self.lat2d_rot
 
-        self.lon2D_rot = np.zeros_like(self.lons2D)
-        self.lat2D_rot = np.zeros_like(self.lons2D)
+        self.lon2d_rot = np.zeros_like(self.lons2D)
+        self.lat2d_rot = np.zeros_like(self.lons2D)
 
         for i in range(in_shape[0]):
             for j in range(in_shape[1]):
-                self.lon2D_rot[i, j], self.lat2D_rot[i, j] = rot_lat_lon_proj.toProjectionXY(self.lons2D[i, j],
+                self.lon2d_rot[i, j], self.lat2d_rot[i, j] = rot_lat_lon_proj.toProjectionXY(self.lons2D[i, j],
                                                                                              self.lats2D[i, j])
 
-        return self.lon2D_rot, self.lat2D_rot
+        return self.lon2d_rot, self.lat2d_rot
 
     def get_spatial_integral_over_mask_of_dyn_field(self, mask, weights_2d, path_to_folder="", var_name="",
                                                     level=-1, level_kind=level_kinds.ARBITRARY, file_prefix="dm"):
@@ -410,9 +410,10 @@ class Crcm5ModelDataManager:
         """
         data = {}
         for fName in os.listdir(path_to_folder):
-            if not fName.endswith(file_prefix): continue
-            fPath = os.path.join(path_to_folder, fName)
-            rObj = RPN(fPath)
+            if not fName.endswith(file_prefix):
+                continue
+            f_path = os.path.join(path_to_folder, fName)
+            rObj = RPN(f_path)
             t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
                                                                       level_kind=level_kind)
             for t, field in t_to_field.iteritems():
@@ -420,7 +421,7 @@ class Crcm5ModelDataManager:
             rObj.close()
 
         times = sorted(data.keys())
-        vals = map(lambda t: data[t], times)
+        vals = map(lambda the_t: data[the_t], times)
         return TimeSeries(time=times, data=vals)
 
 
@@ -521,7 +522,6 @@ class Crcm5ModelDataManager:
         (Month): from 1 to 12
         (DayOfMonth): from 1 to (28|29|30|31 depending on month)
         """
-        import tables as tb
 
         assert isinstance(hdf_handle, tb.File)
 
@@ -539,10 +539,10 @@ class Crcm5ModelDataManager:
 
 
         #read the daily fields
-        fields = hdf_handle.getNode(query_path).read()
+        fields = hdf_handle.get_node(query_path).read()
 
         #read corresponding day and month
-        date_info = hdf_handle.getNode(date_query)
+        date_info = hdf_handle.get_node(date_query)
         stamp_year = 2001
         daily_dates = [
             datetime(stamp_year, row["month"], row["day_of_month"]) for row in date_info
@@ -567,7 +567,6 @@ class Crcm5ModelDataManager:
                     /level
                         /single or /level_value (array)
         """
-        import tables as tb
 
         assert start_year is not None
         assert end_year is not None
@@ -577,31 +576,31 @@ class Crcm5ModelDataManager:
         assert isinstance(hdf_handle, tb.File)
         #Check and create the groups if the con't exist
         if not "/{0}".format(daily_clim_group_name) in hdf_handle:
-            daily_clim_group = hdf_handle.createGroup("/", daily_clim_group_name, "Daily Climatology data")
+            daily_clim_group = hdf_handle.create_group("/", daily_clim_group_name, "Daily Climatology data")
         else:
-            daily_clim_group = hdf_handle.getNode("/{0}".format(daily_clim_group_name))
+            daily_clim_group = hdf_handle.get_node("/{0}".format(daily_clim_group_name))
 
         if not var_name in daily_clim_group:
-            var_group = hdf_handle.createGroup(daily_clim_group, var_name)
-            period_group = hdf_handle.createGroup(var_group, "period_{0}_{1}".format(start_year, end_year))
-            level_group = hdf_handle.createGroup(period_group, "level")
+            var_group = hdf_handle.create_group(daily_clim_group, var_name)
+            period_group = hdf_handle.create_group(var_group, "period_{0}_{1}".format(start_year, end_year))
+            level_group = hdf_handle.create_group(period_group, "level")
         else:
-            var_group = hdf_handle.getNode(daily_clim_group, var_name)
+            var_group = hdf_handle.get_node(daily_clim_group, var_name)
             period_str = "period_{0}_{1}".format(start_year, end_year)
             if period_str in var_group:
 
-                period_group = hdf_handle.getNode(var_group, period_str)
+                period_group = hdf_handle.get_node(var_group, period_str)
                 #sometimes an array is put in here, deleting it but why that happens has to be investigated
                 if isinstance(period_group, tb.Array):
                     print "Removing existing leaf: ", period_group
                     hdf_handle.remove_node(var_group, period_str)
-                    period_group = hdf_handle.createGroup(var_group, period_str)
+                    period_group = hdf_handle.create_group(var_group, period_str)
                     level_group = hdf_handle.create_group(period_group, "level")
                 else:
                     level_group = period_group.level
             else:
-                period_group = hdf_handle.createGroup(var_group, period_str)
-                level_group = hdf_handle.createGroup(period_group, "level")
+                period_group = hdf_handle.create_group(var_group, period_str)
+                level_group = hdf_handle.create_group(period_group, "level")
 
 
         #create an array for each level which will be holding actual data (time, x, y)
@@ -610,7 +609,7 @@ class Crcm5ModelDataManager:
             hdf_handle.remove_node(level_group, level_string)
             print("Warning overwriting {0}/{1}".format(level_group, level_string))
 
-        hdf_handle.createArray(level_group, level_string, daily_clim_fields)
+        hdf_handle.create_array(level_group, level_string, daily_clim_fields)
 
         if "date_info" not in daily_clim_group:
             date_table = hdf_handle.create_table(daily_clim_group, "date_info", {
@@ -650,17 +649,17 @@ class Crcm5ModelDataManager:
         #Try to read cached climatology
         if use_caching:
             #with guarantees that the file will be closed upon exit no matter what happens inside the with block
-            with tb.openFile(hdf_db_path) as hdf:
+            with tb.open_file(hdf_db_path) as hdf:
                 climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                                start_year=start_year,
                                                                end_year=end_year)
                 if climatology is not None:
                     return climatology
 
-        hdf = tb.openFile(hdf_db_path, "a" if use_caching else "r")
+        hdf = tb.open_file(hdf_db_path, "a" if use_caching else "r")
         assert isinstance(hdf, tb.File)
 
-        varTable = hdf.getNode("/", var_name)
+        varTable = hdf.get_node("/", var_name)
         assert isinstance(varTable, tb.Table)
 
         stamp_year = 2001  # Just select the stamp year arbitrarily  (preferably not a leap year)
@@ -756,43 +755,40 @@ class Crcm5ModelDataManager:
         :param start_year:
         :param end_year:
         """
-        year_to_count = {}
-        year_to_mean = {}
-
-        h = tb.openFile(path_to_hdf)
-        varTable = h.getNode("/", var_name)
-
-        def group_selector(row):
-            return row["year"]
+        h = tb.open_file(path_to_hdf, "a")
+        var_table = h.get_node("/", var_name)
 
 
-        monthSel = "|".join(["(month == {0})".format(m) for m in months])
-        yearSel = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
-        if level is None:
-            selForSeason = varTable.where("({0}) & ({1})".format(monthSel, yearSel))
-        else:
-            selForSeason = varTable.where("(level == {0}) & ({1}) & ({2})".format(level, monthSel, yearSel))
+        #create index on date related columns if it is not created yet
+        if not var_table.cols.year.is_indexed:
+            var_table.cols.year.remove_index()
+            print "Start creation of indices"
+            var_table.cols.year.create_index()
+            print "created index on year column"
+            var_table.cols.month.create_index()
+            var_table.cols.day.create_index()
+            var_table.cols.hour.create_index()
+            print "created indexes for all columns"
 
-        for groupKey, selected_rows in itertools.groupby(selForSeason, group_selector):
-            aYear = groupKey
+        month_sel = "|".join(["(month == {0})".format(m) for m in months])
+        result = []
+        for the_year in range(start_year, end_year + 1):
+            year_sel = "year == {0}".format(the_year)
 
-            n0 = 0
-            x0 = 0
-            if aYear in year_to_count:
-                n0 = year_to_count[aYear]
-                x0 = year_to_mean[aYear]
+            if level is None:
+                query = "({0}) & ({1})".format(month_sel, year_sel)
+            else:
+                query = "(level == {0}) & ({1}) & ({2})".format(level, month_sel, year_sel)
+            print "Processing the query: {0}".format(query)
 
-            x1 = [row["field"] for row in selected_rows]
-            n1 = len(x1)
-            x1 = np.mean(x1, axis=0)
+            t0 = time.clock()
+            rows = [row["field"] for row in var_table.where(query)]
+            print "Query timing: {0} seconds".format(time.clock() - t0)
 
-            n = float(n0 + n1)
-
-            year_to_count[aYear] = n
-            year_to_mean[aYear] = numexpr.evaluate("(x0 * n0 + x1 * n1) / n")
-
+            nrows = len(rows)
+            result.append(numexpr.evaluate("sum(row, axis = 0)") / float(nrows))
         h.close()
-        return [year_to_mean[the_year] for the_year in range(start_year, end_year + 1)]
+        return result
 
 
     @staticmethod
@@ -811,9 +807,9 @@ class Crcm5ModelDataManager:
         assert start_year is not None, "You have to specify the start year for the analysis interval"
         assert end_year is not None, "You have to specify the end year for the analysis interval"
 
-        hdf = tb.openFile(hdf_db_path)
+        hdf = tb.open_file(hdf_db_path)
 
-        varTable = hdf.getNode("/", var_name)
+        varTable = hdf.get_node("/", var_name)
         assert isinstance(varTable, tb.Table)
         if months is None:
             months = range(1, 13)
@@ -843,7 +839,7 @@ class Crcm5ModelDataManager:
         if "/rotpole" in h:
             h.remove_node("/", "rotpole")
 
-        projTable = h.createTable("/", "rotpole", table_scheme)
+        projTable = h.create_table("/", "rotpole", table_scheme)
         row = projTable.row
         for aKey, aValue in grid_params.iteritems():
             print aKey, aValue
@@ -881,7 +877,7 @@ class Crcm5ModelDataManager:
 
         }
 
-        root_g = h.getNode("/")
+        root_g = h.get_node("/")
 
         for name, field in name_to_field.iteritems():
             if field is None:
@@ -918,7 +914,7 @@ class Crcm5ModelDataManager:
             raise NotImplementedError("This method is not yet implemented for the case when the rpn files are in"
                                       " different month folders")
 
-        h5file = tb.openFile(file_path, mode=mode, title="created from the data in {0}".format(self.samples_folder))
+        h5file = tb.open_file(file_path, mode=mode, title="created from the data in {0}".format(self.samples_folder))
 
 
         #table row description
@@ -945,7 +941,7 @@ class Crcm5ModelDataManager:
         projection_params = None  # holds projection parameters
 
         for aVarName in var_list:
-            var_name_to_table[aVarName] = h5file.createTable("/", aVarName, field_data_table_scheme,
+            var_name_to_table[aVarName] = h5file.create_table("/", aVarName, field_data_table_scheme,
                                                              filters=tb.Filters(complevel=5))
 
 
@@ -979,7 +975,6 @@ class Crcm5ModelDataManager:
                     projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
                     print "projParams = ", projection_params
 
-
                 new_rows = []
                 for t, vals in data.iteritems():
                     new_rows += [(t.year, t.month, t.day, t.hour, t.minute, t.second, level, field)
@@ -1000,15 +995,15 @@ class Crcm5ModelDataManager:
 
         # insert also lon and lat data
         if "/longitude" not in h5file:
-            h5file.createArray("/", "longitude", self.lons2D)
+            h5file.create_array("/", "longitude", self.lons2D)
 
         if "/latitude" not in h5file:
-            h5file.createArray("/", "latitude", self.lats2D)
+            h5file.create_array("/", "latitude", self.lats2D)
 
         # add projection properties like /projection -> rotpole(  "lon1" =>..., "lon2" =>)
         # the name of the table corresponds to the projection name
         if "/rotpole" not in h5file:
-            proj_table = h5file.createTable("/", "rotpole", projection_table_scheme)
+            proj_table = h5file.create_table("/", "rotpole", projection_table_scheme)
             row = proj_table.row
             for aName, aValue in projection_params.iteritems():
                 if type(aValue) == str:
@@ -1196,7 +1191,7 @@ class Crcm5ModelDataManager:
                           #width=2600000, height=2600000,
                           llcrnrlon=lons2d[0, 0], llcrnrlat=lats2d[0, 0],
                           urcrnrlon=lons2d[-1, -1], urcrnrlat=lats2d[-1, -1],
-                          resolution=resolution#, lon_0 = lon_0, lat_0=lat_0
+                          resolution=resolution  #, lon_0 = lon_0, lat_0=lat_0
         )
 
         return basemap
@@ -1219,7 +1214,7 @@ class Crcm5ModelDataManager:
         return basemap
 
     @classmethod
-    def get_rotpole_basemap_using_lons_lats(cls, lons2d=None, lats2d=None, lon_1=-68, lat_1=52, lon_2=16.65,
+    def get_rotpole_basemap_using_lons_lats(cls, lons2d=None, lats2d=None, lon_1=-68.0, lat_1=52.0, lon_2=16.65,
                                             lat_2=0.0, resolution="l"):
 
         """
@@ -1584,11 +1579,11 @@ class Crcm5ModelDataManager:
         time_series = {}
         if self.all_files_in_one_folder:
             for fName in os.listdir(self.samples_folder):
-                fPath = os.path.join(self.samples_folder, fName)
-                rpnObj = RPN(fPath)
-                rpnObj.suppress_log_messages()
-                date_to_field = rpnObj.get_all_time_records_for_name_and_level(varname=varname, level=level,
-                                                                               level_kind=level_kind)
+                fpath = os.path.join(self.samples_folder, fName)
+                rpn_obj = RPN(fpath)
+                rpn_obj.suppress_log_messages()
+                date_to_field = rpn_obj.get_all_time_records_for_name_and_level(varname=varname, level=level,
+                                                                                level_kind=level_kind)
                 time_series.update(date_to_field)
 
         result = []
@@ -1931,7 +1926,7 @@ class Crcm5ModelDataManager:
                             [data[d][level] for d in times]
                         )
 
-                    t += len(times) #remember how many time steps have already been written
+                    t += len(times)  #remember how many time steps have already been written
 
             ds.close()
         else:
@@ -1960,8 +1955,8 @@ class Crcm5ModelDataManager:
         if self.all_files_in_one_folder:
             ds = Dataset(nc_file_path, "w", format="NETCDF3_CLASSIC")
 
-            dataVar = None
-            timeVar = None
+            data_var = None
+            time_var = None
             levels = None
             t = 0
 
@@ -1974,38 +1969,38 @@ class Crcm5ModelDataManager:
             for fName in fNames:
                 fPath = os.path.join(self.samples_folder, fName)
 
-                rObj = RPN(fPath)
+                r_obj = RPN(fPath)
                 #{time => {level => F(x, y)}}
-                rObj.suppress_log_messages()
-                data = rObj.get_4d_field(name=var_name)
+                r_obj.suppress_log_messages()
+                data = r_obj.get_4d_field(name=var_name)
 
                 #TODO: calculate daily means
 
-                rObj.close()
+                r_obj.close()
 
-                if dataVar is None:
+                if data_var is None:
                     levels = data.items()[0][1].keys()
                     levels = list(sorted(levels))
 
-                    dataVar = self._create_nc_structure(ds, levels, var_name)
-                    timeVar = ds.variables["time"]
-                    timeVar.units = "hours since {0}".format(str(start_date))
+                    data_var = self._create_nc_structure(ds, levels, var_name)
+                    time_var = ds.variables["time"]
+                    time_var.units = "hours since {0}".format(str(start_date))
 
                 #put data and time to netcdf file
                 times = sorted(data.keys())
-                times = list(itertools.ifilter(lambda d: start_year <= d.year <= end_year, times))
+                times = list(itertools.ifilter(lambda the_date: start_year <= the_date.year <= end_year, times))
 
 
                 #if there are records in the given time range
                 if len(times) > 0:
-                    times_num = date2num(times, units=timeVar.units)
-                    timeVar[t:] = times_num[:]
+                    times_num = date2num(times, units=time_var.units)
+                    time_var[t:] = times_num[:]
                     for k, level in enumerate(levels):
-                        dataVar[t:, k, :, :] = np.array(
+                        data_var[t:, k, :, :] = np.array(
                             [data[d][level] for d in times]
                         )
 
-                    t += len(times) #remember how many time steps have already been written
+                    t += len(times)  #remember how many time steps have already been written
 
             ds.close()
         else:
@@ -2047,7 +2042,7 @@ class Crcm5ModelDataManager:
 
             #variables to be read and correspondong levels
             varnames = ["STFL", "I5", "TT", "PR", "TRAF", "TDRA"]
-            levels = [0, 0, 0, 0, 4, 4] #zero-based
+            levels = [0, 0, 0, 0, 4, 4]  #zero-based
             mean_upstream = [False, True, True, True, True, True]
 
             inObject = InputForProcessPool()
@@ -2084,7 +2079,7 @@ class Crcm5ModelDataManager:
             assert isinstance(data_frame, pandas.DataFrame)
             data_frame = data_frame.groupby(lambda d: (d.day, d.month )).mean()
             mp.climatology_data_frame = data_frame[
-                data_frame.index.map(lambda tup: tup != (29, 2))] #select all except 29 of Feb
+                data_frame.index.map(lambda tup: tup != (29, 2))]  #select all except 29 of Feb
 
         return mp
 
@@ -2286,10 +2281,10 @@ class Crcm5ModelDataManager:
 
         #index columns for speed
         if not var_table.cols.year.is_indexed:
-            var_table.cols.year.createIndex()
-            var_table.cols.month.createIndex()
-            var_table.cols.day.createIndex()
-            var_table.cols.hour.createIndex()
+            var_table.cols.year.create_index()
+            var_table.cols.month.create_index()
+            var_table.cols.day.create_index()
+            var_table.cols.hour.create_index()
 
         d0 = datetime(2001, 1, 1)
         daily_dates = [d0 + timedelta(days=i) for i in range(365)]
@@ -2486,7 +2481,7 @@ def compare_lake_levels():
         mod_ts_all = manager.get_timeseries_for_station(var_name="CLDP", station=s, nneighbours=1,
                                                         start_date=start_date, end_date=end_date
         )
-        if mod_ts_all is None: #means model does not see lakes in the vicinity
+        if mod_ts_all is None:  #means model does not see lakes in the vicinity
             continue
         print(s.id, ":", s.get_timeseries_length())
 
@@ -2887,7 +2882,7 @@ def main():
     pass
 
 
-def doTestRotPole():
+def do_test_rotpole():
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,
                                     file_name_prefix="pm", all_files_in_samples_folder=True)
@@ -2923,7 +2918,7 @@ def doTestRotPole():
     plt.show()
 
 
-def doTestStuff():
+def do_test_stuff():
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     manager = Crcm5ModelDataManager(samples_folder_path=data_path,
                                     file_name_prefix="pm", all_files_in_samples_folder=True)
