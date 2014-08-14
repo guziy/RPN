@@ -303,6 +303,9 @@ class CellManager:
             mp.distance_to_station = dists[imin]
 
             station_to_model_point[s] = mp
+
+            print "mp.accumulation_area_km2={}; s.drainage_km2={}".format(mp.accumulation_area, s.drainage_km2)
+
             print u"Found model point for the station {0}".format(s)
 
         return station_to_model_point

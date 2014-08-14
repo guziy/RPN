@@ -38,7 +38,7 @@ class SweDataManager(CRUDataManager):
         self.lons2d, self.lats2d = lons, lats
 
         time_units_s = nc_vars["time"].units
-        self.timesVar = nc_vars["time"]
+        self.times_var = nc_vars["time"]
         self.times_num = nc_vars["time"][:]
         self.times = num2date(times, time_units_s)
         self.var_data = nc_vars[self.var_name][:]

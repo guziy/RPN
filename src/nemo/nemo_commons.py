@@ -21,6 +21,19 @@ varname_to_cmapname = {
 import generate_grid.nemo_domain_properties as domprops
 
 
+lake_to_folder_with_sim_data_1981_2000_seplakes_exp = {
+    "Superior": "/skynet3_rech1/huziy/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Superior",
+    "Michigan": "/skynet3_rech1/huziy/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Michigan",
+    "Erie": "/skynet3_rech1/huziy/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Erie",
+    "Ontario": "/skynet3_rech1/huziy/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Ontario",
+    "Huron": "/skynet3_rech1/huziy/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Huron"
+
+
+}
+
+
+
+
 def get_clevs_and_cmap_for_name(name=""):
     clevs = varname_to_colorlevels.get(name, [])
     cmap = varname_to_cmapname.get(name, None)
@@ -42,7 +55,7 @@ def get_mask(path="/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOG
     if hasattr(mask, "mask"):
         return ~mask.mask
     else:
-        return (mask > 0.1) & (mask < 1e20)
+        return (mask > 0.0001) & (mask < 1e20)
 
 
 def get_basemap_and_coordinates_from_file(path="", resolution = "c"):

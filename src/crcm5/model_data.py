@@ -241,15 +241,15 @@ class Crcm5ModelDataManager:
         ds.createDimension("lat", self.lons2D.shape[1])
 
         data = ds.createVariable(varname, "f8", dimensions=("year", "month", "lon", "lat"))
-        yearVar = ds.createVariable("year", "i4", dimensions=("year",))
-        lonVar = ds.createVariable("lon", "f8", dimensions=("lon", "lat"))
+        yearvar = ds.createVariable("year", "i4", dimensions=("year",))
+        lon_var = ds.createVariable("lon", "f8", dimensions=("lon", "lat"))
         latVar = ds.createVariable("lat", "f8", dimensions=("lon", "lat"))
 
         monthVar = ds.createVariable("month", "i4", dimensions=("month", ))
 
-        lonVar[:, :] = self.lons2D[:, :]
+        lon_var[:, :] = self.lons2D[:, :]
         latVar[:, :] = self.lats2D[:, :]
-        yearVar[:] = np.arange(start_year, end_year + 1)
+        yearvar[:] = np.arange(start_year, end_year + 1)
         monthVar[:] = np.arange(1, 13)
 
         if self.all_files_in_one_folder:
@@ -284,7 +284,7 @@ class Crcm5ModelDataManager:
     def get_annual_mean_fields(self, start_year=-np.Inf, end_year=np.Inf, varname=None, level=-1,
                                level_kind=level_kinds.ARBITRARY):
         """
-        returns pandas.Series withe year as an index, and 2d fields of annual means as values
+        returns pandas.Series with the year as an index, and 2d fields of annual means as values
         {year:mean_field}
         """
         if varname is None:
@@ -345,15 +345,15 @@ class Crcm5ModelDataManager:
                 if not fName.startswith(self.file_name_prefix):
                     continue
 
-                fPath = os.path.join(self.samples_folder, fName)
-                rObj = RPN(fPath)
-                data = rObj.get_all_time_records_for_name(varname=var_name)
+                f_path = os.path.join(self.samples_folder, fName)
+                r_obj = RPN(f_path)
+                data = r_obj.get_all_time_records_for_name(varname=var_name)
 
                 keys_s = map(lambda t: t.strftime("%Y-%m-%d %H:%M"), data.keys())
                 vals = map(lambda k: data[k], data.keys())
 
                 d.update(dict(zip(keys_s, vals)))
-                rObj.close()
+                r_obj.close()
             return d
         else:
             raise NotImplementedError("Output dates query is not implemented for this input")
@@ -388,17 +388,18 @@ class Crcm5ModelDataManager:
         weights_1d = weights_2d[mask == 1]
         data = {}
         for fName in os.listdir(path_to_folder):
-            if not fName.startswith(file_prefix): continue
-            fPath = os.path.join(path_to_folder, fName)
-            rObj = RPN(fPath)
-            t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
-                                                                      level_kind=level_kind)
+            if not fName.startswith(file_prefix):
+                continue
+            fpath = os.path.join(path_to_folder, fName)
+            r_obj = RPN(fpath)
+            t_to_field = r_obj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
+                                                                       level_kind=level_kind)
             for t, field in t_to_field.iteritems():
                 data[t] = sum(field[mask == 1] * weights_1d)
-            rObj.close()
+            r_obj.close()
 
         times = sorted(data.keys())
-        vals = np.array(map(lambda t: data[t], times))
+        vals = np.array(map(lambda the_t: data[the_t], times))
         return TimeSeries(time=times, data=vals)
 
 
@@ -413,12 +414,12 @@ class Crcm5ModelDataManager:
             if not fName.endswith(file_prefix):
                 continue
             f_path = os.path.join(path_to_folder, fName)
-            rObj = RPN(f_path)
-            t_to_field = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
+            robj = RPN(f_path)
+            t_to_field = robj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
                                                                       level_kind=level_kind)
             for t, field in t_to_field.iteritems():
                 data[t] = field[ix, jy]
-            rObj.close()
+            robj.close()
 
         times = sorted(data.keys())
         vals = map(lambda the_t: data[the_t], times)
@@ -755,40 +756,71 @@ class Crcm5ModelDataManager:
         :param start_year:
         :param end_year:
         """
-        h = tb.open_file(path_to_hdf, "a")
-        var_table = h.get_node("/", var_name)
 
 
-        #create index on date related columns if it is not created yet
-        if not var_table.cols.year.is_indexed:
-            var_table.cols.year.remove_index()
-            print "Start creation of indices"
-            var_table.cols.year.create_index()
-            print "created index on year column"
-            var_table.cols.month.create_index()
-            var_table.cols.day.create_index()
-            var_table.cols.hour.create_index()
-            print "created indexes for all columns"
+        cache_arr_name = "{0}_{1}-{2}_{3}".format(var_name, start_year, end_year,
+                                                  "-".join([str(m) for m in sorted(months)]))
 
-        month_sel = "|".join(["(month == {0})".format(m) for m in months])
-        result = []
-        for the_year in range(start_year, end_year + 1):
-            year_sel = "year == {0}".format(the_year)
+        if level is not None:
+            cache_arr_name += "_level{0}".format(level)
 
-            if level is None:
-                query = "({0}) & ({1})".format(month_sel, year_sel)
-            else:
-                query = "(level == {0}) & ({1}) & ({2})".format(level, month_sel, year_sel)
-            print "Processing the query: {0}".format(query)
-
-            t0 = time.clock()
-            rows = [row["field"] for row in var_table.where(query)]
-            print "Query timing: {0} seconds".format(time.clock() - t0)
-
-            nrows = len(rows)
-            result.append(numexpr.evaluate("sum(row, axis = 0)") / float(nrows))
+        #use cached seasonal means if present
+        h = tb.open_file(path_to_hdf)
+        if "/" + cache_arr_name in h:
+            print "Using cached array: {0}".format(cache_arr_name)
+            result = h.get_node("/" + cache_arr_name)[:]
+            h.close()
+            return result
         h.close()
-        return result
+
+        #Do the calculation and store results
+        with tb.open_file(path_to_hdf, "a") as h:
+            var_table = h.get_node("/" + var_name)
+
+
+            def year_selector(arow):
+                return arow["year"]
+
+
+            #create index on date related columns if it is not created yet
+            #print "Start creation of indices"
+
+            # if not var_table.cols.year.is_indexed:
+            #     var_table.cols.year.create_index()
+            #     print "created index on year column"
+
+            # if not var_table.cols.month.is_indexed:
+            #     var_table.cols.month.create_index()
+            #     print "created index on month column"
+
+            #     var_table.cols.day.create_index()
+            #     var_table.cols.hour.create_index()
+            #     print "created indexes for all columns"
+
+            month_sel = "|".join(["(month == {0})".format(m) for m in months])
+            year_sel = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+            query = "({0}) & ({1})".format(year_sel, month_sel)
+            if level is not None:
+                query += "& (level == {0})".format(level)
+
+            year_to_mean = {}
+            year_to_counter = {}
+
+            for the_year, rows_grouped_by_year in itertools.groupby(var_table.where(query), year_selector):
+                data = np.asarray([the_row["field"] for the_row in rows_grouped_by_year])
+
+                cur_mean = year_to_mean.get(the_year, 0)
+                cur_n = year_to_counter.get(the_year, 0)
+
+                year_to_mean[the_year] = (cur_mean * cur_n + data.sum(axis=0)) / float(cur_n + data.shape[0])
+                year_to_counter[the_year] = cur_n + data.shape[0]
+                print "current year is {0}".format(the_year)
+
+            result = np.asarray([year_to_mean[y] for y in range(start_year, end_year + 1)])
+
+            h.create_array("/", cache_arr_name, result)  # save calculated means for reuse
+            h.close()
+            return result
 
 
     @staticmethod
@@ -802,15 +834,14 @@ class Crcm5ModelDataManager:
         :param level: level of interest
         :return:
         """
-        import tables as tb
 
         assert start_year is not None, "You have to specify the start year for the analysis interval"
         assert end_year is not None, "You have to specify the end year for the analysis interval"
 
         hdf = tb.open_file(hdf_db_path)
 
-        varTable = hdf.get_node("/", var_name)
-        assert isinstance(varTable, tb.Table)
+        vartable = hdf.get_node("/", var_name)
+        assert isinstance(vartable, tb.Table)
         if months is None:
             months = range(1, 13)
 
@@ -819,12 +850,12 @@ class Crcm5ModelDataManager:
 
         if level is not None:
             lev_expr = "(level == {0}) & {1} & {2}".format(level, years_expr, month_expr)
-            result = np.mean([row["field"] for row in varTable.where(lev_expr)], axis=0)
+            result = np.mean([row["field"] for row in vartable.where(lev_expr)], axis=0)
             print lev_expr
         else:
             expr = "{0} & {1}".format(years_expr, month_expr)
             print expr
-            result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
+            result = np.mean([row["field"] for row in vartable.where(expr)], axis=0)
 
         hdf.close()
 
@@ -839,8 +870,8 @@ class Crcm5ModelDataManager:
         if "/rotpole" in h:
             h.remove_node("/", "rotpole")
 
-        projTable = h.create_table("/", "rotpole", table_scheme)
-        row = projTable.row
+        proj_table = h.create_table("/", "rotpole", table_scheme)
+        row = proj_table.row
         for aKey, aValue in grid_params.iteritems():
             print aKey, aValue
             if type(aValue) == str:
@@ -864,7 +895,7 @@ class Crcm5ModelDataManager:
             "flow_direction": self.flow_directions,
             "accumulation_area_km2": self.accumulation_area_km2,
             "slope": self.slope,
-            "cell_area_km2": self.cell_area,
+            "cell_area_m2": self.cell_area,
             "sand": self.sand,
             "clay": self.clay,
             "depth_to_bedrock": self.depth_to_bedrock_m,
@@ -942,7 +973,7 @@ class Crcm5ModelDataManager:
 
         for aVarName in var_list:
             var_name_to_table[aVarName] = h5file.create_table("/", aVarName, field_data_table_scheme,
-                                                             filters=tb.Filters(complevel=5))
+                                                              filters=tb.Filters(complevel=5))
 
 
         ##record array type

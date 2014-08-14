@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import datetime
 import os
+from matplotlib.ticker import ScalarFormatter
 
 from mpl_toolkits.basemap import maskoceans
 from matplotlib import gridspec
@@ -9,6 +10,7 @@ from matplotlib.colorbar import Colorbar
 from matplotlib.colors import LogNorm
 from matplotlib.figure import Figure
 from scipy.stats import ttest_ind
+from tables import NoSuchNodeError
 
 from crcm5 import infovar
 import common_plot_params as cpp
@@ -213,6 +215,10 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     #the field is a control mean in the case of the control mean
     #and the difference between the modified simulation and the control mean in the case of the modified simulation
 
+    exclude_0_from_diff_colorbar = False
+
+
+
     assert isinstance(domain_props, DomainProperties)
     print "plotting row for {0}; increments = ({1})".format(var_name, increments)
 
@@ -231,7 +237,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
         if vmax is None or max_current > vmax:
             vmax = max_current
 
-    ncolors = 10
+    ncolors = 13 if exclude_0_from_diff_colorbar else 10
     bounds = None
     if increments:
         # +1 to include white
@@ -241,15 +247,15 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
             else:
                 field_cmap = brewer2mpl.get_map("YlGnBu", "sequential", 9, reverse=True).get_mpl_colormap(N=ncolors)
             field_norm, bounds, bounds_min, bounds_max = infovar.get_boundary_norm(vmin, vmax, ncolors,
-                                                                                   exclude_zero=False,
-                                                                                   varname=var_name,
-                                                                                   difference=increments)
+                                                            exclude_zero=exclude_0_from_diff_colorbar,
+                                                            varname=var_name, difference=increments)
         else:
-            field_cmap = cm.get_cmap("RdBu_r", ncolors + 1)
+            field_cmap = cm.get_cmap("RdBu_r", ncolors)
             d = max(abs(vmin), abs(vmax))
-            field_norm, bounds, bounds_min, bounds_max = infovar.get_boundary_norm(-d, d, ncolors + 1,
-                                                                                   exclude_zero=True, varname=var_name,
-                                                                                   difference=increments)
+            field_norm, bounds, bounds_min, bounds_max = infovar.get_boundary_norm(-d, d, ncolors,
+                                                                            exclude_zero=exclude_0_from_diff_colorbar,
+                                                                            varname=var_name,
+                                                                            difference=increments)
     else:
         #determine colorabr extent and spacing
         field_cmap, field_norm = infovar.get_colormap_and_norm_for(var_name, vmin=vmin, vmax=vmax, ncolors=ncolors)
@@ -265,23 +271,34 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
             #since the increments go below
             ax.set_title(season)
         else:
-            ax.set_title(r"$\Delta_{total} = " + "{0:.1f}".format(field.sum()) + " $")
+            mean_val = float("{0:.1e}".format(field.mean()))
+            sf = ScalarFormatter(useMathText=True)
+            sf.set_powerlimits((-2, 3))
+            ax.set_title(r"$\Delta_{\rm mean} = " + sf.format_data(mean_val) + " $")
 
         basemap.drawmapboundary(ax=ax, fill_color="gray")
         im = basemap.pcolormesh(x, y, field, norm=field_norm, cmap=field_cmap, ax=ax)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
-        col += 1
-
-
 
         if significance is not None:
             cs = basemap.contourf(x, y, significance[season], levels=[0, 0.5, 1],
                                   colors="none",
                                   hatches=[None, ".."],
-                                  edgecolor="g",
-                                  facecolor="g",
                                   ax=ax)
-            #basemap.contour(x, y, significance[season], levels = [0, 0.5, 1], ax = ax)
+
+
+
+            #basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
+            #                linewidths = 0.5, colors="k")
+
+
+            if col == 0 and False:
+                # create a legend for the contour set
+                artists, labels = cs.legend_elements()
+                ax.legend([artists[-1], ], ["Significant changes \n with (p = 0.1)", ],
+                          handleheight=0.5, fontsize="x-small")
+
+        col += 1
 
     #plot the common colorbar
     if isinstance(field_norm, LogNorm):
@@ -290,32 +307,17 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
         plt.colorbar(im, cax=axes[-1], extend="both", ticks=bounds)
 
 
-def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None, levels=None):
-    #Used to plot control and differences
-    season_to_months = OrderedDict([
-        ("Winter", [12, 1, 2]),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12))
-    ])
-
-    # season_to_months = OrderedDict([
-    #    #("March", [3, ]),
-    #    #("April", [4, ]),
-    #    ("May", [5, ]),
-    #    ("June", [6, ]),
-    #    ("July", [7, ]),
-    #    ("August", [8, ])
-    # ])
-
+def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
+                                                              levels=None,
+                                                              season_to_months = None):
 
     season_list = season_to_months.keys()
 
     # crcm5-r vs crcm5-hcd-r
-    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
-    #control_label = "CRCM5-R"
-    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf", ]
-    #labels = ["CRCM5-HCD-R"]
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
+    # control_label = "CRCM5-R"
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf", ]
+    # labels = ["CRCM5-HCD-R"]
 
     # crcm5-hcd-rl vs crcm5-hcd-r
     #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
@@ -341,12 +343,37 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None, lev
     #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf", ]
     #labels = ["CRCM5-HCD-RL-INTFL-sani=10000"]
 
-    #ignore bulk fieald capacity
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+    #Interflow effect
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+    # control_label = "CRCM5-HCD-RL"
+    # ##
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5", ]
+    # labels = ["ITFS"]
+
+
+    #lake effect (lake-atm interactions)
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
+    # control_label = "CRCM5-R"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
+    # labels = ["CRCM5-HCD-R", ]
+
+    #lake effect (lake-river interactions)
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    # control_label = "CRCM5-HCD-R"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    # labels = ["CRCM5-HCD-RL", ]
+
+
+    #interflow effect ()
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     control_label = "CRCM5-HCD-RL"
-    ##
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5", ]
-    labels = ["ITFS"]
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    labels = ["CRCM5-HCD-RL-INTF", ]
+
+
 
     row_labels = [
         r"$\Delta$({0})".format(s) for s in labels
@@ -361,7 +388,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None, lev
     assert len(levels) == len(varnames)
 
     start_year = 1980
-    end_year = 1988
+    end_year = 2010
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=control_path)
     x, y = basemap(lons2d, lats2d)
@@ -390,46 +417,55 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None, lev
         label_to_season_to_significance = {}
 
 
+        try:
+            #Calculate the difference for each season, and save the results to dictionaries
+            #to access later when plotting
+            for season, months_of_interest in season_to_months.iteritems():
+                print "working on season: {0}".format(season)
 
-        #Calculate the difference for each season, and save the results to dictionaries
-        #to access later when plotting
-        for season, months_of_interest in season_to_months.iteritems():
-            print "workin on season: {0}".format(season)
+                control_means = analysis.get_mean_2d_fields_for_months(path=control_path, var_name=var_name,
+                                                                       months=months_of_interest,
+                                                                       start_year=start_year, end_year=end_year,
+                                                                       level=level)
 
-            control_means = analysis.get_mean_2d_fields_for_months(path=control_path, var_name=var_name,
-                                                                   months=months_of_interest,
-                                                                   start_year=start_year, end_year=end_year,
-                                                                   level=level)
+                control_mean = np.mean(control_means, axis=0)
 
-            control_mean = np.mean(control_means, axis=0)
+                control_mean = infovar.get_to_plot(var_name, control_mean,
+                                                   lake_fraction=domain_props.lake_fraction,
+                                                   lons=lons2d, lats=lats2d)
+                season_to_control_mean[season] = control_mean
 
-            control_mean = infovar.get_to_plot(var_name, control_mean,
-                                               lake_fraction=domain_props.lake_fraction,
-                                               lons=lons2d, lats=lats2d)
-            season_to_control_mean[season] = control_mean
+                print "calculated mean from {0}".format(control_path)
 
-            #calculate the difference for each simulation
-            for the_path, the_label in zip(paths, row_labels):
-                modified_means = analysis.get_mean_2d_fields_for_months(path=the_path, var_name=var_name,
-                                                                        months=months_of_interest,
-                                                                        start_year=start_year, end_year=end_year,
-                                                                        level=level)
+                #calculate the difference for each simulation
+                for the_path, the_label in zip(paths, row_labels):
+                    modified_means = analysis.get_mean_2d_fields_for_months(path=the_path, var_name=var_name,
+                                                                            months=months_of_interest,
+                                                                            start_year=start_year, end_year=end_year,
+                                                                            level=level)
 
-                tval, pval = ttest_ind(modified_means, control_means, axis=0, equal_var=False)
-                significance = ((pval <= 0.1) & (~control_mean.mask)).astype(int)
+                    tval, pval = ttest_ind(modified_means, control_means, axis=0, equal_var=False)
+                    significance = ((pval <= 0.1) & (~control_mean.mask)).astype(int)
 
-                modified_mean = np.mean(modified_means, axis=0)
-                if the_label not in label_to_season_to_difference:
-                    label_to_season_to_difference[the_label] = OrderedDict()
-                    label_to_season_to_significance[the_label] = OrderedDict()
+                    modified_mean = np.mean(modified_means, axis=0)
+                    if the_label not in label_to_season_to_difference:
+                        label_to_season_to_difference[the_label] = OrderedDict()
+                        label_to_season_to_significance[the_label] = OrderedDict()
 
-                modified_mean = infovar.get_to_plot(var_name, modified_mean,
-                                                    lake_fraction=domain_props.lake_fraction, lons=lons2d, lats=lats2d)
+                    modified_mean = infovar.get_to_plot(var_name, modified_mean,
+                                                        lake_fraction=domain_props.lake_fraction, lons=lons2d,
+                                                        lats=lats2d)
 
-                diff_vals = modified_mean - control_mean
-                print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
-                label_to_season_to_difference[the_label][season] = diff_vals
-                label_to_season_to_significance[the_label][season] = significance
+                    diff_vals = modified_mean - control_mean
+                    print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
+                    label_to_season_to_difference[the_label][season] = diff_vals
+                    label_to_season_to_significance[the_label][season] = significance
+
+                    print "Calculated mean and diff from {0}".format(the_path)
+        except NoSuchNodeError:
+            print "Could not find {0}, skipping...".format(var_name)
+            continue
+
 
         #Do the plotting for each variable
         fig = plt.figure()
@@ -454,9 +490,8 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None, lev
                       season_list=season_list, significance=label_to_season_to_significance[the_label])
             the_row += 1
 
-        folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}".format("_".join(labels),
-                                                                                                control_label,
-                                                                                "-".join(season_to_months.keys())))
+        folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(
+            "_".join(labels), control_label, "-".join(season_to_months.keys()), start_year, end_year))
         if not os.path.isdir(folderpath):
             os.mkdir(folderpath)
 

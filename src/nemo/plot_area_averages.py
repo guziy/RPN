@@ -23,8 +23,8 @@ application_properties.set_current_directory()
 #EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis_fwb2"
 #EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_Luis_100year_clim"
 
-#EXP_DIR = "/home/huziy/nemo_glk/test_fwb_my"
-EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+EXP_DIR = "/home/huziy/nemo_glk/test_fwb_my"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
 
 
 #EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_0.1deg_lim3"
@@ -120,20 +120,39 @@ def main():
 
     the_mask = nemo_commons.get_mask(path=os.path.join(EXP_DIR, "bathy_meter.nc"))
 
-    lower_left_indices = (115, 5)
-    dix, djy = 15, 10
+#Ontario
+    lower_left_indices = (123, 20)
+    dix, djy = 40, 14
+
+#Erie
+#    lower_left_indices = (88, 2)
+#    dix, djy = 50, 18
+
+#Huron
+#    lower_left_indices = (75, 17)
+#    dix, djy = 49, 36
+
+
+#    lower_left_indices = (115, 5)
+#    dix, djy = 15, 10
+
+#Superior
+    lower_left_indices = (0, 53)
+    dix, djy = 85, 30
+
+
 
     draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
                     var_name="sossheig", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
 
-    draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
-                    var_name="sowaflup", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
-
-    draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
-                    var_name="soicecov", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
-
-    draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
-                    var_name="sosstsst", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
+    # draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
+    #                 var_name="sowaflup", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
+    #
+    # draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
+    #                 var_name="soicecov", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
+    #
+    # draw_timeseries(path=T_FILE_PATH, lower_left_ij=lower_left_indices, nx=dix, ny=djy,
+    #                 var_name="sosstsst", basemap=b, x2d=x2d, y2d=y2d, the_mask=the_mask)
 
     plt.show()
 

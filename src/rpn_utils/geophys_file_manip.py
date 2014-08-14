@@ -27,8 +27,8 @@ import matplotlib.pyplot as plt
 
 def main():
     folder = "/home/huziy/skynet3_rech1/from_guillimin"
-    fName = "geophys_Quebec_0.1deg_260x260_with_dd_v6"
-    path = os.path.join(folder, fName)
+    fname = "geophys_Quebec_0.1deg_260x260_with_dd_v6"
+    path = os.path.join(folder, fname)
 
     rObj = RPN(path)
 
@@ -78,11 +78,15 @@ def main():
 
 
 
+
     #basemap.fillcontinents(color = "none", lake_color="aqua")
     basemap.drawmapboundary(fill_color='#479BF9')
     basemap.drawcoastlines()
     basemap.drawmeridians(np.arange(-180, 180, 20), labels=[1, 0, 0, 1])
     basemap.drawparallels(np.arange(45, 75, 15), labels=[1, 0, 0, 1])
+
+
+    basemap.readshapefile("data/shape/contour_bv_MRCC/Bassins_MRCC_latlon", name="basin", linewidth=3)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
@@ -99,7 +103,7 @@ def main():
     ax.add_patch(Polygon(xy=pol_corners, fc="none", ls="dashed", lw=3))
 
     plt.tight_layout()
-    plt.show()
+    #plt.show()
     plt.savefig("free_domain_260x260.jpeg")
 
 
@@ -193,8 +197,7 @@ if __name__ == "__main__":
     import application_properties
 
     application_properties.set_current_directory()
-    plot_utils.apply_plot_params(width_pt=None, width_cm=45, height_cm=20, font_size=20)
+    plot_utils.apply_plot_params(width_pt=None, width_cm=45, height_cm=30, font_size=20)
     #plot_lake_fraction_field()
     main()
     print "Hello world"
-  

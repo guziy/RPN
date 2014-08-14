@@ -34,12 +34,13 @@ def main():
     start_date = datetime(start_year, 1, 1)
     end_date = datetime(end_year, 12, 31)
 
+    ids_with_lakes_upstream = [
+        "104001", "093806", "093801", "081002", "081007", "080718"
+    ]
+
     selected_station_ids = ["092715", "074903", "080104", "081007", "061905",
                             "093806", "090613", "081002", "093801", "080718", "104001"]
 
-    ids_with_lakes_upstream = [
-        "104001", "093806", "093806", "081002", "081007"
-    ]
 
     selected_station_ids = ids_with_lakes_upstream
 
@@ -52,20 +53,24 @@ def main():
 
 
     #add hydat stations
-    province = "QC"
-    stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date, province=province)
-    if not len(stations_hd):
-        print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
-            str(start_date), str(end_date), province
-        )
-    stations.extend(stations_hd)
+    # province = "QC"
+    # min_drainage_area_km2 = 10000.0
+    # stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date,
+    #                                               province=province, min_drainage_area_km2=min_drainage_area_km2)
+    # if not len(stations_hd):
+    #     print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
+    #         str(start_date), str(end_date), province
+    #     )
+    # stations.extend(stations_hd)
 
 
     path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
     label1 = "CRCM5-HCD-R"
+    color1 = "b"
 
     path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     label2 = "CRCM5-HCD-RL"
+    color2 = "r"
 
     fldirs = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(path1)
@@ -76,7 +81,9 @@ def main():
 
     cell_manager = CellManager(fldirs, lons2d=lons2d, lats2d=lats2d, accumulation_area_km2=acc_area)
 
-    station_to_mp = cell_manager.get_model_points_for_stations(station_list=stations, lake_fraction=lake_fractions)
+    station_to_mp = cell_manager.get_model_points_for_stations(station_list=stations,
+                                                               lake_fraction=lake_fractions,
+                                                               drainaige_area_reldiff_limit=0.3)
 
     fig, axes = plt.subplots(2, 1)
 
@@ -88,7 +95,6 @@ def main():
     q10_mod1_list = []
     q10_mod2_list = []
 
-    h1, h2 = None, None
     for the_station, the_mp in station_to_mp.iteritems():
         assert isinstance(the_station, Station)
         compl_years = the_station.get_list_of_complete_years()
@@ -108,23 +114,10 @@ def main():
         q90_mod1 = np.percentile(stfl1, 90)
         q90_mod2 = np.percentile(stfl2, 90)
 
-        the_ax = axes[0]
-        #the_ax.annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
-        the_ax.scatter(q90_obs, q90_mod1, label=label1, c="b")
-        the_ax.scatter(q90_obs, q90_mod2, label=label2, c="r")
-
-
-
         #Q10
         q10_obs = np.percentile(stfl_obs, 10)
         q10_mod1 = np.percentile(stfl1, 10)
         q10_mod2 = np.percentile(stfl2, 10)
-
-        the_ax = axes[1]
-        #the_ax.annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
-        h1 = the_ax.scatter(q10_obs, q10_mod1, label=label1, c="b")
-        h2 = the_ax.scatter(q10_obs, q10_mod2, label=label2, c="r")
-
 
         #save quantiles to lists for correlation calculation
         q90_obs_list.append(q90_obs)
@@ -136,17 +129,34 @@ def main():
         q10_obs_list.append(q10_obs)
 
 
+        #axes[0].annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
+        #axes[1].annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
+
+    #Plot scatter plot of Q90
+    the_ax = axes[0]
+    #the_ax.annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
+    the_ax.scatter(q90_obs_list, q90_mod1_list, label=label1, c=color1)
+    the_ax.scatter(q90_obs_list, q90_mod2_list, label=label2, c=color2)
+
+    #plot scatter plot of Q10
+    the_ax = axes[1]
+    #the_ax.annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
+    h1 = the_ax.scatter(q10_obs_list, q10_mod1_list, label=label1, c=color1)
+    h2 = the_ax.scatter(q10_obs_list, q10_mod2_list, label=label2, c=color2)
+
+
+
     ##Add correlation coefficients to the axes
     fp = FontProperties(size=20, weight="bold")
-    axes[0].annotate(r"$R^2 = {0:.3f}$".format(np.corrcoef(q90_mod1_list, q90_obs_list)[0, 1] ** 2),
-                     (0.1, 0.85), color = "b", xycoords = "axes fraction", font_properties = fp)
-    axes[0].annotate(r"$R^2 = {0:.3f}$".format(np.corrcoef(q90_mod2_list, q90_obs_list)[0, 1] ** 2),
-                     (0.1, 0.75), color = "r", xycoords = "axes fraction", font_properties = fp)
+    axes[0].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q90_mod1_list, q90_obs_list)[0, 1] ** 2),
+                     (0.1, 0.85), color = color1, xycoords = "axes fraction", font_properties = fp)
+    axes[0].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q90_mod2_list, q90_obs_list)[0, 1] ** 2),
+                     (0.1, 0.75), color = color2, xycoords = "axes fraction", font_properties = fp)
 
-    axes[1].annotate(r"$R^2 = {0:.3f}$".format(np.corrcoef(q10_mod1_list, q10_obs_list)[0, 1] ** 2),
-                     (0.1, 0.85), color = "b", xycoords = "axes fraction", font_properties = fp)
-    axes[1].annotate(r"$R^2 = {0:.3f}$".format(np.corrcoef(q10_mod2_list, q10_obs_list)[0, 1] ** 2),
-                     (0.1, 0.75), color = "r", xycoords = "axes fraction", font_properties = fp)
+    axes[1].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q10_mod1_list, q10_obs_list)[0, 1] ** 2),
+                     (0.1, 0.85), color = color1, xycoords = "axes fraction", font_properties = fp)
+    axes[1].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q10_mod2_list, q10_obs_list)[0, 1] ** 2),
+                     (0.1, 0.75), color = color2, xycoords = "axes fraction", font_properties = fp)
 
     for the_ax in axes:
         plot_one_to_one_line(the_ax)

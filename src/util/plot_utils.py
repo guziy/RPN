@@ -14,7 +14,7 @@ def draw_colorbar(fig, img, ax = None, boundaries = None, ticks = None):
     """
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
-    cb = fig.colorbar(img,  cax = cax, boundaries = boundaries, ticks = ticks)
+    cb = fig.colorbar(img, cax = cax, boundaries = boundaries, ticks = ticks)
 
 
 def get_closest_tick_value(nticks, lower_limit):
@@ -24,7 +24,7 @@ def get_closest_tick_value(nticks, lower_limit):
     """
 
     assert 0 <= lower_limit <= 1
-    d = 1.0 / float( nticks - 1.0 )
+    d = 1.0 / float(nticks - 1.0)
     assert d > 0
 
     tick_value = 0

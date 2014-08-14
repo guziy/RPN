@@ -4,7 +4,17 @@ __author__ = 'huziy'
 #FORCING_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg_1958-2006/" \
 #              "DFS4.3_interpolated"
 
-EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+
+
+#EXP_DIR = \
+#"/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_Superior/Superior_1981-2000_dt30min"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_Michigan/GLK_LIM3_Michigan_1981-2000_dt30min"
+
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_Erie/Erie_1981_2000_dt30min"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_Huron/Huron_1981-2000_dt30min"
+
+EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_Ontario/Ontario_1981-2000_dt30min"
 FORCING_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/DFS5.2_interpolated"
 
 start_year = 1958

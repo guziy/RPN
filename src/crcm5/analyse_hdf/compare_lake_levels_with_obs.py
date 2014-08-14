@@ -30,7 +30,7 @@ __author__ = 'huziy'
 import common_plot_params as cpp
 
 import do_analysis_using_pytables as analysis
-#TODO: this is to compare streamflow simulation results with station data
+# TODO: this is to compare streamflow simulation results with station data
 #   input: station ids or list of station objects and
 #          the list of simulations, to compare with
 
@@ -152,7 +152,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
         #plot max temperature
         df_tmax = _apply_running_mean(daily_dates, basin_tmax)
         print df_tmax.tail(20)
-        p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1, color = "k")
+        p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1, color="k")
 
         #plot min temperature
         df_tmin = _apply_running_mean(daily_dates, basin_tmin)
@@ -212,7 +212,7 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
 
         #running mean
         df = _apply_running_mean(daily_dates, basin_precip, averaging_period=resample_period)
-        ax.plot(df.index, df["values"], label="precip-obs", lw=2, color = "k")
+        ax.plot(df.index, df["values"], label="precip-obs", lw=2, color="k")
 
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.yaxis.set_label_position("right")
@@ -244,7 +244,7 @@ def _validate_swe_with_ross_brown(ax, the_model_point, model_data_dict=None,
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
         ax.plot(daily_dates, data, label=label, lw=2)
 
-    p = ax.plot(daily_dates, basin_swe, label="swe-obs", lw=2, color = "k")
+    p = ax.plot(daily_dates, basin_swe, label="swe-obs", lw=2, color="k")
 
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.grid()
@@ -417,7 +417,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     if ncols * nrows < len(station_to_modelpoint_list):
         nrows += 1
 
-    figure_stfl = plt.figure()
+    figure_panel = plt.figure()
     gs_panel = gridspec.GridSpec(nrows=nrows, ncols=ncols)
     #  a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
     legend_added = False
@@ -465,8 +465,8 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     ax_to_share = None
     for i, the_station in enumerate(station_list):
-        ax_panel = figure_stfl.add_subplot(gs_panel[i // ncols, i % ncols],
-                                           sharex=ax_to_share)
+        ax_panel = figure_panel.add_subplot(gs_panel[i // ncols, i % ncols],
+                                            sharex=ax_to_share)
         if ax_to_share is None:
             ax_to_share = ax_panel
 
@@ -571,15 +571,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                     else:
                         values_model_evp = mult * np.asarray(temp) + values_model_evp
 
-
             values_model /= float(lf_total)
             values_model = values_model - np.mean(values_model)
             print "lake level anomaly ranges for {0}:{1:.8g};{2:.8g}".format(label, values_model.min(),
                                                                              values_model.max())
             ax.plot(dates, values_model, label=label, lw=2)
             ax_panel.plot(dates, values_model, label=label, lw=2)
-
-
 
             if values_model_evp is not None:
                 # normalize cldp
@@ -590,15 +587,14 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                 ax.plot(dates, values_model_evp, label=label + "-PE", lw=2)
                 ax_panel.plot(dates, values_model_evp, label=label + "-PE", lw=2)
 
-
         if the_station is not None:
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
                                                                                                  years=year_list)
 
 
             #To keep the colors consistent for all the variables, the obs Should be plotted last
-            ax.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2, color = "k")
-            ax_panel.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2, color = "k")
+            ax.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2, color="k")
+            ax_panel.plot(dates, values_obs - np.mean(values_obs), label="Obs.", lw=2, color="k")
 
 
             #calculate nash sutcliff coefficient and skip if too small
@@ -615,7 +611,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             point_info = "{0}".format(the_model_point.point_id)
 
         ax.text(0.6, 0.9, point_info, transform=ax.transAxes, bbox=dict(facecolor="white"))
-        ax_panel.text(0.6, 0.85, point_info, transform=ax_panel.transAxes, bbox=dict(facecolor="white"))
+        ax_panel.text(0.6, 0.85, point_info, transform=ax_panel.transAxes, bbox=dict(facecolor="white"), fontsize=8)
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
@@ -711,13 +707,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
         #return  # temporary plot only one point
 
-    assert isinstance(figure_stfl, Figure)
-    figure_stfl.tight_layout()
-    figure_stfl.savefig(
+    assert isinstance(figure_panel, Figure)
+    figure_panel.tight_layout()
+    figure_panel.savefig(
         os.path.join(images_folder, "comp_lake-levels_at_point_with_obs_{0}.jpeg".format("_".join(label_list))),
         dpi=cpp.FIG_SAVE_DPI,
         bbox_inches="tight")
-    plt.close(figure_stfl)
+    plt.close(figure_panel)
     file_scores.close()
 
 
@@ -876,8 +872,6 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
         print s.drainage_km2
 
     assert len(stations)
-
-
 
     draw_model_comparison(model_points=None, sim_name_to_file_name=sim_name_to_file_name,
                           hdf_folder=hdf_folder,

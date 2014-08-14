@@ -31,7 +31,8 @@ from matplotlib import cm
 #EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis_fwb2"
 
 #EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP00"
-EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Huron"
 
 T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
 
@@ -179,7 +180,7 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
 
 
     #plot results
-    b, lons, lats = nemo_commons.get_basemap_and_coordinates_from_file(T_FILE_PATH, resolution="i")
+    b, lons, lats = nemo_commons.get_basemap_and_coordinates_from_file(T_FILE_PATH, resolution="h")
     x, y = b(lons, lats)
     the_mask = nemo_commons.get_mask(path=os.path.join(EXP_DIR, "bathy_meter.nc"))
 
@@ -205,7 +206,7 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
         b.colorbar(cs)
 
         u, v = b.rotate_vector(u, v, lons, lats)
-        q = b.quiver(x, y, u, v, scale = 4, width = 0.001)
+        q = b.quiver(x, y, u, v, scale = 1.5, width = 0.002)
 
         qk = plt.quiverkey(q, 0.15, 0.1, 0.05, '0.05 m/s', labelpos='W')
         b.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
@@ -229,7 +230,7 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
     v_annual = np.ma.masked_where(~the_mask, v_annual)
 
     fig.suptitle("Annual")
-    q = b.quiver(x, y, u_annual, v_annual, scale = 4, width = 0.001, zorder = 5)
+    q = b.quiver(x, y, u_annual, v_annual, scale = 1.5, width = 0.002, zorder = 5)
     qk = plt.quiverkey(q, 0.15, 0.1, 0.05, '0.05 m/s', labelpos='W')
 
 
@@ -249,11 +250,11 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
 
     draw_seasonal_means_panel(path=T_FILE_PATH)
-    draw_seasonal_means_panel(path=T_FILE_PATH, var_name="sossheig")
-    draw_seasonal_means_panel(path=T_FILE_PATH, var_name="somixhgt")
-    draw_seasonal_means_panel(path=T_FILE_PATH, var_name="somxl010")
+    # draw_seasonal_means_panel(path=T_FILE_PATH, var_name="sossheig")
+    # draw_seasonal_means_panel(path=T_FILE_PATH, var_name="somixhgt")
+    # draw_seasonal_means_panel(path=T_FILE_PATH, var_name="somxl010")
     draw_seasonal_means_panel(path=T_FILE_PATH, var_name="soicecov")
-    draw_seasonal_means_panel(path=T_FILE_PATH, var_name="sowindsp")
+    # draw_seasonal_means_panel(path=T_FILE_PATH, var_name="sowindsp")
 
 
     #zonal and meridional currents
@@ -261,5 +262,5 @@ if __name__ == "__main__":
     # draw_seasonal_means_panel(path=V_FILE_PATH, var_name="vomecrty")
 
 
-    #plot_vector_fields(u_path=U_FILE_PATH, v_path=V_FILE_PATH)
+    plot_vector_fields(u_path=U_FILE_PATH, v_path=V_FILE_PATH)
     #draw_for_date()

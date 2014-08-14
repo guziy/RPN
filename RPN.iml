@@ -9,9 +9,6 @@
     <orderEntry type="jdk" jdkName="Python 2.7.2 virtualenv at ~/skynet3_rech1/virtualenv_cython" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
-  <component name="PyDocumentationSettings">
-    <option name="myDocStringFormat" value="reStructuredText" />
-  </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="Nosetests" />
     <option name="PROJECT_TEST_RUNNER" value="Nosetests" />

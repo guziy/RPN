@@ -47,7 +47,7 @@ _varname_to_long_name = {
 HDF_VERT_SOIL_HYDR_COND_NAME = "soil_hydraulic_conductivity"
 HDF_FLOW_DIRECTIONS_NAME = "flow_direction"
 HDF_ACCUMULATION_AREA_NAME = "accumulation_area_km2"
-HDF_CELL_AREA_NAME = "cell_area_km2"
+HDF_CELL_AREA_NAME = "cell_area_m2"
 HDF_LAKE_FRACTION_NAME = "lake_fraction"
 HDF_DEPTH_TO_BEDROCK_NAME = "depth_to_bedrock"
 HDF_SOIL_ANISOTROPY_RATIO_NAME = "soil_anisotropy_ratio"
@@ -100,8 +100,14 @@ def get_to_plot(varname, data, lake_fraction=None,
     elif varname == "I0":
         data1 = data - 273.15  # convert to deg C
         data1 = np.ma.masked_where((data <= 0.1) | (lake_fraction >= GLOBAL_LAKE_FRACTION), data1)
+        data1 = maskoceans(lonsin=lons, latsin=lats, datain=data1)
+        return data1
     elif varname in ["TRAF", "TDRA"]:
         data1 = data * 24 * 60 * 60  # convert mm/s to mm/day
+        if varname == "TDRA":
+            return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=True)
+    elif varname in ["I1", "IMAV", "I5"]:
+        return maskoceans(lonsin=lons, latsin=lats, datain=data, inlands=True)
     else:
         data1 = data
 
@@ -144,16 +150,42 @@ def get_boundary_norm_using_all_vals(to_plot, ncolors):
 
 def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False, varname = None, difference = False):
 
+
+
     if vmin * vmax >= 0:
         locator = MaxNLocator(ncolors)
         bounds = np.asarray(locator.tick_values(vmin, vmax))
     elif exclude_zero:
-        locator = MaxNLocator(nbins=ncolors)
-        bounds = np.asarray(locator.tick_values(vmin, vmax))
-        bounds = bounds[bounds != 0]
+        #implies that this is the case for difference
+        delta = max(abs(vmax), abs(vmin))
+        assert ncolors % 2 == 1
+        d = 2.0 * delta / float(ncolors)
+        print d, np.log10(d)
+        ndec = -int(np.floor(np.log10(d)))
+        print ndec
+        d = np.round(d, decimals=ndec)
+
+        assert d > 0
+        print "ncolors = {0}".format(ncolors)
+
+        negats = [-d / 2.0 - d * i for i in range((ncolors - 1) / 2)]
+        bounds = negats[::-1] + [-the_bound for the_bound in negats]
+        assert 0 not in bounds
+        assert bounds[0] == -bounds[-1]
     else:
         locator = MaxNLocator(nbins=ncolors, symmetric=True)
         bounds = np.asarray(locator.tick_values(vmin, vmax))
+
+
+    #custom variable norms
+    if difference:
+        pass
+    else:
+        if varname == "TRAF":
+            bounds = [0, 0.1, 0.5] + list(range(1, ncolors - 3)) + [vmax, ]
+
+
+
 
     return BoundaryNorm(bounds, ncolors=ncolors), bounds, bounds[0], bounds[-1]
 

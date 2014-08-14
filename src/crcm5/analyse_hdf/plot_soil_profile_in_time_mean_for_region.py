@@ -25,11 +25,11 @@ def main_compare_two_simulations():
     #folder for storing result images
     img_folder = ""
     start_date = datetime(1980, 1, 1)
-    end_date = datetime(1988, 12, 31)
+    end_date = datetime(2010, 12, 31)
 
 
-    path0 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
-    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
+    path0 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
 
     exp_label = "interflow_effect_soil"
 
@@ -40,8 +40,8 @@ def main_compare_two_simulations():
 
 
     rectangle = IndexRectangle(
-        lower_left_point=IndexPoint(1, 1),
-        width=200, height=200
+        lower_left_point=IndexPoint(40, 20),
+        width=100, height=45
     )
 
     params2 = InputParams(hdf_path = path2,
@@ -78,7 +78,13 @@ def main_compare_two_simulations():
         data = data2 - data0
 
         #calculate the profile
-        selected_mean = data[:, :n_select_level, i_sel, j_sel].mean(axis=2)
+        selected_diff = data[:, :n_select_level, i_sel, j_sel]
+        sel_data = (data0[:, :n_select_level, i_sel, j_sel] + data2[:, :n_select_level, i_sel, j_sel]) * 0.5
+        selected_mean = np.zeros_like(sel_data)
+        where_to_compute = np.abs(selected_diff) > 0
+        selected_mean[where_to_compute] = selected_diff[where_to_compute] / sel_data[where_to_compute] * 100.0
+
+        selected_mean = selected_mean.mean(axis=2)
 
 
 

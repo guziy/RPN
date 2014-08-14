@@ -1,3 +1,4 @@
+import calendar
 from datetime import timedelta, datetime
 import itertools
 from matplotlib import gridspec
@@ -17,13 +18,18 @@ __author__ = 'huziy'
 import numpy as np
 from netCDF4 import Dataset, num2date, date2num
 import matplotlib.pyplot as plt
+from collections import OrderedDict
 
 
 class CRUDataManager:
     def __init__(self, path="data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc", var_name="tmp", lazy=False):
-        self.timesVar = None
+        self.times = None
+        self.var_data = None
+
+        self.times_var = None
         self.kdtree = None
         self.times_num = None
+        self.lons2d, self.lats2d = None, None
 
         self.lazy = lazy
         ds = Dataset(path)
@@ -44,14 +50,57 @@ class CRUDataManager:
 
         self.lons2d, self.lats2d = lons2d, lats2d
 
-        self.timesVar = nc_vars["time"]
+        self.times_var = nc_vars["time"]
         self.times_num = nc_vars["time"][:]
-        self.times = num2date(self.times_num, self.timesVar.units, self.timesVar.calendar)
+        self.times = num2date(self.times_num, self.times_var.units, self.times_var.calendar)
         if not self.lazy:
-            self.var_data = np.transpose(nc_vars[self.var_name][:], axes=(0, 2, 1))
+            self.var_data = np.transpose(nc_vars[self.var_name][:], axes=[0, 2, 1])
 
         x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
         self.kdtree = cKDTree(zip(x_in, y_in, z_in))
+
+
+    def get_seasonal_means(self, season_name_to_months=None, start_year = None, end_year = None):
+        if season_name_to_months is None:
+            season_name_to_months = OrderedDict([
+                ("Winter", (1, 2, 12)),
+                ("Spring", range(3, 6)),
+                ("Summer", range(6, 9)),
+                ("Fall", range(9, 12))])
+
+
+
+        season_name_to_coef = {}
+        for sname, months in season_name_to_months.iteritems():
+            season_name_to_coef[sname] = 1
+
+            if self.var_name.lower() == "pre":
+                days = sum([calendar.monthrange(y, m)[1] for m in months for y in range(start_year, end_year + 1)])
+                season_name_to_coef[sname] = 1.0 / float(days)
+
+
+        month_to_season = {}
+        for sname, mlist in season_name_to_months.iteritems():
+            for m in mlist:
+                month_to_season[m] = sname
+
+        if self.var_data is None:
+            self.var_data = np.transpose(self.nc_dataset.variables[self.var_name][:], axes=[0, 2, 1])
+
+        nt, nx, ny = self.var_data.shape
+        panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=range(nx), minor_axis=range(ny))
+        panel = panel.select(lambda d: start_year <= d.year <= end_year)
+
+        if self.var_name == "pre":
+            panel_seasonal = panel.groupby(lambda d: month_to_season[d.month], axis = "items").sum()
+        else:
+            panel_seasonal = panel.groupby(lambda d: month_to_season[d.month], axis = "items").mean()
+
+        season_to_mean = OrderedDict()
+        for sname, _ in season_name_to_months.iteritems():
+            season_to_mean[sname] = panel_seasonal[sname].values * season_name_to_coef[sname]
+
+        return season_to_mean
 
 
     def get_mean(self, start_year, end_year, months=None):
@@ -67,14 +116,14 @@ class CRUDataManager:
         start_date = datetime(start_year, 1, 1)
         end_date = datetime(end_year + 1, 1, 1)
 
-        start_date_num = date2num(start_date, self.timesVar.units)
-        end_date_num = date2num(end_date, self.timesVar.units)
+        start_date_num = date2num(start_date, self.times_var.units)
+        end_date_num = date2num(end_date, self.times_var.units)
 
         sel_query = (self.times_num >= start_date_num) & (self.times_num < end_date_num)
         sel_dates = self.times_num[sel_query]
         sel_data = np.transpose(self.nc_vars[self.var_name][sel_query, :, :], axes=[0, 2, 1])
 
-        sel_dates = num2date(sel_dates, self.timesVar.units)
+        sel_dates = num2date(sel_dates, self.times_var.units)
 
         ind_vector = np.where(map(lambda x: (x.month in months), sel_dates))[0]
         return np.mean(sel_data[ind_vector, :, :], axis=0)
@@ -89,12 +138,10 @@ class CRUDataManager:
         stamp_days = [the_date + i * day for i in xrange(365)]
         result = []
 
-
         nt, nx, ny = self.var_data.shape
         data_panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=range(nx), minor_axis=range(ny))
-        data_panel = data_panel.select(lambda d: (start_year <= d.year <= end_year) and not (d.day == 29 and d.month == 2))
-
-
+        data_panel = data_panel.select(
+            lambda d: (start_year <= d.year <= end_year) and not (d.day == 29 and d.month == 2))
 
         data_panel = data_panel.groupby(lambda d: datetime(stamp_year, d.month, d.day), axis="items").mean()
         assert isinstance(data_panel, pandas.Panel)
@@ -112,8 +159,7 @@ class CRUDataManager:
         return data_panel.values
 
 
-
-    def interpolate_daily_climatology_to(self, clim_data, lons2d_target = None, lats2d_target = None):
+    def interpolate_daily_climatology_to(self, clim_data, lons2d_target=None, lats2d_target=None):
         #expects clim_data to have the following shape (365, nx, ny)
         #        lons2d_target: (nx, ny)
         #        lats2d_target: (nx, ny)
@@ -129,7 +175,6 @@ class CRUDataManager:
         return data_help[:, inds].reshape((nt,) + lons2d_target.shape)
 
         pass
-
 
 
     def get_thawing_index_from_climatology(self, daily_temps_clim, t0=0.0):

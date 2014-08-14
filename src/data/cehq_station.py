@@ -42,6 +42,7 @@ class Station:
         self.grdc_monthly_clim_max = None
 
         self.river_name = ""
+        self._complete_years = None
 
 
     def get_mean_value(self):
@@ -345,7 +346,7 @@ class Station:
         assumes that the observed data frequency is daily
         """
 
-        if hasattr(self, "_complete_years"):
+        if self._complete_years is not None:
             return self._complete_years
 
         years = []
@@ -395,25 +396,9 @@ class Station:
         daily_clim = df.groupby(by=lambda the_date: (the_date.month, the_date.day)).mean()
 
 
-        print "--" * 10
-        print self.id
-        print "--" * 10
-        print daily_clim.describe()
-        print daily_clim
-        print self.values
-        print type(self.values)
-
         vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
         return stamp_dates, vals
 
-
-    def get_daily_climatology_minimums_pandas(self, stamp_dates=None, years=None):
-
-        """
-        get minimum flow value for a given day during years
-        TODO: implement
-        """
-        pass
 
 
     def __str__(self):
@@ -694,7 +679,7 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
 def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
                        natural=True,
                        province="QC", start_date=None, end_date=None, datavariable="streamflow",
-                       min_drainage_area_km2 = None):
+                       min_drainage_area_km2 = None, selected_ids = None):
     """
     loads stations from sqlite db
 
@@ -802,6 +787,12 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         s.id = the_row["STATION_NUMBER"]
         s.name = the_row["STATION_NAME"]
         s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
+
+
+        if selected_ids is not None:
+            if s.id not in selected_ids:
+                continue
+
         #Skip the stations without related infoormation
         if s.drainage_km2 is None:
             continue
@@ -829,6 +820,8 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     #print the_row[province_field]
     connect.close()
+    if len(stations) == 0:
+        print "Warning: could not find acceptable stations for hydat in {0} region".format(province)
     return stations
     #pickle.dump(stations, open(cache_file, mode="w"))
 

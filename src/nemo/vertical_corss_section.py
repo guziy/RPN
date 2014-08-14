@@ -11,6 +11,8 @@ from matplotlib.lines import Line2D
 from crcm5.analyse_hdf import common_plot_params as cpp
 import numpy as np
 from matplotlib import cm
+from util import plot_utils
+
 __author__ = 'huziy'
 
 
@@ -19,7 +21,8 @@ import matplotlib.pyplot as plt
 
 #EXP_DIR = "/home/huziy/nemo_glk/test_fwb_my"
 #EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis_fwb2"
-EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_0.1deg_lim3"
+#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_0.1deg_lim3"
+EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Huron"
 
 T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
 
@@ -220,35 +223,35 @@ def plot_cross_section_for_seasons(data_path = "", i_start = 0, j_start = 0, i_e
 
 
 def main():
-
+    plot_utils.apply_plot_params(font_size=20, width_pt=None, width_cm=20, height_cm=20)
     i_start, j_start = 0, 0
     i_end, j_end = -1, -1
 
     print get_section_hor_indices(i_start=5, j_start = 0, i_end = 10, j_end = 20)
 
 
-    #Superior
-    params = dict(
-        i_start = 25, j_start = 65,
-        i_end = 70, j_end = 65,
-        var_name = "votemper"
-
-    )
-    plot_cross_section_for_seasons(data_path=T_FILE_PATH, **params)
-
-    #Michigan
-    params = dict(
-        i_start = 55, j_start = 55,
-        i_end = 55, j_end = 5,
-        var_name = "votemper"
-
-    )
-    plot_cross_section_for_seasons(data_path=T_FILE_PATH, **params)
+    # #Superior
+    # params = dict(
+    #     i_start = 25, j_start = 65,
+    #     i_end = 70, j_end = 65,
+    #     var_name = "votemper"
+    #
+    # )
+    # plot_cross_section_for_seasons(data_path=T_FILE_PATH, **params)
+    #
+    # #Michigan
+    # params = dict(
+    #     i_start = 55, j_start = 55,
+    #     i_end = 55, j_end = 5,
+    #     var_name = "votemper"
+    #
+    # )
+    # plot_cross_section_for_seasons(data_path=T_FILE_PATH, **params)
 
     #Huron
     params = dict(
-        i_start = 95, j_start = 40,
-        i_end = 105, j_end = 25,
+        i_start = 10, j_start = 30,
+        i_end = 30, j_end = 10,
         var_name = "votemper"
 
     )

@@ -3,7 +3,9 @@ from netCDF4 import Dataset
 from matplotlib import gridspec
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from pandas.core.frame import DataFrame
+from rpn.rpn import RPN
 from scipy.spatial.ckdtree import cKDTree
 from crcm5.model_point import ModelPoint
 from data import cehq_station
@@ -14,6 +16,7 @@ from util.geo import lat_lon
 __author__ = 'huziy'
 
 import numpy as np
+
 
 
 
@@ -31,7 +34,6 @@ def get_dataless_model_points_for_stations(station_list, accumulation_area_km2_2
     model_acc_area_1d = accumulation_area_km2_2d[i_array, j_array]
     npoints = 1
     result = {}
-
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lons, lats)
     kdtree = cKDTree(zip(x0, y0, z0))
@@ -70,28 +72,31 @@ def get_dataless_model_points_for_stations(station_list, accumulation_area_km2_2
 
 
 def main():
-
     stations = cehq_station.read_grdc_stations(st_id_list=["2903430", "2909150", "2912600", "4208025"])
     statins_to_mp = None
 
     import matplotlib.pyplot as plt
-    labels = ["CanESM", "MPI"]
-    paths = ["/skynet3_rech1/huziy/offline_stfl/canesm/discharge_1958_01_01_00_00.nc",
-             "/skynet3_rech1/huziy/offline_stfl/mpi/discharge_1958_01_01_00_00.nc"
-             ]
 
-    colors = ["r", "b"]
+    # labels = ["CanESM", "MPI"]
+    # paths = ["/skynet3_rech1/huziy/offline_stfl/canesm/discharge_1958_01_01_00_00.nc",
+    #          "/skynet3_rech1/huziy/offline_stfl/mpi/discharge_1958_01_01_00_00.nc"]
+    #
+    # colors = ["r", "b"]
+
+    labels = ["ERA", ]
+    colors = ["r", ]
+    paths = ["/skynet3_rech1/huziy/arctic_routing/era40/discharge_1958_01_01_00_00.nc"]
 
 
-    start_year_current = 1971
-    end_year_current = 2000
+    start_year_current = 1981
+    end_year_current = 2010
 
-    start_year_future = 2071
+    plot_future = False
+    start_year_future = 2071  # ignored when plot future is false
     end_year_future = 2100
 
     lons2d = None
     lats2d = None
-
 
     x_index = None
     y_index = None
@@ -99,25 +104,21 @@ def main():
 
     sim_to_time = {}
 
-
     monthly_dates = [datetime(2001, m, 15) for m in range(1, 13)]
     fmt = DateFormatter("%d\n%b")
-    locator = MonthLocator(bymonth=range(2,13,3))
+    locator = MonthLocator(bymonth=range(2, 13, 3))
 
     fig = plt.figure()
-
 
     axes = []
     row_indices = []
     col_indices = []
 
-    ncols = 2
+    ncols = 1
     shiftrow = 0 if len(stations) % ncols == 0 else 1
     nrows = len(stations) // ncols + shiftrow
     shared_ax = None
-    gs = gridspec.GridSpec(ncols = ncols, nrows= nrows )
-
-
+    gs = gridspec.GridSpec(ncols=ncols, nrows=nrows)
 
     for i, s in enumerate(stations):
         row = i // ncols
@@ -132,22 +133,16 @@ def main():
             assert isinstance(shared_ax, Axes)
 
         else:
-            ax = fig.add_subplot(gs[row, col], sharey = shared_ax)
-
-
+            ax = fig.add_subplot(gs[row, col])
 
         ax.xaxis.set_major_locator(locator)
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
+
         ax.xaxis.set_major_formatter(fmt)
-
-
+        sfmt = ScalarFormatter(useMathText=True)
+        sfmt.set_powerlimits((-3, 4))
+        ax.yaxis.set_major_formatter(sfmt)
         assert isinstance(ax, Axes)
-        if row < nrows - 1:
-            for ticklabel in ax.get_xticklabels():
-                ticklabel.set_visible(False)
-        if col > 0:
-            for ticklabel in ax.get_yticklabels():
-                ticklabel.set_visible(False)
-
 
         axes.append(ax)
 
@@ -160,74 +155,73 @@ def main():
 
         assert isinstance(s, Station)
         assert isinstance(ax, Axes)
-        ax.fill_between(monthly_dates, s.grdc_monthly_clim_min, s.grdc_monthly_clim_max, color="0.6", alpha = 0.5)
-        ax.plot(monthly_dates, s.grdc_monthly_clim_mean, "k", lw = 3, label = "Obs")
+        ax.fill_between(monthly_dates, s.grdc_monthly_clim_min, s.grdc_monthly_clim_max, color="0.6", alpha=0.5)
+        ax.plot(monthly_dates, s.grdc_monthly_clim_mean, "k", lw=3, label="Obs")
 
         ax.set_title(s.river_name)
 
         for path, sim_label, color in zip(paths, labels, colors):
             ds = Dataset(path)
 
-
             if statins_to_mp is None:
                 acc_area_2d = ds.variables["accumulation_area"][:]
                 lons2d, lats2d = ds.variables["longitude"][:], ds.variables["latitude"][:]
                 x_index, y_index = ds.variables["x_index"][:], ds.variables["y_index"][:]
                 statins_to_mp = get_dataless_model_points_for_stations(stations, acc_area_2d,
-                             lons2d, lats2d, x_index, y_index  )
+                                                                       lons2d, lats2d, x_index, y_index)
 
             #read dates only once for a given simulation
-            if not sim_to_time.has_key(sim_label):
+            if sim_label not in sim_to_time:
                 time_str = ds.variables["time"][:]
-                times = [ datetime.strptime("".join(t_s), TIME_FORMAT) for t_s in time_str]
+                times = [datetime.strptime("".join(t_s), TIME_FORMAT) for t_s in time_str]
                 sim_to_time[sim_label] = times
-
-
 
             mp = statins_to_mp[s]
             data = ds.variables["water_discharge_accumulated"][:, mp.cell_index]
             print path
-            df = DataFrame(data=data, index = sim_to_time[sim_label], columns=["value"])
+            df = DataFrame(data=data, index=sim_to_time[sim_label], columns=["value"])
             df["year"] = df.index.map(lambda d: d.year)
-            df_current = df.ix[df.year.between(start_year_current, end_year_current),:]
-            df_future = df.ix[df.year.between(start_year_future, end_year_future),:]
+            df_current = df.ix[df.year.between(start_year_current, end_year_current), :]
+            if plot_future:
+                df_future = df.ix[df.year.between(start_year_future, end_year_future), :]
 
+            df_monthly_current = df_current.groupby(by=lambda d: d.month).mean()
+            if plot_future:
+                df_monthly_future = df_future.groupby(by=lambda d: d.month).mean()
 
+            monthly_model_current = [df_monthly_current.ix[month, "value"] for month in range(1, 13)]
 
-            df_monthly_current = df_current.groupby(by = lambda d: d.month).mean()
-            df_monthly_future = df_future.groupby(by = lambda d: d.month).mean()
-
-
-
-
-            monthly_model_current = [ df_monthly_current.ix[month,"value"] for month in range(1,13) ]
-            monthly_model_future = [ df_monthly_future.ix[month,"value"] for month in range(1,13) ]
+            if plot_future:
+                monthly_model_future = [df_monthly_future.ix[month, "value"] for month in range(1, 13)]
 
 
 
 
 
             #print np.mean( monthly_model ), s.river_name, sim_label
-            ax.plot(monthly_dates, monthly_model_current, color, lw = 3, label = sim_label + "(C)")
-            ax.plot(monthly_dates, monthly_model_future, color+"--", lw=3, label = sim_label + "(F)")
+            ax.plot(monthly_dates, monthly_model_current, color, lw=3, label=sim_label + "(C)")
 
+            if plot_future:
+                ax.plot(monthly_dates, monthly_model_future, color + "--", lw=3, label=sim_label + "(F2)")
 
             ds.close()
 
         if row < nrows - 1:
             ax.set_xticklabels([])
 
-    axes[-1].legend()
+    axes[0].legend(fontsize = 17, loc = 2)
     plt.tight_layout()
-    plt.savefig("offline_validation.pdf")
+    plt.savefig("offline_validation.jpeg", dpi=400)
+
 
 if __name__ == "__main__":
     import application_properties
+
     application_properties.set_current_directory()
 
     from util import plot_utils
-    plot_utils.apply_plot_params(width_pt=None, width_cm=20, height_cm=20, font_size=18)
+
+    plot_utils.apply_plot_params(width_pt=None, width_cm=19, height_cm=40, font_size=22)
 
     main()
     print "Hello world"
-  

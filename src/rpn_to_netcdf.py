@@ -2,9 +2,8 @@ from multiprocessing.pool import Pool
 import os.path
 from crcm5.model_data import Crcm5ModelDataManager
 
-__author__="huziy"
-__date__ ="$Jul 25, 2011 4:56:03 PM$"
-
+__author__ = "huziy"
+__date__ = "$Jul 25, 2011 4:56:03 PM$"
 
 import netCDF4 as nc
 import application_properties
@@ -15,7 +14,7 @@ import os
 import numpy as np
 
 
-def extract_field(name = "VF", level = 3, in_file = "", out_file = None, margin = 0):
+def extract_field(name="VF", level=3, in_file="", out_file=None, margin=0):
     if out_file is None:
         out_file = in_file + "_lf.nc"
 
@@ -24,9 +23,7 @@ def extract_field(name = "VF", level = 3, in_file = "", out_file = None, margin 
     lons2d, lats2d = rObj.get_longitudes_and_latitudes_for_the_last_read_rec()
     rObj.close()
 
-
     lons2d[lons2d > 180] -= 360.0
-
 
     ds = nc.Dataset(out_file, "w", format="NETCDF3_CLASSIC")
 
@@ -42,18 +39,17 @@ def extract_field(name = "VF", level = 3, in_file = "", out_file = None, margin 
     var[:] = field[:nx - margin, :ny - margin]
     var[:] = field[:nx - margin, :ny - margin]
     lonVar[:] = lons2d[:nx - margin, :ny - margin]
-    latVar[:] = lats2d[:nx - margin,:ny - margin]
+    latVar[:] = lats2d[:nx - margin, :ny - margin]
     ds.close()
-
 
     pass
 
-def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p', outDir = None):
+
+def extract_runoff_to_netcdf_file(filePath='data/pm1957090100_00589248p', outDir=None):
     surface_runoff_name = 'TRAF'
     subsurface_runoff_name = 'TDRA'
     level_tdra = 5
     level_traf = 5
-
 
     print filePath
 
@@ -61,18 +57,17 @@ def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p', outD
     rpnObj = RPN(filePath)
 
     assert rpnObj.get_number_of_records() > 4, filePath
-    surfRunoff = rpnObj.get_first_record_for_name_and_level(surface_runoff_name, level = level_traf)
-    subSurfRunoff = rpnObj.get_first_record_for_name_and_level(subsurface_runoff_name, level = level_tdra)
+    surfRunoff = rpnObj.get_first_record_for_name_and_level(surface_runoff_name, level=level_traf)
+    subSurfRunoff = rpnObj.get_first_record_for_name_and_level(subsurface_runoff_name, level=level_tdra)
 
     nx, ny = surfRunoff.shape
 
-
-    ncFile = nc.Dataset(filePath + '.nc', 'w', format = 'NETCDF3_CLASSIC')
+    ncFile = nc.Dataset(filePath + '.nc', 'w', format='NETCDF3_CLASSIC')
     ncFile.createDimension('lon', nx)
     ncFile.createDimension('lat', ny)
 
-    surfRunoffVar = ncFile.createVariable(surface_runoff_name, 'f', ('lon','lat'))
-    subSurfRunoffVar = ncFile.createVariable(subsurface_runoff_name, 'f', ('lon','lat'))
+    surfRunoffVar = ncFile.createVariable(surface_runoff_name, 'f', ('lon', 'lat'))
+    subSurfRunoffVar = ncFile.createVariable(subsurface_runoff_name, 'f', ('lon', 'lat'))
 
     subSurfRunoffVar[:] = subSurfRunoff
     surfRunoffVar[:] = surfRunoff
@@ -83,7 +78,7 @@ def extract_runoff_to_netcdf_file(filePath = 'data/pm1957090100_00589248p', outD
     #os.remove(filePath)
 
 
-def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
+def extract_runoff_to_netcdf_folder(folder_path='data/CORDEX/Africa/Samples'):
     for folder in os.listdir(folder_path):
         monthFolderPath = os.path.join(folder_path, folder)
 
@@ -97,11 +92,11 @@ def extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/Africa/Samples'):
             extract_runoff_to_netcdf_file(filePath)
 
 
-
 def extract_runoff_to_nc_process(args):
     inPath, outPath = args
 
-    if os.path.isfile(outPath): return #skip files that already exist
+    if os.path.isfile(outPath):
+        return  #skip files that already exist
 
     #print "in: {0}".format( inPath )
     #print "out: {0}".format( outPath )
@@ -111,13 +106,11 @@ def extract_runoff_to_nc_process(args):
 
     r = RPN(inPath)
     r.suppress_log_messages()
-    traf_data = r.get_all_time_records_for_name(varname = traf_name)
-    tdra_data = r.get_all_time_records_for_name(varname = tdra_name)
+    traf_data = r.get_all_time_records_for_name(varname=traf_name)
+    tdra_data = r.get_all_time_records_for_name(varname=tdra_name)
     r.close()
 
-
     nx, ny = traf_data.items()[0][1].shape
-
 
     ds = nc.Dataset(outPath, "w", format="NETCDF3_CLASSIC")
     ds.createDimension("lon", nx)
@@ -130,91 +123,74 @@ def extract_runoff_to_nc_process(args):
     varTdra = ds.createVariable(tdra_name, "f4", dimensions=("time", "lon", "lat"))
     varTdra.units = "kg/( m**2 * s )"
 
-
     timeVar = ds.createVariable("time", "f4", dimensions=("time",))
 
-
-    sorted_dates = list( sorted(traf_data.keys()) )
+    sorted_dates = list(sorted(traf_data.keys()))
 
     timeVar.units = "hours since {0}".format(sorted_dates[0])
     timeVar[:] = nc.date2num(sorted_dates, timeVar.units)
 
-
     varTraf[:] = np.array(
-        [ traf_data[d] for d in sorted_dates ]
+        [traf_data[d] for d in sorted_dates]
     )
 
     varTdra[:] = np.array(
-        [ tdra_data[d] for d in sorted_dates ]
+        [tdra_data[d] for d in sorted_dates]
     )
     ds.close()
 
 
+def runoff_to_netcdf_parallel(indir, outdir):
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
 
+    in_names = [x for x in os.listdir(indir) if x.startswith("pm") and x.endswith("p")]
 
-def runoff_to_netcdf_parallel(inDir, outDir):
-    if not os.path.isdir(outDir):
-        os.mkdir(outDir)
+    in_paths = [os.path.join(indir, name) for name in in_names]
 
-    inNames = [ x for x in os.listdir(inDir) if x.startswith("pm") and x.endswith("p") ]
-
-    inPaths = [os.path.join(inDir, name) for name in inNames]
-
-    outPaths = [ os.path.join(outDir, inName + ".nc") for inName in inNames ]
-
+    out_paths = [os.path.join(outdir, inName + ".nc") for inName in in_names]
 
     ppool = Pool(processes=20)
-    ppool.map(extract_runoff_to_nc_process, zip(inPaths, outPaths) )
+    ppool.map(extract_runoff_to_nc_process, zip(in_paths, out_paths))
 
 
-
-
-
-def extract_sand_and_clay_from_rpn(rpn_path = 'data/geophys_africa', outpath = ""):
+def extract_sand_and_clay_from_rpn(rpn_path='data/geophys_africa', outpath=""):
     rpnFile = RPN(rpn_path)
     sandField = rpnFile.get_2D_field_on_all_levels('SAND')
     clayField = rpnFile.get_2D_field_on_all_levels('CLAY')
     dpthField = rpnFile.get_first_record_for_name("8L")
     rpnFile.close()
 
-    ncFile = nc.Dataset(outpath, 'w', format = 'NETCDF3_CLASSIC')
+    ncFile = nc.Dataset(outpath, 'w', format='NETCDF3_CLASSIC')
 
-    
     nx, ny = sandField[1].shape
     nz = len(sandField)
-
 
     sand = np.zeros((nx, ny, nz))
     clay = np.zeros((nx, ny, nz))
 
-
-
     for i in xrange(nz):
         print i
-        sand[:, :, i] = sandField[ i + 1 ][:,:]
-        clay[:, :, i] = clayField[ i + 1 ][:,:]
-
+        sand[:, :, i] = sandField[i + 1][:, :]
+        clay[:, :, i] = clayField[i + 1][:, :]
 
     ncFile.createDimension('lon', nx)
     ncFile.createDimension('lat', ny)
     ncFile.createDimension('level', nz)
 
-
-
     sandVar = ncFile.createVariable("SAND", "f4", ("lon", "lat", "level"))
     clayVar = ncFile.createVariable("CLAY", "f4", ("lon", "lat", "level"))
     dpthVar = ncFile.createVariable("DEPTH_TO_BEDROCK", "f4", ("lon", "lat"))
-
 
     sandVar[:] = sand
     clayVar[:] = clay
     dpthVar[:] = dpthField
     ncFile.close()
 
-
     pass
 
-def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_records = 4):
+
+def delete_files_with_nrecords(folder_path='data/CORDEX/Africa/Samples', n_records=4):
     for folder in os.listdir(folder_path):
         monthFolderPath = os.path.join(folder_path, folder)
         if not os.path.isdir(monthFolderPath):
@@ -224,7 +200,7 @@ def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_rec
             filePath = os.path.join(monthFolderPath, fileName)
             rpnObj = RPN(filePath)
             delete = False
-            if rpnObj.get_number_of_records()  == n_records:
+            if rpnObj.get_number_of_records() == n_records:
                 delete = True
             rpnObj.close()
             if delete:
@@ -234,23 +210,24 @@ def delete_files_with_nrecords(folder_path = 'data/CORDEX/Africa/Samples', n_rec
     pass
 
 
-
 if __name__ == "__main__":
     application_properties.set_current_directory()
-#    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
-    extract_sand_and_clay_from_rpn(rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
-        outpath="africa_0.44deg_sand_clay_dpth.nc"
-    )
-#    delete_files_with_nrecords()
-#    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
+    #    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
+    #extract_sand_and_clay_from_rpn(
+    #    rpn_path="/home/huziy/skynet3_exec1/from_guillimin/Africa_044deg_geophy/pm1975120100_00000000p",
+    #    outpath="africa_0.44deg_sand_clay_dpth.nc"
+    #)
+    #    delete_files_with_nrecords()
+    #    extract_runoff_to_netcdf_folder(folder_path = 'data/CORDEX/NA_fix')
 
-#
-#    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_86x86_0.5deg.v3")
-#    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_260x260_3")
+    #
+    #    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_86x86_0.5deg.v3")
+    #    extract_field(name="VF", level=3, in_file="/home/huziy/skynet3_rech1/test/geophys_Quebec_260x260_3")
 
 
     #extract_sand_and_clay_from_rpn(rpn_path= "/b2_fs2/huziy/OMSC26_MPI_long_new_v01/geo_Arctic_198x186",
     #    outpath="/home/huziy/skynet3_rech1/runoff_arctic_nc/geo_Arctic_198x186.nc")
-    #runoff_to_netcdf_parallel("/b2_fs2/huziy/OMSC26_Can_long_new_v01/", "/skynet3_rech1/huziy/runoff_arctic_nc/CanESM")
+    runoff_to_netcdf_parallel("/b2_fs2/huziy/Arctic_0.5deg_OMSC_26L_ERA40I/",
+                              "/skynet3_rech1/huziy/runoff_arctic_nc/ERA40")
 
     print "Hello World"

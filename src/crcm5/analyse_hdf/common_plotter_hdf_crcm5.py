@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from datetime import datetime
 from util import plot_utils
 
@@ -39,11 +40,14 @@ def compare_simulations():
 
 
 def compare_obs_and_model_at_points():
+    plot_utils.apply_plot_params(font_size=20, width_pt=None, width_cm=17, height_cm=10)
     import compare_streamflow_with_obs
     start_date = datetime(1980, 1, 1)
     end_date = datetime(2010, 12, 31)
 
     compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
+    #reset back plot parameters to the default ones
+    configure()
 
 
 def compare_obs_and_model_at_river_outlet_points():
@@ -76,16 +80,38 @@ def plot_static_fields_histograms():
 def compare_2d_seasonal_means_from_simulations():
     import compare_modelled_2d_fields as comp
 
-    varnames = ["STFL", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "AS"]
-    levels = [None, None, None, None, None, 1, 1, None, None, 1, None]
+    varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
+    levels = [None, None, None, None, None, 1, 1, None, None, 1, 1, None]
 
 
-    varnames = ["AS", "STFL", "AV", "AH"]
-    levels = [None, None, None, None]
+    #varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
+    #levels = [None, None, None, None, 1, 1, None, None]
+
+    #Used to plot control and differences
+
+    season_to_months = OrderedDict([
+        ("Winter", [12, 1, 2]),
+        ("Spring", range(3, 6)),
+        ("Summer", range(6, 9)),
+        ("Fall", range(9, 12))
+    ])
+
+
+    # season_to_months = OrderedDict([
+    #    #("March", [3, ]),
+    #    #("April", [4, ]),
+    #    ("May", [5, ]),
+    #    ("June", [6, ]),
+    #    ("July", [7, ]),
+    #    ("August", [8, ])
+    # ])
+
 
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
-    comp.plot_control_and_differences_in_one_panel_for_all_seasons(varnames=varnames, levels=levels)
+    comp.plot_control_and_differences_in_one_panel_for_all_seasons(varnames=varnames,
+                                                                   levels=levels,
+                                                                   season_to_months=season_to_months)
 
 
 def validate_seasonal_mean_atm_fields():
@@ -110,11 +136,13 @@ def compare_quantiles():
 
 def compare_obs_and_model_lake_levels_at_points():
     import compare_lake_levels_with_obs
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
 
     start_date = datetime(1980, 1, 1)
     end_date = datetime(2010, 12, 31)
 
     compare_lake_levels_with_obs.main(start_date=start_date, end_date=end_date)
+    configure()
 
 
 def plot_veg_fractions_for_a_random_run():
@@ -144,20 +172,24 @@ def plot_diff_in_soil_profiles():
     plot_soil_profile_in_time_mean_for_region.main_compare_two_simulations()
 
 if __name__ == "__main__":
+
+    import time
+    t0 = time.clock()
+
     configure()
     #
     #do_plot_static_fields()
     #compare_2d_seasonal_means_from_simulations()
 
     #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    compare_obs_and_model_at_points()
+    #compare_obs_and_model_at_points()
 
     #compare_simulations()
     #validate_seasonal_mean_atm_fields()
     #plot_static_fields_histograms()
 
     #Compares Q10 and Q90 calculated from observed and modelled climatologic hydrographs
-    compare_quantiles()
+    #compare_quantiles()
 
     #plot_vertical_soil_moisture_cross_section()
 
@@ -168,7 +200,7 @@ if __name__ == "__main__":
 
 
     #Compare modelled and observed lake level anomalies at points
-    #compare_obs_and_model_lake_levels_at_points()
+    compare_obs_and_model_lake_levels_at_points()
 
     #plot_veg_fractions_for_a_random_run()
 
@@ -177,3 +209,6 @@ if __name__ == "__main__":
 
     #plot differences in soil profiles between 2 simulations
     #plot_diff_in_soil_profiles()
+
+
+    print "Execution time: {0} seconds".format(time.clock() - t0)
