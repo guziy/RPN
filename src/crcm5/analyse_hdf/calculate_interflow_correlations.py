@@ -80,7 +80,7 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
                                                          start_year=start_year, end_year=end_year)
 
     dates, evap_data = analysis.get_daily_climatology(path_to_hdf_file=path_for_infiltration_data, var_name="AV",
-                                                      level=5,
+                                                      level=None,
                                                       start_year=start_year, end_year=end_year)
     #Convert lists to numpy arrays
     pr_data = np.array(pr_data)
@@ -104,8 +104,8 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
 
 
 def main(start_year=1980, end_year=2010):
-    default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
-
+    #default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+    default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
     months = range(3, 12)
 
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=default_path)
@@ -159,7 +159,7 @@ def main(start_year=1980, end_year=2010):
     del params["path1"]
     corr_intf_infiltr = calculate_correlation_of_infiltration_rate_with(**params)
     to_plot4 = np.ma.masked_where(to_plot2.mask, corr_intf_infiltr)
-    title_list.append("Corr(infiltration, {})".format(params["varname2"]))
+    title_list.append("Corr(infiltr., {})".format(params["varname2"]))
     data_list.append(to_plot4)
 
     ##TODO: Correlate infiltration and surface runoff
@@ -179,7 +179,7 @@ def main(start_year=1980, end_year=2010):
         plt.title(title_list[col])
         basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH, ax=ax)
 
-    plt.colorbar(img, cax=fig.add_subplot(gs[0, 3]))
+    plt.colorbar(img, cax=fig.add_subplot(gs[0, 4]))
     fig.savefig("intfl_correlations.jpg", dpi=cpp.FIG_SAVE_DPI)
     # plt.show()
 

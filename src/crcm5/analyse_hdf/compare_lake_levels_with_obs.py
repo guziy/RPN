@@ -358,7 +358,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     lake_fraction = analysis.get_array_from_file(path=path0, var_name="lake_fraction")
 
     accumulation_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
-    cell_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME)
+    cell_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME_M2)
 
     # print "plotting from {0}".format(path0)
     # plt.pcolormesh(lake_fraction.transpose())

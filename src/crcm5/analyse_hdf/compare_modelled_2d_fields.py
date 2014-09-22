@@ -367,12 +367,18 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
 
     #interflow effect ()
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    control_label = "CRCM5-HCD-RL"
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    # control_label = "CRCM5-HCD-RL"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    # labels = ["CRCM5-HCD-RL-INTF", ]
 
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    labels = ["CRCM5-HCD-RL-INTF", ]
+    #interflow effect (avoid truncation and bigger slopes)
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+    control_label = "CRCM5-HCD-RL-INTF"
 
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
+    labels = ["CRCM5-HCD-RL-INTF-improved", ]
 
 
     row_labels = [
@@ -388,7 +394,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     assert len(levels) == len(varnames)
 
     start_year = 1980
-    end_year = 2010
+    end_year = 1989
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=control_path)
     x, y = basemap(lons2d, lats2d)

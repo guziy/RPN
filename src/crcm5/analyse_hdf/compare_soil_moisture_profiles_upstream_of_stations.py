@@ -26,9 +26,8 @@ __author__ = 'huziy'
 
 
 #noinspection PyNoneFunctionAssignment
-def main():
-    start_year = 1980
-    end_year = 1988
+def main(start_year = 1980, end_year = 1989):
+
 
     soil_layer_widths = infovar.soil_layer_widths_26_to_60
     soil_tops = np.cumsum(soil_layer_widths).tolist()[:-1]
@@ -40,11 +39,14 @@ def main():
         "061905", "074903", "090613", "092715", "093801", "093806"
     ]
 
-    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
-    label1 = "CRCM5-HCD-RL"
+#    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+#    label1 = "CRCM5-HCD-RL"
 
-    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
-    label2 = "CRCM5-HCD-RL-INTFL"
+    path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
+    label1 = "CRCM5-HCD-RL-INTFL"
+
+    path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+    label2 = "CRCM5-HCD-RL-INTFL-improved"
 
     ############
     images_folder = "images_for_lake-river_paper/comp_soil_profiles"
@@ -55,7 +57,7 @@ def main():
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(path1)
 
     lake_fractions = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_LAKE_FRACTION_NAME)
-    cell_areas = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_CELL_AREA_NAME)
+    cell_areas = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_CELL_AREA_NAME_M2)
     acc_areakm2 = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
     depth_to_bedrock = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_DEPTH_TO_BEDROCK_NAME)
 
@@ -155,6 +157,8 @@ def main():
         diff_cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=len(clevs) - 1)
         bn = BoundaryNorm(clevs, len(clevs) - 1)
 
+
+        plt.title("({})-({})".format(label2, label2))
         img = plt.contourf(t, z, profiles[:, :nlayers], cmap = diff_cmap, levels = clevs, norm = bn)
         plt.colorbar(img, ticks = clevs)
         ax = plt.gca()
@@ -165,7 +169,7 @@ def main():
         ax.xaxis.set_major_locator(MonthLocator())
 
 
-        fig.savefig(os.path.join(images_folder, "{0}.jpeg".format(the_station.id)),
+        fig.savefig(os.path.join(images_folder, "{0}_{1}_{2}.jpeg".format(the_station.id, label1, label2)),
                     dpi = cpp.FIG_SAVE_DPI, bbox_inches = "tight")
 
 

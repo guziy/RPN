@@ -384,7 +384,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     lake_fraction = analysis.get_array_from_file(path=path0, var_name="lake_fraction")
 
     accumulation_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
-    cell_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME) * 1.0e-6
+    area_m2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME_M2)
+
+    #Try to read cell areas im meters if it is not Ok then try in km2
+    if area_m2 is not None:
+        cell_area_km2 = area_m2 * 1.0e-6
+    else:
+        cell_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME_KM2)
 
 
     print "cell area ranges from {} to {}".format(cell_area_km2.min(), cell_area_km2.max())
@@ -810,12 +816,16 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     #selected_ids = ["090613", ]
 
     sim_labels = [
-        "CRCM5-R", "CRCM5-HCD-R"
+        #"CRCM5-R", "CRCM5-HCD-R",
+        "Intf1", "Intf-avoid-trunc-higher-slp"
     ]
 
     sim_file_names = [
-        "quebec_0.1_crcm5-r.hdf5",
-        "quebec_0.1_crcm5-hcd-r.hdf5"
+        #"quebec_0.1_crcm5-r.hdf5",
+        #"quebec_0.1_crcm5-hcd-r.hdf5",
+        "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
+        "quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+
     ]
 
     sim_name_to_file_name = OrderedDict()

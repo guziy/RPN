@@ -649,13 +649,14 @@ class Crcm5ModelDataManager:
 
         #Try to read cached climatology
         if use_caching:
-            #with guarantees that the file will be closed upon exit no matter what happens inside the with block
+            #with guarantees that the file will be closed upon exit from the with block no matter what happens inside the with block
             with tb.open_file(hdf_db_path) as hdf:
                 climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                                start_year=start_year,
                                                                end_year=end_year)
                 if climatology is not None:
                     return climatology
+
 
         hdf = tb.open_file(hdf_db_path, "a" if use_caching else "r")
         assert isinstance(hdf, tb.File)

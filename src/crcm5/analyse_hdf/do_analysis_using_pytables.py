@@ -45,15 +45,13 @@ def get_basemap_from_hdf(file_path=""):
 
 
 def get_array_from_file(path="", var_name=""):
-    h = tb.open_file(path)
+    with tb.open_file(path) as h:
+        if not var_name in h.root:
+            print "Warning: no {0} in {1}".format(var_name, path)
+            return None
 
-    if not var_name in h.root:
-        print "Warning: no {0} in {1}".format(var_name, path)
-        return None
-
-    data = h.get_node("/", var_name)[:]
-    h.close()
-    return data
+        data = h.get_node("/", var_name)[:]
+        return data
 
 
 def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,

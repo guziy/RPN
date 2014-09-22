@@ -43,7 +43,7 @@ def compare_obs_and_model_at_points():
     plot_utils.apply_plot_params(font_size=20, width_pt=None, width_cm=17, height_cm=10)
     import compare_streamflow_with_obs
     start_date = datetime(1980, 1, 1)
-    end_date = datetime(2010, 12, 31)
+    end_date = datetime(1989, 12, 31)
 
     compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
     #reset back plot parameters to the default ones
@@ -67,7 +67,7 @@ def do_plot_static_fields():
 def plot_vertical_soil_moisture_cross_section():
     import compare_soil_moisture_profiles_upstream_of_stations as profiles
 
-    profiles.main()
+    profiles.main(start_year=1980, end_year=1989)
 
 
 def plot_static_fields_histograms():
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     #compare_2d_seasonal_means_from_simulations()
 
     #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    #compare_obs_and_model_at_points()
+    compare_obs_and_model_at_points()
 
     #compare_simulations()
     #validate_seasonal_mean_atm_fields()
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     #Compares Q10 and Q90 calculated from observed and modelled climatologic hydrographs
     #compare_quantiles()
 
-    #plot_vertical_soil_moisture_cross_section()
+    plot_vertical_soil_moisture_cross_section()
 
     #explore_seasonal_interflow()
 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
 
 
     #Compare modelled and observed lake level anomalies at points
-    compare_obs_and_model_lake_levels_at_points()
+    #compare_obs_and_model_lake_levels_at_points()
 
     #plot_veg_fractions_for_a_random_run()
 

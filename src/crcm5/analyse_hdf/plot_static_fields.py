@@ -257,7 +257,7 @@ def main():
     itf_slope = analysis.get_array_from_file(path=path, var_name="interflow_slope")
     #slope = np.ma.masked_where(slope <= 0, slope)
 
-    cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME)
+    cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME_M2)
     label = "crcm5-hcd-rl-intfl".upper()
     fig.suptitle(label)
     soil_layer_depths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
