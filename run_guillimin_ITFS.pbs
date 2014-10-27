@@ -2,12 +2,12 @@
 #PBS -l nodes=1:ppn=5
 #PBS -o log.out
 #PBS -e log.err
-#PBS -V
+#PBS -M guziy.sasha@gmail.com
 #PBS -N hdf5export 
-#PBS -l walltime=02:00:00:00
+#PBS -l walltime=04:00:00:00
 #PBS -A ugh-612-ab
 cd $PBS_O_WORKDIR
 
 #. s.ssmuse.dot gfortran 
 . ~/.profile_usr
-python src/crcm5/analyse_hdf/do_export_to_hdf_guillimin.py >& hdf5export.log  
+python src/crcm5/analyse_hdf/do_export_to_hdf_guillimin_ITFS.py >& hdf5export_ITFS.log  
