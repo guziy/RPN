@@ -1195,7 +1195,10 @@ class Crcm5ModelDataManager:
         path = self._get_any_file_path()
 
         rpnObj = RPN(path)
-        [self.lons2D, self.lats2D] = rpnObj.get_longitudes_and_latitudes()
+        varname = [v for v in rpnObj.get_list_of_varnames() if v not in ["^^", ">>"]][0]
+        rpnObj.get_first_record_for_name(varname)
+
+        [self.lons2D, self.lats2D] = rpnObj.get_longitudes_and_latitudes_for_the_last_read_rec()
         rpnObj.close()
 
         self.lons2D[self.lons2D > 180] -= 360
