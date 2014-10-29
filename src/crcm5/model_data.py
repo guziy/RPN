@@ -994,7 +994,7 @@ class Crcm5ModelDataManager:
                     data = rObj.get_4d_field(name=aVarName)
                 except Exception, exc:
                     #the variable not found or some other problem occurred
-                    #print exc
+                    print exc
                     continue
 
 
