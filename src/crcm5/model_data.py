@@ -1015,7 +1015,8 @@ class Crcm5ModelDataManager:
                 new_rows = np.array(new_rows, dtype=rectype)
                 recarr = new_rows.view(np.recarray)
                 data_table.append(recarr)
-                #close the file
+
+            #close the file
             rObj.close()
 
         for v_name, data_table in var_name_to_table.iteritems():
