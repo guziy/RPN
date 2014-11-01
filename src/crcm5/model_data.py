@@ -1004,11 +1004,14 @@ class Crcm5ModelDataManager:
                     the_field = data.items()[0][1].items()[0][1]
                     rectype.append(("field", the_field.dtype, the_field.shape))
                     rectype = np.dtype(rectype)
+		    print "HDF5 record type: ", rectype
                     projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
                     print "projParams = ", projection_params
 
                 new_rows = []
                 for t, vals in data.iteritems():
+		    if t.year == 1984 and t.month == 5 and t.day == 13 and t.hour == 0:
+			print "Hit the date: ", t, "levels = ", vals.keys()
                     new_rows += [(t.year, t.month, t.day, t.hour, t.minute, t.second, level, field)
                                  for level, field in vals.iteritems()]
 
@@ -1016,8 +1019,12 @@ class Crcm5ModelDataManager:
                 recarr = new_rows.view(np.recarray)
                 data_table.append(recarr)
 
+		##Make sure the datais saved to the disk
+		data_table.flush()
+
             #close the file
             rObj.close()
+
 
         for v_name, data_table in var_name_to_table.iteritems():
             data_table.cols.year.create_index()
@@ -1717,7 +1724,8 @@ class Crcm5ModelDataManager:
 
             varname = "MG"
             self.mg = _read_static_field(rpnObj, varname)
-            self.land_sea_mask = (self.mg > 0.6).astype(int)  # 0/1
+	    if not self.mg is None:
+            	self.land_sea_mask = (self.mg > 0.6).astype(int)  # 0/1
 
             varname = "SLOP"
             self.slope = _read_static_field(rpnObj, varname)
