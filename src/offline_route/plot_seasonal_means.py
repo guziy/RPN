@@ -13,9 +13,9 @@ __author__ = 'huziy'
 import numpy as np
 
 
+def get_arctic_basemap_nps(round=True, lon_0=10, resolution="c"):
+    return Basemap(projection="npstere", lon_0=lon_0, boundinglat=45, round=round, resolution=resolution)
 
-def get_arctic_basemap_nps(round = True):
-    return Basemap(projection="npstere", lon_0=10, boundinglat=45, round=round)
 
 def get_arctic_basemap(lons2d, lats2d, lon1=60, lat1=90, lon2=-30, lat2=0, resolution="l"):
     rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
@@ -23,7 +23,7 @@ def get_arctic_basemap(lons2d, lats2d, lon1=60, lat1=90, lon2=-30, lat2=0, resol
     lon_0, lat_0 = rll.get_true_pole_coords_in_rotated_system()
 
     basemap = Basemap(projection="rotpole", o_lon_p=rplon, o_lat_p=rplat,
-                      lon_0 = lon_0 - 180,
+                      lon_0=lon_0 - 180,
                       llcrnrlon=lons2d[0, 0], llcrnrlat=lats2d[0, 0],
                       urcrnrlon=lons2d[-1, -1], urcrnrlat=lats2d[-1, -1],
                       resolution=resolution, round=True)
@@ -79,7 +79,7 @@ def main(months=None, season="DJF"):
 
             print df.shape
             mean_data = df.ix[(df.year >= start_year) & (df.year <= end_year) & df.month.isin(months), :].mean(axis=0)
-            mean_data = mean_data.drop(["year", "month"])  #no need of month and year
+            mean_data = mean_data.drop(["year", "month"])  # no need of month and year
             pickle.dump(mean_data, open(cache_file, mode="w"))
         else:
             mean_data = pickle.load(open(cache_file))
