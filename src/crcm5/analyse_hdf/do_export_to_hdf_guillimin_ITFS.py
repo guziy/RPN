@@ -122,8 +122,8 @@ def main():
     hdf_file_path = "/home/huziy/current_project/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     dm = Crcm5ModelDataManager(samples_folder_path=data_folder, all_files_in_samples_folder=True)
-    var_names = ["STFA", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV",
-                 "AS", "INTF", "QQ", "UU", "VV", "WW", "GZ", "HR", "HU", "CLDP", "LC", "LD", "AL", "L1"]
+    #var_names = ["STFA", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV",
+    #             "AS", "INTF", "QQ", "UU", "VV", "WW", "GZ", "HR", "HU", "CLDP", "LC", "LD", "AL", "L1"]
     #var_names = [ "I0", "I1", "I2", "IMAV"]
     #var_names = ["AS", ]
     #var_names = ["QQ", ]
@@ -131,7 +131,7 @@ def main():
     #var_names = ["AL",]
     #var_names = ["L1", "IMAV", "I5", "I1", "I2"]
 
-    #var_names = ["TRAF", ]
+    var_names = ["TRAF", ]
 
     dm.export_to_hdf(var_list=var_names, file_path=hdf_file_path, mode="w")
     export_static_fields_to_hdf(
