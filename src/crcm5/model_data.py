@@ -1010,16 +1010,21 @@ class Crcm5ModelDataManager:
                     projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
                     print "projParams = ", projection_params
 
-                new_rows = []
+                new_row = data_table.row
                 for t, vals in data.iteritems():
                     if t.year == 1984 and t.month == 5 and t.day == 13 and t.hour == 0:
                         print "Hit the date: ", t, "levels = ", vals.keys()
-                    new_rows += [(t.year, t.month, t.day, t.hour, t.minute, t.second, level, field)
-                                 for level, field in vals.iteritems()]
 
-                new_rows = np.array(new_rows, dtype=rectype)
-                recarr = new_rows.view(np.recarray)
-                data_table.append(recarr)
+                    for level, field in vals.iteritems():
+                        new_row["year"] = t.year
+                        new_row["month"] = t.month
+                        new_row["day"] = t.day
+                        new_row["hour"] = t.hour
+                        new_row["minute"] = t.minute
+                        new_row["second"] = t.second
+                        new_row["level"] = level
+                        new_row["field"] = field
+                        new_row.append()
 
                 ##Make sure the data are saved to the disk
                 data_table.flush()
