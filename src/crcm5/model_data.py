@@ -988,7 +988,6 @@ class Crcm5ModelDataManager:
             rObj = RPN(fPath)  # open current rpn file for reading
 
             for aVarName in var_list:
-
                 data_table = var_name_to_table[aVarName]
                 try:
                     data = rObj.get_4d_field(name=aVarName)
@@ -1040,11 +1039,11 @@ class Crcm5ModelDataManager:
 
 
 
-        for v_name, data_table in var_name_to_table.iteritems():
-            data_table.cols.year.create_index()
-            data_table.cols.month.create_index()
-            data_table.cols.day.create_index()
-            data_table.cols.hour.create_index()
+        #for v_name, data_table in var_name_to_table.iteritems():
+            #data_table.cols.year.create_index()
+            #data_table.cols.month.create_index()
+            #data_table.cols.day.create_index()
+            #data_table.cols.hour.create_index()
 
 
         # insert also lon and lat data
