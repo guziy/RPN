@@ -2342,13 +2342,13 @@ class Crcm5ModelDataManager:
         var_table = hdf.get_node("/", var_name_ori)
         assert isinstance(var_table, tb.Table)
 
-
-        #index columns for speed
-        if not var_table.cols.year.is_indexed:
-            var_table.cols.year.create_index()
-            var_table.cols.month.create_index()
-            var_table.cols.day.create_index()
-            var_table.cols.hour.create_index()
+        ## There is some weird behaviour when using indexed tables...
+        # #index columns for speed
+        # if not var_table.cols.year.is_indexed:
+        #     var_table.cols.year.create_index()
+        #     var_table.cols.month.create_index()
+        #     var_table.cols.day.create_index()
+        #     var_table.cols.hour.create_index()
 
         d0 = datetime(2001, 1, 1)
         daily_dates = [d0 + timedelta(days=i) for i in range(365)]
