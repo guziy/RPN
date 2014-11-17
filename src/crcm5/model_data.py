@@ -1010,7 +1010,7 @@ class Crcm5ModelDataManager:
                     var_name_to_read_row_count[aVarName] += nz * nt
 
                     if aVarName not in var_name_to_table:
-                        nfiles = len(rpn_path_list) // 2
+                        nfiles = len(rpn_path_list) // 2  # Approximately half of files contains each variable
                         the_table = h5file.create_table("/", aVarName, field_data_table_scheme,
                                                         filters=tb.Filters(complevel=5),
                                                         expectedrows=nz * nt * nfiles)
