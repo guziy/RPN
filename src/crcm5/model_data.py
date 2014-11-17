@@ -118,7 +118,7 @@ class Crcm5ModelDataManager:
         self.shelve_path = "cache_db"
 
 
-        ##init static fields with None
+        # #init static fields with None
         self.depth_to_bedrock_m = None
         self.lake_area = None
         self.clay = None
@@ -274,7 +274,7 @@ class Crcm5ModelDataManager:
                 if dates[0].year < start_year or dates[0].year > end_year:
                     continue
 
-                #assert dates[0].month == dates[-1].month, "{0} != {1}".format( str( dates[0] ),  str( dates[-1] ) )
+                # assert dates[0].month == dates[-1].month, "{0} != {1}".format( str( dates[0] ),  str( dates[-1] ) )
                 data[dates[0].year - start_year, dates[0].month - 1, :, :] = np.mean(date_to_field.values(), axis=0)
 
         ds.close()
@@ -542,7 +542,7 @@ class Crcm5ModelDataManager:
         # read the daily fields
         fields = hdf_handle.get_node(query_path).read()
 
-        #read corresponding day and month
+        # read corresponding day and month
         date_info = hdf_handle.get_node(date_query)
         stamp_year = 2001
         daily_dates = [
@@ -591,7 +591,7 @@ class Crcm5ModelDataManager:
             if period_str in var_group:
 
                 period_group = hdf_handle.get_node(var_group, period_str)
-                #sometimes an array is put in here, deleting it but why that happens has to be investigated
+                # sometimes an array is put in here, deleting it but why that happens has to be investigated
                 if isinstance(period_group, tb.Array):
                     print "Removing existing leaf: ", period_group
                     hdf_handle.remove_node(var_group, period_str)
@@ -604,7 +604,7 @@ class Crcm5ModelDataManager:
                 level_group = hdf_handle.create_group(period_group, "level")
 
 
-        #create an array for each level which will be holding actual data (time, x, y)
+        # create an array for each level which will be holding actual data (time, x, y)
         level_string = "{0}".format("single" if level is None else level)
         if level_string in level_group:
             hdf_handle.remove_node(level_group, level_string)
@@ -647,7 +647,7 @@ class Crcm5ModelDataManager:
         assert start_year is not None
         assert end_year is not None
 
-        #Try to read cached climatology
+        # Try to read cached climatology
         if use_caching:
             #with guarantees that the file will be closed upon exit from the with block no matter what happens inside the with block
             with tb.open_file(hdf_db_path) as hdf:
@@ -772,7 +772,7 @@ class Crcm5ModelDataManager:
             return result
         h.close()
 
-        #Do the calculation and store results
+        # Do the calculation and store results
         with tb.open_file(path_to_hdf, "a") as h:
             var_table = h.get_node("/" + var_name)
 
@@ -947,7 +947,7 @@ class Crcm5ModelDataManager:
         h5file = tb.open_file(file_path, mode=mode, title="created from the data in {0}".format(self.samples_folder))
 
 
-        #table row description
+        # table row description
         field_data_table_scheme = {
             "year": tb.Int32Col(pos=1),
             "month": tb.Int8Col(pos=2),
@@ -966,22 +966,31 @@ class Crcm5ModelDataManager:
             "value": tb.FloatCol()
         }
 
+        #for storing level values
+        level_table_scheme = {
+            "level_index": tb.Int32Col(),
+            "level_value": tb.Float32Col()
+        }
+
         var_name_to_table = {}
         var_name_to_read_row_count = {}  #for checking if the number of read fileds is equal to the number of written fields
+
+        var_name_to_level_table = {}
 
         projection_params = None  # holds projection parameters
 
         for aVarName in var_list:
-            var_name_to_table[aVarName] = h5file.create_table("/", aVarName, field_data_table_scheme,
-                                                              filters=tb.Filters(complevel=5))
+            #var_name_to_table[aVarName] = h5file.create_table("/", aVarName, field_data_table_scheme,
+            #                                                  filters=tb.Filters(complevel=5))
             var_name_to_read_row_count[aVarName] = 0
+            #var_name_to_level_table[aVarName] = None
 
 
         ##record array type
         rectype = [
             ("year", "i4"), ("month", "i1"), ("day", "i1"),
             ("hour", "i1"), ("minute", "i1"), ("second", "i1"),
-            ("level", "f4")
+            ("level_index", "i4")
         ]
 
         for fPath in rpn_path_list:
@@ -989,12 +998,25 @@ class Crcm5ModelDataManager:
 
             for aVarName in var_list:
                 data_table = var_name_to_table[aVarName]
+                data = None
                 try:
                     data = rObj.get_4d_field(name=aVarName)
+                    if data is None or len(data) == 0:
+                        continue
+
                     ## Count and save the number of read fields
                     nt = len(data)
                     nz = len(data.items()[0][1])
                     var_name_to_read_row_count[aVarName] += nz * nt
+
+                    if aVarName not in var_name_to_table:
+                        nfiles = len(rpn_path_list) // 2
+                        the_table = h5file.create_table("/", aVarName, field_data_table_scheme,
+                                                        filters=tb.Filters(complevel=5),
+                                                        expectedrows=nz * nt * nfiles)
+
+                        var_name_to_table[aVarName] = the_table
+
                 except Exception, exc:
                     #the variable not found or some other problem occurred
                     print exc
@@ -1009,20 +1031,33 @@ class Crcm5ModelDataManager:
                     projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
                     print "projParams = ", projection_params
 
+                #Save level_index to level mapping for each variable
+                if data is not None and aVarName not in var_name_to_level_table:
+                    lev_table = h5file.create_table("/", "{}_levels".format(aVarName), level_table_scheme)
+
+                    #Append rows to the table
+                    var_name_to_level_table[aVarName] = lev_table
+                    new_row = lev_table.row
+                    for level_index, level in enumerate(sorted(data.items()[0][1])):
+                        new_row["level_index"] = level_index
+                        new_row["level_value"] = level
+                    #flush data to the disk
+                    lev_table.flush()
+
                 new_row = data_table.row
                 for t, vals in data.iteritems():
                     if t.year == 1984 and t.month == 5 and t.day == 13 and t.hour == 0:
                         print "Hit the date: ", t, "levels = ", vals.keys()
 
-                    for level, field in vals.iteritems():
+                    for level_index, level in enumerate(sorted(vals)):
                         new_row["year"] = t.year
                         new_row["month"] = t.month
                         new_row["day"] = t.day
                         new_row["hour"] = t.hour
                         new_row["minute"] = t.minute
                         new_row["second"] = t.second
-                        new_row["level"] = level
-                        new_row["field"] = field
+                        new_row["level_index"] = level_index
+                        new_row["field"] = vals["level"]
                         new_row.append()
 
                 ##Make sure the data are saved to the disk
@@ -1037,10 +1072,8 @@ class Crcm5ModelDataManager:
                     fPath, len(aVarTable), var_name_to_read_row_count[aVarName]
                 )
 
-
-
-        #for v_name, data_table in var_name_to_table.iteritems():
-            #data_table.cols.year.create_index()
+        for v_name, data_table in var_name_to_table.iteritems():
+            data_table.cols.year.create_index()
             #data_table.cols.month.create_index()
             #data_table.cols.day.create_index()
             #data_table.cols.hour.create_index()
@@ -1149,7 +1182,7 @@ class Crcm5ModelDataManager:
 
         print "selected index {0}".format(select_index)
 
-        #assert np.all(acc_area_1d >= 0)
+        # assert np.all(acc_area_1d >= 0)
         acc_area_1d[:select_index] = -1
         acc_area_1d[select_index + 1:] = -1
 
@@ -1231,7 +1264,7 @@ class Crcm5ModelDataManager:
         self.lons2D[self.lons2D > 180] -= 360
 
         # create kdtree for easier and faster lookup of the corresponding points
-        #model <=> obs, for comparison
+        # model <=> obs, for comparison
         [x, y, z] = lat_lon.lon_lat_to_cartesian(self.lons2D.flatten(), self.lats2D.flatten())
         self.kdtree = cKDTree(zip(x, y, z))
 
@@ -1254,7 +1287,7 @@ class Crcm5ModelDataManager:
                           # width=2600000, height=2600000,
                           llcrnrlon=lons2d[0, 0], llcrnrlat=lats2d[0, 0],
                           urcrnrlon=lons2d[-1, -1], urcrnrlat=lats2d[-1, -1],
-                          resolution=resolution  #, lon_0 = lon_0, lat_0=lat_0
+                          resolution=resolution  # , lon_0 = lon_0, lat_0=lat_0
         )
 
         return basemap
@@ -1525,7 +1558,7 @@ class Crcm5ModelDataManager:
                 the_mean = np.zeros((nx, ny, nz))
                 print "levels = {0}".format(",".join([str(lev) for lev in levels]))
 
-            #calculate mean 3d field for the month
+            # calculate mean 3d field for the month
             for k, lev in enumerate(levels):
                 the_mean[:, :, k] = np.mean([fields[lev] for fields in data.values()], axis=0)
 
@@ -1754,7 +1787,7 @@ class Crcm5ModelDataManager:
             self.lkou = _read_static_field(rpnObj, varname)
 
 
-            #read sand
+            # read sand
             varname = "SAND"
             self.sand = _read_static_field(rpnObj, varname)
 
@@ -1821,7 +1854,7 @@ class Crcm5ModelDataManager:
         file_path = os.path.join(self.samples_folder, "..")
         file_path = os.path.join(file_path, "infocell.rpn")
         rpnObj = RPN(file_path)
-        #TODO: Custom margins, fix it
+        # TODO: Custom margins, fix it
         self.accumulation_area_km2 = rpnObj.get_first_record_for_name("FACC")[10:-10, 10:-10]
         self.slope = rpnObj.get_first_record_for_name("SLOP")[10:-10, 10:-10]
         rpnObj.close()
@@ -1871,7 +1904,7 @@ class Crcm5ModelDataManager:
                 return self.upstream_cells_cache[(i_model0, j_model0)]
         else:
             self.upstream_cells_cache = {}
-            ######
+            # #####
         if self.cell_manager is not None:
             aCell = self.cell_manager.cells[i_model0][j_model0]
             self.upstream_cells_cache[(i_model0, j_model0)] = self.cell_manager.get_mask_of_cells_connected_with(aCell)
@@ -1896,7 +1929,7 @@ class Crcm5ModelDataManager:
 
                 rObj.close()
 
-                #if the field for date is found
+                # if the field for date is found
                 if data is not None:
                     return data
         else:
@@ -1976,7 +2009,7 @@ class Crcm5ModelDataManager:
                     timeVar = ds.variables["time"]
                     timeVar.units = "hours since {0}".format(str(start_date))
 
-                #put data and time to netcdf file
+                # put data and time to netcdf file
                 times = sorted(data.keys())
                 times = list(itertools.ifilter(lambda d: d.year <= end_year, times))
 
@@ -2038,7 +2071,7 @@ class Crcm5ModelDataManager:
                 r_obj.suppress_log_messages()
                 data = r_obj.get_4d_field(name=var_name)
 
-                #TODO: calculate daily means
+                # TODO: calculate daily means
 
                 r_obj.close()
 
@@ -2104,7 +2137,7 @@ class Crcm5ModelDataManager:
 
         if set_data_to_model_points:
 
-            #variables to be read and correspondong levels
+            # variables to be read and correspondong levels
             varnames = ["STFL", "I5", "TT", "PR", "TRAF", "TDRA"]
             levels = [0, 0, 0, 0, 4, 4]  #zero-based
             mean_upstream = [False, True, True, True, True, True]
@@ -2175,7 +2208,7 @@ class Crcm5ModelDataManager:
 
                 deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
 
-                #this returns a  list of numpy arrays
+                # this returns a  list of numpy arrays
                 imin = np.where(np.abs(model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
 
                 deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
@@ -2262,7 +2295,7 @@ class Crcm5ModelDataManager:
 
                 deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
 
-                #this returns a  list of numpy arrays
+                # this returns a  list of numpy arrays
                 imin = np.where(np.abs(model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
 
                 deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
@@ -2293,7 +2326,7 @@ class Crcm5ModelDataManager:
                                                     nc_sim_folder)
                     mp_list_for_station.append(mp)
 
-            #if no model points found for the station, do not put it in the result dictionary
+            # if no model points found for the station, do not put it in the result dictionary
             if not len(mp_list_for_station):
                 continue
             station_to_grid_point[s] = mp_list_for_station
@@ -2342,7 +2375,7 @@ class Crcm5ModelDataManager:
         var_table = hdf.get_node("/", var_name_ori)
         assert isinstance(var_table, tb.Table)
 
-        ## There is some weird behaviour when using indexed tables...
+        # # There is some weird behaviour when using indexed tables...
         # #index columns for speed
         # if not var_table.cols.year.is_indexed:
         #     var_table.cols.year.create_index()
@@ -2435,7 +2468,7 @@ def do_test_seasonal_mean():
 
         data = np.ma.masked_all(the_mean.shape)
         data[cond] = (field[cond] - the_mean[cond]) / the_mean[cond] * 100.0
-        #data = np.ma.masked_where( ~cond, data )
+        # data = np.ma.masked_where( ~cond, data )
         print np.ma.min(data), np.ma.max(data)
         #data = np.ma.log(data)
         img = basemap.pcolormesh(x, y, data, ax=ax,
@@ -2451,7 +2484,7 @@ def do_test_seasonal_mean():
     # plt.pcolormesh(manager.get_monthly_mean_fields(months = [6])[6].transpose())
 
 
-    #get ocean mask
+    # get ocean mask
     #lons2D = manager.lons2D[:,:]
     #lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
@@ -2483,7 +2516,7 @@ def do_test_mean():
     [x, y] = basemap(manager.lons2D, manager.lats2D)
     data = manager.get_mean_in_time(var_name="STFL")
 
-    #get ocean mask
+    # get ocean mask
     #lons2D = manager.lons2D[:,:]
     #lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
@@ -2503,7 +2536,7 @@ def compare_lake_levels():
     # lake level controlled only with evaporation and precipitation
     data_path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl_spinup"
 
-    #lake level controlled only by routing
+    # lake level controlled only by routing
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     selected_ids = [
@@ -2622,7 +2655,7 @@ def get_timeseries_from_crcm4_for_station(station):
 
 def compare_streamflow_normals():
     # lake level controlled only by routing
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
     #coord_file = os.path.join(data_path, "pm1985050100_00000000p")
@@ -2765,7 +2798,7 @@ def compare_streamflow_normals():
 
 def compare_streamflow():
     # lake level controlled only by routing
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
     #coord_file = os.path.join(data_path, "pm1985050100_00000000p")
@@ -2936,7 +2969,7 @@ def draw_drainage_area():
 def main():
     plot_utils.apply_plot_params(width_pt=None, height_cm=60, width_cm=20)
     # draw_drainage_area()
-    #compare_streamflow_normals()
+    # compare_streamflow_normals()
     compare_lake_levels()
     #
     # test_mean()
@@ -3003,7 +3036,7 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
 
     # testStuff()
-    #doTestRotPole()
+    # doTestRotPole()
     #main()
 
     print "Hello world"
