@@ -955,7 +955,7 @@ class Crcm5ModelDataManager:
             "hour": tb.Int8Col(pos=4),
             "minute": tb.Int8Col(pos=5),
             "second": tb.Int8Col(pos=6),
-            "level": tb.Float32Col(pos=7),
+            "level_index": tb.Int32Col(pos=7),
             "field": tb.Float32Col(shape=self.lons2D.shape, pos=8)
         }
 
@@ -997,7 +997,7 @@ class Crcm5ModelDataManager:
             rObj = RPN(fPath)  # open current rpn file for reading
 
             for aVarName in var_list:
-                data_table = var_name_to_table[aVarName]
+                data_table = None 
                 data = None
                 try:
                     data = rObj.get_4d_field(name=aVarName)
@@ -1016,7 +1016,7 @@ class Crcm5ModelDataManager:
                                                         expectedrows=nz * nt * nfiles)
 
                         var_name_to_table[aVarName] = the_table
-
+                    data_table = var_name_to_table[aVarName]
                 except Exception, exc:
                     #the variable not found or some other problem occurred
                     print exc
@@ -1057,7 +1057,7 @@ class Crcm5ModelDataManager:
                         new_row["minute"] = t.minute
                         new_row["second"] = t.second
                         new_row["level_index"] = level_index
-                        new_row["field"] = vals["level"]
+                        new_row["field"] = vals[level]
                         new_row.append()
 
                 ##Make sure the data are saved to the disk
