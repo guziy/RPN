@@ -107,13 +107,14 @@ def main():
     #data_folder = "/sb/project/xgk-345-ab/huziy/Output/quebec_0.1_crcm5-hcd-r/all_files_in_one_dir"
     #hdf_file_path = "/sb/project/xgk-345-ab/huziy/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
 
-    #On guillimin: crcm5-hcd-rl
-    #data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl/all_files_in_one_dir"
-    #hdf_file_path = "/home/huziy/current_project/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    # On guillimin: crcm5-hcd-rl
+    # data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl/all_files_in_one_dir"
+    # hdf_file_path = "/home/huziy/current_project/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
 
-    #Interflow spinup
-    #data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS/all_files_in_one_dir"
-    #hdf_file_path = "/home/huziy/current_project/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
+    # Interflow spinup
+    # data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS/all_files_in_one_dir"
+    # hdf_file_path = \
+    # "/home/huziy/current_project/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
 
     # Interflow
     # data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl-intfl_ITFS/all_files_in_one_dir"
