@@ -11,8 +11,7 @@ import numpy as np
 import tables as tb
 
 import matplotlib.pyplot as plt
-
-import do_analysis_using_pytables as pt_analysis
+import crcm5.analyse_hdf.do_analysis_using_pytables as pt_analysis
 
 
 def run_with_default_params():
@@ -20,7 +19,7 @@ def run_with_default_params():
     Just for test runs with defaults
 
     """
-    #intf_file = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+    # intf_file = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
 
     intf_file = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
     no_intf_file = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
@@ -31,9 +30,25 @@ def run_with_default_params():
 
 
 def get_mean_diffs(interflow_data_path="", base_data_path="",
-                   start_year=1980, end_year=2010, months_of_interest=(4, 5, 6, 7, 8, 9)):
+                   start_year=1980, end_year=2010, months_of_interest=(4, 5, 6, 7, 8, 9),
+                   delete_cache=True):
+    """
+    Get mean differences for fixed variables, between interflow_data_path and base_data_path files
+    :param interflow_data_path:
+    :param base_data_path:
+    :param start_year:
+    :param end_year:
+    :param months_of_interest:
+    :return:
+    """
+    # Build the name of the cache file
     cache_file = "cache_extr_intf_effect{}-{}_{}.bin".format(start_year, end_year,
                                                              "-".join(str(m) for m in months_of_interest))
+
+    # Do not use caching by default
+    if delete_cache:
+        os.remove(cache_file)
+
     if os.path.isfile(cache_file):
         return pickle.load(open(cache_file))
 
@@ -95,7 +110,7 @@ def get_mean_diffs(interflow_data_path="", base_data_path="",
 
                 # Get air temperature and precipitation for the same time
                 tt_query = "(year == {}) & (month == {}) & (day == {}) & (hour == {})".format(year, month, day, hour)
-                traf_query = "{} & (level == {})".format(tt_query, 1)
+                traf_query = "{} & (level_index == {})".format(tt_query, 0)
                 for tt_row in tt_intf_table.where(tt_query):
                     tt_intf_field = tt_row["field"]
                     break
@@ -116,7 +131,7 @@ def get_mean_diffs(interflow_data_path="", base_data_path="",
                     break
 
 
-                #for no interflow simulation
+                # for no interflow simulation
                 for tt_row in tt_nointf_table.where(tt_query):
                     tt_nointf_field = tt_row["field"]
                     break
@@ -209,12 +224,13 @@ def main(interflow_data_path="", base_data_path="",
     lons, lats, bsm = pt_analysis.get_basemap_from_hdf(base_data_path)
     x, y = bsm(lons, lats)
 
-    img_dir = "test_intf_extr/exp_avoid_small_incrs_{}-{}".format(start_year, end_year)  # Folder containing debug images
+    # Folder containing debug images
+    img_dir = "test_intf_extr/exp_avoid_small_incrs_{}-{}".format(start_year, end_year)
     if not os.path.isdir(img_dir):
         os.mkdir(img_dir)
 
 
-    ###Plot surface runoff
+    # Plot surface runoff
     plt.figure()
     clevs = [5, 10, 20, 50]
     clevs = [-c for c in reversed(clevs)] + clevs
@@ -228,7 +244,7 @@ def main(interflow_data_path="", base_data_path="",
     plt.savefig("{}/traf_diff_traf_due_to_intf_{}_{}-{}.jpg".format(
         img_dir, "-".join(str(m) for m in months_of_interest), start_year, end_year))
 
-    ###Plot precipitation
+    # Plot precipitation
     plt.figure()
     clevs = [1, 2, 5, 10, 20, 40]
     clevs = [-c for c in reversed(clevs)] + clevs

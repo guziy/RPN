@@ -965,27 +965,25 @@ class Crcm5ModelDataManager:
             "value": tb.FloatCol()
         }
 
-        #for storing level values
+        # for storing level values
         level_table_scheme = {
             "level_index": tb.Int32Col(),
             "level_value": tb.Float32Col()
         }
 
         var_name_to_table = {}
-        var_name_to_read_row_count = {}  #for checking if the number of read fileds is equal to the number of written fields
 
+        # for checking if the number of read fileds is equal to the number of written fields
+        var_name_to_read_row_count = {}
         var_name_to_level_table = {}
 
         projection_params = None  # holds projection parameters
 
         for aVarName in var_list:
-            #var_name_to_table[aVarName] = h5file.create_table("/", aVarName, field_data_table_scheme,
-            #                                                  filters=tb.Filters(complevel=5))
             var_name_to_read_row_count[aVarName] = 0
-            #var_name_to_level_table[aVarName] = None
 
 
-        ##record array type
+        # record array type
         rectype = [
             ("year", "i4"), ("month", "i1"), ("day", "i1"),
             ("hour", "i1"), ("minute", "i1"), ("second", "i1"),
@@ -1003,7 +1001,7 @@ class Crcm5ModelDataManager:
                     if data is None or len(data) == 0:
                         continue
 
-                    ## Count and save the number of read fields
+                    # Count and save the number of read fields
                     nt = len(data)
                     nz = len(data.items()[0][1])
                     var_name_to_read_row_count[aVarName] += nz * nt
@@ -1017,11 +1015,11 @@ class Crcm5ModelDataManager:
                         var_name_to_table[aVarName] = the_table
                     data_table = var_name_to_table[aVarName]
                 except Exception, exc:
-                    #the variable not found or some other problem occurred
+                    # the variable not found or some other problem occurred
                     print exc
                     continue
 
-                #read projection parameters
+                # read projection parameters
                 if projection_params is None and data is not None:
                     the_field = data.items()[0][1].items()[0][1]
                     rectype.append(("field", the_field.dtype, the_field.shape))
@@ -1030,17 +1028,17 @@ class Crcm5ModelDataManager:
                     projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
                     print "projParams = ", projection_params
 
-                #Save level_index to level mapping for each variable
+                # Save level_index to level mapping for each variable
                 if data is not None and aVarName not in var_name_to_level_table:
                     lev_table = h5file.create_table("/", "{}_levels".format(aVarName), level_table_scheme)
 
-                    #Append rows to the table
+                    # Append rows to the table
                     var_name_to_level_table[aVarName] = lev_table
                     new_row = lev_table.row
                     for level_index, level in enumerate(sorted(data.items()[0][1])):
                         new_row["level_index"] = level_index
                         new_row["level_value"] = level
-                    #flush data to the disk
+                    # flush data to the disk
                     lev_table.flush()
 
                 new_row = data_table.row
@@ -1059,10 +1057,10 @@ class Crcm5ModelDataManager:
                         new_row["field"] = vals[level]
                         new_row.append()
 
-                ##Make sure the data are saved to the disk
+                # Make sure the data are saved to the disk
                 data_table.flush()
 
-            #close the file
+            # close the file
             rObj.close()
 
             ## Check if the number of read fields is equal to the number of written fields
