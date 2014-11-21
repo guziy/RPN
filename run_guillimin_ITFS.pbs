@@ -4,7 +4,7 @@
 #PBS -e log.err
 #PBS -M guziy.sasha@gmail.com
 #PBS -N hdf5export 
-#PBS -l walltime=01:00:00:00
+#PBS -l walltime=02:12:00:00
 #PBS -A ugh-612-ab
 cd $PBS_O_WORKDIR
 
