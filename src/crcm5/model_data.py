@@ -5,7 +5,6 @@ from netCDF4 import Dataset, date2num
 import pickle
 import shelve
 import time
-import numexpr
 
 import tables as tb
 from matplotlib import gridspec, cm
@@ -140,7 +139,7 @@ class Crcm5ModelDataManager:
         self.interflow_c_constant = None  # introduced by Clapp and Hornberger (1978) c = 2 * b + 3
         self.interflow_slope = None  # slope used for interflow
 
-        #fill the above fields with data
+        # fill the above fields with data
         self._read_static_data()
 
 
@@ -649,7 +648,7 @@ class Crcm5ModelDataManager:
 
         # Try to read cached climatology
         if use_caching:
-            #with guarantees that the file will be closed upon exit from the with block no matter what happens inside the with block
+            # with guarantees that the file will be closed upon exit from the with block no matter what happens inside the with block
             with tb.open_file(hdf_db_path) as hdf:
                 climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                                start_year=start_year,
@@ -672,7 +671,7 @@ class Crcm5ModelDataManager:
         t0 = time.clock()
 
         if use_grouping:
-            #grouping function
+            # grouping function
             def day_selector(row):
 
                 aMonth = row["month"]
@@ -722,7 +721,7 @@ class Crcm5ModelDataManager:
             daily_fields = [date_to_mean_field[aDate] for aDate in daily_dates]
 
         else:
-            #Use query for each day of month
+            # Use query for each day of month
             while the_date.year == stamp_year:
                 if level is not None:
                     expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level, the_date.month, the_date.day)
@@ -737,7 +736,7 @@ class Crcm5ModelDataManager:
                 print the_date, "{0} seconds spent".format(time.clock() - t0)
 
         if use_caching:
-            #save calculated climatologies to the file
+            # save calculated climatologies to the file
             cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
                                         var_name=var_name, level=level, start_year=start_year, end_year=end_year)
 
@@ -781,7 +780,7 @@ class Crcm5ModelDataManager:
                 return arow["year"]
 
 
-            #create index on date related columns if it is not created yet
+            # create index on date related columns if it is not created yet
             #print "Start creation of indices"
 
             # if not var_table.cols.year.is_indexed:
@@ -960,7 +959,7 @@ class Crcm5ModelDataManager:
         }
 
 
-        #table for storing projection parameters
+        # table for storing projection parameters
         projection_table_scheme = {
             "name": tb.StringCol(256),
             "value": tb.FloatCol()
@@ -997,7 +996,7 @@ class Crcm5ModelDataManager:
             rObj = RPN(fPath)  # open current rpn file for reading
 
             for aVarName in var_list:
-                data_table = None 
+                data_table = None
                 data = None
                 try:
                     data = rObj.get_4d_field(name=aVarName)
@@ -1268,7 +1267,7 @@ class Crcm5ModelDataManager:
         [x, y, z] = lat_lon.lon_lat_to_cartesian(self.lons2D.flatten(), self.lats2D.flatten())
         self.kdtree = cKDTree(zip(x, y, z))
 
-        #calculate characteristic distance
+        # calculate characteristic distance
         v1 = lat_lon.lon_lat_to_cartesian(self.lons2D[0, 0], self.lats2D[0, 0])
         v2 = lat_lon.lon_lat_to_cartesian(self.lons2D[1, 1], self.lats2D[1, 1])
         dv = np.array(v2) - np.array(v1)
@@ -1563,7 +1562,7 @@ class Crcm5ModelDataManager:
                 the_mean[:, :, k] = np.mean([fields[lev] for fields in data.values()], axis=0)
 
 
-            #Calculate mean
+            # Calculate mean
             if counts[month_index] < 0.5:
                 month_to_means[month_index] = the_mean
             else:
@@ -1821,7 +1820,7 @@ class Crcm5ModelDataManager:
 
 
 
-            #self.cbf = rpnObj.get_first_record_for_name("CBF")
+            # self.cbf = rpnObj.get_first_record_for_name("CBF")
             rpnObj.close()
             #self.slope = rpnObj.get_first_record_for_name("SLOP")
             return
@@ -2014,7 +2013,7 @@ class Crcm5ModelDataManager:
                 times = list(itertools.ifilter(lambda d: d.year <= end_year, times))
 
 
-                #if there are records in the given time range
+                # if there are records in the given time range
                 if len(times) > 0:
                     times_num = date2num(times, units=timeVar.units)
                     timeVar[t:] = times_num[:]
@@ -2083,7 +2082,7 @@ class Crcm5ModelDataManager:
                     time_var = ds.variables["time"]
                     time_var.units = "hours since {0}".format(str(start_date))
 
-                #put data and time to netcdf file
+                # put data and time to netcdf file
                 times = sorted(data.keys())
                 times = list(itertools.ifilter(lambda the_date: start_year <= the_date.year <= end_year, times))
 
@@ -2139,7 +2138,7 @@ class Crcm5ModelDataManager:
 
             # variables to be read and correspondong levels
             varnames = ["STFL", "I5", "TT", "PR", "TRAF", "TDRA"]
-            levels = [0, 0, 0, 0, 4, 4]  #zero-based
+            levels = [0, 0, 0, 0, 4, 4]  # zero-based
             mean_upstream = [False, True, True, True, True, True]
 
             inObject = InputForProcessPool()
@@ -2152,7 +2151,7 @@ class Crcm5ModelDataManager:
 
             t0 = time.time()
 
-            #vName, level, average_upstream, nc_sim_folder, inObject = x
+            # vName, level, average_upstream, nc_sim_folder, inObject = x
             nvars = len(varnames)
 
             if not hasattr(self, "reusable_pool"):
@@ -2217,7 +2216,7 @@ class Crcm5ModelDataManager:
 
                 ix, jy = ij[0][0], ij[1][0]
 
-                #check if it is not global lake cell
+                # check if it is not global lake cell
                 if self.lake_fraction[ix, jy] >= 0.6:
                     continue
 
@@ -2302,7 +2301,7 @@ class Crcm5ModelDataManager:
 
                 ij = np.where(deltaDa2D == deltaDaMin)
 
-                #check if it is not global lake cell
+                # check if it is not global lake cell
                 if self.lake_fraction[ij[0][0], ij[1][0]] >= 0.6:
                     continue
 
@@ -2378,7 +2377,7 @@ class Crcm5ModelDataManager:
         # # There is some weird behaviour when using indexed tables...
         # #index columns for speed
         # if not var_table.cols.year.is_indexed:
-        #     var_table.cols.year.create_index()
+        # var_table.cols.year.create_index()
         #     var_table.cols.month.create_index()
         #     var_table.cols.day.create_index()
         #     var_table.cols.hour.create_index()
@@ -2470,7 +2469,7 @@ def do_test_seasonal_mean():
         data[cond] = (field[cond] - the_mean[cond]) / the_mean[cond] * 100.0
         # data = np.ma.masked_where( ~cond, data )
         print np.ma.min(data), np.ma.max(data)
-        #data = np.ma.log(data)
+        # data = np.ma.log(data)
         img = basemap.pcolormesh(x, y, data, ax=ax,
                                  vmax=100.0, vmin=-100, cmap=colormap)
         divider = make_axes_locatable(ax)
@@ -2485,7 +2484,7 @@ def do_test_seasonal_mean():
 
 
     # get ocean mask
-    #lons2D = manager.lons2D[:,:]
+    # lons2D = manager.lons2D[:,:]
     #lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
@@ -2517,7 +2516,7 @@ def do_test_mean():
     data = manager.get_mean_in_time(var_name="STFL")
 
     # get ocean mask
-    #lons2D = manager.lons2D[:,:]
+    # lons2D = manager.lons2D[:,:]
     #lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
@@ -2537,7 +2536,7 @@ def compare_lake_levels():
     data_path = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl_spinup"
 
     # lake level controlled only by routing
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     selected_ids = [
         "093807", "011508", "061303", "040408", "030247"
@@ -2657,7 +2656,7 @@ def compare_streamflow_normals():
     # lake level controlled only by routing
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
     #coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
@@ -2800,7 +2799,7 @@ def compare_streamflow():
     # lake level controlled only by routing
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
     #coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
@@ -2974,7 +2973,7 @@ def main():
     #
     # test_mean()
     plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=20)
-    #plot_utils.apply_plot_params(width_pt=None, height_cm=50, width_cm=50)
+    # plot_utils.apply_plot_params(width_pt=None, height_cm=50, width_cm=50)
     #test_seasonal_mean()
     pass
 
@@ -3037,6 +3036,6 @@ if __name__ == "__main__":
 
     # testStuff()
     # doTestRotPole()
-    #main()
+    # main()
 
     print "Hello world"
