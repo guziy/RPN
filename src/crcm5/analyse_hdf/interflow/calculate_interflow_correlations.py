@@ -5,10 +5,10 @@ from util import plot_utils
 
 __author__ = 'huziy'
 
-import do_analysis_using_pytables as analysis
+import crcm5.analyse_hdf.do_analysis_using_pytables as analysis
 import numpy as np
 import matplotlib.pyplot as plt
-import common_plot_params as cpp
+import crcm5.analyse_hdf.common_plot_params as cpp
 from crcm5 import crcm_constants
 
 
@@ -82,12 +82,12 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
     dates, evap_data = analysis.get_daily_climatology(path_to_hdf_file=path_for_infiltration_data, var_name="AV",
                                                       level=None,
                                                       start_year=start_year, end_year=end_year)
-    #Convert lists to numpy arrays
+    # Convert lists to numpy arrays
     pr_data = np.array(pr_data)
     srunoff_data = np.array(srunoff_data)
     evap_data = np.array(evap_data)
 
-    #calculate infiltration from runoff precip and evap
+    # calculate infiltration from runoff precip and evap
     infiltration = pr_data - srunoff_data / crcm_constants.rho_water - \
                    evap_data / (crcm_constants.Lv_J_per_kg * crcm_constants.rho_water)
 
@@ -104,8 +104,9 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
 
 
 def main(start_year=1980, end_year=2010):
-    #default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+    # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
     default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+    img_filename = "interflow_correlations_avoid_truncation.jpg"
     months = range(3, 12)
 
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=default_path)
@@ -180,7 +181,7 @@ def main(start_year=1980, end_year=2010):
         basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH, ax=ax)
 
     plt.colorbar(img, cax=fig.add_subplot(gs[0, 4]))
-    fig.savefig("intfl_correlations.jpg", dpi=cpp.FIG_SAVE_DPI)
+    fig.savefig(img_filename, dpi=cpp.FIG_SAVE_DPI)
     # plt.show()
 
 
@@ -211,5 +212,5 @@ if __name__ == '__main__':
 
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
-    main()
+    main(start_year=1980, end_year=1989)
     #demo_equal_fields()
