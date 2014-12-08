@@ -1069,8 +1069,8 @@ class Crcm5ModelDataManager:
                     fPath, len(aVarTable), var_name_to_read_row_count[aVarName]
                 )
 
-        for v_name, data_table in var_name_to_table.iteritems():
-            data_table.cols.year.create_index()
+        #for v_name, data_table in var_name_to_table.iteritems():
+        #    data_table.cols.year.create_index()
             #data_table.cols.month.create_index()
             #data_table.cols.day.create_index()
             #data_table.cols.hour.create_index()
