@@ -923,7 +923,7 @@ class Crcm5ModelDataManager:
         h.close()
 
 
-    def export_to_hdf(self, var_list=None, file_path="", mode="w"):
+    def export_to_hdf(self, var_list=None, file_path="", mode="w", start_year=None, end_year=None):
         """
         If var_list is None, then convert all the variables to hdf
         file -> Table(year, month, day, hour, minute, second, level, field1, field2, ..., fieldn)
@@ -932,6 +932,9 @@ class Crcm5ModelDataManager:
         Note: assume that all the fields are on the same grid and the same projection
 
         """
+        # Check if start and end year of the period of interest is specified
+        start_year = start_year if start_year is not None else -1
+        end_year = end_year if end_year is not None else np.Infinity
 
         rpn_path_list = []
 
@@ -1045,6 +1048,10 @@ class Crcm5ModelDataManager:
                 for t, vals in data.iteritems():
                     if t.year == 1984 and t.month == 5 and t.day == 13 and t.hour == 0:
                         print "Hit the date: ", t, "levels = ", vals.keys()
+
+                    if not (start_year <= t.year <= end_year):
+                        continue
+
 
                     for level_index, level in enumerate(sorted(vals)):
                         new_row["year"] = t.year
