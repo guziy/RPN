@@ -123,18 +123,20 @@ class CRCMDataManager:
 
         return monthly_climatology
 
-    def get_alt_using_files_in(self, folder="", file_name_prefix="pm"):
+    def get_alt_using_files_in(self, folder="", file_name_prefix="pm",
+                               suffix="moyenne", vname = "I0"):
         """
         Calculate active layer thickness using files in a folder <var>folder</var>
+        put empty string for prefix and suffix if need to ignore them
         :param folder:
         :param file_name_prefix: only files with name starting with the prefix will be considered
         :return:
         """
         all_temps = []
         for the_file in os.listdir(folder):
-            if the_file.startswith(file_name_prefix):
+            if the_file.startswith(file_name_prefix) and the_file.endswith(suffix):
                 print the_file
-                times, temps = self._read_profiles_from_file(os.path.join(folder, the_file), var_name="I0")
+                times, temps = self._read_profiles_from_file(os.path.join(folder, the_file), var_name=vname)
 
                 mt = np.mean(temps, axis=0)
                 all_temps.append(mt)
@@ -447,7 +449,8 @@ class CRCMDataManager:
                 f_path = os.path.join(self.data_folder, f_name)
                 num_groups = re.findall("\d+", f_name)
 
-                if not len(num_groups): continue
+                if not len(num_groups):
+                    continue
 
                 last_group = num_groups[-1]
                 month = int(last_group[-2:])
@@ -557,24 +560,25 @@ class CRCMDataManager:
         return np.array(field_list).mean(axis=0)
 
 
-def get_alt_for_year(year):
-    cache_file = "year_to_alt.bin"
-    year_to_alt = {}
-    # if os.path.isfile(cache_file):
-    # year_to_alt = pickle.load(open(cache_file))
-
-    if year_to_alt.has_key(year):
-        return year_to_alt[year]
-    else:
-        dm = CRCMDataManager(data_folder="data/CORDEX")
-        h = dm.get_active_layer_thickness(year)
-        #year_to_alt[year] = h
-        #pickle.dump(year_to_alt, open(cache_file, mode="w"))
-        return h
+# def get_alt_for_year(year):
+#     cache_file = "year_to_alt.bin"
+#     year_to_alt = {}
+#     # if os.path.isfile(cache_file):
+#     # year_to_alt = pickle.load(open(cache_file))
+#
+#     if year_to_alt.has_key(year):
+#         return year_to_alt[year]
+#     else:
+#         dm = CRCMDataManager(data_folder="data/CORDEX")
+#         h = dm.get_active_layer_thickness(year)
+#         #year_to_alt[year] = h
+#         #pickle.dump(year_to_alt, open(cache_file, mode="w"))
+#         return h
 
 
 def get_alt_for_year(args):
     """
+    args = year, data_manager, mean_temps_to_use
     """
     year, data_manager, mean_temps_to_use = args
 
