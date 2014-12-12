@@ -1108,7 +1108,7 @@ class Crcm5ModelDataManager:
 
         # Check if the number of read fields is equal to the number of written fields
         for aVarName, aVarTable in var_name_to_table.iteritems():
-            assert len(aVarTable) == var_name_to_read_row_count[aVarName], "read={} fields; written={} fields".format(
+            print len(aVarTable) == var_name_to_read_row_count[aVarName], "read={} fields; written={} fields".format(
                 len(aVarTable), var_name_to_read_row_count[aVarName]
             )
 
