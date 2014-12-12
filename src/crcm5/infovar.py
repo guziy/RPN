@@ -1,4 +1,4 @@
-from brewer2mpl import brewer2mpl
+from matplotlib import cm
 from matplotlib.colors import LogNorm, BoundaryNorm
 from matplotlib.ticker import ScalarFormatter, MaxNLocator
 from mpl_toolkits.basemap import maskoceans
@@ -212,21 +212,23 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
             bounds.append(upper)
         ncolors = len(bounds) - 1
 
-        cmap = brewer2mpl.get_map("Blues", "sequential", 9).get_mpl_colormap(N=ncolors)
+        cmap = cm.get_cmap("Blues", ncolors)
         norm = BoundaryNorm(bounds, ncolors=ncolors)  # LogNorm(vmin=10 ** (pmax - ncolors), vmax=10 ** pmax)
     else:
         if var_name in ["PR"]:
             reverse = False
         else:
             reverse = True
-        cmap = brewer2mpl.get_map("spectral", "diverging", 9, reverse=reverse).get_mpl_colormap(N=ncolors)
-        #norm, bounds, vmin_nice, vmax_nice = get_boundary_norm_using_all_vals(to_plot, ncolors)
+
+        cmap = cm.get_cmap("spectral_r" if reverse else "spectral", ncolors)
+
+        # norm, bounds, vmin_nice, vmax_nice = get_boundary_norm_using_all_vals(to_plot, ncolors)
         locator = MaxNLocator(ncolors)
         norm = BoundaryNorm(locator.tick_values(vmin, vmax), ncolors)
 
     return cmap, norm
 
 
-#the fraction of a grid cell taken by lake, startting from which the lake is
-#treated as global
+# the fraction of a grid cell taken by lake, startting from which the lake is
+# treated as global
 GLOBAL_LAKE_FRACTION = 0.6

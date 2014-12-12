@@ -59,7 +59,6 @@ def apply_plot_params(font_size = 20, width_pt = 1000, aspect_ratio = 1, height_
     params = {
         'axes.labelsize': font_size,
         'font.size': font_size,
-        'text.fontsize': font_size,
         'legend.fontsize': font_size,
         'xtick.labelsize': font_size,
         'ytick.labelsize': font_size,

@@ -799,7 +799,7 @@ class Crcm5ModelDataManager:
             year_sel = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
             query = "({0}) & ({1})".format(year_sel, month_sel)
             if level is not None:
-                query += "& (level == {0})".format(level)
+                query += "& (level_index == {0})".format(level)
 
             year_to_mean = {}
             year_to_counter = {}
@@ -903,7 +903,6 @@ class Crcm5ModelDataManager:
             "soil_anisotropy_ratio": self.soil_anisotropy_ratio,
             "interflow_c_coef": self.interflow_c_constant,
             "interflow_slope": self.interflow_slope
-
         }
 
         root_g = h.get_node("/")
@@ -1038,7 +1037,7 @@ class Crcm5ModelDataManager:
                     # Append rows to the table
                     var_name_to_level_table[aVarName] = lev_table
                     new_row = lev_table.row
-                    for level_index, level in enumerate(sorted(data.items()[0][1])):
+                    for level_index, level in enumerate(sorted(data.items()[0][1].keys())):
                         new_row["level_index"] = level_index
                         new_row["level_value"] = level
                     # flush data to the disk
@@ -1070,7 +1069,7 @@ class Crcm5ModelDataManager:
             # close the file
             rObj.close()
 
-            ## Check if the number of read fields is equal to the number of written fields
+            # Check if the number of read fields is equal to the number of written fields
             for aVarName, aVarTable in var_name_to_table.iteritems():
                 print "{}: read={} fields; written={} fields".format(
                     fPath, len(aVarTable), var_name_to_read_row_count[aVarName]
@@ -1107,7 +1106,7 @@ class Crcm5ModelDataManager:
             proj_table.close()
 
 
-        ## Check if the number of read fields is equal to the number of written fields
+        # Check if the number of read fields is equal to the number of written fields
         for aVarName, aVarTable in var_name_to_table.iteritems():
             assert len(aVarTable) == var_name_to_read_row_count[aVarName], "read={} fields; written={} fields".format(
                 len(aVarTable), var_name_to_read_row_count[aVarName]

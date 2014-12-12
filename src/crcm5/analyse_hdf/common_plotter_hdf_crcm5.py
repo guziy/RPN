@@ -5,7 +5,7 @@ from util import plot_utils
 __author__ = 'huziy'
 
 
-#this is intended as a common launcher for plotting graphs, in hope that
+# this is intended as a common launcher for plotting graphs, in hope that
 #all graphs will have the same parameters
 
 
@@ -15,6 +15,7 @@ from multiprocessing import Process
 def configure():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=20)
     import application_properties
+
     application_properties.set_current_directory()
 
 
@@ -42,6 +43,7 @@ def compare_simulations():
 def compare_obs_and_model_at_points():
     plot_utils.apply_plot_params(font_size=20, width_pt=None, width_cm=17, height_cm=10)
     import compare_streamflow_with_obs
+
     start_date = datetime(1980, 1, 1)
     end_date = datetime(1989, 12, 31)
 
@@ -81,13 +83,13 @@ def compare_2d_seasonal_means_from_simulations():
     import compare_modelled_2d_fields as comp
 
     varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
-    levels = [None, None, None, None, None, 1, 1, None, None, 1, 1, None]
+    levels = len(varnames) * [0, ]
 
 
-    #varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
-    #levels = [None, None, None, None, 1, 1, None, None]
+    # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
+    # levels = [None, None, None, None, 1, 1, None, None]
 
-    #Used to plot control and differences
+    # Used to plot control and differences
 
     season_to_months = OrderedDict([
         ("Winter", [12, 1, 2]),
@@ -125,17 +127,20 @@ def validate_seasonal_mean_atm_fields():
 
 def plot_soil_profiles():
     import plot_soil_profile_in_time_mean_for_region
+
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
     plot_soil_profile_in_time_mean_for_region.exp_plot_one_simulation()
 
 
 def compare_quantiles():
     import lake_effect_on_streamflow_quantiles as lkeff
+
     lkeff.main()
 
 
 def compare_obs_and_model_lake_levels_at_points():
     import compare_lake_levels_with_obs
+
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
 
     start_date = datetime(1980, 1, 1)
@@ -168,47 +173,49 @@ def plot_veg_fractions_for_a_random_run():
 
 def plot_diff_in_soil_profiles():
     import plot_soil_profile_in_time_mean_for_region
+
     plot_utils.apply_plot_params(font_size=7, width_pt=None, width_cm=20, height_cm=10)
     plot_soil_profile_in_time_mean_for_region.main_compare_two_simulations()
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     import time
+
     t0 = time.clock()
 
     configure()
     #
-    #do_plot_static_fields()
-    #compare_2d_seasonal_means_from_simulations()
+    # do_plot_static_fields()
+    compare_2d_seasonal_means_from_simulations()
 
-    #Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    compare_obs_and_model_at_points()
+    # Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
+    # compare_obs_and_model_at_points()
 
-    #compare_simulations()
-    #validate_seasonal_mean_atm_fields()
-    #plot_static_fields_histograms()
+    # compare_simulations()
+    # validate_seasonal_mean_atm_fields()
+    # plot_static_fields_histograms()
 
-    #Compares Q10 and Q90 calculated from observed and modelled climatologic hydrographs
-    #compare_quantiles()
+    # Compares Q10 and Q90 calculated from observed and modelled climatologic hydrographs
+    # compare_quantiles()
 
-    plot_vertical_soil_moisture_cross_section()
+    # plot_vertical_soil_moisture_cross_section()
 
-    #explore_seasonal_interflow()
+    # explore_seasonal_interflow()
 
-    #Compare observed and modelled streamflow and upstream caracteristics for river outlets
-    #compare_obs_and_model_at_river_outlet_points()
+    # Compare observed and modelled streamflow and upstream caracteristics for river outlets
+    # compare_obs_and_model_at_river_outlet_points()
 
 
-    #Compare modelled and observed lake level anomalies at points
-    #compare_obs_and_model_lake_levels_at_points()
+    # Compare modelled and observed lake level anomalies at points
+    # compare_obs_and_model_lake_levels_at_points()
 
-    #plot_veg_fractions_for_a_random_run()
+    # plot_veg_fractions_for_a_random_run()
 
-    #plot soil profiles
-    #plot_soil_profiles()
+    # plot soil profiles
+    # plot_soil_profiles()
 
-    #plot differences in soil profiles between 2 simulations
-    #plot_diff_in_soil_profiles()
+    # plot differences in soil profiles between 2 simulations
+    # plot_diff_in_soil_profiles()
 
 
     print "Execution time: {0} seconds".format(time.clock() - t0)
