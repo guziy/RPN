@@ -781,7 +781,7 @@ class Crcm5ModelDataManager:
 
 
             # create index on date related columns if it is not created yet
-            #print "Start creation of indices"
+            # print "Start creation of indices"
 
             # if not var_table.cols.year.is_indexed:
             #     var_table.cols.year.create_index()
@@ -2060,16 +2060,16 @@ class Crcm5ModelDataManager:
             levels = None
             t = 0
 
-            fNames = os.listdir(self.samples_folder)
-            fNames = itertools.ifilter(lambda name: name.startswith(self.file_name_prefix), fNames)
-            fNames = sorted(fNames, key=lambda name: int(name.split("_")[-1][:-1]))
+            fnames = os.listdir(self.samples_folder)
+            fnames = itertools.ifilter(lambda name: name.startswith(self.file_name_prefix), fnames)
+            fnames = sorted(fnames, key=lambda name: int(name.split("_")[-1][:-1]))
 
-            fNames = list(fNames)
+            fnames = list(fnames)
 
-            for fName in fNames:
-                fPath = os.path.join(self.samples_folder, fName)
+            for fName in fnames:
+                fpath = os.path.join(self.samples_folder, fName)
 
-                r_obj = RPN(fPath)
+                r_obj = RPN(fpath)
                 # {time => {level => F(x, y)}}
                 r_obj.suppress_log_messages()
                 data = r_obj.get_4d_field(name=var_name)
@@ -2091,7 +2091,7 @@ class Crcm5ModelDataManager:
                 times = list(itertools.ifilter(lambda the_date: start_year <= the_date.year <= end_year, times))
 
 
-                #if there are records in the given time range
+                # if there are records in the given time range
                 if len(times) > 0:
                     times_num = date2num(times, units=time_var.units)
                     time_var[t:] = times_num[:]
@@ -2100,14 +2100,14 @@ class Crcm5ModelDataManager:
                             [data[d][level] for d in times]
                         )
 
-                    t += len(times)  #remember how many time steps have already been written
+                    t += len(times)  # remember how many time steps have already been written
 
             ds.close()
         else:
             raise Exception("Not yet implemented")
 
 
-    def _init_model_point(self, station, ix, jy, dist_to_station, timeArr,
+    def _init_model_point(self, station, ix, jy, dist_to_station, time_arr,
                           nc_sim_folder, set_data_to_model_points=True):
         """
 
@@ -2115,7 +2115,7 @@ class Crcm5ModelDataManager:
         :param ix:
         :param jy:
         :param dist_to_station:
-        :param timeArr:
+        :param time_arr:
         :param nc_sim_folder:
         :param set_data_to_model_points: if True sets climatology_data_frame property to the
          returned model point with streamflow, mean upstream temperature, mean upstream precipitation
@@ -2145,17 +2145,17 @@ class Crcm5ModelDataManager:
             levels = [0, 0, 0, 0, 4, 4]  # zero-based
             mean_upstream = [False, True, True, True, True, True]
 
-            inObject = InputForProcessPool()
-            inObject.mp_ix = mp.ix
-            inObject.mp_jy = mp.jy
+            inobject = InputForProcessPool()
+            inobject.mp_ix = mp.ix
+            inobject.mp_jy = mp.jy
 
-            inObject.i_upstream, inObject.j_upstream = np.where(mp.flow_in_mask == 1)
-            sel_areas = self.cell_area[inObject.i_upstream, inObject.j_upstream]
-            inObject.multipliers = sel_areas / np.sum(sel_areas)
+            inobject.i_upstream, inobject.j_upstream = np.where(mp.flow_in_mask == 1)
+            sel_areas = self.cell_area[inobject.i_upstream, inobject.j_upstream]
+            inobject.multipliers = sel_areas / np.sum(sel_areas)
 
             t0 = time.time()
 
-            # vName, level, average_upstream, nc_sim_folder, inObject = x
+            # vName, level, average_upstream, nc_sim_folder, inobject = x
             nvars = len(varnames)
 
             if not hasattr(self, "reusable_pool"):
@@ -2163,23 +2163,23 @@ class Crcm5ModelDataManager:
             ppool = self.reusable_pool
 
             frames = ppool.map(_get_var_data_to_pandas,
-                               zip(varnames, levels, mean_upstream, [nc_sim_folder, ] * nvars, [inObject, ] * nvars))
+                               zip(varnames, levels, mean_upstream, [nc_sim_folder, ] * nvars, [inobject, ] * nvars))
 
             print "extracted data from netcdf in {0} s".format(time.time() - t0)
 
-            data_frame = pandas.DataFrame(index=timeArr)
+            data_frame = pandas.DataFrame(index=time_arr)
             for vName, frame in zip(varnames, frames):
                 data_frame[vName] = frame
 
             data_frame["year"] = data_frame.index.map(lambda d: d.year)
-            #select only the years that the complete timeseries exist for the station corresponding  to the model point
+            # select only the years that the complete timeseries exist for the station corresponding  to the model point
             data_frame = data_frame.drop(data_frame.index[~data_frame.year.isin(station.get_list_of_complete_years())])
             data_frame = data_frame.resample("D", how="mean")
 
             assert isinstance(data_frame, pandas.DataFrame)
-            data_frame = data_frame.groupby(lambda d: (d.day, d.month )).mean()
+            data_frame = data_frame.groupby(lambda d: (d.day, d.month)).mean()
             mp.climatology_data_frame = data_frame[
-                data_frame.index.map(lambda tup: tup != (29, 2))]  #select all except 29 of Feb
+                data_frame.index.map(lambda tup: tup != (29, 2))]  # select all except 29 of Feb
 
         return mp
 
@@ -2280,8 +2280,8 @@ class Crcm5ModelDataManager:
 
         if set_data_to_model_points:
             ds = Dataset(nc_path)
-            timeVar = ds.variables["time"]
-            timeArr = num2date(timeVar[:], timeVar.units)
+            timevar = ds.variables["time"]
+            timearr = num2date(timevar[:], timevar.units)
             ds.close()
 
         t0 = time.time()
@@ -2317,7 +2317,7 @@ class Crcm5ModelDataManager:
                 if deltaDaMin / s.drainage_km2 > 0.1:
                     continue
 
-                mp = self._init_model_point(s, ij[0][0], ij[1][0], dists[imin], timeArr, nc_sim_folder,
+                mp = self._init_model_point(s, ij[0][0], ij[1][0], dists[imin], timearr, nc_sim_folder,
                                             set_data_to_model_points=set_data_to_model_points
                 )
                 mp_list_for_station.append(mp)
@@ -2325,7 +2325,7 @@ class Crcm5ModelDataManager:
             else:
                 for d, i in zip(dists, inds):
                     if set_data_to_model_points:
-                        mp = self._init_model_point(s, ix_indices_flat[i], jy_indices_flat[i], d, timeArr,
+                        mp = self._init_model_point(s, ix_indices_flat[i], jy_indices_flat[i], d, timearr,
                                                     nc_sim_folder)
                     mp_list_for_station.append(mp)
 
