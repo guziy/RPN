@@ -1040,6 +1040,7 @@ class Crcm5ModelDataManager:
                     for level_index, level in enumerate(sorted(data.items()[0][1].keys())):
                         new_row["level_index"] = level_index
                         new_row["level_value"] = level
+			new_row.append()
                     # flush data to the disk
                     lev_table.flush()
 
