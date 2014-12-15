@@ -71,7 +71,7 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
             for t in range(1, nt):
                 place_where_melts = (swe_intf[t] < swe_intf[t - 1]) & (swe_no_intf[t] < swe_no_intf[t - 1])
 
-                total_diff[place_where_melts] += traf_intf[place_where_melts] - traf_no_intf[place_where_melts]
+                total_diff[place_where_melts] += traf_intf[t] - traf_no_intf[t]
 
             # print "Number of relevant points: ", np.count_nonzero(the_diff)
             print "Finished processing {}".format(year)
