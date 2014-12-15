@@ -7,8 +7,12 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 
-import matplotlib.pyplot as plt
+# To plot images and do not care about the DISPLAY variable
 import matplotlib
+matplotlib.use("Agg")
+
+
+import matplotlib.pyplot as plt
 
 
 def get_pandas_panel_sorted_for_year(year, the_table):
@@ -78,7 +82,6 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
             print "Finished processing {}".format(year)
 
         # save the figure
-        matplotlib.use("Agg")
         plt.figure()
         total_diff /= float(end_year - start_year + 1)
         plt.pcolormesh(total_diff.transpose())
