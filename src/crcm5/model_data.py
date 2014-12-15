@@ -1040,6 +1040,7 @@ class Crcm5ModelDataManager:
                     for level_index, level in enumerate(sorted(data.items()[0][1].keys())):
                         new_row["level_index"] = level_index
                         new_row["level_value"] = level
+			new_row.append()
                     # flush data to the disk
                     lev_table.flush()
 
@@ -1108,7 +1109,7 @@ class Crcm5ModelDataManager:
 
         # Check if the number of read fields is equal to the number of written fields
         for aVarName, aVarTable in var_name_to_table.iteritems():
-            print len(aVarTable) == var_name_to_read_row_count[aVarName], "read={} fields; written={} fields".format(
+            print len(aVarTable) == var_name_to_read_row_count[aVarName], "written={} fields; read={} fields".format(
                 len(aVarTable), var_name_to_read_row_count[aVarName]
             )
 
