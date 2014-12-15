@@ -95,7 +95,7 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
         cmap = cm.get_cmap("bwr", 20)
         im = bm.pcolormesh(x, y, total_diff, cmap=cmap)
-        plt.colorbar(im)
+        bm.colorbar(im)
         plt.savefig(os.path.join(img_folder, "traf_diff.png"))
 
     pass
