@@ -82,7 +82,9 @@ def plot_static_fields_histograms():
 def compare_2d_seasonal_means_from_simulations():
     import compare_modelled_2d_fields as comp
 
-    varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
+    # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
+
+    varnames = ["AV", "AH", "TT", "I1", "I0"]
     levels = len(varnames) * [0, ]
 
 

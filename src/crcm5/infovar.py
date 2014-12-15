@@ -204,6 +204,8 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
     if None in [vmin, vmax]:
         vmin, vmax = to_plot.min(), to_plot.max()
 
+    locator = MaxNLocator(ncolors)
+    clevs = locator.tick_values(vmin, vmax)
     if var_name in ["STFL", "STFA"]:
         upper = 1000
         bounds = [0, 100, 200, 500, 1000]
@@ -215,16 +217,18 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
         cmap = cm.get_cmap("Blues", ncolors)
         norm = BoundaryNorm(bounds, ncolors=ncolors)  # LogNorm(vmin=10 ** (pmax - ncolors), vmax=10 ** pmax)
     else:
+        reverse = True
         if var_name in ["PR"]:
             reverse = False
-        else:
-            reverse = True
+        elif var_name in ["TT", ]:
+            clevs = [0.1, 0.2, 0.5, 1, 1.5]
+            clevs = [-c for c in reversed(clevs)] + clevs
 
-        cmap = cm.get_cmap("spectral_r" if reverse else "spectral", ncolors)
+        cmap = cm.get_cmap("rainbow_r" if reverse else "rainbow", len(clevs) - 1)
 
         # norm, bounds, vmin_nice, vmax_nice = get_boundary_norm_using_all_vals(to_plot, ncolors)
-        locator = MaxNLocator(ncolors)
-        norm = BoundaryNorm(locator.tick_values(vmin, vmax), ncolors)
+
+        norm = BoundaryNorm(clevs, len(clevs) - 1)
 
     return cmap, norm
 

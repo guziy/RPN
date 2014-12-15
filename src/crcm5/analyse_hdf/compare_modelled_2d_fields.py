@@ -211,10 +211,10 @@ class DomainProperties(object):
 def _plot_row(axes, data, sim_label, var_name, increments=False,
               domain_props=None, season_list=None, significance=None):
     # data is a dict of season -> field
-    #the field is a control mean in the case of the control mean
-    #and the difference between the modified simulation and the control mean in the case of the modified simulation
+    # the field is a control mean in the case of the control mean
+    # and the difference between the modified simulation and the control mean in the case of the modified simulation
 
-    exclude_0_from_diff_colorbar = False
+    exclude_0_from_diff_colorbar = True
 
     assert isinstance(domain_props, DomainProperties)
     print "plotting row for {0}; increments = ({1})".format(var_name, increments)
@@ -224,9 +224,9 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
 
     vmin = None
     vmax = None
-    #determine vmin and vmax for the row
+    # determine vmin and vmax for the row
     for season, field in data.iteritems():
-        #field = _get_to_plot(var_name, field, lake_fraction=domain_props.lake_fraction, lons=lons2d, lats = lats2d)
+        # field = _get_to_plot(var_name, field, lake_fraction=domain_props.lake_fraction, lons=lons2d, lats = lats2d)
         min_current, max_current = np.percentile(field[~field.mask], 1), np.percentile(field[~field.mask], 99)
         if vmin is None or min_current < vmin:
             vmin = min_current
@@ -255,7 +255,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
                                                                                    varname=var_name,
                                                                                    difference=increments)
     else:
-        #determine colorabr extent and spacing
+        # determine colorabr extent and spacing
         field_cmap, field_norm = infovar.get_colormap_and_norm_for(var_name, vmin=vmin, vmax=vmax, ncolors=ncolors)
     print "vmin = {0}; vmax = {1}".format(vmin, vmax)
 
@@ -266,7 +266,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
         field = data[season]
         ax = axes[col]
         if not increments:
-            #since the increments go below
+            # since the increments go below
             ax.set_title(season)
         else:
             mean_val = float("{0:.1e}".format(field.mean()))
@@ -286,7 +286,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
 
 
 
-            #basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
+            # basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
             #                linewidths = 0.5, colors="k")
 
 
@@ -298,7 +298,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
 
         col += 1
 
-    #plot the common colorbar
+    # plot the common colorbar
     if isinstance(field_norm, LogNorm):
         plt.colorbar(im, cax=axes[-1])
     else:
@@ -322,29 +322,29 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
     # crcm5-hcd-rl vs crcm5-hcd-r
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf"
-    #control_label = "CRCM5-HCD-R"
-    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf", ]
-    #labels = ["CRCM5-HCD-RL"]
+    # control_label = "CRCM5-HCD-R"
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf", ]
+    # labels = ["CRCM5-HCD-RL"]
 
 
 
 
-    #compare simulations with and without interflow
-    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
-    #control_label = "CRCM5-HCD-RL"
+    # compare simulations with and without interflow
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
+    # control_label = "CRCM5-HCD-RL"
     #
-    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf", ]
-    #labels = ["CRCM5-HCD-RL-INTFL"]
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf", ]
+    # labels = ["CRCM5-HCD-RL-INTFL"]
 
 
-    #very high hydr cond
-    #control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
-    #control_label = "CRCM5-HCD-RL-INTFL"
+    # very high hydr cond
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    # control_label = "CRCM5-HCD-RL-INTFL"
     ##
-    #paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf", ]
-    #labels = ["CRCM5-HCD-RL-INTFL-sani=10000"]
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf", ]
+    # labels = ["CRCM5-HCD-RL-INTFL-sani=10000"]
 
-    #Interflow effect
+    # Interflow effect
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
     # control_label = "CRCM5-HCD-RL"
     # ##
@@ -352,7 +352,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # labels = ["ITFS"]
 
 
-    #lake effect (lake-atm interactions)
+    # lake effect (lake-atm interactions)
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
     # control_label = "CRCM5-R"
     #
@@ -471,11 +471,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
             continue
 
 
-        #Do the plotting for each variable
+        # Do the plotting for each variable
         fig = plt.figure()
         assert isinstance(fig, Figure)
 
-        #plot the control data
+        # plot the control data
         ncols = len(season_to_control_mean) + 1  # +1 is for the colorbar
         gs = gridspec.GridSpec(len(paths) + 1, ncols, width_ratios=[1.0, ] * (ncols - 1) + [0.07])
         axes = []
@@ -545,7 +545,7 @@ def study_interflow_effect():
     labels = ["CRCM5-HCD-RL-INTFL", ]
 
 
-    #get control means
+    # get control means
     months = [1, ]
     varnames = ["STFL", "TT", "PR", "AV", "AH", "I0", "I1", "I2"]
     levels = [None, None, None, None, None, 1, 1, 1]
