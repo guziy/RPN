@@ -10,7 +10,9 @@ import numpy as np
 # To plot images and do not care about the DISPLAY variable
 import matplotlib
 matplotlib.use("Agg")
+from matplotlib import cm
 
+from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
 import matplotlib.pyplot as plt
 
@@ -87,10 +89,13 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
         # Convert to mm
         total_diff *= 3 * 60 * 60
+        lons, lats, bm = analysis.get_basemap_from_hdf(intf_file)
 
-        cmap = cm.get_cmap("bwr")
-        plt.pcolormesh(total_diff.transpose())
-        plt.colorbar()
+        x, y = bm(lons, lats)
+
+        cmap = cm.get_cmap("bwr", 20)
+        im = bm.pcolormesh(x, y, total_diff, cmap=cmap)
+        plt.colorbar(im)
         plt.savefig(os.path.join(img_folder, "traf_diff.png"))
 
     pass
