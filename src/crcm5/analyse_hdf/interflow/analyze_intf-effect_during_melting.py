@@ -84,6 +84,11 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
         # save the figure
         plt.figure()
         total_diff /= float(end_year - start_year + 1)
+
+        # Convert to mm
+        total_diff *= 3 * 60 * 60
+
+        cmap = cm.get_cmap("bwr")
         plt.pcolormesh(total_diff.transpose())
         plt.colorbar()
         plt.savefig(os.path.join(img_folder, "traf_diff.png"))
