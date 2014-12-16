@@ -185,7 +185,6 @@ def get_longest_rain_durations_for_files(intf_file="", no_intf_file="",
             print "With intf panels: "
             print pr_intf_panel
 
-
             # Get durations of the longest events during the year when no interflow is present
             max_durations_nointf, acc_runoff_nointf = get_longest_rain_event_durations_from_tables(
                 pr_no_intf_panel.values,
@@ -297,7 +296,7 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
 
     cax = fig.add_subplot(gs[0, 2])
     cb = plt.colorbar(im, cax=cax, ticks=clevs)
-    cb.ax.set_title("mm")
+    cb.ax.set_xlabel("mm")
 
     # Plot differences
     clevs = [-50, -25, -10, -5, -2, -1, -0.1]
@@ -316,8 +315,7 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
 
     cax = fig.add_subplot(gs[0, 4])
     cb = plt.colorbar(im, cax=cax, ticks=clevs)
-    cb.ax.set_title("mm")
-
+    cb.ax.set_xlabel("mm")
 
     # Draw coastlines
     for ax in ax_list:
@@ -339,12 +337,10 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     if not os.path.isdir(img_folder):
         os.mkdir(img_folder)
 
-
     # Calculate the durations of the longest rain events in both simulations
     no_intf_all_max_durations, no_intf_acc_runoff, intf_all_max_durations, intf_acc_runoff = \
         get_longest_rain_durations_for_files(
             intf_file=intf_file, no_intf_file=no_intf_file, start_year=start_year, end_year=end_year)
-
 
     # Debug: visualize
     cmap = cm.get_cmap("rainbow", 20)
@@ -370,11 +366,10 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     print mean_max_durations_intf.min(), mean_max_durations_intf.max(), mean_max_durations_intf.mean()
     plt.savefig(os.path.join(img_folder, "intf-durations.png"))
 
-
     # Plot the interflow effect on the longest rain events
     mask = maskoceans(lons, lats, mean_max_durations_intf, inlands=True).mask
     plt.figure()
-    clevs = [1, 2, 4, 6, 8, 10, 15]
+    clevs = [0.5, 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 150]
     clevs = [-c for c in reversed(clevs)] + clevs
     bn = BoundaryNorm(clevs, len(clevs) - 1)
     cmap_diff = cm.get_cmap("bwr", len(clevs) - 1)
@@ -390,8 +385,6 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     # Plot differences in surface runoff
     plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, intf_acc_runoff, dt_hours=dt_hours,
                                     img_path=os.path.join(img_folder, "runoff_during_long_rain_events.png"))
-
-
 
     # Plot numbers of events of different durations
     plot_nevents_duration_curves(mean_max_durations_nointf[~mask], mean_max_durations_intf[~mask],
