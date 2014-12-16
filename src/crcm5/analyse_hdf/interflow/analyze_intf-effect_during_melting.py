@@ -1,4 +1,5 @@
 import os
+from matplotlib.colors import BoundaryNorm
 
 __author__ = 'huziy'
 
@@ -93,9 +94,13 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
         x, y = bm(lons, lats)
 
-        cmap = cm.get_cmap("bwr", 20)
+        clevs = [10, 20, 30, 40, 50, 100, 150, 200, 250]
+        clevs = [-c for c in reversed(clevs)] + clevs
+
+        cmap = cm.get_cmap("bwr", len(clevs) - 1)
+        bn = BoundaryNorm(clevs, len(clevs) - 1)
         im = bm.pcolormesh(x, y, total_diff, cmap=cmap)
-        bm.colorbar(im)
+        bm.colorbar(im, ticks=clevs)
         plt.savefig(os.path.join(img_folder, "traf_diff.png"))
 
     pass
