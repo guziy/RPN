@@ -272,7 +272,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
             mean_val = float("{0:.1e}".format(field.mean()))
             sf = ScalarFormatter(useMathText=True)
             sf.set_powerlimits((-2, 3))
-            ax.set_title(r"$\Delta_{\rm mean} = " + sf.format_data(mean_val) + " $")
+            # ax.set_title(r"$\Delta_{\rm mean} = " + sf.format_data(mean_val) + " $")
 
         basemap.drawmapboundary(ax=ax, fill_color="gray")
         im = basemap.pcolormesh(x, y, field, norm=field_norm, cmap=field_cmap, ax=ax)
@@ -283,8 +283,6 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
                                   colors="none",
                                   hatches=[None, ".."],
                                   ax=ax)
-
-
 
             # basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
             #                linewidths = 0.5, colors="k")
