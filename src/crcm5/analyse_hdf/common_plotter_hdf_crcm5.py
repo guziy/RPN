@@ -6,7 +6,7 @@ __author__ = 'huziy'
 
 
 # this is intended as a common launcher for plotting graphs, in hope that
-#all graphs will have the same parameters
+# all graphs will have the same parameters
 
 
 from multiprocessing import Process
@@ -23,8 +23,8 @@ def explore_seasonal_interflow():
     import explore_interflow_field
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=17)
-    #hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
-    #hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
+    # hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
+    # hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
     hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf"
     explore_interflow_field.calculate_and_plot_seasonal_means(
         hdf_path=hdf_path,
@@ -48,7 +48,7 @@ def compare_obs_and_model_at_points():
     end_date = datetime(1989, 12, 31)
 
     compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
-    #reset back plot parameters to the default ones
+    # reset back plot parameters to the default ones
     configure()
 
 
@@ -87,7 +87,6 @@ def compare_2d_seasonal_means_from_simulations():
     varnames = ["AV", "AH", "TT", "I1", "I0"]
     levels = len(varnames) * [0, ]
 
-
     # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
     # levels = [None, None, None, None, 1, 1, None, None]
 
@@ -100,7 +99,6 @@ def compare_2d_seasonal_means_from_simulations():
         ("Fall", range(9, 12))
     ])
 
-
     # season_to_months = OrderedDict([
     #    #("March", [3, ]),
     #    #("April", [4, ]),
@@ -109,8 +107,6 @@ def compare_2d_seasonal_means_from_simulations():
     #    ("July", [7, ]),
     #    ("August", [8, ])
     # ])
-
-
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
     comp.plot_control_and_differences_in_one_panel_for_all_seasons(varnames=varnames,
