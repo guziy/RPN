@@ -123,6 +123,7 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
         cmap = cm.get_cmap("bwr", len(clevs) - 1)
         bn = BoundaryNorm(clevs, len(clevs) - 1)
         im = bm.pcolormesh(x, y, total_diff, cmap=cmap, norm=bn)
+        bm.drawcoastlines()
         bm.colorbar(im, ticks=clevs)
         plt.savefig(os.path.join(img_folder, "traf_diff_{}-{}.png".format(start_year, end_year)))
 
