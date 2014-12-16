@@ -1,3 +1,7 @@
+
+import matplotlib
+matplotlib.use("Agg")
+
 import os
 import pickle
 from matplotlib import cm
