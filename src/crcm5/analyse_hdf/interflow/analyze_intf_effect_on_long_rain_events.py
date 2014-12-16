@@ -270,7 +270,7 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
 
     ax_list = []
 
-    clevs = [0, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25, 30, 40]
+    clevs = [0, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 150]
     cmap_field = cm.get_cmap("rainbow", len(clevs) - 1)
     bn = BoundaryNorm(clevs, len(clevs) - 1)
 
@@ -278,7 +278,7 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
     no_intf_acc_runoff_mm = np.ma.masked_where(mask, no_intf_acc_runoff) * dt_hours * 60 * 60
     intf_acc_runoff_mm = np.ma.masked_where(mask, intf_acc_runoff) * dt_hours * 60 * 60
 
-    vmax = 40  # mm
+    vmax = clevs[-1]  # mm
 
     # Plot values
     ax = fig.add_subplot(gs[0, 0])
