@@ -115,7 +115,7 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
         x, y = bm(lons, lats)
 
-        clevs = [0, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 150, 200]
+        clevs = [0.5, 1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 150, 200]
         clevs = [-c for c in reversed(clevs)] + clevs
 
         cmap = cm.get_cmap("bwr", len(clevs) - 1)
