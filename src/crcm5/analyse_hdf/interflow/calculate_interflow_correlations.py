@@ -143,27 +143,24 @@ def main(start_year=1980, end_year=2010):
     data_list.append(to_plot1)
 
     # correlate interflow and precip
-    params.update(dict(varname2="PR", level2=None))
+    params.update(dict(varname2="PR", level2=0))
     corr2 = calculate_correlation_field_for_climatology(**params)
     to_plot2 = np.ma.masked_where(to_plot1.mask, corr2)
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot2)
 
     # correlate precip and soil moisture
-    params.update(dict(varname1="I1", level1=1))
+    params.update(dict(varname1="I1", level1=0))
     corr3 = calculate_correlation_field_for_climatology(**params)
     to_plot3 = np.ma.masked_where(to_plot2.mask, corr3)
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot3)
 
-    # Correlate infiltration and interflow
-    params.update(dict(varname2="INTF", level2=1, path_for_infiltration_data=default_path))
-    del params["varname1"]
-    del params["level1"]
-    del params["path1"]
-    corr_intf_infiltr = calculate_correlation_of_infiltration_rate_with(**params)
-    to_plot4 = np.ma.masked_where(to_plot2.mask, corr_intf_infiltr)
-    title_list.append("Corr(infiltr., {})".format(params["varname2"]))
+    # correlate interflow and evaporation
+    params.update(dict(varname1="AV", level1=0))
+    corr4 = calculate_correlation_field_for_climatology(**params)
+    to_plot4 = np.ma.masked_where(to_plot2.mask, corr4)
+    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot4)
 
     # TODO: Correlate infiltration and surface runoff

@@ -505,7 +505,6 @@ def study_lake_effect_on_atmosphere():
     paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
     labels = ["CRCM5-HCD-R", ]
 
-
     # get control means
     months = [1, ]
     varnames = ["STFA", "TT", "PR", "AV", "AH"]
