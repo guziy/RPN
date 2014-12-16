@@ -1,5 +1,9 @@
 import os
 import pickle
+
+import matplotlib
+matplotlib.use("Agg")
+
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from matplotlib.figure import Figure
