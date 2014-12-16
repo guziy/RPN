@@ -105,6 +105,8 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
                                                   traf_table_no_intf=traf_table_no_intf,
                                                   start_year=start_year, end_year=end_year)
 
+            pickle.dump(total_diff, open(cache_file, "wb"))
+
         # save the figure
         plt.figure()
         total_diff /= float(end_year - start_year + 1)
