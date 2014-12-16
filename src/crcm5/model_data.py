@@ -648,7 +648,8 @@ class Crcm5ModelDataManager:
 
         # Try to read cached climatology
         if use_caching:
-            # with guarantees that the file will be closed upon exit from the with block no matter what happens inside the with block
+            # with guarantees that the file will be closed upon exit from the with block no matter what
+            # happens inside the with block
             with tb.open_file(hdf_db_path) as hdf:
                 climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                                start_year=start_year,
@@ -686,10 +687,9 @@ class Crcm5ModelDataManager:
 
             period_selector_stmt = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
 
-            #calculate mean using chunks of grouped data
+            # calculate mean using chunks of grouped data
             for group_keys, grouped_rows in itertools.groupby(varTable.where(period_selector_stmt), day_selector):
                 aMonth, aDayOfMonth, aLevel = group_keys
-
 
                 # ignore the 29th of February
                 if aMonth == 2 and aDayOfMonth == 29:
@@ -716,7 +716,7 @@ class Crcm5ModelDataManager:
                     date_to_count[d] += n1
                     date_to_mean_field[d] = (n1 * x1 + n0 * x0) / (n0 + n1)
 
-            ##Sort the results by date
+            # Sort the results by date
             daily_dates = sorted(date_to_mean_field.keys())
             daily_fields = [date_to_mean_field[aDate] for aDate in daily_dates]
 

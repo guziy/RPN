@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use("Agg")
+
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import maskoceans
@@ -104,15 +107,16 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
 
 
 def main(start_year=1980, end_year=2010):
-    # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
-    default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
-    img_filename = "interflow_correlations_avoid_truncation.jpg"
-    months = range(3, 12)
+    default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+    # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+
+    months = range(6, 9)
+
+    img_filename = "interflow_correlations_months={}.jpg".format("-".join(str(m) for m in months))
 
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=default_path)
     lons[lons > 180] -= 360
     x, y = basemap(lons, lats)
-
 
     # Correlate interflow rate and soil moisture
     params = dict(
@@ -138,7 +142,6 @@ def main(start_year=1980, end_year=2010):
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot1)
 
-
     # correlate interflow and precip
     params.update(dict(varname2="PR", level2=None))
     corr2 = calculate_correlation_field_for_climatology(**params)
@@ -153,7 +156,7 @@ def main(start_year=1980, end_year=2010):
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot3)
 
-    #Correlate infiltration and interflow
+    # Correlate infiltration and interflow
     params.update(dict(varname2="INTF", level2=1, path_for_infiltration_data=default_path))
     del params["varname1"]
     del params["level1"]
@@ -163,10 +166,9 @@ def main(start_year=1980, end_year=2010):
     title_list.append("Corr(infiltr., {})".format(params["varname2"]))
     data_list.append(to_plot4)
 
-    ##TODO: Correlate infiltration and surface runoff
+    # TODO: Correlate infiltration and surface runoff
 
-
-    # ##Do plotting
+    # Do plotting
     clevels = np.arange(-1, 1.2, 0.2)
     gs = GridSpec(1, 5, width_ratios=[1, 1, 1, 1, 0.05])
 
