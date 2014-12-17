@@ -627,7 +627,7 @@ class Crcm5ModelDataManager:
 
 
     @classmethod
-    def hdf_get_daily_climatological_fields(cls, hdf_db_path="", var_name="", level=None,
+    def hdf_get_daily_climatological_fields(cls, hdf_db_path="", var_name="", level_index=None,
                                             use_grouping=True, use_caching=True,
                                             start_year=None,
                                             end_year=None):
@@ -635,7 +635,7 @@ class Crcm5ModelDataManager:
         use_grouping=True is much more efficient than querying data for each day of each month
         :param hdf_db_path: path to the hdf file
         :param var_name: variable name
-        :param level:
+        :param level_index:
         :param use_grouping:
         :param use_caching: bool, when it is true, then the daily mean climatology is calculated only once
             and saved to the group called daily_climatology in the `hdf_db_path`
@@ -651,7 +651,7 @@ class Crcm5ModelDataManager:
             # with guarantees that the file will be closed upon exit from the with block no matter what
             # happens inside the with block
             with tb.open_file(hdf_db_path) as hdf:
-                climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
+                climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level_index,
                                                                start_year=start_year,
                                                                end_year=end_year)
                 if climatology is not None:
@@ -677,10 +677,9 @@ class Crcm5ModelDataManager:
 
                 aMonth = row["month"]
                 aDay = row["day"]
-                aLevel = row["level"]
+                aLevel = row["level_index"]
 
                 return aMonth, aDay, aLevel
-
 
             date_to_mean_field = {}
             date_to_count = {}
@@ -695,7 +694,7 @@ class Crcm5ModelDataManager:
                 if aMonth == 2 and aDayOfMonth == 29:
                     continue
 
-                if level is not None and aLevel != level:
+                if level_index is not None and aLevel != level_index:
                     continue
                 data = [
                     row["field"] for row in grouped_rows
@@ -723,8 +722,8 @@ class Crcm5ModelDataManager:
         else:
             # Use query for each day of month
             while the_date.year == stamp_year:
-                if level is not None:
-                    expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level, the_date.month, the_date.day)
+                if level_index is not None:
+                    expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level_index, the_date.month, the_date.day)
                     result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
                 else:
                     expr = "(month == {0}) & (day == {1})".format(the_date.month, the_date.day)
@@ -738,7 +737,7 @@ class Crcm5ModelDataManager:
         if use_caching:
             # save calculated climatologies to the file
             cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
-                                        var_name=var_name, level=level, start_year=start_year, end_year=end_year)
+                                        var_name=var_name, level=level_index, start_year=start_year, end_year=end_year)
 
         hdf.close()
         return daily_dates, np.asarray(daily_fields)
