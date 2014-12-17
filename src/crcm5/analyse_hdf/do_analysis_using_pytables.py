@@ -192,7 +192,7 @@ def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, star
                                                                          start_year=start_year,
                                                                          end_year=end_year,
                                                                          var_name=var_name,
-                                                                         level=level,
+                                                                         level_index=level,
                                                                          use_grouping=True)
 
 
