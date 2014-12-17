@@ -189,6 +189,19 @@ def plot_differences_for_a_var_as_panel():
     pass
 
 
+def get_num_days(month_list):
+    import calendar
+    days = 0
+    for m in month_list:
+        days += calendar.monthrange(2001, m)[1]
+
+    # Take a leap year into account
+    if 2 in month_list:
+        days += 0.25
+
+    return days
+
+
 class DomainProperties(object):
     # The class for holding properties of the simulation domain
     def __init__(self):
@@ -306,8 +319,6 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                               end_year=None):
     season_list = season_to_months.keys()
 
-
-
     # crcm5-r vs crcm5-hcd-r
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
     # control_label = "CRCM5-R"
@@ -320,16 +331,12 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf", ]
     # labels = ["CRCM5-HCD-RL"]
 
-
-
-
     # compare simulations with and without interflow
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
     # control_label = "CRCM5-HCD-RL"
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf", ]
     # labels = ["CRCM5-HCD-RL-INTFL"]
-
 
     # very high hydr cond
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
@@ -380,8 +387,6 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
         r"$\Delta$({0})".format(s) for s in labels
     ]
     print labels
-
-
 
     # varnames = ["QQ", ]
     # levels = [None, ]
@@ -454,6 +459,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                         lake_fraction=domain_props.lake_fraction, lons=lons2d,
                                                         lats=lats2d)
 
+                    # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
+                    if var_name in ["PR", "TRAF"]:
+                        modified_mean *= get_num_days(months_of_interest)
+
+
                     diff_vals = modified_mean - control_mean
                     print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
                     label_to_season_to_difference[the_label][season] = diff_vals
@@ -463,7 +473,6 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
         except NoSuchNodeError:
             print "Could not find {0}, skipping...".format(var_name)
             continue
-
 
         # Do the plotting for each variable
         fig = plt.figure()

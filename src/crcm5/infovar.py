@@ -81,17 +81,16 @@ soil_layer_widths_26_to_60 = np.asarray([0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5,
                                          1.0, 3.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0])
 
 
-
 def get_to_plot(varname, data, lake_fraction=None,
                 mask_oceans=True, lons=None, lats=None, difference = False):
     if mask_oceans:
         assert lons is not None and lats is not None
 
-    #This one is used if something is to be masked or changed before plotting
+    # This one is used if something is to be masked or changed before plotting
     if varname in ["STFL", "STFA"]:
 
         if lake_fraction is None or np.sum(lake_fraction) <= 0.01:
-            #data1 = np.ma.masked_where(data < 0, data) if not difference else data
+            # data1 = np.ma.masked_where(data < 0, data) if not difference else data
             return maskoceans(lonsin=lons, latsin=lats, datain=data)
         else:
             data1 = np.ma.masked_where(lake_fraction >= GLOBAL_LAKE_FRACTION, data)
