@@ -212,4 +212,4 @@ if __name__ == '__main__':
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
     main(start_year=1980, end_year=1989)
-    #demo_equal_fields()
+    # demo_equal_fields()
