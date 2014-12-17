@@ -301,11 +301,11 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
 
 def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                               levels=None,
-                                                              season_to_months=None):
+                                                              season_to_months=None,
+                                                              start_year=None,
+                                                              end_year=None):
     season_list = season_to_months.keys()
 
-    start_year = 1980
-    end_year = 1989
 
 
     # crcm5-r vs crcm5-hcd-r
@@ -365,15 +365,15 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     control_label = "CRCM5-HCD-RL"
 
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    # labels = ["CRCM5-HCD-RL-INTF", ]
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    labels = ["CRCM5-HCD-RL-INTF", ]
 
     # interflow effect (avoid truncation and bigger slopes)
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
     # control_label = "CRCM5-HCD-RL-INTF"
     #
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
-    labels = ["CRCM5-HCD-RL-INTF-improved", ]
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
+    # labels = ["CRCM5-HCD-RL-INTF-improved", ]
     #
 
     row_labels = [

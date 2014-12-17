@@ -108,10 +108,15 @@ def compare_2d_seasonal_means_from_simulations():
     #    ("August", [8, ])
     # ])
 
+    start_year = 1980
+    end_year = 2010
+
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
     comp.plot_control_and_differences_in_one_panel_for_all_seasons(varnames=varnames,
                                                                    levels=levels,
-                                                                   season_to_months=season_to_months)
+                                                                   season_to_months=season_to_months,
+                                                                   start_year=start_year,
+                                                                   end_year=end_year)
 
 
 def validate_seasonal_mean_atm_fields():
