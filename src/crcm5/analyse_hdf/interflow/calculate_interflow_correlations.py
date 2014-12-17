@@ -122,10 +122,10 @@ def main(start_year=1980, end_year=2010):
     params = dict(
         path1=default_path,
         varname1="INTF",
-        level1=1,
+        level1=0,
 
         path2=default_path,
-        level2=1,
+        level2=0,
         varname2="I1",
         months=months
     )
@@ -157,7 +157,7 @@ def main(start_year=1980, end_year=2010):
     data_list.append(to_plot3)
 
     # correlate interflow and evaporation
-    params.update(dict(varname1="AV", level1=0))
+    params.update(dict(varname2="AV", level2=0, varname1="INTF", level1=0))
     corr4 = calculate_correlation_field_for_climatology(**params)
     to_plot4 = np.ma.masked_where(to_plot2.mask, corr4)
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
