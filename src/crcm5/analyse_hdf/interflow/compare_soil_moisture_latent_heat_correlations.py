@@ -29,7 +29,7 @@ def plot_for_simulation(axis=None, sim_path="", cmap=None, cnorm=None,
     if months is None:
         months = range(1, 13)
 
-    bm, lons, lats = analysis.get_basemap_from_hdf(sim_path)
+    lons, lats, bm = analysis.get_basemap_from_hdf(sim_path)
 
     params = dict(
         path1=sim_path, path2=sim_path,
