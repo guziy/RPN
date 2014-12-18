@@ -62,7 +62,7 @@ def plot_correlation_diff(sim_label_to_corr, file_for_basemap="", ax=None, cnorm
     return im
 
 
-def main():
+def main(months=None):
     # List of simulations to compare
     label_to_path = OrderedDict([
         ("Without interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"),
@@ -80,7 +80,6 @@ def main():
 
     start_year = 1980
     end_year = 2010
-    months = range(6, 9)
 
     keys = [k.replace(" ", "-") for k in label_to_path]
     keys.extend([str(i) for i in (start_year, end_year)])
@@ -113,16 +112,18 @@ def main():
                                ax=fig.add_subplot(gs[0, nsims + 1]), cnorm=cnorm, cmap=cmap)
 
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims + 2]), ticks=clevels)
-
-
     fig.savefig(img_path)
-
-
-
-
 
 if __name__ == '__main__':
     import application_properties
 
     application_properties.set_current_directory()
-    main()
+
+    seasons = (
+        range(3, 6),
+        range(6, 9),
+        range(9, 12)
+    )
+
+    for months in seasons:
+        main(months=months)
