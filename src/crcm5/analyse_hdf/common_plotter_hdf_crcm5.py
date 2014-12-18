@@ -84,7 +84,7 @@ def compare_2d_seasonal_means_from_simulations():
 
     # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
 
-    varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF"]
+    varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA"]
     levels = len(varnames) * [0, ]
 
     # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
