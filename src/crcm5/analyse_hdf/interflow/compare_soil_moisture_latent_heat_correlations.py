@@ -116,9 +116,7 @@ def main(months=None):
 
 if __name__ == '__main__':
     import application_properties
-
     application_properties.set_current_directory()
-
     seasons = (
         range(3, 6),
         range(6, 9),
