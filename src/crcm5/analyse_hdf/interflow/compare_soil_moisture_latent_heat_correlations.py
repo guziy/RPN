@@ -103,7 +103,7 @@ def main():
 
     # plot differences in correlation
     cdelta = 0.01
-    clevels = np.arange(-0.1, 0.1 + cdelta, cdelta)
+    clevels = np.arange(-0.05, 0.05 + cdelta, cdelta)
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
 
