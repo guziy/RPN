@@ -50,8 +50,8 @@ def plot_for_simulation(axis=None, sim_path="", cmap=None, cnorm=None,
 def main():
     # List of simulations to compare
     label_to_path = OrderedDict([
-        ("Without interflow", ""),
-        ("With interflow", ""),
+        ("Without interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"),
+        ("With interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"),
     ])
 
     nsims = len(label_to_path)
@@ -76,7 +76,7 @@ def main():
     fig = plt.figure()
 
     im = None
-    for col, sim_path in enumerate(label_to_path):
+    for col, sim_path in enumerate(label_to_path.values()):
         ax = fig.add_subplot(gs[0, col])
         im = plot_for_simulation(axis=ax, sim_path=sim_path, cmap=cmap, cnorm=cnorm,
                                  start_year=start_year, end_year=end_year, months=months)
