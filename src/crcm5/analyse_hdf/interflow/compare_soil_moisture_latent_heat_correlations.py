@@ -73,7 +73,7 @@ def main():
     width_ratios = nsims * [1.0, ] + [0.05, ] + [1.0, 0.05]
     gs = GridSpec(1, nsims + 3, width_ratios=width_ratios)
 
-    cdelta = 0.2
+    cdelta = 0.05
     clevels = np.arange(-1.0, 1.0 + cdelta, cdelta)
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
@@ -99,7 +99,7 @@ def main():
         ax.set_title(sim_label)
         sim_label_to_corr[sim_label] = corr
 
-    plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims]), ticks=clevels)
+    plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims]))
 
     # plot differences in correlation
     cdelta = 0.02
