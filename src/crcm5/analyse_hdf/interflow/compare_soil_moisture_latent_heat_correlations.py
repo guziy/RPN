@@ -80,7 +80,7 @@ def main():
 
     start_year = 1980
     end_year = 2010
-    months = range(3, 6)
+    months = range(6, 9)
 
     keys = [k.replace(" ", "-") for k in label_to_path]
     keys.extend([str(i) for i in (start_year, end_year)])
