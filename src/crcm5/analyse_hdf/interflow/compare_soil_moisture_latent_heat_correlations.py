@@ -89,7 +89,7 @@ def main():
 
     im = None
     sim_label_to_corr = OrderedDict()
-    for col, sim_label, sim_path in enumerate(label_to_path.iteritems()):
+    for col, (sim_label, sim_path) in enumerate(label_to_path.iteritems()):
         ax = fig.add_subplot(gs[0, col])
         im, corr = plot_for_simulation(axis=ax, sim_path=sim_path, cmap=cmap, cnorm=cnorm,
                                        start_year=start_year, end_year=end_year, months=months)
