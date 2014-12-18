@@ -69,7 +69,7 @@ def main():
     ])
 
     nsims = len(label_to_path)
-    width_ratios = nsims * [1.0, ] + [0.05, ]
+    width_ratios = nsims * [1.0, ] + [0.05, ] + [1.0, 0.05]
     gs = GridSpec(1, nsims + 3, width_ratios=width_ratios)
 
     cdelta = 0.2
