@@ -84,11 +84,12 @@ def main():
 
     keys = [k.replace(" ", "-") for k in label_to_path]
     keys.extend([str(i) for i in (start_year, end_year)])
-    img_path = "corr-SM-LH_{}_{}_{}-{}.png".format(*keys)
+    keys.append("-".join(str(m) for m in months))
+    img_path = "corr-SM-LH_{}_{}_{}-{}_{}.png".format(*keys)
 
     fig = plt.figure()
     assert isinstance(fig, Figure)
-    fig.set_figwidth(fig.get_figwidth() * 2.6)
+    fig.set_figwidth(fig.get_figwidth() * 3)
 
     im = None
     sim_label_to_corr = OrderedDict()
