@@ -1,4 +1,5 @@
 import matplotlib
+from matplotlib.figure import Figure
 
 matplotlib.use("Agg")
 
@@ -86,6 +87,8 @@ def main():
     img_path = "corr-SM-LH_{}_{}_{}-{}.png".format(*keys)
 
     fig = plt.figure()
+    assert isinstance(fig, Figure)
+    fig.set_figwidth(fig.get_figwidth() * 2.6)
 
     im = None
     sim_label_to_corr = OrderedDict()
@@ -99,7 +102,7 @@ def main():
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims]), ticks=clevels)
 
     # plot differences in correlation
-    clevels = np.arange(-2.0, 2.0 + cdelta, cdelta)
+    clevels = np.arange(-0.5, 0.5 + cdelta, cdelta)
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
 
