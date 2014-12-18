@@ -56,7 +56,7 @@ def plot_for_simulation(axis=None, sim_path="", cmap=None, cnorm=None,
 def plot_correlation_diff(sim_label_to_corr, file_for_basemap="", ax=None, cnorm=None, cmap=None):
     lons, lats, bm = analysis.get_basemap_from_hdf(file_path=file_for_basemap)
     x, y = bm(lons, lats)
-    im = bm.pcolormesh(x, y, sim_label_to_corr.values()[1] - sim_label_to_corr.values()[0], cmap=cmap, cnorm=cnorm)
+    im = bm.pcolormesh(x, y, sim_label_to_corr.values()[1] - sim_label_to_corr.values()[0], cmap=cmap, norm=cnorm)
     ax.set_title("({}) - ({})".format(sim_label_to_corr.keys()[1], sim_label_to_corr.keys()[0]))
     return im
 
