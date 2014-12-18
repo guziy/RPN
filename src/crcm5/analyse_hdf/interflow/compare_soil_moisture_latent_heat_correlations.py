@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use("Agg")
+
 from collections import OrderedDict
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
