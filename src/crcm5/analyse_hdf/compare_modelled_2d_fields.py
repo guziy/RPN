@@ -356,7 +356,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # lake effect (lake-atm interactions)
     control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
     control_label = "CRCM5-R"
-    
+
     paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
     labels = ["CRCM5-HCD-R", ]
 
