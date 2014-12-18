@@ -110,7 +110,7 @@ def main(start_year=1980, end_year=2010):
     default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
     # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
-    months = range(6, 9)
+    months = range(3, 6)
 
     img_filename = "interflow_correlations_months={}.jpg".format("-".join(str(m) for m in months))
 
