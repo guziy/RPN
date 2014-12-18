@@ -102,7 +102,8 @@ def main():
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims]), ticks=clevels)
 
     # plot differences in correlation
-    clevels = np.arange(-0.5, 0.5 + cdelta, cdelta)
+    cdelta = 0.01
+    clevels = np.arange(-0.1, 0.1 + cdelta, cdelta)
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
 
