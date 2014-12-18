@@ -361,19 +361,19 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # labels = ["CRCM5-HCD-R", ]
 
     # lake effect (lake-river interactions)
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    control_label = "CRCM5-HCD-R"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    labels = ["CRCM5-HCD-RL", ]
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    # control_label = "CRCM5-HCD-R"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    # labels = ["CRCM5-HCD-RL", ]
 
 
     # interflow effect ()
-    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    # control_label = "CRCM5-HCD-RL"
-    #
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    # labels = ["CRCM5-HCD-RL-INTF", ]
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    control_label = "CRCM5-HCD-RL"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    labels = ["CRCM5-HCD-RL-INTF", ]
 
 
 
@@ -461,12 +461,13 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                         lake_fraction=domain_props.lake_fraction, lons=lons2d,
                                                         lats=lats2d)
 
+                    diff_vals = modified_mean - control_mean
+
                     # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
                     if var_name in ["PR", "TRAF"]:
-                        modified_mean *= get_num_days(months_of_interest)
+                        diff_vals *= get_num_days(months_of_interest)
 
 
-                    diff_vals = modified_mean - control_mean
                     print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
                     label_to_season_to_difference[the_label][season] = diff_vals
                     label_to_season_to_significance[the_label][season] = significance
