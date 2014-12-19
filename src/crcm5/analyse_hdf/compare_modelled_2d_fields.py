@@ -354,18 +354,18 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
 
     # lake effect (lake-atm interactions)
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
-    control_label = "CRCM5-R"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
-    labels = ["CRCM5-HCD-R", ]
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
+    # control_label = "CRCM5-R"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
+    # labels = ["CRCM5-HCD-R", ]
 
     # lake effect (lake-river interactions)
-    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    # control_label = "CRCM5-HCD-R"
-    #
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    # labels = ["CRCM5-HCD-RL", ]
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    control_label = "CRCM5-HCD-R"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    labels = ["CRCM5-HCD-RL", ]
 
 
     # interflow effect ()
@@ -471,8 +471,6 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                         modified_mean *= get_num_days(months_of_interest)
 
                     diff_vals = modified_mean - control_mean
-
-
 
                     print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
                     label_to_season_to_difference[the_label][season] = diff_vals
