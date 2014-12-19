@@ -219,9 +219,6 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
         reverse = True
         if var_name in ["PR"]:
             reverse = False
-        elif var_name in ["TT", ]:
-            clevs = [0.1, 0.2, 0.5, 1, 1.5]
-            clevs = [-c for c in reversed(clevs)] + clevs
 
         cmap = cm.get_cmap("rainbow_r" if reverse else "rainbow", len(clevs) - 1)
 
