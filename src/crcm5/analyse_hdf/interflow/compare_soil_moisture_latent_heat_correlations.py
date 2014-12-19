@@ -75,7 +75,7 @@ def main(months=None):
 
     nsims = len(label_to_path)
     width_ratios = nsims * [1.0, ] + [0.05, ] + [1.0, 0.05]
-    gs = GridSpec(1, nsims + 3, width_ratios=width_ratios)
+    gs = GridSpec(1, nsims + 3, width_ratios=width_ratios, wspace=0.1)
 
     cdelta = 0.05
     clevels = np.arange(-1.0, 1.0 + cdelta, cdelta)
