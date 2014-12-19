@@ -268,8 +268,8 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
 
     assert isinstance(fig, Figure)
     print fig.get_figwidth()
-    fig.set_size_inches(fig.get_figwidth() * 2.5, fig.get_figheight())
-    gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1, 0.05])
+    fig.set_size_inches(fig.get_figwidth() * 3, fig.get_figheight())
+    gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1.3, 0.05])
 
     ax_list = []
 
@@ -370,7 +370,7 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     # Plot the interflow effect on the longest rain events
     mask = maskoceans(lons, lats, mean_max_durations_intf, inlands=True).mask
     plt.figure()
-    clevs = [0.5, 1, 2, 5, 30, 50, 100, 150]
+    clevs = [0.5, 1, 5, 30, 100, 150]
     clevs = [-c for c in reversed(clevs)] + clevs
     bn = BoundaryNorm(clevs, len(clevs) - 1)
     cmap_diff = cm.get_cmap("bwr", len(clevs) - 1)
