@@ -169,7 +169,7 @@ def main(start_year=1980, end_year=2010):
     clevels = np.arange(-1, 1.2, 0.2)
 
     npanels = len(data_list)
-    gs = GridSpec(1, 5, width_ratios=[1.0, ] * npanels + [0.05,])
+    gs = GridSpec(1, 5, width_ratios=[1.0, ] * npanels + [0.05, ])
 
     fig = plt.figure()
 

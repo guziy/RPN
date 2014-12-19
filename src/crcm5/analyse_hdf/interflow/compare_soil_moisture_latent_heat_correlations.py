@@ -59,6 +59,7 @@ def plot_correlation_diff(sim_label_to_corr, file_for_basemap="", ax=None, cnorm
     x, y = bm(lons, lats)
     im = bm.pcolormesh(x, y, sim_label_to_corr.values()[1] - sim_label_to_corr.values()[0], cmap=cmap, norm=cnorm)
     ax.set_title("({}) - ({})".format(sim_label_to_corr.keys()[1], sim_label_to_corr.keys()[0]))
+    bm.drawmapboundary(fill_color="0.75")
     return im
 
 
