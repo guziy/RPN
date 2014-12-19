@@ -92,7 +92,7 @@ def main(months=None):
 
     fig = plt.figure()
     assert isinstance(fig, Figure)
-    fig.set_figwidth(fig.get_figwidth() * 3)
+    fig.set_figwidth(fig.get_figwidth() * 2.6)
 
     im = None
     sim_label_to_corr = OrderedDict()
