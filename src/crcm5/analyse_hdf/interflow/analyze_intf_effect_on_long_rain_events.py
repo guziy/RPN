@@ -369,7 +369,7 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     # Plot the interflow effect on the longest rain events
     mask = maskoceans(lons, lats, mean_max_durations_intf, inlands=True).mask
     plt.figure()
-    clevs = [0.5, 1, 2, 5, 10, 20, 30, 50, 100, 150]
+    clevs = [0.5, 1, 2, 5, 30, 50, 100, 150]
     clevs = [-c for c in reversed(clevs)] + clevs
     bn = BoundaryNorm(clevs, len(clevs) - 1)
     cmap_diff = cm.get_cmap("bwr", len(clevs) - 1)

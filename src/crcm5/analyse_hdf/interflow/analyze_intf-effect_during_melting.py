@@ -79,6 +79,9 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
     :param start_year:
     :param end_year:
     """
+
+    matplotlib.rc("font", size=20)
+
     img_folder = "intf_during_melting"
 
     cache_file = "intf_during_melting_{}_{}-{}.cache".format(ctypes.c_size_t(hash(intf_file + no_intf_file)).value,
@@ -117,7 +120,7 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
         x, y = bm(lons, lats)
 
-        clevs = [0.5, 1, 2, 5, 10, 20, 30, 50, 100, 150]
+        clevs = [0.5, 1, 2, 5, 30, 50, 100, 150]
         clevs = [-c for c in reversed(clevs)] + clevs
 
         cmap = cm.get_cmap("bwr", len(clevs) - 1)
