@@ -108,8 +108,8 @@ def main(months=None):
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims]))
 
     # plot differences in correlation
-    cdelta = 0.01
-    clevels = np.arange(-0.06, -cdelta, cdelta)
+    cdelta = 0.02
+    clevels = np.arange(-0.2, -cdelta, cdelta)
     clevels = clevels.tolist() + [-c for c in reversed(clevels)]
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
@@ -117,7 +117,7 @@ def main(months=None):
     im = plot_correlation_diff(sim_label_to_corr, file_for_basemap=label_to_path.values()[0],
                                ax=fig.add_subplot(gs[0, nsims + 1]), cnorm=cnorm, cmap=cmap)
 
-    plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims + 2]), ticks=clevels)
+    plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims + 2]))
     fig.savefig(img_path)
 
 if __name__ == '__main__':
