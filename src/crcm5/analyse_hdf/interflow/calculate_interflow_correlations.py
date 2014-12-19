@@ -181,7 +181,7 @@ def main(start_year=1980, end_year=2010):
         plt.title(title_list[col])
         basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH, ax=ax)
 
-    plt.colorbar(img, cax=fig.add_subplot(gs[0, 4]))
+    plt.colorbar(img, cax=fig.add_subplot(gs[0, npanels]))
     fig.savefig(img_filename, dpi=cpp.FIG_SAVE_DPI)
     # plt.show()
 
