@@ -438,6 +438,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                 control_mean = infovar.get_to_plot(var_name, control_mean,
                                                    lake_fraction=domain_props.lake_fraction,
                                                    lons=lons2d, lats=lats2d)
+
+                # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
+                if var_name in ["PR", "TRAF"]:
+                    control_mean *= get_num_days(months_of_interest)
+
                 season_to_control_mean[season] = control_mean
 
                 print "calculated mean from {0}".format(control_path)
@@ -461,11 +466,12 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                         lake_fraction=domain_props.lake_fraction, lons=lons2d,
                                                         lats=lats2d)
 
-                    diff_vals = modified_mean - control_mean
-
                     # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
                     if var_name in ["PR", "TRAF"]:
-                        diff_vals *= get_num_days(months_of_interest)
+                        modified_mean *= get_num_days(months_of_interest)
+
+                    diff_vals = modified_mean - control_mean
+
 
 
                     print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
