@@ -143,23 +143,23 @@ def main(start_year=1980, end_year=2010):
     data_list.append(to_plot1)
 
     # correlate interflow and precip
-    params.update(dict(varname2="PR", level2=0))
-    corr2 = calculate_correlation_field_for_climatology(**params)
-    to_plot2 = np.ma.masked_where(to_plot1.mask, corr2)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
-    data_list.append(to_plot2)
+    # params.update(dict(varname2="PR", level2=0))
+    # corr2 = calculate_correlation_field_for_climatology(**params)
+    # to_plot2 = np.ma.masked_where(to_plot1.mask, corr2)
+    # title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    # data_list.append(to_plot2)
 
     # correlate precip and soil moisture
-    params.update(dict(varname1="I1", level1=0))
-    corr3 = calculate_correlation_field_for_climatology(**params)
-    to_plot3 = np.ma.masked_where(to_plot2.mask, corr3)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
-    data_list.append(to_plot3)
+    # params.update(dict(varname1="I1", level1=0))
+    # corr3 = calculate_correlation_field_for_climatology(**params)
+    # to_plot3 = np.ma.masked_where(to_plot2.mask, corr3)
+    # title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    # data_list.append(to_plot3)
 
     # correlate interflow and evaporation
     params.update(dict(varname2="AV", level2=0, varname1="INTF", level1=0))
     corr4 = calculate_correlation_field_for_climatology(**params)
-    to_plot4 = np.ma.masked_where(to_plot2.mask, corr4)
+    to_plot4 = np.ma.masked_where(to_plot1.mask, corr4)
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot4)
 
@@ -167,12 +167,14 @@ def main(start_year=1980, end_year=2010):
 
     # Do plotting
     clevels = np.arange(-1, 1.2, 0.2)
-    gs = GridSpec(1, 5, width_ratios=[1, 1, 1, 1, 0.05])
+
+    npanels = len(data_list)
+    gs = GridSpec(1, 5, width_ratios=[1.0, ] * npanels + [0.05,])
 
     fig = plt.figure()
 
     img = None
-    for col in range(4):
+    for col in range(npanels):
         ax = fig.add_subplot(gs[0, col])
         basemap.drawmapboundary(fill_color="0.75", ax=ax)
         img = basemap.contourf(x, y, data_list[col], levels=clevels, cmap=cm.get_cmap("RdBu_r", len(clevels) - 1))
