@@ -1,4 +1,6 @@
 import matplotlib
+from matplotlib.figure import Figure
+
 matplotlib.use("Agg")
 
 from matplotlib import cm
@@ -173,6 +175,10 @@ def main(start_year=1980, end_year=2010, months=None):
     gs = GridSpec(1, npanels + 1, width_ratios=[1.0, ] * npanels + [0.05, ])
 
     fig = plt.figure()
+    assert isinstance(fig, Figure)
+    fig.set_figheight(1.5 * fig.get_figheight())
+
+
 
     img = None
     for col in range(npanels):
