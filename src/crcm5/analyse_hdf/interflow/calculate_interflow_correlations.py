@@ -106,11 +106,12 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
     return calculate_correlation(selfields1, selfields2)
 
 
-def main(start_year=1980, end_year=2010):
+def main(start_year=1980, end_year=2010, months=None):
     default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
     # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
-    months = range(3, 6)
+    if months is None:
+        months = range(1, 13)
 
     img_filename = "interflow_correlations_months={}.jpg".format("-".join(str(m) for m in months))
 
@@ -213,5 +214,12 @@ if __name__ == '__main__':
 
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
-    main(start_year=1980, end_year=1989)
+
+    seasons = (
+        range(3, 6), range(6, 9), range(9, 12)
+    )
+
+    for months in seasons:
+        main(start_year=1980, end_year=2010, months=months)
+
     # demo_equal_fields()
