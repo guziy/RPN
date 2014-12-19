@@ -74,7 +74,7 @@ def main(months=None):
     ])
 
     nsims = len(label_to_path)
-    width_ratios = nsims * [1.0, ] + [0.4, ] + [1.0, 0.05]
+    width_ratios = nsims * [1.0, ] + [0.05, ] + [1.3, 0.05]
     gs = GridSpec(1, nsims + 3, width_ratios=width_ratios, wspace=0.25)
 
     cdelta = 0.05
@@ -100,8 +100,6 @@ def main(months=None):
         ax = fig.add_subplot(gs[0, col])
         im, corr = plot_for_simulation(axis=ax, sim_path=sim_path, cmap=cmap, cnorm=cnorm,
                                        start_year=start_year, end_year=end_year, months=months)
-
-
         ax.set_title(sim_label)
         sim_label_to_corr[sim_label] = corr
 
