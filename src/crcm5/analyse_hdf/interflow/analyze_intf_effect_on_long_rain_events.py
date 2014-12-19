@@ -268,9 +268,9 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
 
     assert isinstance(fig, Figure)
     print fig.get_figwidth()
-    fig.set_size_inches(fig.get_figwidth() * 3, fig.get_figheight() * 1.3)
+    fig.set_size_inches(fig.get_figwidth() * 3, fig.get_figheight() * 1.4)
 
-    gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1.3, 0.05])
+    gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1.4, 0.05])
 
     ax_list = []
 
