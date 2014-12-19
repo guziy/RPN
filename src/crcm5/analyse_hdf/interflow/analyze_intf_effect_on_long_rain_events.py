@@ -333,6 +333,7 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     :param end_year:
 
     """
+    matplotlib.rc("font", size=20)
     img_folder = "long-rain-events-30y"
     if not os.path.isdir(img_folder):
         os.mkdir(img_folder)
