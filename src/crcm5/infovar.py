@@ -220,7 +220,7 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
         if var_name in ["PR"]:
             reverse = False
 
-        cmap = cm.get_cmap("rainbow_r" if reverse else "rainbow", len(clevs) - 1)
+        cmap = cm.get_cmap("Spectral_r" if reverse else "Spectral", len(clevs) - 1)
 
         # norm, bounds, vmin_nice, vmax_nice = get_boundary_norm_using_all_vals(to_plot, ncolors)
 
