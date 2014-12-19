@@ -1,4 +1,5 @@
 import matplotlib
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 matplotlib.use("Agg")
@@ -64,6 +65,8 @@ def plot_correlation_diff(sim_label_to_corr, file_for_basemap="", ax=None, cnorm
 
 
 def main(months=None):
+
+    matplotlib.rc("font", size=20)
     # List of simulations to compare
     label_to_path = OrderedDict([
         ("Without interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"),
@@ -97,6 +100,8 @@ def main(months=None):
         ax = fig.add_subplot(gs[0, col])
         im, corr = plot_for_simulation(axis=ax, sim_path=sim_path, cmap=cmap, cnorm=cnorm,
                                        start_year=start_year, end_year=end_year, months=months)
+
+
         ax.set_title(sim_label)
         sim_label_to_corr[sim_label] = corr
 
