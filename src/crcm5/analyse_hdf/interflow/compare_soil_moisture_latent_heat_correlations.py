@@ -74,8 +74,8 @@ def main(months=None):
     ])
 
     nsims = len(label_to_path)
-    width_ratios = nsims * [1.0, ] + [0.05, ] + [1.0, 0.05]
-    gs = GridSpec(1, nsims + 3, width_ratios=width_ratios, wspace=0.3)
+    width_ratios = nsims * [1.0, ] + [0.1, ] + [1.0, 0.05]
+    gs = GridSpec(1, nsims + 3, width_ratios=width_ratios, wspace=0.25)
 
     cdelta = 0.05
     clevels = np.arange(-1.0, 1.0 + cdelta, cdelta)
@@ -118,7 +118,7 @@ def main(months=None):
                                ax=fig.add_subplot(gs[0, nsims + 1]), cnorm=cnorm, cmap=cmap)
 
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims + 2]))
-    #fig.tight_layout()
+    # fig.tight_layout()
     fig.savefig(img_path)
 
 if __name__ == '__main__':
