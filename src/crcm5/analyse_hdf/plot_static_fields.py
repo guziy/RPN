@@ -1,4 +1,3 @@
-from brewer2mpl import brewer2mpl
 from matplotlib import gridspec
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, LogNorm
@@ -16,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import do_analysis_using_pytables as analysis
 import common_plot_params as cpp
-
+from matplotlib import cm
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
 
@@ -107,7 +106,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=path)
 
-    #slope
+    # slope
     ch_slope = analysis.get_array_from_file(path=path, var_name="slope")
     ch_slope = maskoceans(lons2d, lats2d, ch_slope)
     ch_slope = np.ma.masked_where(ch_slope.mask | (ch_slope < 0), ch_slope)
@@ -124,7 +123,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
     ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
 
-    #drainage density
+    # drainage density
     dd = analysis.get_array_from_file(path=path, var_name="drainage_density_inv_meters")
     dd *= 1000  # convert to km^-1
     ax = fig.add_subplot(gs[0, 1])
@@ -142,10 +141,10 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
     ax.grid()
 
 
-    #vertical soil hydraulic conductivity
+    # vertical soil hydraulic conductivity
     vshc = analysis.get_array_from_file(path=path, var_name=infovar.HDF_VERT_SOIL_HYDR_COND_NAME)
     if vshc is not None:
-        #get only on the first layer
+        # get only on the first layer
         vshc = vshc[0, :, :]
         ax = fig.add_subplot(gs[1, 0])
         assert isinstance(ax, Axes)
@@ -159,7 +158,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
 
-        #set a scalar formatter
+        # set a scalar formatter
         sfmt = ScalarFormatter(useMathText=True)
         sfmt.set_powerlimits([-2, 2])
         ax.xaxis.set_major_formatter(sfmt)
@@ -171,7 +170,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         assert isinstance(ax, Axes)
 
         interflow_h = 0.2  # Soulis et al 2000
-        #1e-3 is to convert drainage density to m^-1
+        # 1e-3 is to convert drainage density to m^-1
         the_prod = dd_flat * 1e-3 * vshc_flat * ch_slope_flat * 48 * interflow_h
 
         print "product median: {0}".format(np.median(the_prod))
@@ -272,10 +271,10 @@ def main():
     slope = maskoceans(lons, lats, slope)
     slope = np.ma.masked_less(slope, 0)
 
-    #create the colormap object
-    cmap = brewer2mpl.get_map("spectral", "diverging", 9, reverse=True).get_mpl_colormap(N=10)
+    # create the colormap object
+    cmap = cm.get_cmap("spectral_r", lut=10)
 
-    #lake fraction
+    # lake fraction
     ax = fig.add_subplot(gs[0, 0])
     assert isinstance(ax, Axes)
     all_axes = [ax]
@@ -292,18 +291,18 @@ def main():
 
     #plt.show()
 
-    #slope
+    # slope
     ax = fig.add_subplot(gs[2, 0])
     _plot_slope(ax, basemap, x, y, slope, title="g) River slope", cmap=cmap)
     all_axes.append(ax)
 
-    #slope
+    # slope
     ax = fig.add_subplot(gs[2, 1])
     _plot_slope(ax, basemap, x, y, itf_slope, title="h) Interflow slope", cmap=cmap)
     all_axes.append(ax)
 
 
-    #depth to bedrock
+    # depth to bedrock
     ax = fig.add_subplot(gs[0, 1])
     all_axes.append(ax)
     depth_to_bedrock = analysis.get_array_from_file(path=path, var_name="depth_to_bedrock")
@@ -312,7 +311,7 @@ def main():
 
 
 
-    #sand (calculate mean sand content in the soil above bedrock)
+    # sand (calculate mean sand content in the soil above bedrock)
     ax = fig.add_subplot(gs[1, 0])
     sand = analysis.get_array_from_file(path=path, var_name="sand")
 
@@ -327,7 +326,7 @@ def main():
     _plot_sand_clay_percentages(ax, basemap, x, y, sand_height, title="d) Sand", cmap=cmap)
     all_axes.append(ax)
 
-    #clay
+    # clay
     ax = fig.add_subplot(gs[1, 1])
     clay = analysis.get_array_from_file(path=path, var_name="clay")
     print "clay variable shape: {0} ".format(",".join([str(length) for length in clay.shape]))
@@ -340,7 +339,7 @@ def main():
     _plot_sand_clay_percentages(ax, basemap, x, y, clay_height, title="e) Clay", cmap=cmap)
     all_axes.append(ax)
 
-    #drainage density
+    # drainage density
     ax = fig.add_subplot(gs[2, 2])
     all_axes.append(ax)
     drainage_density = analysis.get_array_from_file(path=path, var_name="drainage_density_inv_meters")
@@ -348,7 +347,7 @@ def main():
     _plot_field(ax, basemap, x, y, drainage_density * 1000.0, title="i) DD (${\\rm km^{-1}}$)", cmap=cmap)
 
 
-    #drainage area
+    # drainage area
     ax = fig.add_subplot(gs[0, 2])
     all_axes.append(ax)
     field = analysis.get_array_from_file(path=path, var_name="accumulation_area_km2")

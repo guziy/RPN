@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import time
 import os
-import brewer2mpl
 from matplotlib import cm
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm
@@ -154,7 +153,7 @@ def main(start_year = 1980, end_year = 1989):
         print "d = {0}".format(d)
         clevs = np.round(np.linspace(-d, d, 12), decimals=5)
 
-        diff_cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=len(clevs) - 1)
+        diff_cmap = cm.get_cmap("RdBu_r", lut=len(clevs) - 1)
         bn = BoundaryNorm(clevs, len(clevs) - 1)
 
 
@@ -191,7 +190,7 @@ def main(start_year = 1980, end_year = 1989):
             print "d = {0}".format(d)
             clevs = np.round(np.linspace(-d, d, 12), decimals=5)
 
-            diff_cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=len(clevs) - 1)
+            diff_cmap = cm.get_cmap("RdBu_r", lut=len(clevs) - 1)
             bn = BoundaryNorm(clevs, len(clevs) - 1)
 
             img = plt.contourf(t, z, profiles[:, :nlayers], cmap = diff_cmap, levels = clevs, norm = bn)

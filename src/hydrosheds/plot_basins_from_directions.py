@@ -9,7 +9,7 @@ from rpn.domains.rotated_lat_lon import RotatedLatLon
 from numba import jit
 
 
-@jit("int32(int32[:,:], int32[:,:], int32[:,:], int32, int32, int32)")
+# @jit("int32(int32[:,:], int32[:,:], int32[:,:], int32, int32, int32)")
 def color_upstream(colors=None,
                    i_shifts=None,
                    j_shifts=None,
@@ -95,7 +95,7 @@ def main():
     im = bmp.pcolormesh(x, y, colors)
     bmp.colorbar(im)
     bmp.drawcoastlines()
-    #plt.show()
+    plt.show()
 
 
 if __name__ == '__main__':

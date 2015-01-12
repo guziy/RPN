@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/nbproject" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 2.7.2 virtualenv at ~/skynet3_rech1/virtualenv_cython" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 2.7.8 virtualenv at /skynet3_rech1/huziy/python_virtualenvs/tutorial" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">
@@ -14,4 +14,3 @@
     <option name="PROJECT_TEST_RUNNER" value="Nosetests" />
   </component>
 </module>
-

@@ -147,6 +147,8 @@ def plot_lake_fraction_field():
 
     basemap.drawmapboundary(fill_color="0.75")
     lkf_plot = maskoceans(lons2d, lats2d, lkf, inlands=False)
+    print "Percentage of lakes in the sim domain: {}".format(lkf_plot.mean() * 100)
+
     img = basemap.pcolormesh(x, y, lkf_plot, norm=bn, cmap=cMap)
     basemap.drawcoastlines()
 
@@ -198,6 +200,6 @@ if __name__ == "__main__":
 
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(width_pt=None, width_cm=45, height_cm=30, font_size=20)
-    #plot_lake_fraction_field()
-    main()
+    plot_lake_fraction_field()
+    #main()
     print "Hello world"
