@@ -530,7 +530,7 @@ class Crcm5ModelDataManager:
         query_path = "/{0}/{1}/period_{2}_{3}/level/{4}".format("daily_climatology", var_name,
                                                                 start_year, end_year,
                                                                 level_string)
-        if not query_path in hdf_handle:
+        if query_path not in hdf_handle:
             return None
 
         date_query = "/daily_climatology/date_info"
@@ -574,16 +574,31 @@ class Crcm5ModelDataManager:
         daily_clim_group_name = "daily_climatology"
 
         assert isinstance(hdf_handle, tb.File)
+
+        # Do it to fix the already exists problems
+        # hdf_handle.remove_node("/", name=daily_clim_group_name)
+
         # Check and create the groups if the con't exist
         if not "/{0}".format(daily_clim_group_name) in hdf_handle:
             daily_clim_group = hdf_handle.create_group("/", daily_clim_group_name, "Daily Climatology data")
         else:
             daily_clim_group = hdf_handle.get_node("/{0}".format(daily_clim_group_name))
 
-        if not var_name in daily_clim_group:
+
+        assert isinstance(daily_clim_group, tb.Group)
+
+        print daily_clim_group
+
+        if var_name not in daily_clim_group:
+            print daily_clim_group
             var_group = hdf_handle.create_group(daily_clim_group, var_name)
+            print "var_group = ", var_group
+
             period_group = hdf_handle.create_group(var_group, "period_{0}_{1}".format(start_year, end_year))
+            print "period_group = ", period_group
+
             level_group = hdf_handle.create_group(period_group, "level")
+            print "level_group = ", level_group
         else:
             var_group = hdf_handle.get_node(daily_clim_group, var_name)
             period_str = "period_{0}_{1}".format(start_year, end_year)
@@ -723,7 +738,8 @@ class Crcm5ModelDataManager:
             # Use query for each day of month
             while the_date.year == stamp_year:
                 if level_index is not None:
-                    expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level_index, the_date.month, the_date.day)
+                    expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level_index, the_date.month,
+                                                                                   the_date.day)
                     result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
                 else:
                     expr = "(month == {0}) & (day == {1})".format(the_date.month, the_date.day)
@@ -736,6 +752,7 @@ class Crcm5ModelDataManager:
 
         if use_caching:
             # save calculated climatologies to the file
+            print "Saving cache to a file: {}".format(hdf_db_path)
             cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
                                         var_name=var_name, level=level_index, start_year=start_year, end_year=end_year)
 
@@ -783,7 +800,7 @@ class Crcm5ModelDataManager:
             # print "Start creation of indices"
 
             # if not var_table.cols.year.is_indexed:
-            #     var_table.cols.year.create_index()
+            # var_table.cols.year.create_index()
             #     print "created index on year column"
 
             # if not var_table.cols.month.is_indexed:
@@ -1039,7 +1056,7 @@ class Crcm5ModelDataManager:
                     for level_index, level in enumerate(sorted(data.items()[0][1].keys())):
                         new_row["level_index"] = level_index
                         new_row["level_value"] = level
-			new_row.append()
+                        new_row.append()
                     # flush data to the disk
                     lev_table.flush()
 
@@ -1050,7 +1067,6 @@ class Crcm5ModelDataManager:
 
                     if not (start_year <= t.year <= end_year):
                         continue
-
 
                     for level_index, level in enumerate(sorted(vals)):
                         new_row["year"] = t.year
@@ -1075,11 +1091,11 @@ class Crcm5ModelDataManager:
                     fPath, len(aVarTable), var_name_to_read_row_count[aVarName]
                 )
 
-        #for v_name, data_table in var_name_to_table.iteritems():
-        #    data_table.cols.year.create_index()
-            #data_table.cols.month.create_index()
-            #data_table.cols.day.create_index()
-            #data_table.cols.hour.create_index()
+                # for v_name, data_table in var_name_to_table.iteritems():
+                #    data_table.cols.year.create_index()
+                #data_table.cols.month.create_index()
+                #data_table.cols.day.create_index()
+                #data_table.cols.hour.create_index()
 
 
         # insert also lon and lat data
@@ -1826,7 +1842,7 @@ class Crcm5ModelDataManager:
 
             # self.cbf = rpnObj.get_first_record_for_name("CBF")
             rpnObj.close()
-            #self.slope = rpnObj.get_first_record_for_name("SLOP")
+            # self.slope = rpnObj.get_first_record_for_name("SLOP")
             return
 
         if derive_from_data and not self.all_files_in_one_folder:
@@ -2026,7 +2042,7 @@ class Crcm5ModelDataManager:
                             [data[d][level] for d in times]
                         )
 
-                    t += len(times)  #remember how many time steps have already been written
+                    t += len(times)  # remember how many time steps have already been written
 
             ds.close()
         else:
@@ -2224,7 +2240,7 @@ class Crcm5ModelDataManager:
                 if self.lake_fraction[ix, jy] >= 0.6:
                     continue
 
-                #check if the gridcell is not too far from the station
+                # check if the gridcell is not too far from the station
                 if dists[imin] > 2 * self.characteristic_distance:
                     continue
 
@@ -2309,7 +2325,7 @@ class Crcm5ModelDataManager:
                 if self.lake_fraction[ij[0][0], ij[1][0]] >= 0.6:
                     continue
 
-                #check if the gridcell is not too far from the station
+                # check if the gridcell is not too far from the station
                 if dists[imin] > 2 * self.characteristic_distance:
                     continue
 
@@ -2382,7 +2398,7 @@ class Crcm5ModelDataManager:
         # #index columns for speed
         # if not var_table.cols.year.is_indexed:
         # var_table.cols.year.create_index()
-        #     var_table.cols.month.create_index()
+        # var_table.cols.month.create_index()
         #     var_table.cols.day.create_index()
         #     var_table.cols.hour.create_index()
 
@@ -2489,7 +2505,7 @@ def do_test_seasonal_mean():
 
     # get ocean mask
     # lons2D = manager.lons2D[:,:]
-    #lons2D[lons2D >= 180] -= 360.0
+    # lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
 
@@ -2521,7 +2537,7 @@ def do_test_mean():
 
     # get ocean mask
     # lons2D = manager.lons2D[:,:]
-    #lons2D[lons2D >= 180] -= 360.0
+    # lons2D[lons2D >= 180] -= 360.0
     #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
     data = np.ma.masked_where((data < 50), data)
@@ -2581,7 +2597,7 @@ def compare_lake_levels():
         mod_ts_all = manager.get_timeseries_for_station(var_name="CLDP", station=s, nneighbours=1,
                                                         start_date=start_date, end_date=end_date
         )
-        if mod_ts_all is None:  #means model does not see lakes in the vicinity
+        if mod_ts_all is None:  # means model does not see lakes in the vicinity
             continue
         print(s.id, ":", s.get_timeseries_length())
 
@@ -2606,7 +2622,7 @@ def compare_lake_levels():
         ax = fig.add_subplot(gs[r, c])
         assert isinstance(ax, Axes)
         print len(mod_normals), len(sta_day_dates)
-        #normals
+        # normals
         h_m = ax.plot(sta_day_dates, mod_normals - np.mean(mod_normals), "b", label="model", lw=3)
         h_s = ax.plot(sta_day_dates, sta_normals - np.mean(sta_normals), "r", label="station", lw=2)
 
@@ -2626,7 +2642,7 @@ def compare_lake_levels():
         #ax.legend()
 
     ax = fig.add_subplot(gs[(r + 1):, :])
-    #lons2d, lats2d = manager.lons2D, manager.lats2D
+    # lons2d, lats2d = manager.lons2D, manager.lats2D
     b = manager.get_rotpole_basemap()
     b.drawcoastlines()
     y1 = 0.8
@@ -2661,7 +2677,7 @@ def compare_streamflow_normals():
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
-    #coord_file = os.path.join(data_path, "pm1985050100_00000000p")
+    # coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
@@ -2804,7 +2820,7 @@ def compare_streamflow():
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1"
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_lake_level_260x260_1_lakes_off_high_res"
-    #coord_file = os.path.join(data_path, "pm1985050100_00000000p")
+    # coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
@@ -2978,7 +2994,7 @@ def main():
     # test_mean()
     plot_utils.apply_plot_params(width_pt=None, height_cm=20, width_cm=20)
     # plot_utils.apply_plot_params(width_pt=None, height_cm=50, width_cm=50)
-    #test_seasonal_mean()
+    # test_seasonal_mean()
     pass
 
 

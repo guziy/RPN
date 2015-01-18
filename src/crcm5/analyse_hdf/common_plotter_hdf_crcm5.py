@@ -84,7 +84,7 @@ def compare_2d_seasonal_means_from_simulations():
 
     # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
 
-    varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS"]
+    varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
     levels = len(varnames) * [0, ]
 
     # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
@@ -109,7 +109,7 @@ def compare_2d_seasonal_means_from_simulations():
     # ])
 
     start_year = 1980
-    end_year = 2010
+    end_year = 1989
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
     comp.plot_control_and_differences_in_one_panel_for_all_seasons(varnames=varnames,

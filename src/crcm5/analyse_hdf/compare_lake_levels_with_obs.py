@@ -47,7 +47,7 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
     x, y = basemap(cell_manager.lons2d, cell_manager.lats2d)
 
 
-    #plot the arrows for upstream cells
+    # plot the arrows for upstream cells
     ups_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
 
     x1d_start = x[ups_mask == 1]
@@ -149,12 +149,12 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
         basin_tmin = np.sum(obs_tmin_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
                             axis=1) / basin_area_km2
 
-        #plot max temperature
+        # plot max temperature
         df_tmax = _apply_running_mean(daily_dates, basin_tmax)
         print df_tmax.tail(20)
         p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1, color="k")
 
-        #plot min temperature
+        # plot min temperature
         df_tmin = _apply_running_mean(daily_dates, basin_tmin)
         ax.plot(df_tmin.index, df_tmin["values"], label="tmin-obs", color=p[0].get_color(), lw=1)
         ax.fill_between(df_tmin.index, df_tmax["values"], df_tmin["values"], alpha=0.3, color=p[0].get_color())
@@ -169,7 +169,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     return True  # True means successful termination of the function
 
 
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
                                    obs_precip_clim_fields=None,
                                    daily_dates=None,

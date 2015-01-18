@@ -150,39 +150,49 @@ def get_boundary_norm_using_all_vals(to_plot, ncolors):
 
 def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False, varname = None, difference = False):
 
+    bounds = None
 
 
-    if vmin * vmax >= 0:
-        locator = MaxNLocator(ncolors)
-        bounds = np.asarray(locator.tick_values(vmin, vmax))
-    elif exclude_zero:
-        #implies that this is the case for difference
-        delta = max(abs(vmax), abs(vmin))
-        assert ncolors % 2 == 1
-        d = 2.0 * delta / float(ncolors)
-        print d, np.log10(d)
-        ndec = -int(np.floor(np.log10(d)))
-        print ndec
-        d = np.round(d, decimals=ndec)
-
-        assert d > 0
-        print "ncolors = {0}".format(ncolors)
-
-        negats = [-d / 2.0 - d * i for i in range((ncolors - 1) / 2)]
-        bounds = negats[::-1] + [-the_bound for the_bound in negats]
-        assert 0 not in bounds
-        assert bounds[0] == -bounds[-1]
-    else:
-        locator = MaxNLocator(nbins=ncolors, symmetric=True)
-        bounds = np.asarray(locator.tick_values(vmin, vmax))
-
-
-    #custom variable norms
+    # custom variable norms
     if difference:
         pass
     else:
         if varname == "TRAF":
             bounds = [0, 0.1, 0.5] + list(range(1, ncolors - 3)) + [vmax, ]
+
+    # temperature
+    if varname in ["TT", ]:
+        if difference:
+            pos = [0.5 * i for i in range(1, 5)]
+            bounds = [-v for v in reversed(pos)] + pos
+
+    # Do not do anything if bounds were already calculated
+    if bounds is None:
+        if vmin * vmax >= 0:
+            locator = MaxNLocator(ncolors)
+            bounds = np.asarray(locator.tick_values(vmin, vmax))
+        elif exclude_zero:
+            # implies that this is the case for difference
+            delta = max(abs(vmax), abs(vmin))
+            assert ncolors % 2 == 1
+            d = 2.0 * delta / float(ncolors)
+            print d, np.log10(d)
+            ndec = -int(np.floor(np.log10(d)))
+            print ndec
+            d = np.round(d, decimals=ndec)
+
+            assert d > 0
+            print "ncolors = {0}".format(ncolors)
+
+            negats = [-d / 2.0 - d * i for i in range((ncolors - 1) / 2)]
+            bounds = negats[::-1] + [-the_bound for the_bound in negats]
+            assert 0 not in bounds
+            assert bounds[0] == -bounds[-1]
+        else:
+            locator = MaxNLocator(nbins=ncolors, symmetric=True)
+            bounds = np.asarray(locator.tick_values(vmin, vmax))
+
+
 
 
 

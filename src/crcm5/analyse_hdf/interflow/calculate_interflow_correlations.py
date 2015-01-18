@@ -66,7 +66,7 @@ def calculate_correlation_field_for_climatology(start_year=None,
     selfields1 = [f for date, f in zip(dates, data1) if date.month in months]
     selfields2 = [f for date, f in zip(dates, data2) if date.month in months]
 
-    return calculate_correlation(selfields1, selfields2)
+    return calculate_correlation(selfields1, selfields2), selfields1, selfields2
 
 
 def calculate_correlation_of_infiltration_rate_with(start_year=None,
@@ -109,8 +109,8 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
 
 
 def main(start_year=1980, end_year=2010, months=None):
-    default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
-    # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+    # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+    default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     if months is None:
         months = range(1, 13)
@@ -140,7 +140,7 @@ def main(start_year=1980, end_year=2010, months=None):
     title_list = []
     data_list = []
 
-    corr1 = calculate_correlation_field_for_climatology(**params)
+    corr1, intf_clim, i1_clim = calculate_correlation_field_for_climatology(**params)
     to_plot1 = maskoceans(lons, lats, corr1)
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot1)
@@ -161,8 +161,8 @@ def main(start_year=1980, end_year=2010, months=None):
 
     # correlate interflow and evaporation
     params.update(dict(varname2="AV", level2=0, varname1="INTF", level1=0))
-    corr4 = calculate_correlation_field_for_climatology(**params)
-    to_plot4 = np.ma.masked_where(to_plot1.mask, corr4)
+    corr4, intf_clim, av_clim = calculate_correlation_field_for_climatology(**params)
+    to_plot4 = np.ma.masked_where(to_plot1.mask | (corr4 >= -0.1), corr4)
     title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
     data_list.append(to_plot4)
 
@@ -184,6 +184,8 @@ def main(start_year=1980, end_year=2010, months=None):
     for col in range(npanels):
         ax = fig.add_subplot(gs[0, col])
         basemap.drawmapboundary(fill_color="0.75", ax=ax)
+
+
         img = basemap.contourf(x, y, data_list[col], levels=clevels, cmap=cm.get_cmap("RdBu_r", len(clevels) - 1))
         plt.title(title_list[col])
         basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH, ax=ax)
@@ -225,7 +227,12 @@ if __name__ == '__main__':
         range(3, 6), range(6, 9), range(9, 12)
     )
 
+    start_year = 1980
+    end_year = 1989
+
     for months in seasons:
-        main(start_year=1980, end_year=2010, months=months)
+        main(start_year=start_year,
+             end_year=end_year,
+             months=months)
 
     # demo_equal_fields()

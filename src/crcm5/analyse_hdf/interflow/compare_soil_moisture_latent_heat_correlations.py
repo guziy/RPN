@@ -70,7 +70,9 @@ def main(months=None):
     # List of simulations to compare
     label_to_path = OrderedDict([
         ("Without interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"),
-        ("With interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"),
+        ("With interflow (a)", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"),
+        ("With interflow (b)",
+         "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5")
     ])
 
     nsims = len(label_to_path)
@@ -83,7 +85,7 @@ def main(months=None):
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
 
     start_year = 1980
-    end_year = 2010
+    end_year = 1989
 
     keys = [k.replace(" ", "-") for k in label_to_path]
     keys.extend([str(i) for i in (start_year, end_year)])
