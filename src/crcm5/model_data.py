@@ -500,6 +500,7 @@ class Crcm5ModelDataManager:
         return TimeSeries(data=map(lambda t: data[t], dates), time=dates).get_ts_of_monthly_means()
 
 
+
     @classmethod
     def _get_saved_daily_climatology(cls, hdf_handle, var_name="", level=None,
                                      start_year=None, end_year=None):
@@ -517,39 +518,18 @@ class Crcm5ModelDataManager:
                                                                                                     for level 1
                                             /level/2 -> 3D array ... for level 2
                 the first dimensions of these 3D arrays correspond to the times stored in date_info table
-
-        Scheme of the date_info table for each level is:
-        (Month): from 1 to 12
-        (DayOfMonth): from 1 to (28|29|30|31 depending on month)
         """
 
         assert isinstance(hdf_handle, tb.File)
 
-        level_string = "{0}".format("single" if level is None else level)
+        data_file, dates_file = _get_path_to_cached_data_and_dates_files(hdf_handle,
+                                                                         var_name=var_name,
+                                                                         start_year=start_year,
+                                                                         end_year=end_year,
+                                                                         level=level)
 
-        query_path = "/{0}/{1}/period_{2}_{3}/level/{4}".format("daily_climatology", var_name,
-                                                                start_year, end_year,
-                                                                level_string)
-        if query_path not in hdf_handle:
-            return None
+        return pickle.load(open(dates_file)), np.asarray(pickle.load(open(data_file)))
 
-        date_query = "/daily_climatology/date_info"
-        if date_query not in hdf_handle:
-            return None
-
-
-        # read the daily fields
-        fields = hdf_handle.get_node(query_path).read()
-
-        # read corresponding day and month
-        date_info = hdf_handle.get_node(date_query)
-        stamp_year = 2001
-        daily_dates = [
-            datetime(stamp_year, row["month"], row["day_of_month"]) for row in date_info
-        ]
-        date_info.close()
-
-        return daily_dates, np.asarray(fields)
 
     @classmethod
     def _save_daily_climatology(cls, hdf_handle, daily_dates=None, daily_clim_fields=None, var_name="",
@@ -568,77 +548,25 @@ class Crcm5ModelDataManager:
                         /single or /level_value (array)
         """
 
-        assert start_year is not None
-        assert end_year is not None
-
-        daily_clim_group_name = "daily_climatology"
-
-        assert isinstance(hdf_handle, tb.File)
-
-        # Do it to fix the already exists problems
-        # hdf_handle.remove_node("/", name=daily_clim_group_name)
-
-        # Check and create the groups if the con't exist
-        if not "/{0}".format(daily_clim_group_name) in hdf_handle:
-            daily_clim_group = hdf_handle.create_group("/", daily_clim_group_name, "Daily Climatology data")
-        else:
-            daily_clim_group = hdf_handle.get_node("/{0}".format(daily_clim_group_name))
+        data_file, dates_file = _get_path_to_cached_data_and_dates_files(hdf_handle,
+                                                                         var_name=var_name,
+                                                                         start_year=start_year,
+                                                                         end_year=end_year,
+                                                                         level=level)
+        # create folders if they do not exist
+        cache_data_folder = os.path.dirname(os.path.realpath(data_file))
+        _create_folder_if_needed(cache_data_folder)
 
 
-        assert isinstance(daily_clim_group, tb.Group)
+        pickle.dump(daily_clim_fields, open(data_file, "w"))
 
-        print daily_clim_group
-
-        if var_name not in daily_clim_group:
-            print daily_clim_group
-            var_group = hdf_handle.create_group(daily_clim_group, var_name)
-            print "var_group = ", var_group
-
-            period_group = hdf_handle.create_group(var_group, "period_{0}_{1}".format(start_year, end_year))
-            print "period_group = ", period_group
-
-            level_group = hdf_handle.create_group(period_group, "level")
-            print "level_group = ", level_group
-        else:
-            var_group = hdf_handle.get_node(daily_clim_group, var_name)
-            period_str = "period_{0}_{1}".format(start_year, end_year)
-            if period_str in var_group:
-
-                period_group = hdf_handle.get_node(var_group, period_str)
-                # sometimes an array is put in here, deleting it but why that happens has to be investigated
-                if isinstance(period_group, tb.Array):
-                    print "Removing existing leaf: ", period_group
-                    hdf_handle.remove_node(var_group, period_str)
-                    period_group = hdf_handle.create_group(var_group, period_str)
-                    level_group = hdf_handle.create_group(period_group, "level")
-                else:
-                    level_group = period_group.level
-            else:
-                period_group = hdf_handle.create_group(var_group, period_str)
-                level_group = hdf_handle.create_group(period_group, "level")
+        # save dates as well
+        if not os.path.exists(dates_file):
+            pickle.dump(daily_dates, open(dates_file, "w"))
 
 
-        # create an array for each level which will be holding actual data (time, x, y)
-        level_string = "{0}".format("single" if level is None else level)
-        if level_string in level_group:
-            hdf_handle.remove_node(level_group, level_string)
-            print("Warning overwriting {0}/{1}".format(level_group, level_string))
 
-        hdf_handle.create_array(level_group, level_string, daily_clim_fields)
 
-        if "date_info" not in daily_clim_group:
-            date_table = hdf_handle.create_table(daily_clim_group, "date_info", {
-                "month": tb.IntCol(pos=0),
-                "day_of_month": tb.IntCol(pos=1)})
-
-            data = [
-                (aDate.month, aDate.day) for aDate in daily_dates
-            ]
-
-            print date_table.description
-            print len(data)
-            assert isinstance(date_table, tb.Table)
-            date_table.append(data)
 
 
     @classmethod
@@ -801,7 +729,7 @@ class Crcm5ModelDataManager:
 
             # if not var_table.cols.year.is_indexed:
             # var_table.cols.year.create_index()
-            #     print "created index on year column"
+            # print "created index on year column"
 
             # if not var_table.cols.month.is_indexed:
             #     var_table.cols.month.create_index()
@@ -1092,7 +1020,7 @@ class Crcm5ModelDataManager:
                 )
 
                 # for v_name, data_table in var_name_to_table.iteritems():
-                #    data_table.cols.year.create_index()
+                # data_table.cols.year.create_index()
                 #data_table.cols.month.create_index()
                 #data_table.cols.day.create_index()
                 #data_table.cols.hour.create_index()
@@ -2244,7 +2172,7 @@ class Crcm5ModelDataManager:
                 if dists[imin] > 2 * self.characteristic_distance:
                     continue
 
-                #check if difference in drainage areas is not too big less than 10 %
+                # check if difference in drainage areas is not too big less than 10 %
                 if deltaDaMin / s.drainage_km2 > 0.1: continue
 
                 mp = ModelPoint()
@@ -2329,7 +2257,7 @@ class Crcm5ModelDataManager:
                 if dists[imin] > 2 * self.characteristic_distance:
                     continue
 
-                #check if difference in drainage areas is not too big less than 10 %
+                # check if difference in drainage areas is not too big less than 10 %
                 if deltaDaMin / s.drainage_km2 > 0.1:
                     continue
 
@@ -2399,7 +2327,7 @@ class Crcm5ModelDataManager:
         # if not var_table.cols.year.is_indexed:
         # var_table.cols.year.create_index()
         # var_table.cols.month.create_index()
-        #     var_table.cols.day.create_index()
+        # var_table.cols.day.create_index()
         #     var_table.cols.hour.create_index()
 
         d0 = datetime(2001, 1, 1)
@@ -2506,7 +2434,7 @@ def do_test_seasonal_mean():
     # get ocean mask
     # lons2D = manager.lons2D[:,:]
     # lons2D[lons2D >= 180] -= 360.0
-    #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
+    # ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
 
     #data = np.ma.masked_where(data < 0.1, data)
@@ -2538,7 +2466,7 @@ def do_test_mean():
     # get ocean mask
     # lons2D = manager.lons2D[:,:]
     # lons2D[lons2D >= 180] -= 360.0
-    #ocean_mask = maskoceans(lons2D, manager.lats2D, data)
+    # ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
     data = np.ma.masked_where((data < 50), data)
 
@@ -2626,7 +2554,7 @@ def compare_lake_levels():
         h_m = ax.plot(sta_day_dates, mod_normals - np.mean(mod_normals), "b", label="model", lw=3)
         h_s = ax.plot(sta_day_dates, sta_normals - np.mean(sta_normals), "r", label="station", lw=2)
 
-        #instantaneous values
+        # instantaneous values
         #h_m = ax.plot(mod_ts_all[0].time, mod_ts_all[0].data - np.mean(mod_ts_all[0].data) , "b", label = "model", lw = 3)
         #h_s = ax.plot(s.dates, s.values - np.mean(s.values), "r", label = "station", lw = 1)
 
@@ -2680,7 +2608,7 @@ def compare_streamflow_normals():
     # coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
@@ -2823,7 +2751,7 @@ def compare_streamflow():
     # coord_file = os.path.join(data_path, "pm1985050100_00000000p")
 
 
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
@@ -3033,6 +2961,50 @@ def do_test_rotpole():
 
     plt.show()
 
+
+def _create_folder_if_needed(path):
+    if os.path.isdir(path) or os.path.islink(path):
+        return
+
+    os.makedirs(path)
+
+
+def _get_path_to_cached_data_and_dates_files(hdf_handle, var_name="", start_year=None, end_year=None, level=None):
+    """
+    path to the data cache of daily_climatology calculated from test.hdf5 for 1980-1985 period for the level=1
+    of variable TT
+
+        test.hdf5.cache/daily_climatology/TT/1980-1985/level_1/data.bin
+
+    daily dates corresponding to the first dimension of the array in data.bin are at the following location
+
+        test.hdf5.cache/daily_climatology/daily_dates.bin
+
+    :param hdf_handle:
+    :param var_name:
+    :param start_year:
+    :param end_year:
+    :param level:
+    :return:
+    """
+    assert start_year is not None
+    assert end_year is not None
+
+
+    assert isinstance(hdf_handle, tb.File)
+    hdf_file_path = hdf_handle.filename
+
+    cache_folder_path = "{}.cache".format(hdf_file_path)
+
+    daily_clim_folder_for_var = os.path.join(cache_folder_path, "daily_climatology", var_name,
+                                             "{}-{}".format(start_year, end_year), "level_{}".format(level))
+
+
+    data_file = os.path.join(daily_clim_folder_for_var, "data.bin")
+    dates_file = os.path.join(cache_folder_path, "daily_climatology", "daily_dates.bin")
+
+
+    return data_file, dates_file
 
 def do_test_stuff():
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
