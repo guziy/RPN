@@ -130,4 +130,6 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
 
 if __name__ == '__main__':
+    import application_properties
+    application_properties.set_current_directory()
     main()
