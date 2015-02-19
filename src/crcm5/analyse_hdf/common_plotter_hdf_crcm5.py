@@ -45,7 +45,7 @@ def compare_obs_and_model_at_points():
     import compare_streamflow_with_obs
 
     start_date = datetime(1980, 1, 1)
-    end_date = datetime(1989, 12, 31)
+    end_date = datetime(2010, 12, 31)
 
     compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
     # reset back plot parameters to the default ones
@@ -82,9 +82,10 @@ def plot_static_fields_histograms():
 def compare_2d_seasonal_means_from_simulations():
     import compare_modelled_2d_fields as comp
 
-    # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
+    varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
 
-    varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
+    # varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
+    # varnames = ["TT", "TRAF"]
     levels = len(varnames) * [0, ]
 
     # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
@@ -100,12 +101,10 @@ def compare_2d_seasonal_means_from_simulations():
     ])
 
     # season_to_months = OrderedDict([
-    #    #("March", [3, ]),
-    #    #("April", [4, ]),
-    #    ("May", [5, ]),
-    #    ("June", [6, ]),
-    #    ("July", [7, ]),
-    #    ("August", [8, ])
+    # ("May", [5, ]),
+    #     ("June", [6, ]),
+    #     ("July", [7, ]),
+    #     ("August", [8, ])
     # ])
 
     start_year = 1980
@@ -196,6 +195,7 @@ if __name__ == "__main__":
 
     # compare_simulations()
     # validate_seasonal_mean_atm_fields()
+
     # plot_static_fields_histograms()
 
     # Compares Q10 and Q90 calculated from observed and modelled climatologic hydrographs

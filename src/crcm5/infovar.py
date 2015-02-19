@@ -120,7 +120,7 @@ def get_colorbar_formatter(varname):
     if varname in ["STFL", "STFA"]:
         return None
     else:
-        #format the colorbar tick labels
+        # format the colorbar tick labels
         sfmt = ScalarFormatter(useMathText=True)
         sfmt.set_powerlimits((-3, 3))
         return sfmt
@@ -161,10 +161,7 @@ def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False, varname = None, d
             bounds = [0, 0.1, 0.5] + list(range(1, ncolors - 3)) + [vmax, ]
 
     # temperature
-    if varname in ["TT", ]:
-        if difference:
-            pos = [0.5 * i for i in range(1, 5)]
-            bounds = [-v for v in reversed(pos)] + pos
+
 
     # Do not do anything if bounds were already calculated
     if bounds is None:
@@ -227,8 +224,8 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
         norm = BoundaryNorm(bounds, ncolors=ncolors)  # LogNorm(vmin=10 ** (pmax - ncolors), vmax=10 ** pmax)
     else:
         reverse = True
-        if var_name in ["PR"]:
-            reverse = False
+        # if var_name in ["PR"]:
+        #     reverse = False
 
         cmap = cm.get_cmap("Spectral_r" if reverse else "Spectral", len(clevs) - 1)
 

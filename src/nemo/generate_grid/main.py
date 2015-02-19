@@ -5,7 +5,7 @@ from nemo import nemo_commons
 
 __author__ = 'huziy'
 
-#Example header of the coordinates file
+# Example header of the coordinates file
 # netcdf coordinates {
 # dimensions:
 # 	x = 355 ;
@@ -66,19 +66,19 @@ def generate_grid_coordinates():
                 llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat)
 
     print lons_rot[0, 0], lats_rot[0, 0], lons_rot[-1, -1], lats_rot[-1, -1]
-    lons_real, lats_real = b(lons_rot, lats_rot, inverse = True)
+    lons_real, lats_real = b(lons_rot, lats_rot, inverse=True)
 
     print "Check consistency of the transformations (below): "
-    #from RotatedLatlon
+    # from RotatedLatlon
     print "from rotated lat/lon: ", llcrnrlon, llcrnrlat, urcrnrlon, urcrnrlat
 
-    #from basemap
-    print "from baseap: ", lons_real[0, 0], lats_real[0, 0], lons_real[-1, -1], lats_real[-1, -1]
+    # from basemap
+    print "from basemap: ", lons_real[0, 0], lats_real[0, 0], lons_real[-1, -1], lats_real[-1, -1]
 
-    #t point coordinates
+    # t point coordinates
     tlons, tlats = lons_real, lats_real
 
-    #calculate gridspacing for t grid in x direction
+    # calculate gridspacing for t grid in x direction
     # Not greatcircle distance expects p = (lat, lon)
     geo_metric = lambda p1, p2: gpy_dist.GreatCircleDistance(p1, p2, radius=nemo_commons.mean_earth_radius_km_crcm5).m
 
@@ -88,29 +88,32 @@ def generate_grid_coordinates():
     e2t = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten()),
                                                 zip(lats_rot.flatten() + dom_props.dy, lons_rot.flatten()))]
 
-    #u grid sapcing
+    # u grid sapcing
     e1u = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx / 2.0),
                                                 zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx * 1.5))]
 
     e2u = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx / 2.0),
-                                                zip(lats_rot.flatten() + dom_props.dy, lons_rot.flatten() + dom_props.dx / 2.0))]
+                                                zip(lats_rot.flatten() + dom_props.dy,
+                                                    lons_rot.flatten() + dom_props.dx / 2.0))]
 
 
-    #v grid sapcing
+    # v grid sapcing
     e1v = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten()),
-                                                zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx))]
+                                                zip(lats_rot.flatten() + dom_props.dy / 2.0,
+                                                    lons_rot.flatten() + dom_props.dx))]
 
     e2v = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten()),
                                                 zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten()))]
 
 
-    #f grid sapcing
-    e1f = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0),
-                                                zip(lats_rot.flatten()+ dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx * 1.5))]
+    # f grid sapcing
+    e1f = [geo_metric(p1, p2) for p1, p2 in
+           zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0),
+               zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx * 1.5))]
 
-    e2f = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0),
-                                                zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten() + dom_props.dx / 2.0))]
-
+    e2f = [geo_metric(p1, p2) for p1, p2 in
+           zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0),
+               zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten() + dom_props.dx / 2.0))]
 
     scales = [e1t, e2t, e1u, e2u, e1v, e2v, e1f, e2f]
 
@@ -124,29 +127,26 @@ def generate_grid_coordinates():
 
     result = {"T": (tlons.transpose(), tlats.transpose(), e1t, e2t)}
 
-    #u point coordinates
+    # u point coordinates
     u_rot_lons, u_rot_lats = lons_rot + dom_props.dx / 2.0, lats_rot
-    ulons, ulats = b(u_rot_lons, u_rot_lats, inverse = True)
+    ulons, ulats = b(u_rot_lons, u_rot_lats, inverse=True)
     result["U"] = (ulons.transpose(), ulats.transpose(), e1u, e2u)
 
-    #v point coordinates
+    # v point coordinates
     v_rot_lons, v_rot_lats = lons_rot, lats_rot + dom_props.dy / 2.0
-    vlons, vlats = b(v_rot_lons, v_rot_lats, inverse = True)
+    vlons, vlats = b(v_rot_lons, v_rot_lats, inverse=True)
     result["V"] = (vlons.transpose(), vlats.transpose(), e1v, e2v)
 
-    #f point coordinates
+    # f point coordinates
     f_rot_lons, f_rot_lats = lons_rot + dom_props.dx / 2.0, lats_rot + dom_props.dy / 2.0
-    flons, flats = b(f_rot_lons, f_rot_lats, inverse = True)
+    flons, flats = b(f_rot_lons, f_rot_lats, inverse=True)
     result["F"] = (flons.transpose(), flats.transpose(), e1f, e2f)
     print flons.shape
 
     return result
 
 
-
-
 def main():
-
     out_folder = "nemo_grids"
     out_file = "coordinates_{0}.nc".format(dom_props.config_name)
     out_path = os.path.join(out_folder, out_file)

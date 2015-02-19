@@ -2,14 +2,17 @@ __author__ = 'huziy'
 
 
 
-nx, dx = 170, 0.1
-ny, dy = 90, 0.1
+# nx, dx = 170, 0.1
+# ny, dy = 90, 0.1
 
+nx, dx = 210, 0.1
+ny, dy = 130, 0.1
 
-iref, jref = 85, 80
+# Indices are 1-based
+iref, jref = 105, 100
 lonref, latref = -84, 48
 
-#porjection properties (rotated lat/lon)
+# porjection properties (rotated lat/lon)
 lon1, lat1 = 180, 0
 lon2, lat2 = -84, 1
 

@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import colors
 import numpy as np
-from permafrost import draw_regions
 from util.geo import lat_lon
 
 __author__ = 'huziy'

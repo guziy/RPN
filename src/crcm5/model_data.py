@@ -50,24 +50,24 @@ class InputForProcessPool:
 
 
 def _get_var_data_to_pandas(x):
-    vName, level, average_upstream, nc_sim_folder, inObject = x
-    assert isinstance(inObject, InputForProcessPool)
-    ds = Dataset(os.path.join(nc_sim_folder, "{0}_all.nc4".format(vName)))
-    var = ds.variables[vName]
+    vname, level, average_upstream, nc_sim_folder, inobject = x
+    assert isinstance(inobject, InputForProcessPool)
+    ds = Dataset(os.path.join(nc_sim_folder, "{0}_all.nc4".format(vname)))
+    var = ds.variables[vname]
     if average_upstream:
         # data_frame[vName] = np.sum( var[:,level,:,:][:,i_upstream, j_upstream] * coefs, axis = 1 )
 
-        imin, imax = min(inObject.i_upstream), max(inObject.i_upstream)
-        jmin, jmax = min(inObject.j_upstream), max(inObject.j_upstream)
+        imin, imax = min(inobject.i_upstream), max(inobject.i_upstream)
+        jmin, jmax = min(inobject.j_upstream), max(inobject.j_upstream)
 
         the_data = var[:, level, imin:imax + 1, jmin:jmax + 1]
 
-        i_adapt = np.array(inObject.i_upstream) - imin
-        j_adapt = np.array(inObject.j_upstream) - jmin
+        i_adapt = np.array(inobject.i_upstream) - imin
+        j_adapt = np.array(inobject.j_upstream) - jmin
 
-        the_data = np.sum(the_data[:, i_adapt, j_adapt] * inObject.multipliers, axis=1)
+        the_data = np.sum(the_data[:, i_adapt, j_adapt] * inobject.multipliers, axis=1)
     else:
-        the_data = var[:, level, inObject.mp_ix, inObject.mp_jy]
+        the_data = var[:, level, inobject.mp_ix, inobject.mp_jy]
 
     ds.close()
     return the_data
@@ -88,6 +88,7 @@ class Crcm5ModelDataManager:
     def __init__(self, samples_folder_path="data/gemclim/quebec/Samples",
                  var_name="STFL", file_name_prefix="pm",
                  all_files_in_samples_folder=False, need_cell_manager=False):
+        self.projection = None
         self.file_name_prefix = file_name_prefix
         self.samples_folder = samples_folder_path
         self.all_files_in_one_folder = all_files_in_samples_folder
@@ -500,7 +501,6 @@ class Crcm5ModelDataManager:
         return TimeSeries(data=map(lambda t: data[t], dates), time=dates).get_ts_of_monthly_means()
 
 
-
     @classmethod
     def _get_saved_daily_climatology(cls, hdf_handle, var_name="", level=None,
                                      start_year=None, end_year=None):
@@ -527,6 +527,11 @@ class Crcm5ModelDataManager:
                                                                          start_year=start_year,
                                                                          end_year=end_year,
                                                                          level=level)
+        # Check if cache already exists
+        if not os.path.isfile(data_file):
+            return None, None
+
+        print "Using cache from: {}".format(data_file)
 
         return pickle.load(open(dates_file)), np.asarray(pickle.load(open(data_file)))
 
@@ -543,7 +548,7 @@ class Crcm5ModelDataManager:
         /daily_climatology
             /date_info (table)
             /varname
-                /startyear_endyear
+                /startyear-endyear
                     /level
                         /single or /level_value (array)
         """
@@ -557,16 +562,12 @@ class Crcm5ModelDataManager:
         cache_data_folder = os.path.dirname(os.path.realpath(data_file))
         _create_folder_if_needed(cache_data_folder)
 
-
+        print "Saving cache to a file: {}".format(data_file)
         pickle.dump(daily_clim_fields, open(data_file, "w"))
 
         # save dates as well
         if not os.path.exists(dates_file):
             pickle.dump(daily_dates, open(dates_file, "w"))
-
-
-
-
 
 
     @classmethod
@@ -594,17 +595,17 @@ class Crcm5ModelDataManager:
             # with guarantees that the file will be closed upon exit from the with block no matter what
             # happens inside the with block
             with tb.open_file(hdf_db_path) as hdf:
-                climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level_index,
-                                                               start_year=start_year,
-                                                               end_year=end_year)
+                dates, climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level_index,
+                                                                      start_year=start_year,
+                                                                      end_year=end_year)
                 if climatology is not None:
-                    return climatology
+                    return dates, climatology
 
-        hdf = tb.open_file(hdf_db_path, "a" if use_caching else "r")
+        hdf = tb.open_file(hdf_db_path)
         assert isinstance(hdf, tb.File)
 
-        varTable = hdf.get_node("/", var_name)
-        assert isinstance(varTable, tb.Table)
+        vartable = hdf.get_node("/", var_name)
+        assert isinstance(vartable, tb.Table)
 
         stamp_year = 2001  # Just select the stamp year arbitrarily  (preferably not a leap year)
         the_date = datetime(stamp_year, 1, 1)
@@ -617,12 +618,10 @@ class Crcm5ModelDataManager:
         if use_grouping:
             # grouping function
             def day_selector(row):
-
-                aMonth = row["month"]
-                aDay = row["day"]
-                aLevel = row["level_index"]
-
-                return aMonth, aDay, aLevel
+                amonth = row["month"]
+                aday = row["day"]
+                alevel = row["level_index"]
+                return amonth, aday, alevel
 
             date_to_mean_field = {}
             date_to_count = {}
@@ -630,21 +629,21 @@ class Crcm5ModelDataManager:
             period_selector_stmt = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
 
             # calculate mean using chunks of grouped data
-            for group_keys, grouped_rows in itertools.groupby(varTable.where(period_selector_stmt), day_selector):
-                aMonth, aDayOfMonth, aLevel = group_keys
+            for group_keys, grouped_rows in itertools.groupby(vartable.where(period_selector_stmt), day_selector):
+                amonth, adayofmonth, alevel = group_keys
 
                 # ignore the 29th of February
-                if aMonth == 2 and aDayOfMonth == 29:
+                if amonth == 2 and adayofmonth == 29:
                     continue
 
-                if level_index is not None and aLevel != level_index:
+                if level_index is not None and alevel != level_index:
                     continue
                 data = [
                     row["field"] for row in grouped_rows
                 ]
                 data = np.asarray(data)
 
-                d = datetime(stamp_year, aMonth, aDayOfMonth)
+                d = datetime(stamp_year, amonth, adayofmonth)
                 if d not in date_to_count:
                     date_to_count[d] = float(data.shape[0])
                     date_to_mean_field[d] = data.mean(axis=0)
@@ -668,10 +667,10 @@ class Crcm5ModelDataManager:
                 if level_index is not None:
                     expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level_index, the_date.month,
                                                                                    the_date.day)
-                    result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
+                    result = np.mean([row["field"] for row in vartable.where(expr)], axis=0)
                 else:
                     expr = "(month == {0}) & (day == {1})".format(the_date.month, the_date.day)
-                    result = np.mean([row["field"] for row in varTable.where(expr)], axis=0)
+                    result = np.mean([row["field"] for row in vartable.where(expr)], axis=0)
 
                 daily_fields.append(result)
                 daily_dates.append(the_date)
@@ -680,7 +679,6 @@ class Crcm5ModelDataManager:
 
         if use_caching:
             # save calculated climatologies to the file
-            print "Saving cache to a file: {}".format(hdf_db_path)
             cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
                                         var_name=var_name, level=level_index, start_year=start_year, end_year=end_year)
 
@@ -698,31 +696,35 @@ class Crcm5ModelDataManager:
         :param var_name:
         :param start_year:
         :param end_year:
+
+        cache file:
+
+        "{}.cache/seasonal_means/{}/{}-{}/{}/level_{}/data.bin".format(
+            path_to_hdf, start_year, end_year, "-".join([str(m) for m in months]), level
+        )
         """
 
-        cache_arr_name = "{0}_{1}-{2}_{3}".format(var_name, start_year, end_year,
-                                                  "-".join([str(m) for m in sorted(months)]))
+        months = range(1, 13) if months is None else months
 
-        if level is not None:
-            cache_arr_name += "_level{0}".format(level)
+        # check if cached data exist
+        cache_folder = "{}.cache/seasonal_means/{}/{}-{}/level_{}".format(
+            path_to_hdf, var_name, start_year, end_year, "-".join([str(m) for m in sorted(months)]), level
+        )
+        cache_folder = os.path.realpath(cache_folder)
 
-        # use cached seasonal means if present
-        h = tb.open_file(path_to_hdf)
-        if "/" + cache_arr_name in h:
-            print "Using cached array: {0}".format(cache_arr_name)
-            result = h.get_node("/" + cache_arr_name)[:]
-            h.close()
-            return result
-        h.close()
+        if not os.path.isdir(cache_folder):
+            os.makedirs(cache_folder)
+
+        cache_file = os.path.join(cache_folder, "data.bin")
+        if os.path.isfile(cache_file):
+            return pickle.load(open(cache_file))
 
         # Do the calculation and store results
-        with tb.open_file(path_to_hdf, "a") as h:
+        with tb.open_file(path_to_hdf) as h:
             var_table = h.get_node("/" + var_name)
-
 
             def year_selector(arow):
                 return arow["year"]
-
 
             # create index on date related columns if it is not created yet
             # print "Start creation of indices"
@@ -732,8 +734,8 @@ class Crcm5ModelDataManager:
             # print "created index on year column"
 
             # if not var_table.cols.month.is_indexed:
-            #     var_table.cols.month.create_index()
-            #     print "created index on month column"
+            # var_table.cols.month.create_index()
+            # print "created index on month column"
 
             #     var_table.cols.day.create_index()
             #     var_table.cols.hour.create_index()
@@ -760,7 +762,7 @@ class Crcm5ModelDataManager:
 
             result = np.asarray([year_to_mean[y] for y in range(start_year, end_year + 1)])
 
-            h.create_array("/", cache_arr_name, result)  # save calculated means for reuse
+            pickle.dump(result, open(cache_file, "wb"))  # save calculated means for reuse
             h.close()
             return result
 
@@ -1021,8 +1023,8 @@ class Crcm5ModelDataManager:
 
                 # for v_name, data_table in var_name_to_table.iteritems():
                 # data_table.cols.year.create_index()
-                #data_table.cols.month.create_index()
-                #data_table.cols.day.create_index()
+                # data_table.cols.month.create_index()
+                # data_table.cols.day.create_index()
                 #data_table.cols.hour.create_index()
 
 
@@ -2184,7 +2186,7 @@ class Crcm5ModelDataManager:
                 mp.latitude = self.lats2D[mp.ix, mp.jy]
                 mp.distance_to_station = dists[imin]
 
-                #flow in mask
+                # flow in mask
                 mp.flow_in_mask = self.get_mask_for_cells_upstream(ix, jy)
                 result[s] = mp
             else:
@@ -2306,15 +2308,29 @@ class Crcm5ModelDataManager:
     @classmethod
     def hdf_get_daily_extreme_climatological_fields(cls, hdf_db_path, start_year=None,
                                                     end_year=None, var_name="STFL_max", level=None, maximum=True):
-        hdf = tb.open_file(hdf_db_path, mode="a")
-        climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
-                                                       start_year=start_year,
-                                                       end_year=end_year)
+        """
+
+        :param hdf_db_path:
+        :param start_year:
+        :param end_year:
+        :param var_name:
+        :param level: - is a level index of a 3d field starting from 0
+        :param maximum: if True applies np.max to the fields corresponding to a given day
+        :return:
+        """
+        hdf = tb.open_file(hdf_db_path)
+        dates, climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
+                                                              start_year=start_year,
+                                                              end_year=end_year)
         if climatology is not None:
             hdf.close()
-            return climatology
+            return dates, climatology
 
 
+        if maximum:
+            operator = np.max
+        else:
+            operator = np.min
 
         # get the original variable name (i.e. without min or max)
         var_name_ori = var_name.split("_")[0]
@@ -2328,44 +2344,63 @@ class Crcm5ModelDataManager:
         # var_table.cols.year.create_index()
         # var_table.cols.month.create_index()
         # var_table.cols.day.create_index()
-        #     var_table.cols.hour.create_index()
+        # var_table.cols.hour.create_index()
 
         d0 = datetime(2001, 1, 1)
         daily_dates = [d0 + timedelta(days=i) for i in range(365)]
         daily_fields = []
 
-        if level is None:
-            sel_year_level = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
-        else:
-            sel_year_level = "(year >= {0}) & (year <= {1}) & (level == {2})".format(start_year, end_year, level)
+        import time
 
-        for d in daily_dates:
-            sel_day = "(day == {0}) & (month == {1})".format(d.day, d.month)
-            rows = var_table.read_where("{0} & {1}".format(sel_year_level, sel_day))
+        for the_year in range(start_year, end_year + 1):
+            t0 = time.clock()
+            daily_fields_for_each_year = []
+            selection = "(year == {}) & (level_index == {}) & ~((month == 2) & (day == 29))".format(the_year, level)
 
-            rows = list(sorted(rows, key=lambda r: r["year"]))
+            rows = var_table.read_where(selection)
+            rows_sorted = sorted(rows, key=lambda r1: datetime(r1["year"], r1["month"], r1["day"]))
 
-            data_store = []
-            for year, sel_rows in itertools.groupby(rows, key=lambda r: r["year"]):
-                if maximum:
-                    data_store.append(np.max([r1["field"] for r1 in sel_rows], axis=0))
-                else:
-                    data_store.append(np.min([r1["field"] for r1 in sel_rows], axis=0))
+            for d, sel_rows in itertools.groupby(rows_sorted,
+                                                 key=lambda r2: datetime(r2["year"], r2["month"], r2["day"])):
+                daily_fields_for_each_year.append(operator([r["field"] for r in sel_rows], axis=0))
 
-            daily_fields.append(np.mean(data_store, axis=0))
+            daily_fields.append(daily_fields_for_each_year)
+            print "Processed year {} in {}s".format(the_year, time.clock() - t0)
+
+        daily_fields = np.mean(daily_fields, axis=0)
+
+        # if level is None:
+        #     sel_year_level = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+        # else:
+        #     sel_year_level = "(year >= {0}) & (year <= {1}) & (level_index == {2})".format(start_year, end_year, level)
+        #
+        # for d in daily_dates:
+        #     sel_day = "(day == {0}) & (month == {1})".format(d.day, d.month)
+        #     rows = var_table.read_where("{0} & {1}".format(sel_year_level, sel_day))
+        #
+        #     rows = list(sorted(rows, key=lambda r: r["year"]))
+        #
+        #     data_store = []
+        #     for year, sel_rows in itertools.groupby(rows, key=lambda r: r["year"]):
+        #         if maximum:
+        #             data_store.append(np.max([r1["field"] for r1 in sel_rows], axis=0))
+        #         else:
+        #             data_store.append(np.min([r1["field"] for r1 in sel_rows], axis=0))
+        #
+        #     daily_fields.append(np.mean(data_store, axis=0))
+        #
 
 
-
-        #save calculated climatologies to the file
+        # save calculated climatologies to the file
         cls._save_daily_climatology(hdf, daily_dates=daily_dates, daily_clim_fields=daily_fields,
                                     var_name=var_name, level=level, start_year=start_year, end_year=end_year)
         hdf.close()
-
+        print daily_fields.shape
         assert len(daily_fields) == 365, "There should be 365 daily fileds and not {0}".format(len(daily_fields))
         return daily_dates, np.asarray(daily_fields)
 
 
-def _read_static_field(rpnObj, varname):
+def _read_static_field(rpn_obj, varname):
     """
     :rtype : numpy.array
     """
@@ -2374,10 +2409,10 @@ def _read_static_field(rpnObj, varname):
     try:
         if varname in ["SAND", "CLAY", "C8", "HT"]:
             # these are 3d fields
-            sand_dict = rpnObj.get_2D_field_on_all_levels(name=varname)
+            sand_dict = rpn_obj.get_2D_field_on_all_levels(name=varname)
             res = np.asarray([sand_dict[the_level] for the_level in sorted(sand_dict.keys())])
         else:
-            res = rpnObj.get_first_record_for_name(varname)
+            res = rpn_obj.get_first_record_for_name(varname)
     except Exception, e:
         print msg.format(varname)
 
@@ -2437,7 +2472,7 @@ def do_test_seasonal_mean():
     # ocean_mask = maskoceans(lons2D, manager.lats2D, data)
 
 
-    #data = np.ma.masked_where(data < 0.1, data)
+    # data = np.ma.masked_where(data < 0.1, data)
 
 
     plt.savefig("mean_clim.png")
@@ -2470,7 +2505,7 @@ def do_test_mean():
 
     data = np.ma.masked_where((data < 50), data)
 
-    #data = np.ma.masked_where(data < 0.1, data)
+    # data = np.ma.masked_where(data < 0.1, data)
     basemap.pcolormesh(x, y, data)
     plt.colorbar()
     basemap.drawcoastlines(linewidth=0.5)
@@ -2555,8 +2590,8 @@ def compare_lake_levels():
         h_s = ax.plot(sta_day_dates, sta_normals - np.mean(sta_normals), "r", label="station", lw=2)
 
         # instantaneous values
-        #h_m = ax.plot(mod_ts_all[0].time, mod_ts_all[0].data - np.mean(mod_ts_all[0].data) , "b", label = "model", lw = 3)
-        #h_s = ax.plot(s.dates, s.values - np.mean(s.values), "r", label = "station", lw = 1)
+        # h_m = ax.plot(mod_ts_all[0].time, mod_ts_all[0].data - np.mean(mod_ts_all[0].data) , "b", label = "model", lw = 3)
+        # h_s = ax.plot(s.dates, s.values - np.mean(s.values), "r", label = "station", lw = 1)
 
 
 
@@ -2609,9 +2644,9 @@ def compare_streamflow_normals():
 
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
 
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
@@ -2752,9 +2787,9 @@ def compare_streamflow():
 
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_test_198501_198612_0.1deg"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
 
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
@@ -2969,10 +3004,11 @@ def _create_folder_if_needed(path):
     os.makedirs(path)
 
 
-def _get_path_to_cached_data_and_dates_files(hdf_handle, var_name="", start_year=None, end_year=None, level=None):
+def _get_path_to_cached_data_and_dates_files(hdf_handle, var_name="", start_year=None, end_year=None, level=None,
+                                             aggregation="daily_climatology"):
     """
     path to the data cache of daily_climatology calculated from test.hdf5 for 1980-1985 period for the level=1
-    of variable TT
+    of variable TT (with default aggregation="daily_climatology")
 
         test.hdf5.cache/daily_climatology/TT/1980-1985/level_1/data.bin
 
@@ -2990,21 +3026,19 @@ def _get_path_to_cached_data_and_dates_files(hdf_handle, var_name="", start_year
     assert start_year is not None
     assert end_year is not None
 
-
     assert isinstance(hdf_handle, tb.File)
     hdf_file_path = hdf_handle.filename
 
     cache_folder_path = "{}.cache".format(hdf_file_path)
 
-    daily_clim_folder_for_var = os.path.join(cache_folder_path, "daily_climatology", var_name,
+    daily_clim_folder_for_var = os.path.join(cache_folder_path, aggregation, var_name,
                                              "{}-{}".format(start_year, end_year), "level_{}".format(level))
 
-
     data_file = os.path.join(daily_clim_folder_for_var, "data.bin")
-    dates_file = os.path.join(cache_folder_path, "daily_climatology", "daily_dates.bin")
-
+    dates_file = os.path.join(cache_folder_path, aggregation, "daily_dates.bin")
 
     return data_file, dates_file
+
 
 def do_test_stuff():
     data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"

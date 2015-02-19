@@ -72,8 +72,21 @@ def get_basin_map(directions):
     return result
 
 
+def save_matrix_to_netcdf(fdv):
+    path = "basins.nc"
+
+    nx, ny = fdv.shape
+    ds = Dataset(path, "w")
+    ds.createDimension("lon", nx)
+    ds.createDimension("lat", ny)
+
+    v = ds.createVariable("basin_id", "i4", ("lon", "lat"))
+    v[:] = fdv
+    ds.close()
+
+
 def main():
-    #path = "/skynet3_exec2/aganji/2GW_new/guziy-water_route_offline-d4627cd00b84/infocell.nc"
+    # path = "/skynet3_exec2/aganji/2GW_new/guziy-water_route_offline-d4627cd00b84/infocell.nc"
 
     path = "/skynet3_rech1/huziy/temp/directions_north_america_0.44deg_arman.v5.nc"
 
@@ -92,6 +105,10 @@ def main():
     x, y = bmp(lons, lats)
 
     colors = get_basin_map(fdv)
+
+    save_matrix_to_netcdf(colors)
+
+
     im = bmp.pcolormesh(x, y, colors)
     bmp.colorbar(im)
     bmp.drawcoastlines()

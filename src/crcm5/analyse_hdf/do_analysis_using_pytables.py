@@ -46,7 +46,7 @@ def get_basemap_from_hdf(file_path=""):
 
 def get_array_from_file(path="", var_name=""):
     with tb.open_file(path) as h:
-        if not var_name in h.root:
+        if var_name not in h.root:
             print "Warning: no {0} in {1}".format(var_name, path)
             return None
 
@@ -65,8 +65,6 @@ def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,
     """
     return Crcm5ModelDataManager.hdf_get_seasonal_means(path_to_hdf=path, months=months, var_name=var_name, level=level,
                                                         start_year=start_year, end_year=end_year)
-
-
 
 
 def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=None):
@@ -96,7 +94,7 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
 
 
 def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=None, j_index=None,
-                                                              year_list = None):
+                                                              year_list=None):
     """
 
     :param path:
@@ -106,10 +104,8 @@ def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=N
     """
     ts = get_lake_level_timesries_due_to_precip_evap(path=path, i_index=i_index, j_index=j_index)
 
-
     assert isinstance(ts, pd.TimeSeries)
     ts = ts.select(lambda d: d.year in year_list)
-
 
     ts_clim = ts.groupby(
         lambda d: datetime(2001, d.month, d.day, 1) if not (d.month == 2 and d.day == 29) else
@@ -121,7 +117,7 @@ def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=N
     assert isinstance(ts_clim, pd.Series)
     ts_clim = ts_clim.sort_index()
 
-    #assert isinstance(ts_clim, pd.TimeSeries)
+    # assert isinstance(ts_clim, pd.TimeSeries)
     print ts_clim.index
     return ts_clim.index, ts_clim.values
 
@@ -139,13 +135,13 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
     var_table = h.get_node("/", var_name)
 
     def grouping_func(the_row):
-        return the_row["month"], the_row["day"], the_row["level"]
+        return the_row["month"], the_row["day"], the_row["level_index"]
 
     date_to_mean = {}
     date_to_count = {}
 
     if level is not None:
-        selbylevel = "(level == {0})".format(level)
+        selbylevel = "(level_index == {0})".format(level)
     else:
         selbylevel = ""
 
@@ -181,6 +177,21 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
 
 
 def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
+
+    # if the difference of 2 variables is requested
+    opsign = "-" if "-" in var_name else "+" if "+" in var_name else None
+    if "-" in var_name or "+" in var_name:
+        v1name, v2name = var_name.replace(" ", "").split(opsign)
+
+        dates, v1data = get_daily_climatology(path_to_hdf_file=path_to_hdf_file, level=level,
+                                              start_year=start_year, end_year=end_year, var_name=v1name)
+
+        _, v2data = get_daily_climatology(path_to_hdf_file=path_to_hdf_file, level=level,
+                                          start_year=start_year, end_year=end_year, var_name=v1name)
+
+        return dates, v1data - v2data if opsign == "-" else v1data + v2data if opsign == "+" else None
+
+
     if var_name.endswith("_min"):
         return get_daily_min_climatology(path_to_hdf_file=path_to_hdf_file, var_name=var_name, level=level,
                                          start_year=start_year, end_year=end_year)
@@ -198,7 +209,7 @@ def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, star
 
 def get_daily_max_climatology(path_to_hdf_file="", var_name="STFL", level=None,
                               start_year=None, end_year=None):
-    var_name_max = "{0}_max".format(var_name)
+    var_name_max = "{0}_max".format(var_name) if not var_name.endswith("_max") else var_name
 
     return Crcm5ModelDataManager.hdf_get_daily_extreme_climatological_fields(
         hdf_db_path=path_to_hdf_file,
@@ -208,7 +219,7 @@ def get_daily_max_climatology(path_to_hdf_file="", var_name="STFL", level=None,
 
 def get_daily_min_climatology(path_to_hdf_file="", var_name="STFL", level=None,
                               start_year=None, end_year=None):
-    var_name_min = "{0}".format(var_name)
+    var_name_min = "{0}_min".format(var_name) if not var_name.endswith("_min") else var_name
 
     return Crcm5ModelDataManager.hdf_get_daily_extreme_climatological_fields(
         hdf_db_path=path_to_hdf_file,
@@ -254,7 +265,7 @@ def get_daily_climatology_of_3d_field(path_to_hdf_file="", var_name="STFL", star
 
     sel_by_year = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
 
-    #create index on date related columns if it is not created yet
+    # create index on date related columns if it is not created yet
     if not var_table.cols.year.is_indexed:
         var_table.cols.year.createIndex()
         var_table.cols.month.createIndex()
@@ -298,7 +309,7 @@ def get_daily_climatology_of_3d_field(path_to_hdf_file="", var_name="STFL", star
         [[date_to_level_to_mean[d][lev] for lev in sorted_levels] for d in sorted_dates]
     )
 
-    #save cache
+    # save cache
     if clim_3d_node not in h:
         h.create_group("/", clim_3d_node[1:])
 
@@ -311,13 +322,13 @@ def get_daily_climatology_of_3d_field(path_to_hdf_file="", var_name="STFL", star
 def calculate_daily_mean_fields():
     dates, clim_fields_hcd_rl = Crcm5ModelDataManager.hdf_get_daily_climatological_fields(
         hdf_db_path="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
-        var_name="STFL", level=None, use_grouping=True, start_year=1979, end_year=1988)
+        var_name="STFL", level_index=None, use_grouping=True, start_year=1979, end_year=1988)
 
     dates, clim_fields_hcd_rl_intfl = Crcm5ModelDataManager.hdf_get_daily_climatological_fields(
         hdf_db_path="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup.hdf",
-        var_name="STFL", level=None, use_grouping=True, start_year=1979, end_year=1988)
+        var_name="STFL", level_index=None, use_grouping=True, start_year=1979, end_year=1988)
 
-    #Calculate mean timeseries and take a difference
+    # Calculate mean timeseries and take a difference
     ts_hcd_rl = []
     for field in clim_fields_hcd_rl:
         field = np.asarray(field)
@@ -347,7 +358,7 @@ def calculate_daily_mean_fields():
 
 
 
-    #plot a mean for each month
+    # plot a mean for each month
     for the_month in range(1, 13):
         month_mean_for_day[month_vals == the_month] = monthly_diff_ts[the_month - 1]
         month_dates = list(itertools.ifilter(lambda d: d.month == the_month, dates))
@@ -363,8 +374,8 @@ def calculate_daily_mean_fields():
 
 
 def get_seasonal_climatology(hdf_path="", start_year=None, end_year=None, var_name="", level=None, months=None):
-    #get seasonal climatology, uses daily climatology function which is cached for performance
-    #returns the result in m/s
+    # get seasonal climatology, uses daily climatology function which is cached for performance
+    # returns the result in m/s
     daily_dates, daily_fields = get_daily_climatology(path_to_hdf_file=hdf_path, var_name=var_name, level=level,
                                                       start_year=start_year, end_year=end_year)
 
@@ -391,13 +402,31 @@ def main():
     pass
 
 
+def get_pandas_panel_sorted_for_year(year, the_table, level_index=0):
+    assert isinstance(the_table, tb.Table)
+
+    query = "(year == {}) & (level_index == {})".format(year, level_index)
+
+    coords = the_table.get_where_list(query)
+    rows = the_table.read_coordinates(coords)
+
+    date_keys = ["year", "month", "day", "hour", "minute", "second"]
+    return pd.Panel({datetime(*[row[k] for k in date_keys]): pd.DataFrame(row["field"])
+                     for row in rows})
+
+
+def get_np_arr_sorted_for_year(year, the_table, level_index=0):
+    return get_pandas_panel_sorted_for_year(year, the_table, level_index=level_index).values
+
+
+
 if __name__ == "__main__":
     import application_properties
 
     application_properties.set_current_directory()
     t0 = time.clock()
     main()
-    #calculate_daily_mean_fields()
+    # calculate_daily_mean_fields()
     print "Elapsed time {0} seconds".format(time.clock() - t0)
 
     print "Hello world"

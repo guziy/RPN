@@ -20,21 +20,6 @@ from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 import matplotlib.pyplot as plt
 
 
-def get_pandas_panel_sorted_for_year(year, the_table):
-    assert isinstance(the_table, tb.Table)
-
-    query = "(year == {}) & (level_index == 0)".format(year)
-
-    coords = the_table.get_where_list(query)
-    rows = the_table.read_coordinates(coords)
-
-    date_keys = ["year", "month", "day", "hour", "minute", "second"]
-    return pd.Panel({datetime(*[row[k] for k in date_keys]): pd.DataFrame(row["field"])
-                     for row in rows})
-
-
-def get_np_arr_sorted_for_year(year, the_table):
-    return get_pandas_panel_sorted_for_year(year, the_table).values
 
 
 
@@ -48,12 +33,12 @@ def get_runoff_diff_composit(swe_table_intf=None, traf_table_intf=None,
         print "Processing year {}".format(year)
 
         # Get data for the simulation with interflow
-        traf_intf = get_np_arr_sorted_for_year(year, traf_table_intf)
-        swe_intf = get_np_arr_sorted_for_year(year, swe_table_intf)
+        traf_intf = analysis.get_np_arr_sorted_for_year(year, traf_table_intf, level_index=0)
+        swe_intf = analysis.get_np_arr_sorted_for_year(year, swe_table_intf, level_index=0)
 
         # Get data for the simulation with interflow
-        traf_no_intf = get_np_arr_sorted_for_year(year, traf_table_no_intf)
-        swe_no_intf = get_np_arr_sorted_for_year(year, swe_table_no_intf)
+        traf_no_intf = analysis.get_np_arr_sorted_for_year(year, traf_table_no_intf, level_index=0)
+        swe_no_intf = analysis.get_np_arr_sorted_for_year(year, swe_table_no_intf, level_index=0)
 
         nt, nx, ny = swe_intf.shape
         if total_diff is None:

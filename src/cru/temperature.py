@@ -22,7 +22,8 @@ from collections import OrderedDict
 
 
 class CRUDataManager:
-    def __init__(self, path="data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc", var_name="tmp", lazy=False):
+    def __init__(self, path="/RECH/skynet1_rech3/huziy/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc",
+                 var_name="tmp", lazy=False):
         self.times = None
         self.var_data = None
 

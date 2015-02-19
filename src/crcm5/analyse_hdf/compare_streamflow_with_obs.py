@@ -42,11 +42,13 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
     assert the_station is None or isinstance(the_station, Station)
     assert isinstance(the_model_point, ModelPoint)
     assert isinstance(cell_manager, CellManager)
+    assert isinstance(ax, Axes)
 
     x, y = basemap(cell_manager.lons2d, cell_manager.lats2d)
 
 
-    #plot the arrows for upstream cells
+
+    # plot the arrows for upstream cells
     ups_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
 
     x1d_start = x[ups_mask == 1]
@@ -76,7 +78,9 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
     else:
         x_station, y_station = basemap(the_model_point.longitude, the_model_point.latitude)
 
-    basemap.scatter(x_station, y_station, c="b", s=25, ax=ax, linewidths=0, zorder=2)
+
+
+    basemap.scatter(x_station, y_station, c="b", s=100, ax=ax, linewidths=1, zorder=2)
 
     from util import direction_and_value
 
@@ -94,19 +98,19 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
     u2d[i_upstream, j_upstream] = u
     v2d[i_upstream, j_upstream] = v
 
-    #basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax=ax)
+    # basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax=ax)
     basemap.pcolormesh(x, y, np.ma.masked_where(ups_mask < 0.5, ups_mask) * 0.5, cmap=cm.get_cmap(name="gray"),
-                       ax=ax, vmax=1, vmin=0)
+                       ax=ax, vmax=1, vmin=0, zorder=1)
 
     basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
 
-    #put back the initial corners of the basemap
+    # put back the initial corners of the basemap
     basemap.llcrnrx, basemap.llcrnry, basemap.urcrnrx, basemap.urcrnry = basemap_initial_corners
 
     return ups_mask
 
 
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=None,
                                         obs_tmin_clim_fields=None,
                                         obs_tmax_clim_fields=None, daily_dates=None,
@@ -129,6 +133,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     resample_period = "5D"  # 5 day running mean
 
     for label in simlabel_list:
+
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
         df = _apply_running_mean(daily_dates, data, averaging_period=resample_period)
         ax.plot(df.index, df["values"], label=label, lw=1)
@@ -141,12 +146,12 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
         basin_tmin = np.sum(obs_tmin_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
                             axis=1) / basin_area_km2
 
-        #plot max temperature
+        # plot max temperature
         df_tmax = _apply_running_mean(daily_dates, basin_tmax)
         print df_tmax.tail(20)
         p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1)
 
-        #plot min temperature
+        # plot min temperature
         df_tmin = _apply_running_mean(daily_dates, basin_tmin)
         ax.plot(df_tmin.index, df_tmin["values"], label="tmin-obs", color=p[0].get_color(), lw=1)
         ax.fill_between(df_tmin.index, df_tmax["values"], df_tmin["values"], alpha=0.3, color=p[0].get_color())
@@ -160,7 +165,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     ax.grid()
 
 
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
                                    obs_precip_clim_fields=None,
                                    daily_dates=None,
@@ -186,7 +191,7 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
     for label in simlabel_list:
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
 
-        #convert m/s to mm/day
+        # convert m/s to mm/day
         data = data * 1000.0 * 24 * 60 * 60
 
         df = _apply_running_mean(daily_dates, data, averaging_period=resample_period)
@@ -194,14 +199,14 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
         ax.plot(df.index, df["values"], label=label, lw=1)
 
 
-    #obs_precip_clim_fields[np.isnan(obs_precip_clim_fields)] = -9999
-    #Do not draw region averaged observed precip for the regions, where there is missing data
+    # obs_precip_clim_fields[np.isnan(obs_precip_clim_fields)] = -9999
+    # Do not draw region averaged observed precip for the regions, where there is missing data
     if not np.any(np.isnan(obs_precip_clim_fields[0][upstream_mask == 1])):
         basin_precip = np.sum(
             obs_precip_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
             axis=1) / basin_area_km2
 
-        #running mean
+        # running mean
         df = _apply_running_mean(daily_dates, basin_precip, averaging_period=resample_period)
         ax.plot(df.index, df["values"], label="precip-obs", lw=2)
 
@@ -211,7 +216,7 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
     ax.grid()
 
 
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _validate_swe_with_ross_brown(ax, the_model_point, model_data_dict=None,
                                   obs_swe_clim_fields=None,
                                   daily_dates=None,
@@ -242,7 +247,7 @@ def _validate_swe_with_ross_brown(ax, the_model_point, model_data_dict=None,
     p = ax.plot(daily_dates, basin_swe, label="swe-obs", lw=2)
 
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
-    #plt.setp(ax.get_xticklabels(), visible=False)
+    # plt.setp(ax.get_xticklabels(), visible=False)
     ax.grid()
 
 
@@ -265,14 +270,21 @@ def calclulate_spring_peak_err(dates, qobs, qmod, st_id=None, da_obs=None, da_mo
 
 
 
-    #select spring
+    # select spring
     s = sum((qmodi - qobsi) * dt for qobsi, qmodi, t in zip(qobs, qmod, dates)
-            if t.month in (4, 5, 6) and qmodi - qobsi*da_mod / da_mod >= 0)
+            if t.month in (4, 5, 6) and qmodi - qobsi * da_mod / da_mod >= 0)
+
+    max_err_start_month = 4
+    max_err_end_month = 12
+    max_err = max((qmodi - qobsi) for qobsi, qmodi, t in zip(qobs, qmod, dates)
+                  if t.month in range(max_err_start_month, max_err_end_month + 1))
+
+    print "maximum error during {}-{} months: {} m**3/s".format(max_err_start_month, max_err_end_month, max_err)
+
     print "{}: int(dqdt) = {}".format(st_id, s)
 
 
-
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _plot_upstream_surface_runoff(ax, the_model_point, model_data_dict=None,
                                   daily_dates=None,
                                   cell_area_km2=None,
@@ -386,7 +398,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     accumulation_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
     area_m2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME_M2)
 
-    #Try to read cell areas im meters if it is not Ok then try in km2
+    # Try to read cell areas im meters if it is not Ok then try in km2
     if area_m2 is not None:
         cell_area_km2 = area_m2 * 1.0e-6
     else:
@@ -406,7 +418,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     file_annual_discharge = open("flow_{0}_{1}-{2}.txt".format("_".join(label_list), start_year, end_year), "w")
 
     text_files = [file_scores, file_correlations, file_annual_discharge]
-    #write the following columns to the scores file
+    # write the following columns to the scores file
     header_format = "{0:10s}\t{1:10s}\t{2:10s}\t" + "\t".join(["{" + str(i + 3) + ":10s}"
                                                                for i in range(len(sim_name_to_file_name))])
     line_format = "{0:10s}\t{1:10.1f}\t{2:10.1f}\t" + "\t".join(["{" + str(i + 3) + ":10.1f}"
@@ -423,13 +435,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=path0)
 
-    #Create a cell manager if it is not provided
+    # Create a cell manager if it is not provided
     if cell_manager is None:
         cell_manager = CellManager(flow_directions, accumulation_area_km2=accumulation_area_km2,
                                    lons2d=lons2d, lats2d=lats2d)
 
     if stations is not None:
-        #Get the list of the corresponding model points
+        # Get the list of the corresponding model points
         station_to_modelpoint = cell_manager.get_model_points_for_stations(
             station_list=stations,
             lake_fraction=lake_fraction,
@@ -441,11 +453,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     else:
         mp_list = model_points
         station_list = None
-        #sort so that the northernmost stations appear uppermost
+        # sort so that the northernmost stations appear uppermost
         mp_list.sort(key=lambda mpt: mpt.latitude, reverse=True)
 
 
-    #set ids to the model points so they can be distinguished easier
+    # set ids to the model points so they can be distinguished easier
     model_point.set_model_point_ids(mp_list)
 
 
@@ -459,7 +471,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
 
-    #For the streamflow only plot
+    # For the streamflow only plot
     ncols = 3
     nrows = max(len(mp_list) // ncols, 1)
     if ncols * nrows < len(mp_list):
@@ -484,7 +496,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
 
-    #create obs data managers
+    # create obs data managers
     anusplin_tmin = AnuSplinManager(variable="stmn")
     anusplin_tmax = AnuSplinManager(variable="stmx")
     anusplin_pcp = AnuSplinManager(variable="pcp")
@@ -501,7 +513,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         start_year=start_year, end_year=end_year,
         lons_target=lons2d, lats_target=lats2d)
 
-    swe_manager = SweDataManager(var_name="SWE")
+    swe_path = "/skynet3_rech1/huziy/swe_ross_brown/swe.nc4"
+    if not os.path.isfile(os.path.realpath(swe_path)):
+        raise IOError("SWE-obs file {} does not exist".format(swe_path))
+
+    swe_manager = SweDataManager(path=swe_path, var_name="SWE")
     obs_swe_daily_clim = swe_manager.get_daily_climatology(start_year, end_year)
     interpolated_obs_swe_clim = swe_manager.interpolate_daily_climatology_to(obs_swe_daily_clim,
                                                                              lons2d_target=lons2d,
@@ -514,7 +530,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
         assert isinstance(the_model_point, ModelPoint)
 
-        ##Check the number of years accessible for the station if the list of stations is given
+        # Check the number of years accessible for the station if the list of stations is given
         the_station = None if station_list is None else station_list[i]
         if the_station is not None:
             assert isinstance(the_station, Station)
@@ -531,13 +547,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         gs = gridspec.GridSpec(4, 4, wspace=1)
 
 
-        #plot station position
+        # plot station position
         ax = fig.add_subplot(gs[3, 0:2])
         upstream_mask = _plot_station_position(ax, the_station, basemap, cell_manager, the_model_point)
 
 
 
-        #plot streamflows
+        # plot streamflows
         ax = fig.add_subplot(gs[0:2, 0:2])
 
         dates = None
@@ -547,30 +563,30 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         model_daily_clim_subsurf_runoff = {}
         model_daily_clim_swe = {}
 
-        #get model data for the list of years
+        # get model data for the list of years
         simlabel_to_vals = {}
         for label in label_list:
             fname = sim_name_to_file_name[label]
             fpath = os.path.join(hdf_folder, fname)
-            #read temperature data and calculate daily climatologic fileds
+            # read temperature data and calculate daily climatologic fileds
             _, model_daily_temp_clim[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TT", level=1, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="TT", level=0, start_year=start_year, end_year=end_year)
 
-            #read modelled precip and calculate daily climatologic fields
+            # read modelled precip and calculate daily climatologic fields
             _, model_daily_precip_clim[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="PR", level=None, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="PR", level=0, start_year=start_year, end_year=end_year)
 
-            #read modelled surface runoff and calculate daily climatologic fields
+            # read modelled surface runoff and calculate daily climatologic fields
             _, model_daily_clim_surf_runoff[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TRAF", level=1, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="TRAF", level=0, start_year=start_year, end_year=end_year)
 
-            #read modelled subsurface runoff and calculate daily climatologic fields
+            # read modelled subsurface runoff and calculate daily climatologic fields
             _, model_daily_clim_subsurf_runoff[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TDRA", level=1, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="TDRA", level=0, start_year=start_year, end_year=end_year)
 
-            #read modelled swe and calculate daily climatologic fields
+            # read modelled swe and calculate daily climatologic fields
             _, model_daily_clim_swe[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="I5", level=None, start_year=start_year, end_year=end_year)
+                path_to_hdf_file=fpath, var_name="I5", level=0, start_year=start_year, end_year=end_year)
 
             dates, values_model = analysis.get_daily_climatology_for_a_point(path=fpath,
                                                                              var_name=stfl_name,
@@ -588,13 +604,13 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
                                                                                                  years=year_list)
 
-            #To keep the colors consistent for all the variables, the obs Should be plotted last
+            # To keep the colors consistent for all the variables, the obs Should be plotted last
             ax.plot(dates, values_obs, label="Obs.", lw=2)
-            #no ticklabels for streamflow plot
+            # no ticklabels for streamflow plot
             plt.setp(ax.get_xticklabels(), visible=False)
             ax_stfl.plot(dates, values_obs, label="Obs.", lw=2)
 
-            #Print excesss from streamflow validation
+            # Print excesss from streamflow validation
             for label, values_model in simlabel_to_vals.iteritems():
                 calclulate_spring_peak_err(dates, values_obs, values_model,
                                            st_id="{}: {}".format(label, the_station.id),
@@ -607,7 +623,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         assert isinstance(fig, Figure)
 
         upstream_area_km2 = np.sum(cell_area_km2[upstream_mask == 1])
-        #Put some information about the point
+        # Put some information about the point
         if the_station is not None:
             lf_upstream = lake_fraction[upstream_mask == 1]
             point_info = "{0}\nlf-max={1:.2f}".format(the_station.id, lf_upstream.max())
@@ -619,7 +635,9 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             point_info = "{0}".format(the_model_point.point_id)
 
         ax.text(0.6, 0.9, point_info, transform=ax.transAxes, bbox=dict(facecolor="white"))
-        ax_stfl.text(0.6, 0.85, point_info, transform=ax_stfl.transAxes, bbox=dict(facecolor="white"), fontsize=8)
+        ax_stfl.text(0.6, 0.85, point_info, transform=ax_stfl.transAxes,
+                     bbox=dict(facecolor="white"),
+                     fontsize=8)
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
@@ -642,7 +660,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
 
-        #plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
+        # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
         ax = fig.add_subplot(gs[3, 2:], sharex=streamflow_axes)
         _validate_temperature_with_anusplin(ax, the_model_point, cell_area_km2=cell_area_km2,
                                             upstream_mask=upstream_mask,
@@ -652,7 +670,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                             model_data_dict=model_daily_temp_clim,
                                             simlabel_list=label_list)
 
-        #plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
+        # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
         ax = fig.add_subplot(gs[2, 2:], sharex=streamflow_axes)
         _validate_precip_with_anusplin(ax, the_model_point, cell_area_km2=cell_area_km2,
                                        upstream_mask=upstream_mask,
@@ -662,7 +680,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                        simlabel_list=label_list)
 
 
-        #plot mean upstream surface runoff
+        # plot mean upstream surface runoff
         ax = fig.add_subplot(gs[0, 2:], sharex=streamflow_axes)
         _plot_upstream_surface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
                                       upstream_mask=upstream_mask,
@@ -671,7 +689,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                       simlabel_list=label_list)
 
 
-        #plot mean upstream subsurface runoff
+        # plot mean upstream subsurface runoff
         ax = fig.add_subplot(gs[1, 2:], sharex=streamflow_axes, sharey=ax)
         _plot_upstream_subsurface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
                                          upstream_mask=upstream_mask,
@@ -679,7 +697,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                          model_data_dict=model_daily_clim_subsurf_runoff,
                                          simlabel_list=label_list)
 
-        #plot mean upstream swe comparison
+        # plot mean upstream swe comparison
         ax = fig.add_subplot(gs[2, 0:2], sharex=streamflow_axes)
         print "Validating SWE for ", the_station.id, "--" * 20
         _validate_swe_with_ross_brown(ax, the_model_point, cell_area_km2=cell_area_km2,
@@ -700,7 +718,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             im_folder_path = os.path.join(images_folder, "outlets_point_comp")
 
 
-        #create a folder for a given source of observed streamflow if it does not exist yet
+        # create a folder for a given source of observed streamflow if it does not exist yet
         if not os.path.isdir(im_folder_path):
             os.mkdir(im_folder_path)
 
@@ -710,7 +728,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         plt.close(fig)
 
 
-        #return  # temporary plot only one point
+        # return  # temporary plot only one point
 
     assert isinstance(figure_stfl, Figure)
     figure_stfl.tight_layout()
@@ -719,14 +737,14 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                         bbox_inches="tight")
     plt.close(figure_stfl)
 
-    #close information text files
+    # close information text files
     for f in text_files:
         f.close()
 
 
 def plot_point_positions_with_upstream_areas(processed_stations, processed_model_points,
                                              basemap, cell_manager):
-    #plot point positions with upstream areas
+    # plot point positions with upstream areas
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
@@ -740,16 +758,16 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
     end_year = 1981
 
     sim_name_to_file_name = {
-        #"CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
-        #"CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
+        # "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf",
+        # "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf",
         "CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
         "CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
-        #"SANI=10000, ignore THFC":
+        # "SANI=10000, ignore THFC":
         #    "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf",
 
-        #"CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
+        # "CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
         "SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
-        #"CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
+        # "CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
     }
 
     path0 = os.path.join(hdf_folder, sim_name_to_file_name.items()[0][1])
@@ -802,29 +820,33 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     selected_ids = ["092715", "074903", "080104", "081007", "061905",
                     "093806", "090613", "081002", "093801", "080718", "104001"]
 
-    selected_ids = ids_with_lakes_upstream
-    #selected_ids = []  # Do not use CEHQ stations temporarily
+    # selected_ids = ids_with_lakes_upstream
+    # selected_ids = []  # Do not use CEHQ stations temporarily
 
     # selected_ids = [
     #     "074903", "061905", "090613", "092715", "093801", "093806", "081002"
     # ]
 
-    #selected_ids = ["081002", "104001"]
+    selected_ids = ["081002", "093801"]
 
 
 
-    #selected_ids = ["090613", ]
+    # selected_ids = ["090613", ]
 
     sim_labels = [
-        #"CRCM5-R", "CRCM5-HCD-R",
-        "Intf1", "Intf-avoid-trunc-higher-slp"
+        # "CRCM5-R",
+        "CRCM5-HCD-R",
+        "CRCM5-HCD-RL",
+        # "CRCM5-HCD-RL-INTF-a"
     ]
 
     sim_file_names = [
         #"quebec_0.1_crcm5-r.hdf5",
-        #"quebec_0.1_crcm5-hcd-r.hdf5",
-        "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
-        "quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+        "quebec_0.1_crcm5-hcd-r.hdf5",
+        #"quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
+        "quebec_0.1_crcm5-hcd-rl.hdf5",
+        #"quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+        #"quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     ]
 
@@ -849,7 +871,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
 
 
 
-    #Get the list of stations to do the comparison with
+    # Get the list of stations to do the comparison with
     stations = cehq_station.read_station_data(
         start_date=start_date, end_date=end_date, selected_ids=selected_ids
     )
@@ -859,7 +881,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
         print u"{0}".format(s)
 
 
-    #Commented hydat station for performance during testing
+    # Commented hydat station for performance during testing
     # province = "QC"
     # selected_ids_hydat = None
     # stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date,

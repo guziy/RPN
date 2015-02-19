@@ -36,7 +36,7 @@ def get_data_and_coords():
 def main():
 
     # create the image folder if necessary
-    img_folder = "bulk_field_capacity"
+    img_folder = "bulk_field_capacity_model"
     if not os.path.isdir(img_folder):
         os.mkdir(img_folder)
 
@@ -68,4 +68,6 @@ def main():
 
 
 if __name__ == '__main__':
+    import application_properties
+    application_properties.set_current_directory()
     main()

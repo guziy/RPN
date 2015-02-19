@@ -8,11 +8,12 @@ from mpl_toolkits.basemap import maskoceans
 from crcm5 import infovar
 from data.anusplin import AnuSplinManager
 from swe import SweDataManager
+from matplotlib import cm
 
 __author__ = 'huziy'
 
 
-#Validate modelled precipitation data with Anusplin as well as daily min and max temperature
+# Validate modelled precipitation data with Anusplin as well as daily min and max temperature
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,21 +36,21 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     """
 
     model_var_name = "PR"
-    model_level = None
+    model_level = 0
     reasonable_error_mm_per_day = 1
 
     assert isinstance(obs_manager, AnuSplinManager)
     fig = plt.figure()
     assert isinstance(fig, Figure)
 
-    fig.suptitle("({0}) - ({1})".format(simlabel, obs_manager.name))
+    fig.suptitle("({0}) - ({1})".format(simlabel, "Obs."))
 
     lon, lat, basemap = analysis.get_basemap_from_hdf(file_path=model_file)
 
-    #do calculations and only after that do the plotting
+    # do calculations and only after that do the plotting
     season_to_field = {}
 
-    #calculate global min and max for plotting
+    # calculate global min and max for plotting
     vmin = None
     vmax = None
 
@@ -59,13 +60,13 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
                                                         level=model_level,
                                                         var_name=model_var_name, hdf_path=model_file)
 
-        #convert m/s to mm/day for comparison with anusplin data
+        # convert m/s to mm/day for comparison with anusplin data
         model_field *= 1000.0 * 60 * 60 * 24
 
-        obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lonsTarget=lon, latsTarget=lat,
+        obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lonstarget=lon, latstarget=lat,
                                                                     start_year=start_year, end_year=end_year)
 
-        #calculate the difference between the modelled and observed fields
+        # calculate the difference between the modelled and observed fields
         the_diff = model_field - obs_field
         current_min = np.min(the_diff)
         current_max = np.max(the_diff)
@@ -79,17 +80,17 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
 
         season_to_field[season] = the_diff
 
-    ncolors = 11
+    ncolors = 12
     gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.05])
 
-    cmap = brewer2mpl.get_map("RdBu", "diverging", 11, reverse=True).get_mpl_colormap(N=ncolors)
+    cmap = cm.get_cmap("RdBu_r", ncolors)
     x, y = basemap(lon, lat)
     im = None
 
     d = min(abs(vmin), abs(vmax))
     vmin = -d
     vmax = d
-    bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
+    bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False)
 
     print "bounds: ", bounds
 
@@ -98,22 +99,22 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
         row, col = season_to_plot_indices[season]
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
-        basemap.drawmapboundary(fill_color="gray", ax = ax)
+        basemap.drawmapboundary(fill_color="gray", ax=ax)
         im = basemap.pcolormesh(x, y, season_to_field[season], vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
-        small_error = (np.abs(season_to_field[season]) < reasonable_error_mm_per_day).astype(int)
-        nlevs = 1
-        #ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
-        cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
+        # small_error = (np.abs(season_to_field[season]) < reasonable_error_mm_per_day).astype(int)
+        # nlevs = 1
+        # ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
+        # cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
 
 
-    #artists, labels = cs.legend_elements()
-    #plt.legend(artists, labels, handleheight=2)
+    # artists, labels = cs.legend_elements()
+    # plt.legend(artists, labels, handleheight=2)
 
     cax = fig.add_subplot(gs[:, 2])
     cax.set_title("mm/day\n")
-    plt.colorbar(im, cax=cax, extend = "both")
+    plt.colorbar(im, cax=cax, extend="both")
     seasons_str = "_".join(sorted([str(s) for s in season_to_field.keys()]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
@@ -134,7 +135,7 @@ def validate_temperature(
         model data is in deg C
     """
 
-    model_level = 1
+    model_level = 0
     reasonable_error_deg = 2
 
     assert isinstance(obs_manager, AnuSplinManager)
@@ -145,10 +146,10 @@ def validate_temperature(
 
     lon, lat, basemap = analysis.get_basemap_from_hdf(file_path=model_file)
 
-    #do calculations and only after that do the plotting
+    # do calculations and only after that do the plotting
     season_to_field = {}
 
-    #calculate global min and max for plotting
+    # calculate global min and max for plotting
     vmin = None
     vmax = None
 
@@ -158,10 +159,10 @@ def validate_temperature(
                                                         level=model_level,
                                                         var_name=model_var_name, hdf_path=model_file)
 
-        obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lonsTarget=lon, latsTarget=lat,
+        obs_field = obs_manager.getMeanFieldForMonthsInterpolatedTo(months=months, lonstarget=lon, latstarget=lat,
                                                                     start_year=start_year, end_year=end_year)
 
-        #calculate the difference between the modelled and observed fields
+        # calculate the difference between the modelled and observed fields
         the_diff = model_field - obs_field
         current_min = np.min(the_diff)
         current_max = np.max(the_diff)
@@ -178,7 +179,7 @@ def validate_temperature(
     ncolors = 10
     gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.05])
 
-    cmap = brewer2mpl.get_map("RdBu", "diverging", 10, reverse=True).get_mpl_colormap(N=ncolors)
+    cmap = cm.get_cmap("RdBu_r", ncolors)
     x, y = basemap(lon, lat)
     im = None
 
@@ -199,12 +200,12 @@ def validate_temperature(
 
         small_error = (np.abs(season_to_field[season]) < reasonable_error_deg).astype(int)
         nlevs = 1
-        #ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
+        # ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
         cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
 
 
-    #artists, labels = cs.legend_elements()
-    #plt.legend(artists, labels, handleheight=2)
+    # artists, labels = cs.legend_elements()
+    # plt.legend(artists, labels, handleheight=2)
 
     cax = fig.add_subplot(gs[:, 2])
 
@@ -235,15 +236,15 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     fig.suptitle("({0}) - ({1})".format(simlabel, obs_manager.name))
 
 
-    #1. read model results
-    #2. plot the differences (model - obs)
+    # 1. read model results
+    # 2. plot the differences (model - obs)
 
     lon, lat, basemap = analysis.get_basemap_from_hdf(file_path=model_file)
 
-    #do calculations and only after that do the plotting
+    # do calculations and only after that do the plotting
     season_to_field = {}
 
-    #calculate global min and max for plotting
+    # calculate global min and max for plotting
     vmin = None
     vmax = None
 
@@ -258,7 +259,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
                                                                     start_year=start_year, end_year=end_year)
 
         season_to_obs_field[season] = obs_field
-        #calculate the difference between the modelled and observed fields
+        # calculate the difference between the modelled and observed fields
         the_diff = model_field - obs_field
         current_min = np.min(the_diff)
         current_max = np.max(the_diff)
@@ -285,17 +286,22 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
     vmin = -d
     vmax = d
-    #bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
+    # bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
 
     bounds = [-100, -80, -50, -20, -10, -5]
     bounds += [-b for b in reversed(bounds)]
     bn = BoundaryNorm(bounds, ncolors=len(bounds) - 1)
-    cmap = brewer2mpl.get_map("RdBu", "diverging", ncolors, reverse=True).get_mpl_colormap(N=len(bounds) - 1)
+    cmap = cm.get_cmap("RdBu_r", len(bounds) - 1)
 
     print "bounds: ", bounds
 
     cs = None
     for season, field in season_to_field.iteritems():
+
+        if season.lower() == "summer":
+            print "Warning: skipping summer season for SWE"
+            continue
+
         row, col = season_to_plot_indices[season]
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
@@ -310,12 +316,12 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
         small_error = ((np.abs(season_to_field[season]) < reasonable_error_mm) | to_plot.mask).astype(int)
         nlevs = 1
-        #ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
+        # ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
         cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
 
 
-    #artists, labels = cs.legend_elements()
-    #plt.legend(artists, labels, handleheight=2)
+    # artists, labels = cs.legend_elements()
+    # plt.legend(artists, labels, handleheight=2)
 
     cax = fig.add_subplot(gs[:, 2])
 
@@ -335,7 +341,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
 
 def do_4_seasons(start_year=1980, end_year=2010):
-    #Creates one file per simulation containing biases for 4 seasons
+    # Creates one file per simulation containing biases for 4 seasons
     season_to_months = {
         "Winter": [12, 1, 2],
         "Spring": range(3, 6),
@@ -351,7 +357,8 @@ def do_4_seasons(start_year=1980, end_year=2010):
     }
 
     simlabel_to_path = {
-        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
+#        "CRCM5-R-CanESM2-current": "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5",
+#        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
         "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5",
 #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
 #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
@@ -369,7 +376,7 @@ def do_4_seasons(start_year=1980, end_year=2010):
     swe_obs_manager = SweDataManager(var_name="SWE")
 
     for simlabel, path in simlabel_to_path.iteritems():
-        #Validate precipitations
+        # Validate precipitations
         validate_precip(model_file=path, obs_manager=pcp_obs_manager,
                         season_to_months=season_to_months, simlabel=simlabel,
                         season_to_plot_indices=season_to_plot_indices,
@@ -387,7 +394,7 @@ def do_4_seasons(start_year=1980, end_year=2010):
                              start_year=start_year, end_year=end_year, model_var_name="TT_min")
 
 
-        #validate swe
+        # validate swe
         validate_swe(model_file=path, obs_manager=swe_obs_manager,
                      season_to_months=season_to_months, simlabel=simlabel,
                      season_to_plot_indices=season_to_plot_indices,

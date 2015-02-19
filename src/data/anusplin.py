@@ -40,7 +40,14 @@ class AnuSplinManager:
         else:
             raise Exception("Unknown variable: {0}".format(variable))
 
-        self.folder_path = folder_path
+        if os.path.isdir(os.path.realpath(folder_path)):
+            self.folder_path = folder_path
+        else:
+            # Try a folder from skynet3
+            print "{} does not exist".format(folder_path)
+            self.folder_path = folder_path.replace("skynet1_rech3", "skynet3_rech1")
+            print "Using {} instead".format(self.folder_path)
+
         self.fname_format = "{0}{1}_%Y_%m.nc".format(file_name_preifx, variable)
         self._read_lon_lats()
         self.name = "ANUSPLIN"
@@ -52,6 +59,11 @@ class AnuSplinManager:
         """
         the_date = datetime(1980, 1, 1)
         fpath = os.path.join(self.folder_path, the_date.strftime(self.fname_format))
+
+        # Check if file exists before trying to read it
+        if not os.path.isfile(fpath):
+            raise IOError("No such file: {}".format(fpath))
+
         ds = Dataset(fpath)
         self.lons2d = ds.variables["lon"][:].transpose()
         self.lats2d = ds.variables["lat"][:].transpose()
@@ -117,7 +129,7 @@ class AnuSplinManager:
 
 
         # daily_clim_fields = [
-        #    np.asarray([ds.variables[self.nc_varname][day - 1, :, :] for ds in ds_list]).mean(axis=0)
+        # np.asarray([ds.variables[self.nc_varname][day - 1, :, :] for ds in ds_list]).mean(axis=0)
         #    for day, ds_list in zip(day_list, ds_lists)
         #]
 
@@ -275,22 +287,69 @@ def demo():
     plt.show()
 
 
+def _get_topography():
+    path = "/skynet3_rech1/huziy/geofields_interflow_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6_with_ITFS"
+    from rpn.rpn import RPN
+    r = RPN(path=path)
+    data = r.get_first_record_for_name_and_level("ME", level=0)
+    r.close()
+    return data
+
+
 def demo_interolate_daily_clim():
     import crcm5.analyse_hdf.do_analysis_using_pytables as analysis
 
+    model_data_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    start_year = 1980
+    end_year = 2010
+
+    vmin = -30
+    vmax = 30
+    vname = "TT_max"
+    coef_mod = 1.0e3 * 24 * 3600 if vname == "PR" else 1.0
+
     # get target lons and lats for testing
     lon, lat, basemap = analysis.get_basemap_from_hdf(
-        file_path="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r_spinup2.hdf")
+        file_path=model_data_path)
 
-    ans = AnuSplinManager()
-    dates, fileds = ans.get_daily_clim_fields_interpolated_to(start_year=1980, end_year=1982,
+    ans = AnuSplinManager(variable="stmx")
+    dates, fields = ans.get_daily_clim_fields_interpolated_to(start_year=start_year,
+                                                              end_year=end_year,
                                                               lons_target=lon, lats_target=lat)
     import matplotlib.pyplot as plt
 
-    plt.pcolormesh(fileds[5].transpose())
+    x, y = basemap(lon, lat)
 
-    print dates
-    print fileds.mean(axis=1).mean(axis=1)
+    margin = 20
+    topo = _get_topography()[margin:-margin, margin:-margin]
+
+    # Plot obs data
+    plt.figure()
+    mean_obs = np.ma.array([fields[i] for i, d in enumerate(dates) if d.month in range(1, 13)]).mean(axis=0)
+    im = basemap.pcolormesh(x, y, mean_obs, vmin=vmin, vmax=vmax)
+    basemap.colorbar(im)
+    basemap.drawcoastlines()
+    plt.title("Anusplin")
+    print "Obs stdev = {}".format(mean_obs[~mean_obs.mask].std())
+
+    print "Obs correlations: ", np.corrcoef(mean_obs[~mean_obs.mask], topo[~mean_obs.mask])
+
+    # Plot model data
+    plt.figure()
+    dates, fields = analysis.get_daily_climatology(path_to_hdf_file=model_data_path, var_name=vname,
+                                                   level=0,
+                                                   start_year=start_year, end_year=end_year)
+
+    mean_mod = np.array([fields[i] for i, d in enumerate(dates) if d.month in range(1, 13)]).mean(axis=0) * coef_mod
+    im = basemap.pcolormesh(x, y, mean_mod, vmin=vmin, vmax=vmax)
+    basemap.colorbar(im)
+    basemap.drawcoastlines()
+    plt.title("Model")
+
+    print "Model correlations: ", np.corrcoef(mean_mod[~mean_obs.mask], topo[~mean_obs.mask])
+    print "Model stdev = {}".format(mean_mod[~mean_obs.mask].std())
+
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -298,5 +357,5 @@ if __name__ == "__main__":
 
     application_properties.set_current_directory()
     # demo()
-    #demo_seasonal_mean()
+    # demo_seasonal_mean()
     demo_interolate_daily_clim()

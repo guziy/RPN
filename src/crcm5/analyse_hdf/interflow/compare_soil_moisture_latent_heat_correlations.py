@@ -37,12 +37,12 @@ def plot_for_simulation(axis=None, sim_path="", cmap=None, cnorm=None,
     params = dict(
         path1=sim_path, path2=sim_path,
         start_year=start_year, end_year=end_year,
-        varname1="I0", level1=0,
+        varname1="I1", level1=0,
         varname2="AV", level2=0,
         months=months
     )
 
-    corr = calculate_correlation_field_for_climatology(**params)
+    corr, i1_clim, av_clim = calculate_correlation_field_for_climatology(**params)
 
     # convert longitudes to the [-180, 180] range
     lons[lons > 180] -= 360
@@ -59,20 +59,24 @@ def plot_correlation_diff(sim_label_to_corr, file_for_basemap="", ax=None, cnorm
     lons, lats, bm = analysis.get_basemap_from_hdf(file_path=file_for_basemap)
     x, y = bm(lons, lats)
     im = bm.pcolormesh(x, y, sim_label_to_corr.values()[1] - sim_label_to_corr.values()[0], cmap=cmap, norm=cnorm)
-    ax.set_title("({}) - ({})".format(sim_label_to_corr.keys()[1], sim_label_to_corr.keys()[0]))
+    ax.set_title("(2) - (1)")
     bm.drawmapboundary(fill_color="0.75")
     return im
 
 
 def main(months=None):
-
+    """
+    Note: if you want to compare more than 2 simulations at the same time
+    make sure that the differences are plotted correctly
+    :param months:
+    """
     matplotlib.rc("font", size=20)
     # List of simulations to compare
     label_to_path = OrderedDict([
-        ("Without interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"),
-        ("With interflow (a)", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"),
-        ("With interflow (b)",
-         "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5")
+        ("(1) Without interflow", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"),
+        ("(2) With interflow-a", "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"),
+        # ("With interflow (b)",
+        # "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5")
     ])
 
     nsims = len(label_to_path)
@@ -108,8 +112,8 @@ def main(months=None):
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims]))
 
     # plot differences in correlation
-    cdelta = 0.02
-    clevels = np.arange(-0.2, -cdelta, cdelta)
+    cdelta = 0.05
+    clevels = np.arange(-0.5, -cdelta, cdelta)
     clevels = clevels.tolist() + [-c for c in reversed(clevels)]
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)

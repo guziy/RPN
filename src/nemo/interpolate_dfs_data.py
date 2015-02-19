@@ -169,7 +169,7 @@ class Interpolator(object):
 
 
 
-        #Handle time variable first
+        # Handle time variable first
         timename = None
         time_data = None
         for v in varnames:
@@ -194,7 +194,7 @@ class Interpolator(object):
                         nperday = ntimes // 366
                         dtseconds = 24 * 60 * 60 // nperday
                         dt = timedelta(seconds=dtseconds)
-                        #dt0 = timedelta(seconds=int(time_vals[0] * 60 * 60))  # usually in seconds
+                        # dt0 = timedelta(seconds=int(time_vals[0] * 60 * 60))  # usually in seconds
                         start_date = datetime(2008, 1, 1)
                         time_data = [start_date + dt * i for i in range(ntimes)]
                         assert time_data[0].year == time_data[-1].year
@@ -210,7 +210,7 @@ class Interpolator(object):
             out_var = None
 
             in_var = ds_in.variables[varname]
-            #Interpolate only 3d variables (time, lat, lon) and some 2d variables
+            # Interpolate only 3d variables (time, lat, lon) and some 2d variables
             if in_var.ndim == 3:
                 out_var = ds_out.createVariable(varname, "f4", ("time", "y", "x"))
                 if hasattr(out_var, "units"):
@@ -227,12 +227,12 @@ class Interpolator(object):
 
                     in_data = p.values
 
-                #reshape to 2d
+                # reshape to 2d
                 print in_data.shape, self.target_lons.shape
                 in_data.shape = (in_data.shape[0], -1)
                 out_data = in_data[:, inds]
                 out_data.shape = (out_data.shape[0], ) + self.target_lons.shape
-                #print out_data.shape
+                # print out_data.shape
                 out_var[:] = out_data
 
             elif varname.lower() == "bathymetry":
@@ -245,15 +245,15 @@ class Interpolator(object):
                 out_var = ds_out.createVariable(varname, "f4", ("y", "x"))
 
                 in_data = in_var[:]
-                #reshape to 2d
+                # reshape to 2d
                 in_data = in_data.flatten()
                 out_data = in_data[inds]
                 out_data.shape = self.target_lons.shape
-                #print out_data.shape
+                # print out_data.shape
                 out_var[:] = out_data
 
             if out_var is not None:
-                #Set attributes of the interpolated fields
+                # Set attributes of the interpolated fields
                 if hasattr(out_var, "long_name"):
                     out_var.long_name = in_var.long_name
 
@@ -268,7 +268,7 @@ class Interpolator(object):
 
         lonVar[:] = self.target_lons
         latVar[:] = self.target_lats
-        #close netcdf files
+        # close netcdf files
         ds_out.close()
         ds_in.close()
 
@@ -290,21 +290,21 @@ def main(infolder="DFS4.3", coord_file="", outfolder=None):
         os.mkdir(outfolder)
 
     worker = Interpolator(coord_file=coord_file)
-    #in_file = "DFS4.3_interpolated/t2/t2_DFS4.3_1985_sht.nc" 
-    #worker.interpolate_file(in_file)    
+    # in_file = "DFS4.3_interpolated/t2/t2_DFS4.3_1985_sht.nc"
+    # worker.interpolate_file(in_file)
 
-    ##interpolate sst and salinity
+    # interpolate sst and salinity
     in_ncpaths = []
     out_ncpaths = []
 
-    #worker.interpolate_file(in_ncpaths[0], out_ncpaths[0])
+    # worker.interpolate_file(in_ncpaths[0], out_ncpaths[0])
 
 
-    ##interpolate runoffs
-    #in_ncpaths += ["runoff_1m_nomask.nc"]
-    #out_ncpaths += ["runoff_1m_nomask_interpolated.nc"]
+    # interpolate runoffs
+    # in_ncpaths += ["runoff_1m_nomask.nc"]
+    # out_ncpaths += ["runoff_1m_nomask_interpolated.nc"]
 
-    #find all netcdf files interpolate and save to the same structure, but with adding
+    # find all netcdf files interpolate and save to the same structure, but with adding
     # _interpolated to the topmost folder
     for root, dirs, files in os.walk(infolder):
         root_name = os.path.basename(root)
@@ -326,18 +326,22 @@ def main(infolder="DFS4.3", coord_file="", outfolder=None):
     workers = [worker] * len(in_ncpaths)
     res = pool.map(apply_interpolator, zip(workers, in_ncpaths, out_ncpaths))
     assert sum(res) == 0
-    #for in_path, out_path in zip(in_ncpaths, out_ncpaths):
-    #    worker.interpolate_file(in_path, out_path)
+    # for in_path, out_path in zip(in_ncpaths, out_ncpaths):
+    #     worker.interpolate_file(in_path, out_path)
 
 
 def interpolate_10km_grid_glk():
-    #    main(infolder="/home/huziy/skynet3_rech1/NEMO/WORK_GRTLKS/DFS4.3",
+    # main(infolder="/home/huziy/skynet3_rech1/NEMO/WORK_GRTLKS/DFS4.3",
     #      coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx170_ny90_dx0.1_dy0.1.nc",
     #      outfolder="/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/DFS4.3_interpolated")
 
-    main(infolder="/skynet3_rech1/huziy/NEMO_OFFICIAL/DFS5.2",
-         coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx170_ny90_dx0.1_dy0.1.nc")
+    # main(infolder="/skynet3_rech1/huziy/NEMO_OFFICIAL/DFS5.2",
+    #      coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx170_ny90_dx0.1_dy0.1.nc")
+    #
 
+    main(infolder="/home/huziy/skynet3_rech1/NEMO_fields_to_interpolate_from",
+         coord_file="/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/nemo_grids/coordinates_rotpole_nx210_ny130_dx0.1_dy0.1.nc",
+         outfolder="/home/huziy/skynet3_rech1/NEMO_fields_to_interpolated_210x130_0.1deg")
 
 if __name__ == "__main__":
     #main()

@@ -155,13 +155,13 @@ def compare(paths=None, path_to_control_data=None, control_label="",
             vmax = d
 
             field_norm, bounds, vmn_nice, vmx_nice = infovar.get_boundary_norm(vmin, vmax, diff_cmap.N,
-                                                                               exclude_zero=True)
+                                                                               exclude_zero=False)
             basemap.pcolormesh(x, y, to_plot, cmap=diff_cmap, norm=field_norm, vmin=vmn_nice, vmax=vmx_nice)
 
             cb = basemap.colorbar(format=sfmt)
 
             t, pval = ttest_ind(means_for_years, control_means, axis=0)
-            sig = pval < 0.05
+            sig = pval < 0.1
             basemap.contourf(x, y, sig.astype(int), nlevels=2, hatches=["+", None], colors="none")
 
             # cb.ax.set_ylabel(infovar.get_units(var_name))
@@ -223,7 +223,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     # the field is a control mean in the case of the control mean
     # and the difference between the modified simulation and the control mean in the case of the modified simulation
 
-    exclude_0_from_diff_colorbar = True
+    exclude_0_from_diff_colorbar = False
 
     assert isinstance(domain_props, DomainProperties)
     print "plotting row for {0}; increments = ({1})".format(var_name, increments)
@@ -294,8 +294,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
                                   ax=ax)
 
             # basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
-            #                linewidths = 0.5, colors="k")
-
+            #                 linewidths = 0.5, colors="k")
 
             if col == 0 and False:
                 # create a legend for the contour set
@@ -318,6 +317,8 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                               start_year=None,
                                                               end_year=None):
     season_list = season_to_months.keys()
+
+    pvalue_max = 0.1
 
     # crcm5-r vs crcm5-hcd-r
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_spinup.hdf"
@@ -371,13 +372,13 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # interflow effect ()
     control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     control_label = "CRCM5-HCD-RL"
-
+    #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
     # labels = ["CRCM5-HCD-RL-INTF", ]
 
 
     paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
-    labels = ["CRCM5-HCD-RL-INTF-improved", ]
+    labels = ["CRCM5-HCD-RL-INTFb", ]
 
 
 
@@ -444,7 +445,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                    lons=lons2d, lats=lats2d)
 
                 # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
-                if var_name in ["PR", "TRAF"]:
+                if var_name in ["PR", "TRAF", "TDRA"]:
                     control_mean *= get_num_days(months_of_interest)
 
                 season_to_control_mean[season] = control_mean
@@ -459,7 +460,8 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                                             level=level)
 
                     tval, pval = ttest_ind(modified_means, control_means, axis=0, equal_var=False)
-                    significance = ((pval <= 0.1) & (~control_mean.mask)).astype(int)
+                    significance = ((pval <= pvalue_max) & (~control_mean.mask)).astype(int)
+                    print "pval ranges: {} to {}".format(pval.min(), pval.max())
 
                     modified_mean = np.mean(modified_means, axis=0)
                     if the_label not in label_to_season_to_difference:
@@ -471,7 +473,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                         lats=lats2d)
 
                     # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
-                    if var_name in ["PR", "TRAF"]:
+                    if var_name in ["PR", "TRAF", "TDRA"]:
                         modified_mean *= get_num_days(months_of_interest)
 
                     diff_vals = modified_mean - control_mean

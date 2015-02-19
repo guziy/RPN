@@ -68,7 +68,9 @@ def get_longest_rain_event_durations_from_tables(pr, traf=None, t2m=None, pr_low
         is_it_raining_now = (p >= pr_lower_lim) & (t2m_field > 0)
 
         durations_current[is_it_raining_now] += 1
-        acc_runoff_current[is_it_raining_now] += r[is_it_raining_now]
+
+        to_update_runoff = is_it_raining_now & (durations_current > 2)
+        acc_runoff_current[to_update_runoff] += r[to_update_runoff]
 
         update_duration_max = (~is_it_raining_now) & (durations_max < durations_current)
 
@@ -95,12 +97,15 @@ def get_longest_rain_durations_for_files(intf_file="", no_intf_file="",
     :param end_year:
     """
 
-    precip_lower_limit_mm_per_day = 20
+    precip_lower_limit_mm_per_day = 5
 
     key_str = intf_file + no_intf_file + "{}".format(precip_lower_limit_mm_per_day)
     cache_file = "{}_{}-{}.long-events-intf.cache".format(
         ctypes.c_size_t(hash(key_str)).value,
         start_year, end_year)
+
+    # Temporarily disable caching
+    # os.remove(cache_file)
 
     if os.path.isfile(cache_file):
         return pickle.load(open(cache_file))
@@ -268,9 +273,9 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
 
     assert isinstance(fig, Figure)
     print fig.get_figwidth()
-    fig.set_size_inches(fig.get_figwidth() * 3, fig.get_figheight() * 1.4)
+    # fig.set_size_inches(fig.get_figwidth() * 3, fig.get_figheight() * 1.4)
 
-    gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1.3, 0.05])
+    # gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1.3, 0.05])
 
     ax_list = []
 
@@ -285,19 +290,19 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
     vmax = clevs[-1]  # mm
 
     # Plot values
-    ax = fig.add_subplot(gs[0, 0])
-    basemap.pcolormesh(x, y, no_intf_acc_runoff_mm, vmin=0, vmax=vmax, cmap=cmap_field, norm=bn)
-    ax.set_title("No intf., surface runoff")
-    ax_list.append(ax)
+    # ax = fig.add_subplot(gs[0, 0])
+    # basemap.pcolormesh(x, y, no_intf_acc_runoff_mm, vmin=0, vmax=vmax, cmap=cmap_field, norm=bn)
+    # ax.set_title("No intf., surface runoff")
+    # ax_list.append(ax)
+    #
+    # ax = fig.add_subplot(gs[0, 1])
+    # im = basemap.pcolormesh(x, y, intf_acc_runoff_mm, vmin=0, vmax=vmax, cmap=cmap_field, norm=bn)
+    # ax.set_title("Intf., surface runoff")
+    # ax_list.append(ax)
 
-    ax = fig.add_subplot(gs[0, 1])
-    im = basemap.pcolormesh(x, y, intf_acc_runoff_mm, vmin=0, vmax=vmax, cmap=cmap_field, norm=bn)
-    ax.set_title("Intf., surface runoff")
-    ax_list.append(ax)
-
-    cax = fig.add_subplot(gs[0, 2])
-    cb = plt.colorbar(im, cax=cax, ticks=clevs)
-    cb.ax.set_xlabel("mm")
+    # cax = fig.add_subplot(gs[0, 2])
+    # cb = plt.colorbar(im, cax=cax, ticks=clevs)
+    # cb.ax.set_xlabel("mm")
 
     # Plot differences
     clevs = [0.5, 1, 5, 30, 100, 150]
@@ -305,18 +310,18 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
     cmap_diff = cm.get_cmap("bwr", len(clevs) - 1)
     bn = BoundaryNorm(clevs, len(clevs) - 1)
 
-    ax = fig.add_subplot(gs[0, 3])
+    ax = fig.add_subplot(111)
     diff = intf_acc_runoff_mm - no_intf_acc_runoff_mm
     im = basemap.pcolormesh(x, y, diff, cmap=cmap_diff, norm=bn)
-    ax.set_title(r"$R_{\rm intf.} - R_{\rm nointf.}$; " +
-                 r"$\sum\Delta_{i, j}$ = " +
-                 "{:.2f} ".format(diff.sum() * 100.0 * 1.0e-6) +
-                 r"${\rm km^3 / year}$" + "\n")
+    # ax.set_title(r"$R_{\rm intf.} - R_{\rm nointf.}$; " +
+    #              r"$\sum\Delta_{i, j}$ = " +
+    #              "{:.2f} ".format(diff.sum() * 100.0 * 1.0e-6) +
+    #              r"${\rm km^3 / year}$" + "\n")
     ax_list.append(ax)
 
-    cax = fig.add_subplot(gs[0, 4])
-    cb = plt.colorbar(im, cax=cax, ticks=clevs)
-    cb.ax.set_xlabel("mm")
+    # cax = fig.add_subplot(gs[0, :])
+    cb = plt.colorbar(im, ax=ax, ticks=clevs)
+    cb.ax.set_xlabel("mm/year")
 
     # Draw coastlines
     for ax in ax_list:
