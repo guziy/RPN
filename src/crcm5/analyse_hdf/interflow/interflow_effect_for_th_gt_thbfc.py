@@ -67,10 +67,9 @@ def get_runoff_differences_composit(traf_table_intf=None, th_table_intf=None,
     return total_diff
 
 
-
 def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
          no_intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
-         start_year=1980, end_year=2010):
+         start_year=1980, end_year=2010, label="CRCM5-HCD-RL-INTFa"):
     """
     Study impact of interflow only for the cases when liquid soil moisture is greater than field capacity
     """
@@ -89,8 +88,8 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
         traf_table_intf = intf_handle.get_node("/TRAF")
         traf_table_no_intf = no_intf_handle.get_node("/TRAF")
 
-        th_table_intf = intf_handle.get_node("/I0")
-        th_table_no_intf = no_intf_handle.get_node("/I0")
+        th_table_intf = intf_handle.get_node("/I1")
+        th_table_no_intf = no_intf_handle.get_node("/I1")
 
         bfc = get_bulk_field_capacity()
 
@@ -106,15 +105,12 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
 
         # save the figure
         plt.figure()
-        total_diff /= float(end_year - start_year + 1)
 
-        # Convert to mm
-        total_diff *= 3 * 60 * 60
         lons, lats, bm = analysis.get_basemap_from_hdf(intf_file)
 
         x, y = bm(lons, lats)
 
-        clevs = [0.5, 1, 5, 30, 100, 150]
+        clevs = [0.5, 1, 5, 30, 100, 150, 200]
         clevs = [-c for c in reversed(clevs)] + clevs
 
         cmap = cm.get_cmap("bwr", len(clevs) - 1)
@@ -122,7 +118,7 @@ def main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl
         im = bm.pcolormesh(x, y, total_diff, cmap=cmap, norm=bn)
         bm.drawcoastlines()
         bm.colorbar(im, ticks=clevs)
-        plt.savefig(os.path.join(img_folder, "traf_diff_{}-{}.png".format(start_year, end_year)))
+        plt.savefig(os.path.join(img_folder, "{}_traf_diff_{}-{}.png".format(label, start_year, end_year)))
 
 
 
@@ -133,3 +129,5 @@ if __name__ == '__main__':
     import application_properties
     application_properties.set_current_directory()
     main()
+    # main(intf_file="/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5",
+    #      start_year=1980, end_year=1989, label="CRCM5-HCD-RL-INTFb")
