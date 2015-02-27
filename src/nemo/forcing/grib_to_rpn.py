@@ -35,17 +35,13 @@ def main(out_folder=""):
         path = path_template.format(year)
         ind = pygrib.index(path, "year", "month")
 
-
         for month in range(1, 13):
             fname = "ERAI_0.75_{}h_{}{:02d}.rpn".format(fcst_hour_list[0], year, month)
             fpath = os.path.join(out_folder, fname)
             if os.path.isfile(fpath):
-
                 print "{} -- already exists, delete to regenerate".format(fpath)
                 raise Exception("Unfortunately the program cannot be run in parallel for consistency of the data!"
                                 " Please delete all previously generated files before proceeding.")
-
-
 
             r_out = RPN(fpath, "w")
 
@@ -57,7 +53,7 @@ def main(out_folder=""):
 
                 print grb_message
                 # for k in grb_message.keys():
-                #    print "{}: {}".format(k, grb_message[k])
+                # print "{}: {}".format(k, grb_message[k])
                 print grb_message.startStep
                 print [grb_message[k] for k in ["year", "month", "day", "hour"]]
                 print grb_message.validityDate, grb_message.validityTime
@@ -70,7 +66,6 @@ def main(out_folder=""):
                 data = (grb_message.values - data_previous) / float(fcst_hour_list[0] * 3600)
 
                 data[data <= 1.0e-16] = 0
-
                 data_previous = grb_message.values[:, :]
 
 
@@ -83,13 +78,14 @@ def main(out_folder=""):
                 data = np.flipud(data[:, :])
 
                 print data.shape
-                r_out.write_2D_field(name = varname,
-                                     data = data.transpose(), ip = [0, npas * fcst_hour_list[0], 0],
-                                     ig = [0] * 4,
-                                     npas = npas, deet=3600 * fcst_hour_list[0], label="ERAI075", dateo = dateo,
+                r_out.write_2D_field(name=varname,
+                                     data=data.transpose(), ip=[0, npas * fcst_hour_list[0], 0],
+                                     ig=[0] * 4,
+                                     npas=npas, deet=3600 * fcst_hour_list[0], label="ERAI075", dateo=dateo,
                                      grid_type="B", typ_var="P",
-                                     nbits = -32, data_type = data_types.compressed_floating_point)
+                                     nbits=-32, data_type=data_types.compressed_floating_point)
                 npas += 1
+
             r_out.close()
 
             # plt.figure()
@@ -97,6 +93,7 @@ def main(out_folder=""):
             # plt.show()
 
         ind.close()
+
 
 if __name__ == '__main__':
     main(out_folder="/home/huziy/skynet3_rech1/ERAI075_snowfall_rpn/6h")
