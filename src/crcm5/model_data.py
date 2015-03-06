@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import itertools
 from multiprocessing import Pool
-from netCDF4 import Dataset, date2num
+from netCDF4 import Dataset, date2num, num2date
 import pickle
 import shelve
 import time
@@ -15,7 +15,6 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import LinearLocator
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
-from netcdftime import num2date
 from numpy.lib.function_base import meshgrid
 from scipy.spatial.ckdtree import cKDTree
 from rpn import level_kinds
