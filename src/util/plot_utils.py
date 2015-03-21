@@ -42,9 +42,6 @@ def apply_plot_params(font_size=20, width_pt=1000, aspect_ratio=1, height_cm=Non
     """
     aspect_ratio = height / (width * golden_mean)
     """
-    import matplotlib
-    matplotlib.use("Agg")
-
     import pylab
     import math
 

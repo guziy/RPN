@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import datetime
 import os
+from matplotlib.font_manager import FontProperties
 from matplotlib.ticker import ScalarFormatter
 
 from mpl_toolkits.basemap import maskoceans
@@ -191,6 +192,7 @@ def plot_differences_for_a_var_as_panel():
 
 def get_num_days(month_list):
     import calendar
+
     days = 0
     for m in month_list:
         days += calendar.monthrange(2001, m)[1]
@@ -269,7 +271,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     print "vmin = {0}; vmax = {1}".format(vmin, vmax)
 
     col = 0
-    axes[0].set_ylabel(sim_label)
+    # axes[0].set_ylabel(sim_label)
     im = None
     for season in season_list:
         field = data[season]
@@ -294,7 +296,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
                                   ax=ax)
 
             # basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
-            #                 linewidths = 0.5, colors="k")
+            # linewidths = 0.5, colors="k")
 
             if col == 0 and False:
                 # create a legend for the contour set
@@ -306,16 +308,18 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
 
     # plot the common colorbar
     if isinstance(field_norm, LogNorm):
-        plt.colorbar(im, cax=axes[-1])
+        cb = plt.colorbar(im, cax=axes[-1])
     else:
-        plt.colorbar(im, cax=axes[-1], extend="both", ticks=bounds)
+        cb = plt.colorbar(im, cax=axes[-1], extend="both", ticks=bounds)
+
+    cb.ax.set_title(infovar.get_units(var_name))
 
 
-def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
-                                                              levels=None,
-                                                              season_to_months=None,
-                                                              start_year=None,
-                                                              end_year=None):
+def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
+        varnames=None, levels=None,
+        season_to_months=None,
+        start_year=None,
+        end_year=None):
     season_list = season_to_months.keys()
 
     pvalue_max = 0.1
@@ -371,14 +375,14 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
     # interflow effect ()
     control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    control_label = "CRCM5-HCD-RL"
-    #
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    # labels = ["CRCM5-HCD-RL-INTF", ]
+    control_label = "CRCM5-L2"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    labels = ["CRCM5-L2I", ]
 
 
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
-    labels = ["CRCM5-HCD-RL-INTFb", ]
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
+    # labels = ["CRCM5-HCD-RL-INTFb", ]
 
 
 
@@ -400,7 +404,6 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
     assert len(levels) == len(varnames)
 
-
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=control_path)
     x, y = basemap(lons2d, lats2d)
     # save the domain properties for reuse
@@ -420,8 +423,18 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # +1 to include white
     diff_cmap = cm.get_cmap("RdBu", ncolors + 1)
 
+
+    # Do the plotting for each variable
+    fig = plt.figure()
+    assert isinstance(fig, Figure)
+
+    # plot the control data
+    ncols = len(season_list) + 1  # +1 is for the colorbar
+    gs = gridspec.GridSpec(len(varnames), ncols, width_ratios=[1.0, ] * (ncols - 1) + [0.07], top=0.95)
+
+
     # plot the plots one file per variable
-    for var_name, level in zip(varnames, levels):
+    for var_name, level, the_row in zip(varnames, levels, range(len(varnames))):
         sfmt = infovar.get_colorbar_formatter(var_name)
         season_to_control_mean = {}
         label_to_season_to_difference = {}
@@ -447,6 +460,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                 # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
                 if var_name in ["PR", "TRAF", "TDRA"]:
                     control_mean *= get_num_days(months_of_interest)
+                    infovar.change_units_to(varnames=[var_name, ], new_units=r"${\rm mm}$")
 
                 season_to_control_mean[season] = control_mean
 
@@ -487,98 +501,36 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
             print "Could not find {0}, skipping...".format(var_name)
             continue
 
-        # Do the plotting for each variable
-        fig = plt.figure()
-        assert isinstance(fig, Figure)
 
-        # plot the control data
-        ncols = len(season_to_control_mean) + 1  # +1 is for the colorbar
-        gs = gridspec.GridSpec(len(paths) + 1, ncols, width_ratios=[1.0, ] * (ncols - 1) + [0.07])
-        axes = []
-        for col in range(ncols):
-            axes.append(fig.add_subplot(gs[0, col]))
-        _plot_row(axes, season_to_control_mean, control_label, var_name, domain_props=domain_props,
-                  season_list=season_list)
 
-        the_row = 1
+
+
         for the_label, data in label_to_season_to_difference.iteritems():
             axes = []
             for col in range(ncols):
                 axes.append(fig.add_subplot(gs[the_row, col]))
 
+            # Set season titles
+            if the_row == 0:
+                for the_season, ax in zip(season_list, axes):
+                    ax.set_title(the_season)
+
+
             _plot_row(axes, data, the_label, var_name, increments=True, domain_props=domain_props,
                       season_list=season_list, significance=label_to_season_to_significance[the_label])
-            the_row += 1
 
-        folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(
-            "_".join(labels), control_label, "-".join(season_to_months.keys()), start_year, end_year))
-        if not os.path.isdir(folderpath):
-            os.mkdir(folderpath)
+            axes[0].set_ylabel(var_name)
 
-        imname = "{0}_{1}.png".format(var_name, "_".join(labels + [control_label]))
-        impath = os.path.join(folderpath, imname)
-        fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
+    fig.suptitle("({}) vs ({})".format(labels[0], control_label), font_properties=FontProperties(weight="bold"))
+    folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(
+        "_".join(labels), control_label, "-".join(season_to_months.keys()), start_year, end_year))
 
+    if not os.path.isdir(folderpath):
+        os.mkdir(folderpath)
 
-def study_lake_effect_on_atmosphere():
-    path_to_control_data = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
-    control_label = "CRCM5-R"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
-    labels = ["CRCM5-HCD-R", ]
-
-    # get control means
-    months = [1, ]
-    varnames = ["STFA", "TT", "PR", "AV", "AH"]
-    levels = [None, None, None, None, None]
-
-    assert len(levels) == len(varnames)
-
-    start_year = 1979
-    end_year = 1988
-
-    season_list = [
-        [12, 1, 2], range(3, 6), range(6, 9), range(9, 12)
-    ]
-
-    for months in season_list:
-        compare(paths, path_to_control_data=path_to_control_data,
-                control_label=control_label, labels=labels,
-                varnames=varnames, start_year=start_year, end_year=end_year,
-                months_of_interest=months, levels=levels)
-
-
-def study_interflow_effect():
-    # Compare runs with and without interflow
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup.hdf", ]
-    labels = ["CRCM5-HCD-RL-INTFL", ]
-
-    path_to_control_data = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf"
-    control_label = "CRCM5-HCD-RL"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf", ]
-    labels = ["CRCM5-HCD-RL-INTFL", ]
-
-
-    # get control means
-    months = [1, ]
-    varnames = ["STFL", "TT", "PR", "AV", "AH", "I0", "I1", "I2"]
-    levels = [None, None, None, None, None, 1, 1, 1]
-
-    assert len(levels) == len(varnames)
-
-    start_year = 1979
-    end_year = 1985
-
-    season_list = [
-        [12, 1, 2], range(3, 6), range(6, 9), range(9, 12)
-    ]
-
-    for months in season_list:
-        compare(paths, path_to_control_data=path_to_control_data,
-                control_label=control_label, labels=labels,
-                varnames=varnames, start_year=start_year, end_year=end_year,
-                months_of_interest=months, levels=levels)
+    imname = "{0}_{1}.png".format("-".join(varnames), "_".join(labels + [control_label]))
+    impath = os.path.join(folderpath, imname)
+    fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
 
 
 def main():
@@ -589,7 +541,6 @@ def main():
 
     t0 = time.clock()
     # study_interflow_effect()
-    study_lake_effect_on_atmosphere()
     print "Execution time: {0} seconds".format(time.clock() - t0)
 
 

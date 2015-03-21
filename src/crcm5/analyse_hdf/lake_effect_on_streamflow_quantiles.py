@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from matplotlib.axes import Axes
 from matplotlib.font_manager import FontProperties
+from matplotlib.ticker import MaxNLocator
 from crcm5 import infovar
 from data import cehq_station
 from data.cehq_station import Station
@@ -44,7 +45,7 @@ def main():
 
     selected_station_ids = ids_with_lakes_upstream
 
-    #Get the list of stations to do the comparison with
+    # Get the list of stations to do the comparison with
     stations = cehq_station.read_station_data(
         start_date=start_date,
         end_date=end_date,
@@ -52,7 +53,7 @@ def main():
     )
 
 
-    #add hydat stations
+    # add hydat stations
     # province = "QC"
     # min_drainage_area_km2 = 10000.0
     # stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date,
@@ -65,18 +66,18 @@ def main():
 
 
     path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    label1 = "CRCM5-HCD-R"
+    label1 = "CRCM5-L1"
     color1 = "b"
 
     path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    label2 = "CRCM5-HCD-RL"
+    label2 = "CRCM5-L2"
     color2 = "r"
 
     fldirs = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(path1)
 
     lake_fractions = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_LAKE_FRACTION_NAME)
-    #cell_areas = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_CELL_AREA_NAME)
+    # cell_areas = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_CELL_AREA_NAME)
     acc_area = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
 
     cell_manager = CellManager(fldirs, lons2d=lons2d, lats2d=lats2d, accumulation_area_km2=acc_area)
@@ -85,7 +86,7 @@ def main():
                                                                lake_fraction=lake_fractions,
                                                                drainaige_area_reldiff_limit=0.3)
 
-    fig, axes = plt.subplots(2, 1)
+    fig, axes = plt.subplots(1, 2, gridspec_kw=dict(top=0.80, wspace=0.4))
 
     q90_obs_list = []
     q90_mod1_list = []
@@ -109,17 +110,17 @@ def main():
 
         _, stfl_obs = the_station.get_daily_climatology_for_complete_years(stamp_dates=t, years=compl_years)
 
-        #Q90
+        # Q90
         q90_obs = np.percentile(stfl_obs, 90)
         q90_mod1 = np.percentile(stfl1, 90)
         q90_mod2 = np.percentile(stfl2, 90)
 
-        #Q10
+        # Q10
         q10_obs = np.percentile(stfl_obs, 10)
         q10_mod1 = np.percentile(stfl1, 10)
         q10_mod2 = np.percentile(stfl2, 10)
 
-        #save quantiles to lists for correlation calculation
+        # save quantiles to lists for correlation calculation
         q90_obs_list.append(q90_obs)
         q90_mod1_list.append(q90_mod1)
         q90_mod2_list.append(q90_mod2)
@@ -129,42 +130,56 @@ def main():
         q10_obs_list.append(q10_obs)
 
 
-        #axes[0].annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
-        #axes[1].annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
+        # axes[0].annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
+        # axes[1].annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
 
-    #Plot scatter plot of Q90
+
+
+
+    # Plot scatter plot of Q90
     the_ax = axes[0]
-    #the_ax.annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
+
+    # the_ax.annotate(the_station.id, (q90_obs, np.percentile(stfl1, 90)))
     the_ax.scatter(q90_obs_list, q90_mod1_list, label=label1, c=color1)
     the_ax.scatter(q90_obs_list, q90_mod2_list, label=label2, c=color2)
 
-    #plot scatter plot of Q10
+
+
+    # plot scatter plot of Q10
     the_ax = axes[1]
-    #the_ax.annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
+    # the_ax.annotate(the_station.id, (q10_obs, np.percentile(stfl1, 10)))
     h1 = the_ax.scatter(q10_obs_list, q10_mod1_list, label=label1, c=color1)
     h2 = the_ax.scatter(q10_obs_list, q10_mod2_list, label=label2, c=color2)
 
 
 
-    ##Add correlation coefficients to the axes
-    fp = FontProperties(size=20, weight="bold")
+    # Add correlation coefficients to the axes
+    fp = FontProperties(size=10, weight="bold")
     axes[0].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q90_mod1_list, q90_obs_list)[0, 1] ** 2),
                      (0.1, 0.85), color = color1, xycoords = "axes fraction", font_properties = fp)
     axes[0].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q90_mod2_list, q90_obs_list)[0, 1] ** 2),
-                     (0.1, 0.75), color = color2, xycoords = "axes fraction", font_properties = fp)
+                     (0.1, 0.78), color = color2, xycoords = "axes fraction", font_properties = fp)
 
     axes[1].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q10_mod1_list, q10_obs_list)[0, 1] ** 2),
                      (0.1, 0.85), color = color1, xycoords = "axes fraction", font_properties = fp)
     axes[1].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q10_mod2_list, q10_obs_list)[0, 1] ** 2),
-                     (0.1, 0.75), color = color2, xycoords = "axes fraction", font_properties = fp)
+                     (0.1, 0.78), color = color2, xycoords = "axes fraction", font_properties = fp)
 
-    for the_ax in axes:
+    for ind, the_ax in enumerate(axes):
         plot_one_to_one_line(the_ax)
-        the_ax.set_xlabel(r"Obs. ${\rm m^3/s}$")
-        the_ax.set_ylabel(r"Mod. ${\rm m^3/s}$")
+        if ind == 0:
+            the_ax.set_xlabel(r"Observed $\left({\rm m^3/s} \right)$")
+            the_ax.set_ylabel(r"Modelled $\left({\rm m^3/s} \right)$")
 
-    fig.legend([h1, h2], [label1, label2], loc="upper center")
-    figpath = os.path.join(images_folder, "percentiles_comparison.jpeg")
+        the_ax.set_title(r"$Q_{90}$" if ind == 0 else r"$Q_{10}$",
+                         font_properties=FontProperties(size=16, weight="bold"))
+        locator = MaxNLocator(nbins=5)
+        the_ax.xaxis.set_major_locator(locator)
+        the_ax.yaxis.set_major_locator(locator)
+
+    fig.legend([h1, h2], [label1, label2], loc="upper center", ncol=2)
+    figpath = os.path.join(images_folder, "percentiles_comparison.png")
+    # plt.tight_layout()
     fig.savefig(figpath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 

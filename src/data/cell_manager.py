@@ -12,12 +12,11 @@ import numpy as np
 
 
 class CellManager:
-    #responsible for creating conected cells, and for quering subregions
-    def __init__(self, flow_dirs, nx = None, ny = None,
-                 lons2d = None,
-                 lats2d = None,
-                 accumulation_area_km2 = None
-                 ):
+    # responsible for creating conected cells, and for quering subregions
+    def __init__(self, flow_dirs, nx=None, ny=None,
+                 lons2d=None,
+                 lats2d=None,
+                 accumulation_area_km2=None):
         self.cells = []
         self.lons2d = lons2d
         self.lats2d = lats2d
@@ -25,7 +24,7 @@ class CellManager:
 
         self.accumulation_area_km2 = accumulation_area_km2
 
-        #calculate characteristic distance
+        # calculate characteristic distance
         if None not in [self.lats2d, self.lons2d]:
             v1 = lat_lon.lon_lat_to_cartesian(self.lons2d[0, 0], self.lats2d[0, 0])
             v2 = lat_lon.lon_lat_to_cartesian(self.lons2d[1, 1], self.lats2d[1, 1])
@@ -35,7 +34,7 @@ class CellManager:
             x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
             self.kdtree = cKDTree(zip(x, y, z))
 
-        if not None in [nx, ny]:
+        if None not in [nx, ny]:
             self.nx = nx
             self.ny = ny
         else:
@@ -43,7 +42,7 @@ class CellManager:
             self.nx, self.ny = flow_dirs.shape
 
         for i in range(nx):
-            self.cells.append(list([Cell(i = i, j = j, flow_dir_value = flow_dirs[i, j]) for j in range(ny)]))
+            self.cells.append(list([Cell(i=i, j=j, flow_dir_value=flow_dirs[i, j]) for j in range(ny)]))
 
         self._without_next_mask = np.zeros((nx, ny), dtype=np.int)
         self._wo_next_wo_prev_mask = np.zeros((nx, ny), dtype=np.int)  # mask of the potential outlets
@@ -55,13 +54,11 @@ class CellManager:
                     if 0 <= j_next < ny:
                         next_cell = self.cells[i_next][j_next]
 
-
                 self._without_next_mask[i, j] = int(next_cell is None)
                 self.cells[i][j].set_next(next_cell)
 
 
-
-    def get_outlet_mask_array(self, lower_accumulation_index_limit = 5):
+    def get_outlet_mask_array(self, lower_accumulation_index_limit=5):
         """
         returns a mask 2d bool array which is True where accumulation index is greater then (>)
         lower_accumulation_index_limit
@@ -78,19 +75,19 @@ class CellManager:
         return (self.get_accumulation_index() > lower_accumulation_index_limit) & is_outlet_candidate
 
 
-    def get_model_points_of_outlets(self, lower_accumulation_index_limit = 5):
+    def get_model_points_of_outlets(self, lower_accumulation_index_limit=5):
         """
         Does the same thing as self.get_oulet_mask_array, except the result is a list of ModelPoint objects
         :param lower_accumulation_index_limit:
         """
-        omask = self.get_outlet_mask_array(lower_accumulation_index_limit = lower_accumulation_index_limit)
+        omask = self.get_outlet_mask_array(lower_accumulation_index_limit=lower_accumulation_index_limit)
         return [ModelPoint(ix=i, jy=j, longitude=self.lons2d[i, j], latitude=self.lats2d[i, j])
                 for i, j in zip(*np.where(omask))]
 
 
     def get_accumulation_index(self):
-        #returns a field of the number of cells flowing into a given cell
-        #(based on the list of cells representing current domain)
+        # returns a field of the number of cells flowing into a given cell
+        # (based on the list of cells representing current domain)
         result = np.zeros((self.nx, self.ny))
 
         for i in range(self.nx):
@@ -107,11 +104,9 @@ class CellManager:
         return result
 
 
-
-
-
     def get_mask_of_cells_connected_with_by_indices(self, ix, jy):
         """
+        Note: only upstream cells are checked
         returns 2d array indicating 1 where there is a cell connected to aCell and 0 where it is not
         ix, jy - horizontal and vertical indices of the Cell to which the upstream are sought
         """
@@ -120,7 +115,6 @@ class CellManager:
         for uc in all_upstream:
             the_mask[uc.i, uc.j] = 1
         return the_mask
-
 
 
     def get_mask_of_cells_connected_with(self, acell):
@@ -136,8 +130,7 @@ class CellManager:
         return the_mask
 
 
-
-    def get_outlet_mask(self, rout_domain_mask = None):
+    def get_outlet_mask(self, rout_domain_mask=None):
         """
         returns a matrix of 0/1, 1 - where you have outlets
         note, that there is no way to distinguish ocean cells and outlets at this stage, if the
@@ -148,7 +141,6 @@ class CellManager:
             return self._without_next_mask * rout_domain_mask
         else:
             return self._without_next_mask
-
 
 
     def get_coherent_rout_domain_mask(self, outlet_mask):
@@ -166,15 +158,15 @@ class CellManager:
                 rout_mask[the_cell.i, the_cell.j] = 1
 
 
-            #do not consider outlets, since they contain ocean points, the runoff for which can be
+            # do not consider outlets, since they contain ocean points, the runoff for which can be
             #negative, and this is not accounted for in the routing scheme
             rout_mask[io, jo] = 0
 
         return rout_mask
 
 
-    def get_lake_model_points_for_stations(self, station_list, lake_fraction = None,
-                                           nneighbours = 8):
+    def get_lake_model_points_for_stations(self, station_list, lake_fraction=None,
+                                           nneighbours=8):
 
         """
         For lake levels we have a bit different search algorithm since accumulation area is not a very sensible param to compare
@@ -198,7 +190,7 @@ class CellManager:
 
             assert isinstance(s, Station)
             x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
-            dists, inds = self.kdtree.query((x, y, z), k = nneighbours)
+            dists, inds = self.kdtree.query((x, y, z), k=nneighbours)
             if nneighbours == 1:
                 dists = [dists]
                 inds = [inds]
@@ -206,7 +198,7 @@ class CellManager:
             for d, i in zip(dists, inds):
                 ix = i_flat[i]
                 jy = j_flat[i]
-                mp = ModelPoint(ix = ix, jy = jy)
+                mp = ModelPoint(ix=ix, jy=jy)
 
                 mp.longitude = self.lons2d[ix, jy]
                 mp.latitude = self.lats2d[ix, jy]
@@ -219,7 +211,6 @@ class CellManager:
                     mp.lake_fraction = lake_fraction[ix, jy]
                 mp_list.append(mp)
 
-
             if lake_fraction is not None:
                 lf = 0.0
                 for mp in mp_list:
@@ -228,15 +219,14 @@ class CellManager:
                 if lf <= 0.001:
                     continue
 
-
             station_to_model_point_list[s] = mp_list
             print u"Found model point for the station {0}".format(s)
 
         return station_to_model_point_list
 
 
-    def get_model_points_for_stations(self, station_list, lake_fraction = None,
-                                      drainaige_area_reldiff_limit = 0.1, nneighbours = 8):
+    def get_model_points_for_stations(self, station_list, lake_fraction=None,
+                                      drainaige_area_reldiff_limit=0.1, nneighbours=8):
         """
         returns a map {station => modelpoint} for comparison modeled streamflows with observed
         :rtype   dict
@@ -249,21 +239,18 @@ class CellManager:
         model_acc_area = self.accumulation_area_km2
         model_acc_area_1d = model_acc_area.flatten()
 
-
         for s in station_list:
             if s.drainage_km2 < self.characteristic_distance ** 2 * 1e-12:
                 print "skipping {0}, because drainage area is too small: {1} km**2".format(s.id, s.drainage_km2)
                 continue
 
-
             assert isinstance(s, Station)
             x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
-            dists, inds = self.kdtree.query((x, y, z), k = nneighbours)
-
+            dists, inds = self.kdtree.query((x, y, z), k=nneighbours)
 
             deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
 
-            #this returns a  list of numpy arrays
+            # this returns a  list of numpy arrays
             imin = np.where(np.abs(model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
 
             deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
@@ -312,8 +299,9 @@ class CellManager:
 
 
 def main():
-    #TODO: implement
+    # TODO: implement
     pass
+
 
 if __name__ == "__main__":
     main()

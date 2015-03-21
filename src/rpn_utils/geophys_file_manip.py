@@ -1,17 +1,14 @@
-from _threading_local import local
 from matplotlib.axes import Axes
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FixedFormatter, ScalarFormatter
 
 import os
-from matplotlib import cm
-import matplotlib
+
 from matplotlib.cm import get_cmap
 from matplotlib.colors import BoundaryNorm
 from matplotlib.patches import Polygon
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import maskoceans
-from crcm5.model_data import Crcm5ModelDataManager
 from domains.rotated_lat_lon import RotatedLatLon
 import my_colormaps
 from rpn import level_kinds
@@ -21,11 +18,12 @@ from util import plot_utils
 __author__ = 'huziy'
 
 import numpy as np
-
+import crcm5.analyse_hdf.common_plot_params as cpp
 import matplotlib.pyplot as plt
 
 
 def main():
+    # plot_utils.apply_plot_params(20)
     folder = "/home/huziy/skynet3_rech1/from_guillimin"
     fname = "geophys_Quebec_0.1deg_260x260_with_dd_v6"
     path = os.path.join(folder, fname)
@@ -33,7 +31,7 @@ def main():
     rObj = RPN(path)
 
     mg = rObj.get_first_record_for_name_and_level("MG", level=0, level_kind=level_kinds.PRESSURE)
-    #j2 = rObj.get_first_record_for_name("J2")
+    # j2 = rObj.get_first_record_for_name("J2")
 
 
     levs = [0, 100, 200, 300, 500, 700, 1000, 1500, 2000, 2800]
@@ -50,9 +48,9 @@ def main():
 
 
 
-    #me_to_plot = np.ma.masked_where(mg < 0.4, me)
+    # me_to_plot = np.ma.masked_where(mg < 0.4, me)
     me_to_plot = me
-    #print me_to_plot.min(), me_to_plot.max()
+    # print me_to_plot.min(), me_to_plot.max()
 
 
     rll = RotatedLatLon(**proj_params)
@@ -64,13 +62,13 @@ def main():
 
     plt.figure()
     ax = plt.gca()
-    #the_cmap = cm.get_cmap(name = "gist_earth", lut=len(levs) -1)
-    #the_cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/topo_15lev.rgb")
+    # the_cmap = cm.get_cmap(name = "gist_earth", lut=len(levs) -1)
+    # the_cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/topo_15lev.rgb")
     the_cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/OceanLakeLandSnow.rgb",
                                                         ncolors=len(levs) - 1)
 
 
-    #new_cm = matplotlib.colors.LinearSegmentedColormap('colormap',new_dict,len(levs) - 1)
+    # new_cm = matplotlib.colors.LinearSegmentedColormap('colormap',new_dict,len(levs) - 1)
 
     me_to_plot = maskoceans(lons2d, lats2d, me_to_plot, resolution="l")
     basemap.contourf(x, y, me_to_plot,
@@ -79,20 +77,20 @@ def main():
 
 
 
-    #basemap.fillcontinents(color = "none", lake_color="aqua")
+    # basemap.fillcontinents(color = "none", lake_color="aqua")
     basemap.drawmapboundary(fill_color='#479BF9')
-    basemap.drawcoastlines()
+    basemap.drawcoastlines(linewidth=0.5)
     basemap.drawmeridians(np.arange(-180, 180, 20), labels=[1, 0, 0, 1])
     basemap.drawparallels(np.arange(45, 75, 15), labels=[1, 0, 0, 1])
 
 
-    basemap.readshapefile("data/shape/contour_bv_MRCC/Bassins_MRCC_latlon", name="basin", linewidth=3)
+    basemap.readshapefile("data/shape/contour_bv_MRCC/Bassins_MRCC_latlon", name="basin", linewidth=1)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
     plt.colorbar(ticks=levs, cax=cax)
 
-    basemap.scatter(x, y, color="k", s=1, linewidths=0, ax=ax, zorder=2)
+    # basemap.scatter(x, y, color="k", s=1, linewidths=0, ax=ax, zorder=2)
 
     margin = 20
     x1 = x[margin, margin]
@@ -102,9 +100,9 @@ def main():
     pol_corners = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
     ax.add_patch(Polygon(xy=pol_corners, fc="none", ls="dashed", lw=3))
 
-    plt.tight_layout()
-    #plt.show()
-    plt.savefig("free_domain_260x260.jpeg")
+    # plt.tight_layout()
+    # plt.show()
+    plt.savefig("free_domain_260x260.png", dpi=cpp.FIG_SAVE_DPI)
 
 
 
@@ -177,7 +175,7 @@ def plot_lake_fraction_field():
     assert isinstance(ax, Axes)
     ax.bar(lefts, cell_numms, width=df1)
 
-    #ax.semilogy(rights, cell_numms)
+    # ax.semilogy(rights, cell_numms)
     ax.xaxis.set_ticks(levels)
     ax.yaxis.set_ticks(np.arange(1000, 10000, 1000))
     sf = ScalarFormatter(useMathText=True)
@@ -191,6 +189,7 @@ def plot_lake_fraction_field():
     plt.show()
     fig.tight_layout()
     fig.savefig("lake_fractions_220x220_0.1deg.jpeg")
+    plt.show()
 
     pass
 
@@ -199,7 +198,10 @@ if __name__ == "__main__":
     import application_properties
 
     application_properties.set_current_directory()
-    plot_utils.apply_plot_params(width_pt=None, width_cm=45, height_cm=30, font_size=20)
-    plot_lake_fraction_field()
-    #main()
+    # plot_utils.apply_plot_params(width_pt=None, width_cm=45, height_cm=30, font_size=20)
+    # plot_lake_fraction_field()
+    # plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20.0 / 7.0, height_cm=10.0 / 7.0)
+
+    plot_utils.apply_plot_params(font_size=18, width_pt=None, width_cm=20.0 / 1.2, height_cm=17.0 / 1.2)
+    main()
     print "Hello world"

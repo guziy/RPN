@@ -40,6 +40,52 @@ def compare_simulations():
     p.start()
 
 
+def compare_simulations_differences():
+    """
+    Plot changes for different variables for different seasons for 2 simulations
+
+    """
+    import compare_modelled_2d_fields_increments_only as comp_incrs
+
+
+    # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
+
+    varnames = ["STFA", "TRAF", "I1", "PR", "TDRA", "AV"]
+
+    # varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
+    # varnames = ["TT", "TRAF"]
+    levels = len(varnames) * [0, ]
+
+    # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
+    # levels = [None, None, None, None, 1, 1, None, None]
+
+    # Used to plot control and differences
+
+    season_to_months = OrderedDict([
+        ("Winter", [12, 1, 2]),
+        ("Spring", range(3, 6)),
+        ("Summer", range(6, 9)),
+        ("Fall", range(9, 12))
+    ])
+
+    # season_to_months = OrderedDict([
+    # ("May", [5, ]),
+    # ("June", [6, ]),
+    #     ("July", [7, ]),
+    #     ("August", [8, ])
+    # ])
+
+    start_year = 1980
+    end_year = 2010
+
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=30)
+    comp_incrs.plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(varnames=varnames,
+                                                                                      levels=levels,
+                                                                                      season_to_months=season_to_months,
+                                                                                      start_year=start_year,
+                                                                                      end_year=end_year)
+
+
 def compare_obs_and_model_at_points():
     plot_utils.apply_plot_params(font_size=20, width_pt=None, width_cm=17, height_cm=10)
     import compare_streamflow_with_obs
@@ -102,7 +148,7 @@ def compare_2d_seasonal_means_from_simulations():
 
     # season_to_months = OrderedDict([
     # ("May", [5, ]),
-    #     ("June", [6, ]),
+    # ("June", [6, ]),
     #     ("July", [7, ]),
     #     ("August", [8, ])
     # ])
@@ -137,6 +183,8 @@ def plot_soil_profiles():
 def compare_quantiles():
     import lake_effect_on_streamflow_quantiles as lkeff
 
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=10)
+    # plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=24, height_cm=12)
     lkeff.main()
 
 
@@ -188,10 +236,10 @@ if __name__ == "__main__":
     configure()
     #
     # do_plot_static_fields()
-    compare_2d_seasonal_means_from_simulations()
+    # compare_2d_seasonal_means_from_simulations()
 
     # Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    # compare_obs_and_model_at_points()
+    compare_obs_and_model_at_points()
 
     # compare_simulations()
     # validate_seasonal_mean_atm_fields()
@@ -220,5 +268,5 @@ if __name__ == "__main__":
     # plot differences in soil profiles between 2 simulations
     # plot_diff_in_soil_profiles()
 
-
+    # compare_simulations_differences()
     print "Execution time: {0} seconds".format(time.clock() - t0)

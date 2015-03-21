@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+import os
+import pickle
 
 __author__ = 'huziy'
 
@@ -130,6 +132,20 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
     :rtype : tuple
     :param years_of_interest: is a list of years used for calculating daily climatologies
     """
+
+    # Construct the path to the cache file
+    cache_folder = os.path.join(path + ".cache", "point_climatology")
+    cache_file = "_".join([str(y) for y in years_of_interest]) + \
+                 "__{}__level{}__{}_{}.bin".format(var_name, level, i_index, j_index)
+
+    if not os.path.isdir(cache_folder):
+        os.mkdir(cache_folder)
+
+    cache_file = os.path.join(cache_folder, cache_file)
+
+    if os.path.isfile(cache_file):
+        return pickle.load(open(cache_file))
+
     h = tb.open_file(path)
 
     var_table = h.get_node("/", var_name)
@@ -173,7 +189,12 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
 
     h.close()
     sorted_dates = list(sorted(date_to_mean.keys()))
-    return sorted_dates, [date_to_mean[d] for d in sorted_dates]
+
+    # Save the cache
+    result = (sorted_dates, [date_to_mean[d] for d in sorted_dates])
+    pickle.dump(result, open(cache_file, "wb"))
+
+    return result
 
 
 def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
@@ -380,8 +401,9 @@ def get_seasonal_climatology(hdf_path="", start_year=None, end_year=None, var_na
                                                       start_year=start_year, end_year=end_year)
 
     daily_fields = np.asarray(daily_fields)
-    selection_vec = np.array([d.month in months for d in daily_dates], dtype=np.bool)
-    return np.mean(daily_fields[selection_vec, :, :], axis=0)
+    selection_vec = np.where(np.array([d.month in months for d in daily_dates], dtype=np.bool))
+    selected_data = daily_fields[selection_vec, :, :]
+    return np.mean(selected_data, axis=0)
 
 
 def main():

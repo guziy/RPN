@@ -17,6 +17,7 @@ import pandas as pd
 
 from iris.analysis import cartography
 
+
 class NemoOutputManager(object):
 
     def __init__(self, file_path = "", var_name = "",
@@ -69,7 +70,7 @@ class NemoOutputManager(object):
         ts_vals = surface_data.mean(axis=1).mean(axis=1)
         time = self.cube.coord("time")
 
-        #print dir(time.units)
+        # print dir(time.units)
         dates = num2date(time.points[:], str(time.units))
 
 

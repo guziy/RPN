@@ -708,12 +708,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                       simlabel_list=label_list)
 
         if the_station is not None:
-            im_name = "comp_point_with_obs_{0}_{1}_{2}.jpeg".format(the_station.id,
+            im_name = "comp_point_with_obs_{0}_{1}_{2}.png".format(the_station.id,
                                                                     the_station.source,
                                                                     "_".join(label_list))
             im_folder_path = os.path.join(images_folder, the_station.source)
         else:
-            im_name = "comp_point_with_obs_{0}_{1}.jpeg".format(the_model_point.point_id,
+            im_name = "comp_point_with_obs_{0}_{1}.png".format(the_model_point.point_id,
                                                                 "_".join(label_list))
             im_folder_path = os.path.join(images_folder, "outlets_point_comp")
 
@@ -732,7 +732,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     assert isinstance(figure_stfl, Figure)
     figure_stfl.tight_layout()
-    figure_stfl.savefig(os.path.join(images_folder, "comp_point_with_obs_{0}.jpeg".format("_".join(label_list))),
+    figure_stfl.savefig(os.path.join(images_folder, "comp_point_with_obs_{0}.png".format("_".join(label_list))),
                         dpi=cpp.FIG_SAVE_DPI,
                         bbox_inches="tight")
     plt.close(figure_stfl)
@@ -748,7 +748,7 @@ def plot_point_positions_with_upstream_areas(processed_stations, processed_model
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
-    impath = os.path.join(images_folder, "station_positions.jpeg")
+    impath = os.path.join(images_folder, "station_positions.png")
     fig.savefig(impath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
     plt.close(fig)
 
@@ -820,14 +820,15 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     selected_ids = ["092715", "074903", "080104", "081007", "061905",
                     "093806", "090613", "081002", "093801", "080718", "104001"]
 
-    # selected_ids = ids_with_lakes_upstream
+    selected_ids = ids_with_lakes_upstream
+
     # selected_ids = []  # Do not use CEHQ stations temporarily
 
     # selected_ids = [
     #     "074903", "061905", "090613", "092715", "093801", "093806", "081002"
     # ]
 
-    selected_ids = ["081002", "093801"]
+    # selected_ids = ["081002", "093801"]
 
 
 
@@ -835,18 +836,18 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
 
     sim_labels = [
         # "CRCM5-R",
-        "CRCM5-HCD-R",
-        "CRCM5-HCD-RL",
+        "CRCM5-L1",
+        "CRCM5-L2",
         # "CRCM5-HCD-RL-INTF-a"
     ]
 
     sim_file_names = [
-        #"quebec_0.1_crcm5-r.hdf5",
+        # "quebec_0.1_crcm5-r.hdf5",
         "quebec_0.1_crcm5-hcd-r.hdf5",
-        #"quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
+        # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
         "quebec_0.1_crcm5-hcd-rl.hdf5",
-        #"quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
-        #"quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
+        # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+        # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     ]
 
@@ -854,18 +855,18 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     for k, v in zip(sim_labels, sim_file_names):
         sim_name_to_file_name[k] = v
 
-        #sim_name_to_file_name = {
-        #"CRCM5-R": "quebec_0.1_crcm5-r.hdf5",
-        #"CRCM5-HCD-R": "quebec_0.1_crcm5-hcd-r.hdf5",
-        #"CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
-        #"CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
-        #"SANI=10000, ignore THFC":
-        #    "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf",
-
-        #"CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
-        #"SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
-        #"CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
-    #}
+    #     sim_name_to_file_name = {
+    #     "CRCM5-R": "quebec_0.1_crcm5-r.hdf5",
+    #     "CRCM5-HCD-R": "quebec_0.1_crcm5-hcd-r.hdf5",
+    #     "CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
+    #     "CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
+    #     "SANI=10000, ignore THFC":
+    #        "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf",
+    #
+    # "CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
+    #     "SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
+    #     "CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
+    # }
 
 
 

@@ -55,7 +55,7 @@ def main_for_lake(bathy_path = "",
         u, v = manager_u.get_next_time_frame_data(), manager_v.get_next_time_frame_data()
         u = np.ma.masked_where(~the_mask, u)
         v = np.ma.masked_where(~the_mask, v)
-        #qp = basemap.quiver(x, y, u, v, scale=1.5)
+        # qp = basemap.quiver(x, y, u, v, scale=1.5)
         c = np.sqrt(u ** 2 + v ** 2)
         qp = basemap.streamplot(x, y, u, v, color="k", density=(5, 5), linewidth=3 * c / c.max())
         basemap.drawcoastlines()

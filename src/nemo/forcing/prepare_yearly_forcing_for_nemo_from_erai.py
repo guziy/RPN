@@ -26,12 +26,18 @@ def _year_from_file_path(path):
     return int(path.split("_")[-1].split(".")[0][:-2])
 
 
-def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=None, units=None):
+def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=None,
+                           units=None, offsets=None):
 
     if multipliers is None:
         multipliers = [1] * len(varnames)
     else:
         assert len(varnames) == len(multipliers)
+
+    if offsets is None:
+        offsets = [0] * len(varnames)
+    else:
+        assert len(varnames) == len(offsets)
 
 
     if units is None:
@@ -61,7 +67,7 @@ def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=Non
         print year
 
         # loop over all var names
-        for varname, multiplier, var_units in zip(varnames, multipliers, units):
+        for varname, multiplier, var_units, offset in zip(varnames, multipliers, units, offsets):
             var_folder = os.path.join(out_folder, varname)
 
             if not os.path.isdir(var_folder):
@@ -102,7 +108,7 @@ def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=Non
             time_var.units = "hours since {:%Y-%m-%d %H:%M:%S}".format(year_dates[0])
             ncvar.units = var_units
             time_var[:] = date2num(year_dates, time_var.units)
-            ncvar[:] = np.asarray(data)
+            ncvar[:] = np.asarray(data) * multiplier + offset
 
             # assert isinstance(basemap_params_var, Variable)
             basemap_params_var.setncatts(basemap_params_dict)
@@ -120,21 +126,22 @@ def main():
     # file names are in the following form: ERA_Interim_0.75d_6h_analysis_199010
     path_to_rpn_files = "/RECH/data/Driving_data/Offline/ERA-Interim_0.75/6h_Analysis"
 
-    varnames = ["PR", "TT", "HU", "UU", "VV", "N4", "AD"]
-    units = ["mm/s", "K", "kg/kg", "m/s", "m/s", "W/m**2", "W/m**2"]
+    varnames = ["PR", "TT", "HU", "UU", "VV", "N4", "AD", "SN"]
+    offsets = [0, 273.15, 0, 0, 0, 0, 0, 0]
+    units = ["mm/s", "K", "kg/kg", "m/s", "m/s", "W/m**2", "W/m**2", "mm/s"]
 
     mpers_per_knot = 0.514444444
-    multipliers = [1.0e3, 1., 1., mpers_per_knot, mpers_per_knot, 1.0, 1.0]
+    multipliers = [1.0e3, 1., 1., mpers_per_knot, mpers_per_knot, 1.0, 1.0, 1.0e3]
     create_yearly_from_rpn(path_to_rpn_files, out_folder, varnames=varnames,
-                           multipliers=multipliers, units=units)
+                           multipliers=multipliers, units=units, offsets=offsets)
 
     # Interpolate snowfall
-    varnames = ["SN", ]
-    units = ["mm/s", ]
-    multipliers = [1.0e3, ]
-    path_to_rpn_files = "/home/huziy/skynet3_rech1/ERAI075_snowfall_rpn/6h"
-    create_yearly_from_rpn(path_to_rpn_files, out_folder, varnames=varnames,
-                           multipliers=multipliers, units=units)
+    # varnames = ["SN", ]
+    # units = ["mm/s", ]
+    # multipliers = [1.0e3, ]
+    # path_to_rpn_files = "/home/huziy/skynet3_rech1/ERAI075_snowfall_rpn/6h"
+    # create_yearly_from_rpn(path_to_rpn_files, out_folder, varnames=varnames,
+    #                        multipliers=multipliers, units=units)
 
 
     pass

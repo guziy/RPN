@@ -1,7 +1,7 @@
 import math
 
-__author__="huziy"
-__date__ ="$13 juil. 2010 13:34:52$"
+__author__ = "huziy"
+__date__ = "$13 juil. 2010 13:34:52$"
 
 from math import atan2
 from util.geo.GeoPoint import GeoPoint
@@ -9,9 +9,9 @@ import numpy as np
 
 EARTH_RADIUS_METERS = 0.637122e7  # mean earth radius used in the CRCM5 model for area calculation
 
-#longitude and latitude are in radians
+# longitude and latitude are in radians
 def get_nvector(rad_lon, rad_lat):
-    return [ np.cos(rad_lat) * np.cos(rad_lon), np.cos(rad_lat) * np.sin(rad_lon), np.sin(rad_lat) ]
+    return [np.cos(rad_lat) * np.cos(rad_lon), np.cos(rad_lat) * np.sin(rad_lon), np.sin(rad_lat)]
 
 
 #p1 and p2 are geopoint objects
@@ -40,7 +40,7 @@ def get_angle_between_vectors(n1, n2):
     return atan2(dy, dx)
 
 
-def lon_lat_to_cartesian(lon, lat, R = EARTH_RADIUS_METERS):
+def lon_lat_to_cartesian(lon, lat, R=EARTH_RADIUS_METERS):
     """
     calculates x,y,z coordinates of a point on a sphere with
     radius R = EARTH_RADIUS_METERS
@@ -51,7 +51,7 @@ def lon_lat_to_cartesian(lon, lat, R = EARTH_RADIUS_METERS):
     x = R * np.cos(lat_r) * np.cos(lon_r)
     y = R * np.cos(lat_r) * np.sin(lon_r)
     z = R * np.sin(lat_r)
-    return x,y,z
+    return x, y, z
 
 
 def cartesian_to_lon_lat(x):
@@ -62,23 +62,20 @@ def cartesian_to_lon_lat(x):
 
     lon = np.arctan2(x[1], x[0])
     lon = np.degrees(lon)
-    lat = np.arcsin(x[2]/ (np.dot(x, x)) ** 0.5)
+    lat = np.arcsin(x[2] / (np.dot(x, x)) ** 0.5)
     lat = np.degrees(lat)
     return lon, lat
 
 
-
-
 #nvectors.shape = (3, nx, ny)
 def get_coefs_between(nvectors1, nvectors2):
-    return np.array([1.0 / (get_angle_between_vectors(v1, v2) * EARTH_RADIUS_METERS ) ** 2.0 for v1, v2 in zip(nvectors1, nvectors2)])
-
+    return np.array([1.0 / (get_angle_between_vectors(v1, v2) * EARTH_RADIUS_METERS ) ** 2.0 for v1, v2 in
+                     zip(nvectors1, nvectors2)])
 
 
 def test():
-    p1 = GeoPoint(-86.67,36.12)
+    p1 = GeoPoint(-86.67, 36.12)
     p2 = GeoPoint(-118.4, 33.94)
-
 
     from geopy import distance
 
@@ -86,10 +83,10 @@ def test():
     distance.EARTH_RADIUS = EARTH_RADIUS_METERS / 1000.0
     print distance.GreatCircleDistance((-86.67, 36.12)[::-1], (-118.4, 33.94)[::-1]).m
 
-
     print get_distance_in_meters(p1, p2)
     print get_distance_in_meters(p1.longitude, p1.latitude, p2.longitude, p2.latitude)
     print 'Theoretical distance: %f km' % 2887.26
+
 
 if __name__ == "__main__":
     test()

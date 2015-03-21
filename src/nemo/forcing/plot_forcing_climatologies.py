@@ -12,7 +12,6 @@ def plot_wind(basemap, x, y, u, v, ax = None):
 
 
 def plot_scalar_field(basemap, x, y, title_to_field, ax = None):
-
     pass
 
 

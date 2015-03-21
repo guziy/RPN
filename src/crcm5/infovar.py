@@ -7,14 +7,17 @@ import numpy as np
 __author__ = 'huziy'
 
 _varname_to_units = {
-    "STFL": "${\\rm m^3/s}$",
-    "TT": "${\\rm ^{\circ}C}$",
-    "PR": "${\\rm mm/day}$",
-    "DEPTH_TO_BEDROCK": "${\\rm m}$",
-    "SAND": "${\\rm \\%}$",
-    "CLAY": "${\\rm \\%}$",
-    "AV": "${\\rm W/m^2}$",
-    "AH": "${\\rm W/m^2}$"
+    "STFL": r"${\rm m^3/s}$",
+    "STFA": r"${\rm m^3/s}$",
+    "TT": r"${\rm ^{\circ}C}$",
+    "PR": r"${\rm mm/day}$",
+    "DEPTH_TO_BEDROCK": r"${rm m}$",
+    "SAND": r"${\rm %}$",
+    "CLAY": r"${\rm %}$",
+    "AV": r"${\rm W/m^2}$",
+    "AH": r"${\rm W/m^2}$",
+    "I1": r"${\rm mm}$",
+
 }
 
 
@@ -43,7 +46,7 @@ _varname_to_long_name = {
     "AH": "Sensible heat flux at the surface"
 }
 
-#Names of the variables in the hdf file
+# Names of the variables in the hdf file
 HDF_VERT_SOIL_HYDR_COND_NAME = "soil_hydraulic_conductivity"
 HDF_FLOW_DIRECTIONS_NAME = "flow_direction"
 HDF_ACCUMULATION_AREA_NAME = "accumulation_area_km2"
@@ -82,7 +85,8 @@ soil_layer_widths_26_to_60 = np.asarray([0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5,
 
 
 def get_to_plot(varname, data, lake_fraction=None,
-                mask_oceans=True, lons=None, lats=None, difference = False):
+                mask_oceans=True, lons=None, lats=None, difference = False,
+                level_width_m=soil_layer_widths_26_to_60[0]):
     if mask_oceans:
         assert lons is not None and lats is not None
 
@@ -104,9 +108,12 @@ def get_to_plot(varname, data, lake_fraction=None,
         return data1
     elif varname in ["TRAF", "TDRA"]:
         data1 = data * 24 * 60 * 60  # convert mm/s to mm/day
-        if varname == "TDRA":
-            return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=True)
+        return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=True)
     elif varname in ["I1", "IMAV", "I5"]:
+
+        if varname == "I1":
+            data = level_width_m * data * 1000.0
+
         return maskoceans(lonsin=lons, latsin=lats, datain=data, inlands=True)
     else:
         data1 = data
@@ -239,3 +246,8 @@ def get_colormap_and_norm_for(var_name, to_plot=None, ncolors=10, vmin=None, vma
 # the fraction of a grid cell taken by lake, startting from which the lake is
 # treated as global
 GLOBAL_LAKE_FRACTION = 0.6
+
+
+def change_units_to(varnames, new_units):
+    for v in varnames:
+        _varname_to_units[v] = new_units
