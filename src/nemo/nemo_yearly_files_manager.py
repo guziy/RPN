@@ -35,7 +35,7 @@ class NemoYearlyFilesManager(object):
         self.suffix = suffix
 
 
-        self.kdtree = None
+        self.model_kdtree = None
         self.lons = None
         self.lats = None
         self.basemap = None
@@ -45,6 +45,47 @@ class NemoYearlyFilesManager(object):
 
         self.year_to_path = None
         self._build_year_to_datapath_map()
+        pass
+
+
+    def get_tz_crosssection_for_the_point(self, lon=None, lat=None, zlist=None, var_name="",
+                                          start_date=None, end_date=None):
+
+        if self.model_kdtree is None:
+            xs, ys, zs = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
+            self.model_kdtree = cKDTree(zip(xs, ys, zs))
+
+        xt, yt, zt = lat_lon.lon_lat_to_cartesian(lon, lat)
+
+        start_year = start_date.year
+        end_year = end_date.year
+
+        # Get 4 nearest neighbors for interpolation
+        dists_from, inds_from = self.model_kdtree.query([(xt, yt, zt), ], k=4)
+
+        neighbor_lons = self.lons.flatten()[inds_from]
+        neighbor_lats = self.lats.flatten()[inds_from]
+
+
+
+
+        constraint = None
+
+        # build constraints
+        for the_lon, the_lat in zip(neighbor_lons, neighbor_lats):
+            if constraint is None:
+                constraint = iris.Constraint(longitude=the_lon, latitude=the_lat)
+            else:
+                constraint = constraint | iris.Constraint(longitude=the_lon, latitude=the_lat)
+
+        for the_year in range(start_year, end_year + 1):
+            cube = iris.load_cube(self.year_to_path[the_year],
+                                  constraint=iris.Constraint(cube_func=lambda c: c.var_name == var_name))
+
+            # TODO: finish
+
+
+
         pass
 
 
@@ -96,20 +137,12 @@ class NemoYearlyFilesManager(object):
             assert isinstance(seas_mean, Cube)
             assert isinstance(self.basemap, Basemap)
 
-            rotpole = ccrs.RotatedPole(pole_longitude=self.basemap.projparams["lon_0"] + 180,
-                                       pole_latitude=self.basemap.projparams["o_lat_p"])
+            # rotpole = ccrs.RotatedPole(pole_longitude=self.basemap.projparams["lon_0"] + 180,
+            #                            pole_latitude=self.basemap.projparams["o_lat_p"])
+            #
+            # xll, yll = rotpole.transform_point(self.lons[0, 0], self.lats[0, 0], ccrs.Geodetic())
+            # xur, yur = rotpole.transform_point(self.lons[-1, -1], self.lats[-1, -1], ccrs.Geodetic())
 
-            xll, yll = rotpole.transform_point(self.lons[0, 0], self.lats[0, 0], ccrs.Geodetic())
-            xur, yur = rotpole.transform_point(self.lons[-1, -1], self.lats[-1, -1], ccrs.Geodetic())
-
-            # And add some more features.
-            scale = "50m"
-            rivers = cartopy.feature.NaturalEarthFeature('physical', 'rivers_lake_centerlines', scale,
-                                                         edgecolor='k', facecolor='none', linewidth=0.8)
-            lakes = cartopy.feature.NaturalEarthFeature('physical', 'lakes', scale,
-                                                        edgecolor='k', facecolor='none')
-
-            # xx, yy = self.basemap(self.lons, self.lats)
 
             for the_season in season_to_months.keys():
                 c = iris.Constraint(season=the_season)
@@ -169,12 +202,12 @@ class NemoYearlyFilesManager(object):
 
         # source grid
         xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons_source, lats_source)
-        self.kdtree = cKDTree(data=zip(xs, ys, zs))
+        kdtree = cKDTree(data=zip(xs, ys, zs))
 
         # target grid
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
 
-        dists, inds = self.kdtree.query(zip(xt, yt, zt))
+        dists, inds = kdtree.query(zip(xt, yt, zt))
 
 
         print len(inds)
