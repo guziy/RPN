@@ -1,9 +1,12 @@
-from netCDF4 import Dataset, OrderedDict
+from netCDF4 import Dataset, OrderedDict, date2num
 import os
 import cartopy
 from iris.cube import Cube
+from iris.time import PartialDateTime
 from matplotlib import cm
+from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm
+from matplotlib.dates import DateFormatter
 from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
@@ -15,20 +18,25 @@ import iris.quickplot as qplt
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from iris import analysis as ianalysis
+from scipy.sparse.dia import dia_matrix
 from scipy.spatial.ckdtree import cKDTree
 from util import plot_utils
 from util.geo import lat_lon
 import numpy as np
 
+import matplotlib.dates as mdates
+
 __author__ = 'huziy'
 
 import iris
 from iris import coord_categorisation
+from iris import unit as iunit
 
 
 class NemoYearlyFilesManager(object):
     def __init__(self, folder="", bathymetry_file="bathy_meter.nc",
                  proj_file="gemclim_settings.nml", suffix="_T.nc"):
+        self.bathymetry = None
         self.data_folder = folder
         self.bathymetry_file = bathymetry_file
         self.proj_file = proj_file
@@ -45,12 +53,21 @@ class NemoYearlyFilesManager(object):
 
         self.year_to_path = None
         self._build_year_to_datapath_map()
-        pass
 
 
     def get_tz_crosssection_for_the_point(self, lon=None, lat=None, zlist=None, var_name="",
                                           start_date=None, end_date=None):
 
+        """
+        get t-z cross section matrix for the point on the zlist levels
+        Note: if zlist is None, the profiles are returned on model levels
+        :param lon:
+        :param lat:
+        :param zlist:
+        :param var_name:
+        :param start_date:
+        :param end_date:
+        """
         if self.model_kdtree is None:
             xs, ys, zs = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
             self.model_kdtree = cKDTree(zip(xs, ys, zs))
@@ -61,38 +78,145 @@ class NemoYearlyFilesManager(object):
         end_year = end_date.year
 
         # Get 4 nearest neighbors for interpolation
-        dists_from, inds_from = self.model_kdtree.query([(xt, yt, zt), ], k=4)
+        dists_from, inds_from = self.model_kdtree.query([(xt, yt, zt), ], k=1)
+
+
+        # Calculate the inverse of squre of distance for weighted average
+        weights = 1.0 / dists_from ** 2
+        weights /= weights.sum()
+
+
+        inds_from = inds_from.squeeze()
+        weights = weights.squeeze()
+        if len(weights.shape) == 0:
+           weights = [weights, ]
+
 
         neighbor_lons = self.lons.flatten()[inds_from]
         neighbor_lats = self.lats.flatten()[inds_from]
 
+        i_list, j_list = [], []
+
+        if len(dists_from) > 1:
+            for the_lon, the_lat in zip(neighbor_lons, neighbor_lats):
+                i, j = np.where((self.lons == the_lon) & (self.lats == the_lat))
+                i_list.append(i[0])
+                j_list.append(j[0])
+        else:
+                i, j = np.where((self.lons == neighbor_lons) & (self.lats == neighbor_lats))
+                i_list.append(i[0])
+                j_list.append(j[0])
 
 
-
-        constraint = None
-
-        # build constraints
-        for the_lon, the_lat in zip(neighbor_lons, neighbor_lats):
-            if constraint is None:
-                constraint = iris.Constraint(longitude=the_lon, latitude=the_lat)
-            else:
-                constraint = constraint | iris.Constraint(longitude=the_lon, latitude=the_lat)
-
+        profiles = []
+        dates = []
+        ztarget = np.asarray(zlist) if zlist is not None else None
+        vert_kdtree = None
         for the_year in range(start_year, end_year + 1):
+
+
+            # cube dimensions (t, z, y, x)
             cube = iris.load_cube(self.year_to_path[the_year],
                                   constraint=iris.Constraint(cube_func=lambda c: c.var_name == var_name))
 
-            # TODO: finish
+            # select the dates within the interval between the start_date and end_date
+            with iris.FUTURE.context(cell_datetime_objects=True):
+                start = PartialDateTime(year=start_date.year, month=start_date.month, day=start_date.day)
+                end = PartialDateTime(year=end_date.year, month=end_date.month, day=end_date.day)
+                cube = cube.extract(iris.Constraint(time=lambda d: start <= d.point <= end))
 
 
 
-        pass
+            # Use inverse squared distances to interpolate in horizontal
+            prof = cube.data[:, :, j_list[0], i_list[0]] * weights[0]
+            for i, j, weight in zip(i_list[1:], j_list[1:], weights[1:]):
+                prof += cube.data[:, :, j, i] * weight
+
+            # Linear interpolation in vertical
+            zsource = cube.coord("model_level_number").points[:]
+            if vert_kdtree is None:
+                vert_kdtree = cKDTree([[z, ] for z in zsource])
+
+            # No interpolation if the vertical levels are not supplied
+            ztarget = zsource if ztarget is None else ztarget
+
+            zdists, zinds = vert_kdtree.query([[z, ] for z in ztarget], k=2)
+            zdists = zdists.squeeze()
+            zinds = zinds.squeeze()
+
+            zweights = zdists / zdists.sum(axis=1)[:, np.newaxis]  # weight1 = d2/(d1 + d2)
+
+            prof = prof[:, zinds[:, 0]] * zweights[np.newaxis, :, 1] + prof[:, zinds[:, 1]] * zweights[np.newaxis, :, 0]
+            profiles.extend(prof)
+
+
+            time_coord = cube.coord("time")
+            current_dates = iunit.num2date(time_coord.points[:], time_coord.units.origin, time_coord.units.calendar)
+
+            print "Selected data for the time range: ", \
+                current_dates[0], \
+                current_dates[-1]
+
+            dates.extend(current_dates)
+
+        # Calculate model bottom
+        bottom = 0
+        for i, j in zip(i_list, j_list):
+            bottom += self.bathymetry[i, j]
+        bottom /= float(len(i_list))
+
+
+        dates_num = mdates.date2num(dates)
+
+        # mask everything below the model bottom
+        if zlist is None:
+            profiles = np.asarray(profiles)
+            profiles = profiles[:, np.where(ztarget <= bottom)]
+            profiles = profiles.squeeze()
+            ztarget = ztarget[ztarget <= bottom]
+
+
+
+
+        zz, tt = np.meshgrid(ztarget, dates_num)
+
+        print "nemo tt-ranges: ", tt.min(), tt.max()
+        profiles = np.ma.masked_where(zz > bottom, profiles)
+
+        # plot for debug
+        #
+        # plt.figure()
+        # ax = plt.gca()
+        # profiles = np.ma.masked_where(zz >= bottom, profiles)
+        # im = ax.contourf(tt, zz, profiles, levels=np.arange(4, 30, 1))
+        #
+        # xlimits = ax.get_xlim()
+        # ax.plot(xlimits, [bottom, bottom], "k-", lw=2)
+        # print bottom
+        #
+        # assert isinstance(ax, Axes)
+        # ax.invert_yaxis()
+        # ax.xaxis.set_major_formatter(DateFormatter("%Y\n%b\n%d"))
+        #
+        # plt.colorbar(im)
+        # plt.show()
+
+        return tt, zz, profiles
+
+
+
+
+
+
+
+
 
 
     def define_lake_mask(self):
         c = iris.load_cube(os.path.join(self.data_folder, self.bathymetry_file),
                            constraint=iris.Constraint(cube_func=lambda f: f.var_name == "Bathymetry"))
-        self.lake_mask = (c.data > 0.5).transpose()
+        self.bathymetry = c.data.transpose()
+        self.lake_mask = self.bathymetry > 0.5
 
 
     def _build_year_to_datapath_map(self):
@@ -340,10 +464,16 @@ def main():
         ("Fall", range(9, 12))
     ])
 
-    nemo_manager.plot_comparisons_of_seasonal_sst_with_homa_obs(
-        start_year=start_year, end_year=end_year, season_to_months=season_to_months
-    )
+    # nemo_manager.plot_comparisons_of_seasonal_sst_with_homa_obs(
+    #     start_year=start_year, end_year=end_year, season_to_months=season_to_months
+    # )
 
+    import obs
+    po = obs.get_profile_for_testing()
+    nemo_manager.get_tz_crosssection_for_the_point(lon=po.longitude, lat=po.latitude, zlist=po.levels,
+                                                   var_name="votemper",
+                                                   start_date=po.get_start_date(),
+                                                   end_date=po.get_end_date())
 
 if __name__ == '__main__':
     import application_properties

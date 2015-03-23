@@ -22,6 +22,26 @@ config_name = "rotpole_nx{0}_ny{1}_dx{2}_dy{3}".format(nx, ny, dx, dy)
 
 
 
-known_domains = {
+class Grid(object):
+    def __init__(self, rll=None, nx=None, ny=None,
+                 iref=None, jref=None, lonref=None, latref=None):
+
+        self.latref = latref
+        self.lonref = lonref
+        self.jref = jref
+        self.iref = iref
+        self.rll = rll
+        self.nx = nx
+        self.ny = ny
+
+
+
+known_projections = {
     "GLK_210x130_0.1deg": RotatedLatLon(lon1=180., lat1=0., lon2=-84., lat2=1.0)
+}
+
+
+known_domains = {
+    "GLK_210x130_0.1deg": Grid(rll=RotatedLatLon(lon1=180., lat1=0., lon2=-84., lat2=1.0),
+                               nx=210, ny=130, iref=105, jref=100, lonref=-84, latref=48)
 }

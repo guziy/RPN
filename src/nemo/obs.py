@@ -51,12 +51,17 @@ class TempProfileObs(ObservationPoint):
         assert isinstance(self.data_frame, pd.DataFrame)
         self.data_frame.columns = self.levels
 
-        # print self.data_frame[:10]
 
-        print self.data_frame.values[:10, :]
+    def get_dates(self):
+        return self.data_frame.index
 
-        # self.data_frame.plot()
-        # plt.show()
+    def get_start_date(self):
+        return self.data_frame.index.to_pydatetime()[0]
+
+    def get_end_date(self):
+        return self.data_frame.index.to_pydatetime()[-1]
+
+
 
     def _read_meta_data(self, path=""):
         """
@@ -111,7 +116,6 @@ class TempProfileObs(ObservationPoint):
 
         data = self.data_frame.values
 
-        data = np.ma.masked_where(data < -60, data)
         ax = plt.gca()
         im = ax.contourf(tt, zz, data, levels=np.arange(4, 30, 1))
 
@@ -120,6 +124,45 @@ class TempProfileObs(ObservationPoint):
         ax.xaxis.set_major_formatter(DateFormatter("%Y\n%b\n%d"))
         plt.colorbar(im)
 
+    def get_tz_section_data(self):
+        dates_num = date2num(self.data_frame.index.to_pydatetime())
+        zz, tt = np.meshgrid(self.levels, dates_num)
+        data = self.data_frame.values
+        return tt, zz, data
+
+
+
+def get_profile_for_prefix(prefix="", folder=""):
+    po = TempProfileObs()
+    folder = os.path.expanduser(folder)
+
+    header_path = os.path.join(folder, "{}.header".format(prefix))
+    data_path = os.path.join(folder, "{}.data".format(prefix))
+    po.read_metadata_and_data(data_path=data_path, header_path=header_path)
+    return po
+
+
+def get_profile_for_testing():
+    """
+    Get a profile for testing
+    :rtype : TempProfileObs
+    """
+
+    po = TempProfileObs()
+    folder = os.path.expanduser("/RESCUE/skynet3_rech1/huziy/nemo_obs_for_validation/data_from_Ram_Yerubandi/Erie")
+
+    # header_path = os.path.join(folder, "08-01T-004A024.120.290.header")
+    # data_path = os.path.join(folder, "08-01T-004A024.120.290.data")
+    # print data_path
+    # po.read_metadata_and_data(header_path=header_path, data_path=data_path)
+    # po.plot_vertical_section()
+
+    header_path = os.path.join(folder, "08-01T-013A054.120.290.header")
+    data_path = os.path.join(folder, "08-01T-013A054.120.290.data")
+    print data_path
+    po.read_metadata_and_data(header_path=header_path, data_path=data_path)
+    # po.plot_vertical_section()
+    return po
 
 if __name__ == '__main__':
     po = TempProfileObs()
@@ -149,6 +192,6 @@ if __name__ == '__main__':
 
     # model_cube.add_aux_coord(AuxCoord(depth_cube.data, units="m"))
 
-    print model_cube.coord("model_level_number").points[:]
-    po.get_vertical_section_of_model_bias(model_cube)
+    # print model_cube.coord("model_level_number").points[:]
+    #po.get_vertical_section_of_model_bias(model_cube)
 
