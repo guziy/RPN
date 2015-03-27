@@ -20,6 +20,18 @@ class ObservationPoint(object):
         pass
 
 
+class AdcpProfileObs(ObservationPoint):
+    def __init__(self):
+        """
+        Advanced Doppler current profiler data interface
+        """
+        super(AdcpProfileObs, self).__init__()
+
+    # TODO: implement
+
+
+
+
 class TempProfileObs(ObservationPoint):
     first_data_column_index = 4
     time_column_index = 3

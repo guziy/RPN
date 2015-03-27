@@ -25,7 +25,7 @@ def main():
         data = rObjIn.get_next_record()
         if data is None:
             break
-        info = rObjIn.get_current_info
+        info = rObjIn.get_current_info()
 
         nbits = info["nbits"].value
         data_type = info["data_type"].value
@@ -35,25 +35,25 @@ def main():
 
         print "nbits = {0}, data_type = {1}".format(nbits, data_type)
 
-        ips =  map(lambda x: x.value, info["ip"])
+        ips = info["ip"]
         if ips[1] == ip2old:
             ips[1] = ip2
-            ips[2] = 0 #since ip3 is 0 there
-        #convert soil temperature to Kelvins
+            ips[2] = 0  # since ip3 is 0 there
+
+        # convert soil temperature to Kelvins
         if info["varname"].value.strip() == "I0":
             data += 273.15
 
-        rObjOut.write_2D_field(name = info["varname"].value,
-            data = data, ip = ips,
-            ig = map(lambda x: x.value, info["ig"]),
-            npas = npas, deet=deet, label="IC, lake infl. exp.", dateo = dateo,
-            grid_type=info["grid_type"].value, typ_var=info["var_type"].value,
-            nbits = nbits, data_type = data_type
-        )
+        rObjOut.write_2D_field(name=info["varname"],
+                               data=data, ip=ips,
+                               ig=info["ig"],
+                               npas=npas, deet=deet, label="IC, lake infl. exp.", dateo=dateo,
+                               grid_type=info["grid_type"], typ_var=info["var_type"],
+                               nbits=nbits, data_type=data_type)
         i += 1
 
 
-    #check that all fields were copied
+    # check that all fields were copied
     nRecsIn = rObjIn.get_number_of_records()
     assert i == nRecsIn, "copied {0} records, but should be {1}".format(i, nRecsIn)
 
@@ -63,6 +63,7 @@ def main():
 
 if __name__ == "__main__":
     import application_properties
+
     application_properties.set_current_directory()
     main()
     print "Hello world"

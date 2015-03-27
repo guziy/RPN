@@ -19,7 +19,7 @@ import numpy as np
 import cartopy
 from matplotlib import cm
 
-#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP00/"
+# EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP00/"
 #EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP01/"
 #EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/"
 
@@ -37,6 +37,7 @@ EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per
 T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
 
 import application_properties
+
 application_properties.set_current_directory()
 
 for fname in os.listdir(EXP_DIR):
@@ -106,7 +107,6 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
     gs = gridspec.GridSpec(ncols=ncols + 1, nrows=nrows, width_ratios=[1, 1, 0.05], wspace=0)  # +1 for the colorbar
     the_mask = nemo_commons.get_mask(path=os.path.join(EXP_DIR, "bathy_meter.nc"))
 
-
     vmin = None
     vmax = None
 
@@ -121,7 +121,6 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
         else:
             vmin = min(the_min, vmin)
             vmax = max(the_max, vmax)
-
 
     print "{0}: ".format(var_name), vmin, vmax
     cs = None
@@ -143,12 +142,12 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
         to_plot = np.ma.masked_where(~the_mask, data)
         print to_plot.min(), to_plot.max()
 
-        cs = b.pcolormesh(x, y, to_plot, ax=ax, vmin = vmin, vmax = vmax, cmap = cm.get_cmap("jet", 20))
+        cs = b.pcolormesh(x, y, to_plot, ax=ax, vmin=vmin, vmax=vmax, cmap=cm.get_cmap("jet", 20))
         b.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
         b.drawparallels(np.arange(-90, 90, 2))
         b.drawmeridians(np.arange(-180, 180, 2))
 
-    plt.colorbar(cs, cax = fig.add_subplot(gs[:, ncols]))
+    plt.colorbar(cs, cax=fig.add_subplot(gs[:, ncols]))
 
     fname = "{0}_{1}.jpeg".format(cube_seasonal.var_name, "-".join(cube_seasonal.coord("season").points))
     if not os.path.isdir(NEMO_IMAGES_DIR):
@@ -157,17 +156,14 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
     fig.savefig(os.path.join(NEMO_IMAGES_DIR, fname), dpi=cpp.FIG_SAVE_DPI)
 
 
-
-
-
 def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty", level=0):
     name_constraint = iris.Constraint(cube_func=lambda c: c.var_name == u_name or c.var_name == v_name)
 
     u_cube = iris.load_cube(u_path, constraint=name_constraint)
-    u_cube = u_cube.extract(iris.Constraint(model_level_number = u_cube.coord("model_level_number").points[level]))
+    u_cube = u_cube.extract(iris.Constraint(model_level_number=u_cube.coord("model_level_number").points[level]))
 
     v_cube = iris.load_cube(v_path, constraint=name_constraint)
-    v_cube = v_cube.extract(iris.Constraint(model_level_number = v_cube.coord("model_level_number").points[level]))
+    v_cube = v_cube.extract(iris.Constraint(model_level_number=v_cube.coord("model_level_number").points[level]))
     assert isinstance(u_cube, Cube)
 
     #calculate seasonal means
@@ -188,10 +184,9 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
     bn = BoundaryNorm(levels, len(levels) - 1)
     cmap = cm.get_cmap("Accent", len(levels) - 1)
 
-
     for season in u_cube_seasonal.coord("season").points:
         print season
-        fig = plt.figure(figsize=(8,4))
+        fig = plt.figure(figsize=(8, 4))
 
         ax = fig.add_subplot(111)
         ax.set_title(season.upper())
@@ -202,15 +197,14 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
         v = np.ma.masked_where(~the_mask, v)
 
         speed = np.sqrt(u ** 2 + v ** 2)
-        cs = b.pcolormesh(x, y, speed, norm = bn, vmin=levels[0], vmax = levels[-1], cmap = cmap)
+        cs = b.pcolormesh(x, y, speed, norm=bn, vmin=levels[0], vmax=levels[-1], cmap=cmap)
         b.colorbar(cs)
 
         u, v = b.rotate_vector(u, v, lons, lats)
-        q = b.quiver(x, y, u, v, scale = 1.5, width = 0.002)
+        q = b.quiver(x, y, u, v, scale=1.5, width=0.002)
 
         qk = plt.quiverkey(q, 0.15, 0.1, 0.05, '0.05 m/s', labelpos='W')
         b.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
-
 
         fname = "{0}-{1}_{2}.jpeg".format(u_cube_seasonal.var_name, v_cube_seasonal.var_name, season)
 
@@ -230,15 +224,14 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
     v_annual = np.ma.masked_where(~the_mask, v_annual)
 
     fig.suptitle("Annual")
-    q = b.quiver(x, y, u_annual, v_annual, scale = 1.5, width = 0.002, zorder = 5)
+    q = b.quiver(x, y, u_annual, v_annual, scale=1.5, width=0.002, zorder=5)
     qk = plt.quiverkey(q, 0.15, 0.1, 0.05, '0.05 m/s', labelpos='W')
-
 
     levels = np.arange(0, 0.15, 0.01)
     bn = BoundaryNorm(levels, len(levels) - 1)
     #cmap = my_colormaps.get_cmap_from_ncl_spec_file("colormap_files/wgne15.rgb", len(levels) - 1)
     cmap = cm.get_cmap("Paired", len(levels) - 1)
-    cs = b.pcolormesh(x, y, np.sqrt(u_annual ** 2 + v_annual ** 2), cmap = cmap, norm = bn)
+    cs = b.pcolormesh(x, y, np.sqrt(u_annual ** 2 + v_annual ** 2), cmap=cmap, norm=bn)
     b.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
     b.colorbar(cs)
     fig.tight_layout()
@@ -247,6 +240,7 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
 
 if __name__ == "__main__":
     import application_properties
+
     application_properties.set_current_directory()
 
     draw_seasonal_means_panel(path=T_FILE_PATH)

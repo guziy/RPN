@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from datetime import datetime
 from nemo.glerl_icecov_data2d_interface import GLERLIceCoverManager
 from nemo.nemo_yearly_files_manager import NemoYearlyFilesManager
+import matplotlib.pyplot as plt
 
 __author__ = 'huziy'
 
@@ -21,10 +23,16 @@ def main():
 
     glerl_manager = GLERLIceCoverManager()
     # glerl_manager.get_data_for_day(the_date=datetime(2005, 1, 3))
-    glerl_manager.get_clim_of_max_icecover_interpolated_to(
-        lons2d_target=nemo_manager.lons, lats2d_target=nemo_manager.lats, start_year=2003, end_year=2004, month=2
-    )
+    obs_ice_cover_interp = glerl_manager.get_icecover_interpolated_to(
+        lons2d_target=nemo_manager.lons, lats2d_target=nemo_manager.lats, the_date=datetime(2008, 4, 3))
 
+
+    fig = plt.figure()
+    xx, yy = nemo_manager.basemap(nemo_manager.lons, nemo_manager.lats)
+    im = nemo_manager.basemap.pcolormesh(xx, yy, obs_ice_cover_interp)
+    nemo_manager.basemap.colorbar(im)
+    nemo_manager.basemap.drawcoastlines()
+    plt.show()
 
 if __name__ == '__main__':
     import application_properties

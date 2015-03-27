@@ -938,13 +938,11 @@ class Crcm5ModelDataManager:
         ]
 
         for fPath in rpn_path_list:
-            rObj = RPN(fPath)  # open current rpn file for reading
+            r_obj = RPN(fPath)  # open current rpn file for reading
 
             for aVarName in var_list:
-                data_table = None
-                data = None
                 try:
-                    data = rObj.get_4d_field(name=aVarName)
+                    data = r_obj.get_4d_field(name=aVarName)
                     if data is None or len(data) == 0:
                         continue
 
@@ -972,7 +970,7 @@ class Crcm5ModelDataManager:
                     rectype.append(("field", the_field.dtype, the_field.shape))
                     rectype = np.dtype(rectype)
                     print "HDF5 record type: ", rectype
-                    projection_params = rObj.get_proj_parameters_for_the_last_read_rec()
+                    projection_params = r_obj.get_proj_parameters_for_the_last_read_rec()
                     print "projParams = ", projection_params
 
                 # Save level_index to level mapping for each variable
@@ -991,10 +989,9 @@ class Crcm5ModelDataManager:
 
                 new_row = data_table.row
                 for t, vals in data.iteritems():
-                    if t.year == 1984 and t.month == 5 and t.day == 13 and t.hour == 0:
-                        print "Hit the date: ", t, "levels = ", vals.keys()
 
                     if not (start_year <= t.year <= end_year):
+                        print "Skipping date: {}".format(t)
                         continue
 
                     for level_index, level in enumerate(sorted(vals)):
@@ -1012,7 +1009,7 @@ class Crcm5ModelDataManager:
                 data_table.flush()
 
             # close the file
-            rObj.close()
+            r_obj.close()
 
             # Check if the number of read fields is equal to the number of written fields
             for aVarName, aVarTable in var_name_to_table.iteritems():
@@ -1024,7 +1021,7 @@ class Crcm5ModelDataManager:
                 # data_table.cols.year.create_index()
                 # data_table.cols.month.create_index()
                 # data_table.cols.day.create_index()
-                #data_table.cols.hour.create_index()
+                # data_table.cols.hour.create_index()
 
 
         # insert also lon and lat data

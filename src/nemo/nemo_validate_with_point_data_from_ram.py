@@ -16,11 +16,16 @@ import numpy as np
 
 # Validate temperature profiles, flow profiles at given points
 
+# ADCP data are on different levels: level values are encoded in the file names
+# Zhao Jun: "the last four number of '021A0XXXX' is the depth in cm."
+#
 
 
+def plot_flow_speed_profiles_comparisons():
+    pass
 
 
-def main_plot_all_in_one_figure(
+def main_plot_all_temp_profiles_in_one_figure(
         folder_path="/home/huziy/skynet3_rech1/nemo_obs_for_validation/data_from_Ram_Yerubandi/T-profiles"):
     """
 
@@ -165,4 +170,4 @@ def main_plot_all_in_one_figure(
 if __name__ == '__main__':
     import application_properties
     application_properties.set_current_directory()
-    main_plot_all_in_one_figure()
+    main_plot_all_temp_profiles_in_one_figure()

@@ -143,8 +143,8 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         minval = np.min(all_means)
         maxval = np.max(all_means)
 
-        mindiff = np.percentile(all_diffs, 1)
-        maxdiff = np.percentile(all_diffs, 99)
+        mindiff = np.percentile(all_diffs, 5)
+        maxdiff = np.percentile(all_diffs, 95)
 
         maxdiff = max(np.abs(maxdiff), np.abs(mindiff))
         mindiff = -maxdiff
@@ -223,6 +223,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
 
         img_path = os.path.join(img_folder, img_name)
         fig.savefig(img_path, bbox_inches="tight")
+        plt.close(fig)
 
 
 def main():
@@ -232,13 +233,14 @@ def main():
 
     season_to_months = plot_cc_2d_fields.get_default_season_to_months_dict()
 
-    var_names = ["TT", "HU", "PR", "AV", "STFA"]
+    var_names = ["TT", "HU", "PR", "AV", "STFA", "TRAF"]
 
     # var_names = ["STFA", ]
 
-    levels = [0, 0, 0, 0, 0]
+    levels = [0, 0, 0, 0, 0, 0]
     multipliers = {
-        "PR": 1.0e3 * 24.0 * 3600.
+        "PR": 1.0e3 * 24.0 * 3600.,
+        "TRAF": 24 * 3600.0
     }
 
     base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
@@ -248,6 +250,17 @@ def main():
     modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                          "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
     modif_label = "CRCM5-L2"
+
+    # base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
+    #                     "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
+    # base_label = "CRCM5-L2"
+    #
+    # modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
+    #                      "quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
+    # modif_label = "CRCM5-L2I"
+
+
+
 
     start_year_c = 1980
     end_year_c = 2010

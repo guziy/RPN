@@ -52,7 +52,7 @@ def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=Non
     lonst, latst = get_target_lon_lat_from_coordinates_file()
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lonst.flatten(), latst.flatten())
 
-    rll_target = nemo_domain_properties.known_domains["GLK_210x130_0.1deg"]
+    rll_target = nemo_domain_properties.known_projections["GLK_210x130_0.1deg"]
     basemap_params_dict = rll_target.get_basemap_params(llcrnrlon=lonst[0, 0], llcrnrlat=latst[0, 0],
                                                         urcrnrlon=lonst[-1, -1], urcrnrlat=latst[-1, -1])
 

@@ -29,48 +29,77 @@ import numpy as np
 from util import plot_utils
 
 
-def calculate_and_plot_climate_change_hydrographs(base_configs, modif_configs, name_to_indices=None):
+def calculate_and_plot_climate_change_hydrographs(base_configs, modif_configs, name_to_indices=None, months=None):
     base_c, base_f = base_configs
     modif_c, modif_f = modif_configs
 
+
+    if months is None:
+        months = range(1, 13)
+
     assert isinstance(base_c, RunConfig)
+    varname = "STFA"
+    level = 0
     daily_dates, stfa_clim_base_c = analysis.get_daily_climatology(path_to_hdf_file=base_c.data_path,
-                                                                   var_name="STFA", level=0,
+                                                                   var_name=varname, level=level,
                                                                    start_year=base_c.start_year,
                                                                    end_year=base_c.end_year)
 
     _, stfa_clim_base_f = analysis.get_daily_climatology(path_to_hdf_file=base_f.data_path,
-                                                         var_name="STFA", level=0,
+                                                         var_name=varname, level=level,
                                                          start_year=base_f.start_year,
                                                          end_year=base_f.end_year)
 
     _, stfa_clim_modif_c = analysis.get_daily_climatology(path_to_hdf_file=modif_c.data_path,
-                                                          var_name="STFA", level=0,
+                                                          var_name=varname, level=level,
                                                           start_year=modif_c.start_year,
                                                           end_year=modif_c.end_year)
 
     _, stfa_clim_modif_f = analysis.get_daily_climatology(path_to_hdf_file=modif_f.data_path,
-                                                          var_name="STFA", level=0,
+                                                          var_name=varname, level=level,
                                                           start_year=modif_f.start_year,
                                                           end_year=modif_f.end_year)
 
-    delta = (stfa_clim_modif_f - stfa_clim_modif_c) - (stfa_clim_base_f - stfa_clim_base_c)
+
+    delta_modif = stfa_clim_modif_f - stfa_clim_modif_c
+    delta_modif = np.asarray([delta_modif[ti, :, :] for ti, t in enumerate(daily_dates)
+                              if (t.month == months[0] and t.day > 20) or
+                                 (t.month == months[1] and t.day < 10)])
+
+    delta_base = stfa_clim_base_f - stfa_clim_base_c
+    delta_base = np.asarray([delta_base[ti, :, :] for ti, t in enumerate(daily_dates)
+                             if (t.month == months[0] and t.day > 20) or
+                                (t.month == months[1] and t.day < 10)])
+
+    daily_dates = [d for d in daily_dates if (d.month == months[0] and d.day > 20) or
+                                             (d.month == months[1] and d.day < 10)]
+
+    delta = delta_modif - delta_base
+
+
+
 
     items = list(sorted(name_to_indices.items(), key=lambda item: item[1][1], reverse=True))
 
+    plot_utils.apply_plot_params(font_size=16, width_pt=None, width_cm=35, height_cm=45)
     ncols = 3
     fig = plt.figure()
     gs = GridSpec(len(items) // ncols + int(len(items) % ncols != 0), ncols)
     subplot_count = 0
     for name, (i, j) in items:
         print name
+        print i, j, np.max(delta)
         row = subplot_count // ncols
         col = subplot_count % ncols
 
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(name)
 
-        ax.plot(daily_dates, delta[:, i, j])
+
+        h_delta = ax.plot(daily_dates, delta[:, i, j], label="({})-({})".format(modif_c.label, base_c.label), lw=4)
+        h_delta_base = ax.plot(daily_dates, delta_base[:, i, j], label="{}".format(base_c.label), lw=4)
+        h_delta_modif = ax.plot(daily_dates, delta_modif[:, i, j], label="{}".format(modif_c.label), lw=4)
+
         ax.grid()
         subplot_count += 1
 
@@ -78,9 +107,10 @@ def calculate_and_plot_climate_change_hydrographs(base_configs, modif_configs, n
 
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
         ax.xaxis.set_minor_locator(MonthLocator())
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        # ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
 
 
+    ax.legend()
     # Save the image to the file
     img_folder = os.path.join("cc_paper", "{}_vs_{}".format(modif_c.label, base_c.label))
     if not os.path.isdir(img_folder):
@@ -220,7 +250,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
     bmp.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap)
 
     for name, xa, ya, lona, lata in zip(basin_names_out, xs, ys, lons_out, lats_out):
-        break
+
         text_offset = (-20, 20) if name not in ["WAS", "GRB", "GEO", "BAL", "MEL", "NAT"] else (20, 20)
         plt.annotate(name, xy=(xa, ya), xytext=text_offset,
                      textcoords='offset points', ha='right', va='bottom', font_properties=FontProperties(size=10),
@@ -261,8 +291,8 @@ def main_interflow():
     base_configs = [base_config_c, base_config_f]
 
     params.update(dict(
-        data_path=modif_current_path, label=modif_label
-    ))
+        data_path=modif_current_path, label=modif_label))
+
     modif_config_c = RunConfig(**params)
     modif_config_f = modif_config_c.get_shifted_config(future_shift_years)
     modif_configs = [modif_config_c, modif_config_f]
@@ -276,7 +306,7 @@ def main_interflow():
     basin_name_to_indexes_map = get_basin_to_outlet_indices_map(lons=lons, lats=lats, bmp=bmp, accumulation_areas=facc,
                                                                 directions=fldr)
     calculate_and_plot_climate_change_hydrographs(base_configs, modif_configs,
-                                                  name_to_indices=basin_name_to_indexes_map)
+                                                  name_to_indices=basin_name_to_indexes_map, months=[4, 5])
 
     # plt.show()
     # b = Basemap()
@@ -303,8 +333,7 @@ def main():
     future_shift_years = 90
 
     params = dict(
-        data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label
-    )
+        data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
 
     geo_data_file = "/skynet3_rech1/huziy/hdf_store/pm1979010100_00000000p"
 
@@ -314,8 +343,8 @@ def main():
     base_configs = [base_config_c, base_config_f]
 
     params.update(dict(
-        data_path=modif_current_path, label=modif_label
-    ))
+        data_path=modif_current_path, label=modif_label))
+
     modif_config_c = RunConfig(**params)
     modif_config_f = modif_config_c.get_shifted_config(future_shift_years)
     modif_configs = [modif_config_c, modif_config_f]
