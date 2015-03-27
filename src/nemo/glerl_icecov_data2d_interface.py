@@ -79,13 +79,12 @@ class GLERLIceCoverManager(object):
         lons2d_target[lons2d_target > 180] -= 360
 
 
-
         lats2d_target_r = np.radians(lats2d_target)
         lons2d_target_r = np.radians(lons2d_target)
 
 
         yt = r_earth_m * lats2d_target_r
-        xt = r_earth_m * lons2d_target_r
+        xt = r_earth_m * lons2d_target_r * np.cos(lats2d_target_r)
 
         print xt.min(), xt.max()
 

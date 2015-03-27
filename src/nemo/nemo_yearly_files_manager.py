@@ -11,7 +11,7 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.basemap import Basemap
-from rpn.domains.rotated_lat_lon import RotatedLatLon
+# from rpn.domains.rotated_lat_lon import RotatedLatLon
 import matplotlib.pyplot as plt
 
 import iris.quickplot as qplt
@@ -20,6 +20,7 @@ import cartopy.crs as ccrs
 from iris import analysis as ianalysis
 from scipy.sparse.dia import dia_matrix
 from scipy.spatial.ckdtree import cKDTree
+from domains.rotated_lat_lon import RotatedLatLon
 from util import plot_utils
 from util.geo import lat_lon
 import numpy as np
@@ -41,7 +42,6 @@ class NemoYearlyFilesManager(object):
         self.bathymetry_file = bathymetry_file
         self.proj_file = proj_file
         self.suffix = suffix
-
 
         self.model_kdtree = None
         self.lons = None
@@ -85,12 +85,10 @@ class NemoYearlyFilesManager(object):
         weights = 1.0 / dists_from ** 2
         weights /= weights.sum()
 
-
         inds_from = inds_from.squeeze()
         weights = weights.squeeze()
         if len(weights.shape) == 0:
-           weights = [weights, ]
-
+            weights = [weights, ]
 
         neighbor_lons = self.lons.flatten()[inds_from]
         neighbor_lats = self.lats.flatten()[inds_from]
@@ -103,10 +101,9 @@ class NemoYearlyFilesManager(object):
                 i_list.append(i[0])
                 j_list.append(j[0])
         else:
-                i, j = np.where((self.lons == neighbor_lons) & (self.lats == neighbor_lats))
-                i_list.append(i[0])
-                j_list.append(j[0])
-
+            i, j = np.where((self.lons == neighbor_lons) & (self.lats == neighbor_lats))
+            i_list.append(i[0])
+            j_list.append(j[0])
 
         profiles = []
         dates = []
@@ -149,7 +146,6 @@ class NemoYearlyFilesManager(object):
             prof = prof[:, zinds[:, 0]] * zweights[np.newaxis, :, 1] + prof[:, zinds[:, 1]] * zweights[np.newaxis, :, 0]
             profiles.extend(prof)
 
-
             time_coord = cube.coord("time")
             current_dates = iunit.num2date(time_coord.points[:], time_coord.units.origin, time_coord.units.calendar)
 
@@ -165,7 +161,6 @@ class NemoYearlyFilesManager(object):
             bottom += self.bathymetry[i, j]
         bottom /= float(len(i_list))
 
-
         dates_num = mdates.date2num(dates)
 
         # mask everything below the model bottom
@@ -174,9 +169,6 @@ class NemoYearlyFilesManager(object):
             profiles = profiles[:, np.where(ztarget <= bottom)]
             profiles = profiles.squeeze()
             ztarget = ztarget[ztarget <= bottom]
-
-
-
 
         zz, tt = np.meshgrid(ztarget, dates_num)
 
@@ -202,14 +194,6 @@ class NemoYearlyFilesManager(object):
         # plt.show()
 
         return tt, zz, profiles
-
-
-
-
-
-
-
-
 
 
     def define_lake_mask(self):
@@ -256,7 +240,6 @@ class NemoYearlyFilesManager(object):
 
             assert isinstance(cube, Cube)
             seas_mean = cube.aggregated_by(["season"], iris.analysis.MEAN)
-
 
             assert isinstance(seas_mean, Cube)
             assert isinstance(self.basemap, Basemap)
@@ -333,7 +316,6 @@ class NemoYearlyFilesManager(object):
 
         dists, inds = kdtree.query(zip(xt, yt, zt))
 
-
         print len(inds)
 
         result = {}
@@ -349,8 +331,6 @@ class NemoYearlyFilesManager(object):
                 result[the_year][the_season] = the_mean.data.flatten()[inds].reshape(self.lons.shape) - 273.15
 
         return result
-
-
 
 
     def plot_comparisons_of_seasonal_sst_with_homa_obs(self, start_year=None, end_year=None, season_to_months=None):
@@ -446,7 +426,6 @@ class NemoYearlyFilesManager(object):
 
         self.lons[self.lons > 180] -= 360
 
-
         return self.lons, self.lats, self.basemap
 
 
@@ -469,13 +448,16 @@ def main():
     # )
 
     import obs
+
     po = obs.get_profile_for_testing()
     nemo_manager.get_tz_crosssection_for_the_point(lon=po.longitude, lat=po.latitude, zlist=po.levels,
                                                    var_name="votemper",
                                                    start_date=po.get_start_date(),
                                                    end_date=po.get_end_date())
 
+
 if __name__ == '__main__':
     import application_properties
+
     application_properties.set_current_directory()
     main()
