@@ -31,14 +31,11 @@ def main():
         os.makedirs(img_folder)
 
     img_name_prefix = "mean_surface_temp_"
-    obs_data_path = "/skynet3_rech1/huziy/GLSEA/coastwatch.glerl.noaa.gov/ftp/glsea/avgtemps/1992-1998/glsea-temps1992-1998-schwab.dat"
+    obs_data_path = ("/skynet3_rech1/huziy/GLSEA/"
+                     "coastwatch.glerl.noaa.gov/ftp/glsea/avgtemps/1992-1998/glsea-temps1992-1998-schwab.dat")
     data = np.loadtxt(obs_data_path, skiprows=3)
 
     dates = [datetime(int(data[row, 0]), int(data[row, 2]), int(data[row, 3])) for row in range(data.shape[0])]
-
-
-
-
 
     for col, lake_name in column_to_lake_name_glsea.iteritems():
         folder_path = nemo_commons.lake_to_folder_with_sim_data_1981_2000_seplakes_exp[lake_name]
@@ -79,7 +76,7 @@ def main():
 
 
 
-    #plt.plot(dates, data[:, 4:], label = [column_to_lake_name_glsea[i + 4] for i in range(5)])
+    # plt.plot(dates, data[:, 4:], label = [column_to_lake_name_glsea[i + 4] for i in range(5)])
 
 
 

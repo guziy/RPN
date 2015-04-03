@@ -142,7 +142,7 @@ def main_interflow():
     start_year_c = 1980
     end_year_c = 2010
 
-    future_shift_years = 90
+    future_shift_years = 60
 
     params = dict(
         data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label
