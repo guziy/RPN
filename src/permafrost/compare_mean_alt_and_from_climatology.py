@@ -15,9 +15,9 @@ from scipy.spatial.kdtree import KDTree
 from shapely.geometry.multilinestring import MultiLineString
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.polygon import Polygon
-import draw_regions
+from . import draw_regions
 import my_colormaps
-from sounding_plotter import SoundingPlotter
+from .sounding_plotter import SoundingPlotter
 from rpn.rpn import RPN
 from util import plot_utils
 import matplotlib as mpl
@@ -27,7 +27,7 @@ __author__ = 'huziy'
 
 import numpy as np
 import os
-from active_layer_thickness import CRCMDataManager
+from .active_layer_thickness import CRCMDataManager
 import matplotlib.pyplot as plt
 
 
@@ -49,7 +49,7 @@ def do_stats_plots(x,y,basemap, hc, hm, hm2d, permafrost_mask):
     assert isinstance(fig, Figure)
     ax = fig.add_subplot(gs[0,0])
     the_min[~the_mask] = np.ma.min(hm[:,~the_mask], axis=0)
-    print the_min.shape
+    print(the_min.shape)
     img = basemap.contourf(x,y, the_min, ax = ax)
     all_img.append(img)
     all_axes.append(ax)
@@ -64,7 +64,7 @@ def do_stats_plots(x,y,basemap, hc, hm, hm2d, permafrost_mask):
 
     ax = fig.add_subplot(gs[2,0])
     the_std[~the_mask] = np.ma.std(hm[:,~the_mask], axis=0)
-    print the_std.shape
+    print(the_std.shape)
 
     img = basemap.contourf(x,y, the_std, ax = ax)
     all_img.append(img)
@@ -95,7 +95,7 @@ def plot_alt_from_recent_jpp_and_andrey():
     rObj = RPN(path)
 
     altt = rObj.get_all_time_records_for_name(varname="FALT")
-    alt = np.mean( np.array(altt.values()), axis = 0)
+    alt = np.mean( np.array(list(altt.values())), axis = 0)
     rObj.close()
 
 
@@ -169,7 +169,7 @@ def plot_mean_alt_from_jpp_results():
     rObj = RPN(path)
 
     altt = rObj.get_all_time_records_for_name(varname="FALT")
-    alt = np.mean( np.array(altt.values()), axis = 0)
+    alt = np.mean( np.array(list(altt.values())), axis = 0)
     rObj.close()
 
 
@@ -206,7 +206,7 @@ def plot_mean_alt_from_jpp_results():
 
     ax = fig.add_subplot(gs[0,0])
     assert isinstance(ax, Axes)
-    hc = np.ma.masked_where(mask_cond | (np.min(altt.values(), axis = 0) < 0), alt)
+    hc = np.ma.masked_where(mask_cond | (np.min(list(altt.values()), axis = 0) < 0), alt)
     #hc = np.ma.masked_where( (hc < 0), hc)
     img = basemap.pcolormesh(x, y, hc, cmap = cmap, vmax = h_max, norm=norm)
     ax.set_title("ALT, JPP ({0} - {1}) \n".format(start_year, end_year))
@@ -246,8 +246,8 @@ def get_zone_polygons(path = "", basemap = None):
 
         polygon = wkb.loads(geom.ExportToWkb())
 
-        print polygon.geom_type
-        print polygon.boundary.geom_type
+        print(polygon.geom_type)
+        print(polygon.boundary.geom_type)
 
         bound = polygon.boundary
 
@@ -263,11 +263,11 @@ def get_zone_polygons(path = "", basemap = None):
 
 
         for line in the_lines:
-            x += map(lambda w: w[0], line.coords )
-            y += map(lambda w: w[1], line.coords )
+            x += [w[0] for w in line.coords]
+            y += [w[1] for w in line.coords]
 
         x1,y1 = basemap(x,y)
-        polygon = Polygon(zip(x1,y1))
+        polygon = Polygon(list(zip(x1,y1)))
         p = PolygonPatch(polygon, edgecolor = "k")
         #p.set_transform(to_map_proj)
 
@@ -291,10 +291,10 @@ def main():
     hm = ds.variables["alt"][:]
     years = ds.variables["year"][:]
     years_sel = np.where(( start_year <= years ) & (years <= end_year))[0]
-    print years_sel
+    print(years_sel)
 
     hm = hm[np.array(years_sel),:,:]
-    print hm.shape
+    print(hm.shape)
 
     good_points = ~np.any(hm < 0, axis = 0)
 
@@ -347,8 +347,8 @@ def main():
     all_axes = []
     all_img = []
 
-    print basemap(-96.999, 68.42)
-    print basemap(-2.4e7,6.3e6, inverse = True)
+    print(basemap(-96.999, 68.42))
+    print(basemap(-2.4e7,6.3e6, inverse = True))
     ax = fig.add_subplot(gs[0,0])
     hm2d = np.ma.masked_where(mask_cond, hm2d)
     img = basemap.pcolormesh(x, y, hm2d, cmap = cmap, vmax = h_max, norm=norm)
@@ -356,7 +356,7 @@ def main():
     ax.set_title("Mean ALT")
     all_axes.append(ax)
     all_img.append(img)
-    print("hm2d(min,max) = ",hm2d.min(), hm2d.max())
+    print(("hm2d(min,max) = ",hm2d.min(), hm2d.max()))
 
 
 #    ax = fig.add_subplot(gs[1,0])
@@ -420,9 +420,9 @@ def get_alt_using_nyear_rule(hct, nyears):
     result[:,:] = np.inf
 
     stdev = np.std(hct, axis = 0)
-    print stdev.min(), stdev.max()
+    print(stdev.min(), stdev.max())
 
-    for t in xrange(nt - nyears + 1):
+    for t in range(nt - nyears + 1):
         hmax = np.max(hct[t:t+nyears,:,:], axis=0)
         cond = (result >= hmax) & (hmax >= 0)
         if np.any(cond):
@@ -499,7 +499,7 @@ def plot_current_alts_nyear_rule(nyear = 2):
         years = ds.variables["year"][:]
         hct = ds.variables["alt"][(years >= start_year) & (years <= end_year),:,:]
         hct_list.append(hct)
-        print "hct.shape = ", hct.shape
+        print("hct.shape = ", hct.shape)
         #hc = get_alt_using_nyear_rule(hct, nyears = nyear)
         hc = np.mean(hct, axis = 0)
 
@@ -555,21 +555,21 @@ def plot_current_alts_nyear_rule(nyear = 2):
     xo,yo,zo = lat_lon.lon_lat_to_cartesian(sel_lons, sel_lats)
 
     xi, yi, zi = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-    ktree = KDTree(zip(xi,yi,zi))
-    dists, indexes =  ktree.query(zip(xo,yo,zo))
+    ktree = KDTree(list(zip(xi,yi,zi)))
+    dists, indexes =  ktree.query(list(zip(xo,yo,zo)))
 
     for name, data, the_hct in zip(sim_names, hc_list, hct_list):
-        print name
+        print(name)
         flat_data = data.flatten()
 
         for p_name, ind in zip(site_names, indexes):
             in_data = []
-            for t in xrange(the_hct.shape[0]):
+            for t in range(the_hct.shape[0]):
                 in_data.append(the_hct[t,:,:].flatten()[ind])
 
-            print ",".join(map( lambda x: "{0:.1f}".format(float(x)), in_data))
-            print p_name, "{0:.1f} m".format(float(flat_data[ind]))
-        print "--" * 10
+            print(",".join(["{0:.1f}".format(float(x)) for x in in_data]))
+            print(p_name, "{0:.1f} m".format(float(flat_data[ind])))
+        print("--" * 10)
 
 
 
@@ -625,7 +625,7 @@ def plot_future_alts():
     for name in sim_names:
         path = simname_to_path[name]
         dm = CRCMDataManager(data_folder=path)
-        hc = dm.get_alt_using_monthly_mean_climatology(xrange(start_year,end_year+1))
+        hc = dm.get_alt_using_monthly_mean_climatology(range(start_year,end_year+1))
         ax = fig.add_subplot(gs[i+1,0])
         assert isinstance(ax, Axes)
         hc = np.ma.masked_where(mask_cond, hc)
@@ -662,7 +662,7 @@ def plot_future_alts():
     basemap.drawcoastlines(ax = ax, linewidth=1.5)
     shp_info = basemap.readshapefile("data/pf_2/permafrost5_wgs84/permaice", name="zone",
             ax=ax, linewidth=3)
-    print shp_info
+    print(shp_info)
     for nshape,seg in enumerate(basemap.zone):
         the_color = "green" if basemap.zone_info[nshape]["EXTENT"] == "C" else "red"
         poly = mpl.patches.Polygon(seg,facecolor=the_color, zorder = 10)
@@ -691,7 +691,7 @@ def plot_future_alts():
 
 def plot_current_alts():
 
-    import plot_dpth_to_bdrck
+    from . import plot_dpth_to_bdrck
     bdrck_field = plot_dpth_to_bdrck.get_depth_to_bedrock()
     start_year = 1980
     end_year = 1996
@@ -754,7 +754,7 @@ def plot_current_alts():
     for name in sim_names:
         path = simname_to_path[name]
         dm = CRCMDataManager(data_folder=path)
-        hc0, t3d_min, t3d_max = dm.get_alt_using_monthly_mean_climatology(range(start_year,end_year+1))
+        hc0, t3d_min, t3d_max = dm.get_alt_using_monthly_mean_climatology(list(range(start_year,end_year+1)))
 
         hc_list.append(hc0)
         ax = fig.add_subplot(gs[i,0])
@@ -771,7 +771,7 @@ def plot_current_alts():
         ax.set_ylabel("CRCM ({0})".format(name))
         all_axes.append(ax)
         all_img.append(img)
-        print np.ma.min(hc), np.ma.max(hc)
+        print(np.ma.min(hc), np.ma.max(hc))
         #hc5 = np.ma.masked_where((hc0 <= 6) | hc.mask, hc)
         #print "Number of cells with alt > 5 is {0}, and the range is {1} ... {2}".format(hc5.count(), hc5.min(), hc5.max())
         #bdrck_field5 = np.ma.masked_where(hc5.mask, bdrck_field)
@@ -782,7 +782,7 @@ def plot_current_alts():
         xs = ind[0]
         ys = ind[1]
 
-        all_months, all_temps = dm.get_monthly_mean_soiltemps(year_range=xrange(start_year,end_year+1))
+        all_months, all_temps = dm.get_monthly_mean_soiltemps(year_range=range(start_year,end_year+1))
         all_months_ord = date2num(all_months)
 #        mpl.rcParams['contour.negative_linestyle'] = 'solid'
 #
@@ -829,8 +829,8 @@ def plot_current_alts():
 #
 #            i += 1
 
-        print  "lons = [{0}]".format(",".join(map( lambda x: str(x), lons2d[np.array(xs), np.array(ys)])))
-        print  "lats = [{0}]".format(",".join(map( lambda x: str(x), lats2d[np.array(xs), np.array(ys)])))
+        print("lons = [{0}]".format(",".join([str(x) for x in lons2d[np.array(xs), np.array(ys)]])))
+        print("lats = [{0}]".format(",".join([str(x) for x in lats2d[np.array(xs), np.array(ys)]])))
 
 
 
@@ -897,15 +897,15 @@ def plot_current_alts():
     xo,yo,zo = lat_lon.lon_lat_to_cartesian(sel_lons, sel_lats)
 
     xi, yi, zi = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-    ktree = KDTree(zip(xi,yi,zi))
-    dists, indexes =  ktree.query(zip(xo,yo,zo))
+    ktree = KDTree(list(zip(xi,yi,zi)))
+    dists, indexes =  ktree.query(list(zip(xo,yo,zo)))
 
     for name, data in zip(sim_names, hc_list):
-        print name
+        print(name)
         flat_data = data.flatten()
         for p_name, ind in zip(site_names, indexes):
-            print p_name, "{0} m".format(flat_data[ind])
-        print "--" * 10
+            print(p_name, "{0} m".format(flat_data[ind]))
+        print("--" * 10)
 
 
     pass
@@ -923,5 +923,5 @@ if __name__ == "__main__":
 #    plot_mean_alt_from_jpp_results()
     #plt.show()
     #main()
-    print "Hello world"
+    print("Hello world")
   

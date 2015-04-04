@@ -92,7 +92,7 @@ def plot_lake_fractions(ax, crcm5_manager, model_data, rot_latlon_projection,
     x, y = basemap(lons2d, lats2d)
     basemap.pcolormesh(x, y, to_plot)
     plt.colorbar()
-    print "lf: ", np.ma.min(to_plot), np.ma.max(to_plot)
+    print("lf: ", np.ma.min(to_plot), np.ma.max(to_plot))
 
 
     pass
@@ -135,7 +135,7 @@ def plot_gldas_runoff(ax, crcm5_manager, areas2d, model_data, mask = None):
     ax.set_ylabel("Integrated runoff (m^3/s)")
     ax.set_title("GLDAS (VIC)")
     ax.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
 
     ax.legend()
 
@@ -170,8 +170,8 @@ def plot_swe_timeseries(ax, crcm5_manager, areas2d, model_data, mask = None):
     sta = np.array( ts_swe_obs.data ) / 1000.0 #convert to m * m^2
 
 
-    print min(mod), max(mod)
-    print min(sta), max(sta)
+    print(min(mod), max(mod))
+    print(min(sta), max(sta))
 
     ax.annotate( "r = {0:.2f}".format( float( np.corrcoef([mod, sta])[0,1] )),
             xy = (0.1,0.8), xycoords= "axes fraction", zorder = 5)
@@ -180,7 +180,7 @@ def plot_swe_timeseries(ax, crcm5_manager, areas2d, model_data, mask = None):
     ax.plot(ts_swe_mod.time, sta, color = "r")
 
     ax.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
 
     ax.set_title("CRCM5 versus Analysis (Ross Brown)")
     ax.set_ylabel("SWE, m^3, SWEmod - SWEobs")
@@ -221,7 +221,7 @@ def plot_runoff(ax, crcm5_manager, areas2d, model_data, mask = None):
     ax.set_ylabel("Integrated runoff (m^3/s)")
 
     ax.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
 
     ax.legend()
     pass
@@ -276,7 +276,7 @@ def plot_total_precip_and_temp_re_1d(ax_pr, ax_temp, crcm5_manager,
     ax_pr.plot(ts_prec_mod.time, (mod - sta) / sta, color = "k", linewidth = 2)
 
     ax_pr.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax_pr.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax_pr.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
 
     ax_pr.set_title("CRCM5 versus CRU")
     ax_pr.set_ylabel("Total Precip (Pmod - Pobs)/Pobs")
@@ -289,7 +289,7 @@ def plot_total_precip_and_temp_re_1d(ax_pr, ax_temp, crcm5_manager,
         file_prefix="dp"
     )
 
-    print "ts_temp_mod time interval: ", ts_temp_mod.time[0], ts_temp_mod.time[-1]
+    print("ts_temp_mod time interval: ", ts_temp_mod.time[0], ts_temp_mod.time[-1])
     ts_temp_mod = ts_temp_mod.time_slice(model_data.time[0], model_data.time[-1])
 
     cruManager = CRUDataManager(path="data/cru_data/CRUTS3.1/cru_ts_3_10.1901.2009.tmp.dat.nc", var_name="tmp")
@@ -314,7 +314,7 @@ def plot_total_precip_and_temp_re_1d(ax_pr, ax_temp, crcm5_manager,
     ax_temp.plot(ts_prec_mod.time, (mod - sta), color = "k", linewidth = 2)
 
     ax_temp.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax_temp.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax_temp.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
 
     ax_temp.set_title("CRCM5 versus CRU")
     ax_temp.set_ylabel("Temperature, deg., Tmod - Tobs")
@@ -380,7 +380,7 @@ def plot_directions_and_positions(ax, station, model_data,
 #    for i,j in zip(i_interest, j_interest):
     for i in range(i_min, i_max + 1):
         for j in range(j_min, j_max + 1):
-            next_cell = crcm5_manager.cell_manager.cells[i][j].next
+            next_cell = crcm5_manager.cell_manager.cells[i][j].__next__
             if next_cell is None:
                 continue
             start = basemap(lons2d[i,j], lats2d[i,j])
@@ -391,7 +391,7 @@ def plot_directions_and_positions(ax, station, model_data,
             end = basemap(lons2d[next_i, next_j], lats2d[next_i, next_j])
 
 
-            print start, end
+            print(start, end)
             ax.add_line(Line2D([start[0], end[0]], [start[1], end[1]], linewidth=0.5))
 
 
@@ -431,7 +431,7 @@ def plot_streamflows(ax, station, model_data):
     obs_integral = sum(station.values) * dt_sec
 
 
-    print "+" * 20
+    print("+" * 20)
     assert len(mod_vals) == len(station.dates)
 
     line_model = ax.plot(station.dates, mod_vals, label = "Model (CRCM5)", lw = 1, color = "b")
@@ -453,7 +453,7 @@ def plot_streamflows(ax, station, model_data):
                     model_ts.metadata["distance_to_obs_km"]))
 
     ax.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
     ax.legend()
 
 
@@ -476,7 +476,7 @@ def plot_streamflow_re(ax, station, model_data):
     ax.set_ylabel("Streamflow, (Qmod - Qobs)/Qobs")
 
     ax.xaxis.set_major_formatter(DateFormatter("%y/%m"))
-    ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,2)))
+    ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,2))))
     #ax.legend()
 
 
@@ -500,9 +500,9 @@ def diagnose(station_ids = None, model_data_path = None):
     dx = x10 - x00
     dy = y01 - y00
 
-    print "dx, dy = {0}, {1}".format( dx, dy )
+    print("dx, dy = {0}, {1}".format( dx, dy ))
     areas = rot_lat_lon.get_areas_of_gridcells(dx, dy, nx, ny, y00, 1)#1 -since the index is starting from 1
-    print areas[0,0]
+    print(areas[0,0])
 
     start_date = datetime(1986, 1, 1)
     end_date = datetime(1986, 12, 31)
@@ -522,7 +522,7 @@ def diagnose(station_ids = None, model_data_path = None):
         model_ts = manager.get_streamflow_timeseries_for_station(s, start_date = start_date,
             end_date = end_date, nneighbours=9)
 
-        print model_ts.time[0], model_ts.time[-1]
+        print(model_ts.time[0], model_ts.time[-1])
 
         i_model0, j_model0 = model_ts.metadata["ix"], model_ts.metadata["jy"]
         mask = manager.get_mask_for_cells_upstream(i_model0, j_model0)
@@ -562,7 +562,7 @@ def diagnose(station_ids = None, model_data_path = None):
 
 
         #print np.where(mask == 1)
-        print "(i, j) = ({0}, {1})".format(model_ts.metadata["ix"], model_ts.metadata["jy"])
+        print("(i, j) = ({0}, {1})".format(model_ts.metadata["ix"], model_ts.metadata["jy"]))
 
         fig.savefig("diagnose_{0}_{1:.2f}deg.pdf".format(s.id, dx))
 
@@ -593,5 +593,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=40, font_size=10)
     main()
-    print "Hello world"
+    print("Hello world")
   

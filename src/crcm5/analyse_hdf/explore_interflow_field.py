@@ -9,7 +9,7 @@ from matplotlib.ticker import ScalarFormatter
 from mpl_toolkits.basemap import maskoceans
 import numpy as np
 from crcm5 import infovar
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
 __author__ = 'huziy'
 
@@ -19,12 +19,12 @@ __author__ = 'huziy'
 
 default_seasons = OrderedDict([
     ("Winter", [12, 1, 2]),
-    ("Spring", range(3, 6)),
-    ("Summer", range(6, 9)),
-    ("Autumn", range(9, 12))
+    ("Spring", list(range(3, 6))),
+    ("Summer", list(range(6, 9))),
+    ("Autumn", list(range(9, 12)))
 ])
 
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 
 images_folder = "images_for_lake-river_paper/seasonal_intfl"
 
@@ -47,9 +47,9 @@ def calculate_and_plot_seasonal_means(seasons=default_seasons,
     season_to_field = OrderedDict()
     nlayers = 4
     soil_layer_depths = infovar.soil_layer_widths_26_to_60
-    print "max depth is {0}".format(np.sum(soil_layer_depths[:nlayers]))
+    print("max depth is {0}".format(np.sum(soil_layer_depths[:nlayers])))
     vmin, vmax = None, None
-    for season, months in seasons.iteritems():
+    for season, months in seasons.items():
         field = np.mean([z for z, date in zip(data, dates) if date.month in list(months)], axis = 0)
 
         field = np.sum(field[:nlayers, :, :], axis=0)
@@ -69,7 +69,7 @@ def calculate_and_plot_seasonal_means(seasons=default_seasons,
     i = 0
     cmap = brewer2mpl.get_map("spectral", "diverging", 9, reverse=True).get_mpl_colormap(N=len(levels) - 1)
     bn = BoundaryNorm(levels, len(levels) - 1)
-    for season, field in season_to_field.iteritems():
+    for season, field in season_to_field.items():
         ax = fig.add_subplot(gs[i // 2, i % 2])
         ax.set_title(season)
 

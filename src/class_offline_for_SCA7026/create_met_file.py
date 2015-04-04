@@ -12,7 +12,7 @@ from multiprocessing import Process
 
 __author__ = 'huziy'
 
-import util_class_offline
+from . import util_class_offline
 import numpy as np
 import shutil
 
@@ -59,7 +59,7 @@ def generate_kdtree(folder_with_ini_files, filename_prefix):
         paths.append(fpath)
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(np.asarray(lons), np.asarray(lats))
-    return cKDTree(zip(x0, y0, z0)), paths
+    return cKDTree(list(zip(x0, y0, z0))), paths
 
 
 
@@ -87,7 +87,7 @@ def get_points_of_interest():
 
 
 def interpolate_for_the_list_of_points():
-    for point, coords in get_points_of_interest().iteritems():
+    for point, coords in get_points_of_interest().items():
         p = Process(target=main, kwargs=dict(point_name=point, dest_lon=coords[0], dest_lat=coords[1]))
         p.start()
 
@@ -137,7 +137,7 @@ def main(point_name="", dest_lon=None, dest_lat=None):
     lons_1d, lats_1d = lons.flatten(), lats.flatten()
     x, y, z = lat_lon.lon_lat_to_cartesian(lons_1d, lats_1d)
 
-    ktree = cKDTree(zip(x, y, z))
+    ktree = cKDTree(list(zip(x, y, z)))
     dist, ind = ktree.query((x0, y0, z0))
 
     met_format = " {:>2}{:>3}{:>5}{:>6}" + 2 * "{:>9.2f}" + \
@@ -151,7 +151,7 @@ def main(point_name="", dest_lon=None, dest_lat=None):
         df = pd.DataFrame()
         dates = None
         for vname in varnames:
-            print "Reading {}".format(vname)
+            print("Reading {}".format(vname))
             r = RPN(os.path.join(source_data_path, fname_pattern.format(vname)))
             data = r.get_time_records_iterator_for_name_and_level(varname=vname)
             #select only dates from the range of interest and for the position of interest
@@ -178,13 +178,13 @@ def main(point_name="", dest_lon=None, dest_lat=None):
 
             r.close()
 
-        print "Finished reading data into memory"
+        print("Finished reading data into memory")
 
         df = df.select(crit=lambda d: not (d.month == 2 and d.day == 29 and ignore_leap_year))
         df = df.select(crit=lambda d: start_year <= d.year <= end_year)  # select the time window after interpolation
 
         for vname in varnames:
-            print "{} ranges: min={}; max={}".format(vname, df[vname].min(), df[vname].max())
+            print("{} ranges: min={}; max={}".format(vname, df[vname].min(), df[vname].max()))
 
         for d, row in df.iterrows():
 
@@ -211,8 +211,8 @@ def main(point_name="", dest_lon=None, dest_lat=None):
     shutil.copyfile(src_ini, "{}.INI".format(point_name))
 
 
-    print dist, ind
-    print "Finished processing: {}".format(point_name)
+    print(dist, ind)
+    print("Finished processing: {}".format(point_name))
 
 
 if __name__ == '__main__':

@@ -39,15 +39,15 @@ class NemoOutputManager(object):
         xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons2d_gl.flatten(), lats2d_gl.flatten())
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
 
-        tree = cKDTree(zip(xs, ys, zs))
-        dists, indices = tree.query(zip(xt, yt, zt))
+        tree = cKDTree(list(zip(xs, ys, zs)))
+        dists, indices = tree.query(list(zip(xt, yt, zt)))
 
         self.mask = mask_gl.flatten()[indices].reshape(self.lons.shape)
 
 
         self.nt = self.cube.shape[0]
         assert isinstance(self.cube, Cube)
-        print self.nt
+        print(self.nt)
 
 
     def get_total_number_of_time_frames(self):
@@ -137,13 +137,13 @@ def check():
     #plt.colorbar()
 
     def update_fig(*args):
-        print manager_u.get_current_time()
+        print(manager_u.get_current_time())
         u = manager_u.get_next_time_frame_data()
         v = manager_v.get_next_time_frame_data()
         cur_data = (u ** 2 + v ** 2) ** 0.5
         cur_data = manager_t.get_next_time_frame_data()
         #cur_data = np.ma.masked_where(cur_data <= 0, cur_data)
-        print cur_data.min(), cur_data.max()
+        print(cur_data.min(), cur_data.max())
         qp.set_UVC(u.flatten(), v.flatten())
         plt.title(str(manager_u.current_time_frame))
 

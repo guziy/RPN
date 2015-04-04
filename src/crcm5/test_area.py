@@ -64,7 +64,7 @@ class MyTestCase(unittest.TestCase):
 
         plt.scatter(flat_rpn_area, flat_nc_area, linewidths=0)
 
-        print flat_nc_area - flat_rpn_area
+        print(flat_nc_area - flat_rpn_area)
         x1 = min(flat_rpn_area)
         x2 = max(flat_rpn_area)
         plt.plot([x1, x2], [x1, x2],"k")

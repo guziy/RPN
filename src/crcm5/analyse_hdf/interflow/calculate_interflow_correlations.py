@@ -66,7 +66,7 @@ def calculate_correlation_field_for_climatology(start_year=None,
                                                   start_year=start_year, end_year=end_year)
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     selfields1 = [f for date, f in zip(dates, data1) if date.month in months]
     selfields2 = [f for date, f in zip(dates, data2) if date.month in months]
@@ -105,7 +105,7 @@ def calculate_correlation_of_infiltration_rate_with(start_year=None,
                                                   start_year=start_year, end_year=end_year)
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     selfields1 = [f for date, f in zip(dates, infiltration) if date.month in months]
     selfields2 = [f for date, f in zip(dates, data2) if date.month in months]
@@ -118,7 +118,7 @@ def plot_tmin_tmax_correlations(start_year=1980, end_year=2010, months=None):
     # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     img_folder = os.path.join("interflow_corr_images", os.path.basename(default_path))
     if not os.path.isdir(img_folder):
@@ -208,7 +208,7 @@ def main(start_year=1980, end_year=2010, months=None):
     # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     img_folder = os.path.join("interflow_corr_images", os.path.basename(default_path))
     if not os.path.isdir(img_folder):
@@ -325,7 +325,7 @@ def main(start_year=1980, end_year=2010, months=None):
     dates = [d0 + dt * i for i in range(365) if (d0 + dt * i).month in months]
     sfmt = ScalarFormatter()
     dfmt = DateFormatter("%d%b")
-    for i, (label, data) in enumerate(varname_to_ts.iteritems()):
+    for i, (label, data) in enumerate(varname_to_ts.items()):
         ax = fig.add_subplot(gs[i, 0])
         ax.plot(dates, data, label=label, lw=2)
         ax.grid()
@@ -351,7 +351,7 @@ def get_mean_over(mask, field_3d):
     :type field_3d: np.ndarray
     """
 
-    print mask.shape, field_3d.shape
+    print(mask.shape, field_3d.shape)
     return np.mean((field_3d * mask[np.newaxis, :, :]), axis=1).mean(axis=1)
 
 
@@ -361,20 +361,20 @@ def demo_equal_fields():
 
     c = calculate_correlation(x, y)
 
-    print c.shape
-    print c.min(), c.max()
+    print(c.shape)
+    print(c.min(), c.max())
 
     c = calculate_correlation(x, x)
-    print c.min(), c.max()
+    print(c.min(), c.max())
 
     c = calculate_correlation(np.sin(x), np.cos(x))
-    print c.min(), c.max()
+    print(c.min(), c.max())
 
     c = calculate_correlation(np.sin(x), np.sin(-x))
-    print c.min(), c.max()
+    print(c.min(), c.max())
 
     c = calculate_correlation_nd(x, y, axis=2)
-    print c.shape
+    print(c.shape)
 
 
 if __name__ == '__main__':
@@ -384,7 +384,7 @@ if __name__ == '__main__':
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
 
     seasons = (
-        range(3, 6), range(6, 9), range(9, 12)
+        list(range(3, 6)), list(range(6, 9)), list(range(9, 12))
     )
 
     start_year = 1980

@@ -39,7 +39,7 @@ __author__ = 'huziy'
 
 
 from netCDF4 import Dataset
-import nemo_domain_properties as dom_props
+from . import nemo_domain_properties as dom_props
 import numpy as np
 from geopy import distance as gpy_dist
 from scipy.spatial import distance as sp_dist
@@ -50,7 +50,7 @@ def generate_grid_coordinates():
     lats_rot = np.asarray([dom_props.latref + (i - dom_props.jref) * dom_props.dy for i in range(1, dom_props.ny + 1)])
 
     lats_rot, lons_rot = np.meshgrid(lats_rot, lons_rot)
-    print lats_rot.shape
+    print(lats_rot.shape)
     lons_rot[lons_rot < 0] += 360
 
     rll = RotatedLatLon(lon1=dom_props.lon1, lat1=dom_props.lat1,
@@ -65,15 +65,15 @@ def generate_grid_coordinates():
     b = Basemap(projection="rotpole", lon_0=truepole_lonr - 180, o_lat_p=rotpole_lat, o_lon_p=rotpole_lon,
                 llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat)
 
-    print lons_rot[0, 0], lats_rot[0, 0], lons_rot[-1, -1], lats_rot[-1, -1]
+    print(lons_rot[0, 0], lats_rot[0, 0], lons_rot[-1, -1], lats_rot[-1, -1])
     lons_real, lats_real = b(lons_rot, lats_rot, inverse=True)
 
-    print "Check consistency of the transformations (below): "
+    print("Check consistency of the transformations (below): ")
     # from RotatedLatlon
-    print "from rotated lat/lon: ", llcrnrlon, llcrnrlat, urcrnrlon, urcrnrlat
+    print("from rotated lat/lon: ", llcrnrlon, llcrnrlat, urcrnrlon, urcrnrlat)
 
     # from basemap
-    print "from basemap: ", lons_real[0, 0], lats_real[0, 0], lons_real[-1, -1], lats_real[-1, -1]
+    print("from basemap: ", lons_real[0, 0], lats_real[0, 0], lons_real[-1, -1], lats_real[-1, -1])
 
     # t point coordinates
     tlons, tlats = lons_real, lats_real
@@ -82,38 +82,38 @@ def generate_grid_coordinates():
     # Not greatcircle distance expects p = (lat, lon)
     geo_metric = lambda p1, p2: gpy_dist.GreatCircleDistance(p1, p2, radius=nemo_commons.mean_earth_radius_km_crcm5).m
 
-    e1t = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten()),
-                                                zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx))]
+    e1t = [geo_metric(p1, p2) for p1, p2 in zip(list(zip(lats_rot.flatten(), lons_rot.flatten())),
+                                                list(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx)))]
 
-    e2t = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten()),
-                                                zip(lats_rot.flatten() + dom_props.dy, lons_rot.flatten()))]
+    e2t = [geo_metric(p1, p2) for p1, p2 in zip(list(zip(lats_rot.flatten(), lons_rot.flatten())),
+                                                list(zip(lats_rot.flatten() + dom_props.dy, lons_rot.flatten())))]
 
     # u grid sapcing
-    e1u = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx / 2.0),
-                                                zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx * 1.5))]
+    e1u = [geo_metric(p1, p2) for p1, p2 in zip(list(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx / 2.0)),
+                                                list(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx * 1.5)))]
 
-    e2u = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx / 2.0),
-                                                zip(lats_rot.flatten() + dom_props.dy,
-                                                    lons_rot.flatten() + dom_props.dx / 2.0))]
+    e2u = [geo_metric(p1, p2) for p1, p2 in zip(list(zip(lats_rot.flatten(), lons_rot.flatten() + dom_props.dx / 2.0)),
+                                                list(zip(lats_rot.flatten() + dom_props.dy,
+                                                    lons_rot.flatten() + dom_props.dx / 2.0)))]
 
 
     # v grid sapcing
-    e1v = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten()),
-                                                zip(lats_rot.flatten() + dom_props.dy / 2.0,
-                                                    lons_rot.flatten() + dom_props.dx))]
+    e1v = [geo_metric(p1, p2) for p1, p2 in zip(list(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten())),
+                                                list(zip(lats_rot.flatten() + dom_props.dy / 2.0,
+                                                    lons_rot.flatten() + dom_props.dx)))]
 
-    e2v = [geo_metric(p1, p2) for p1, p2 in zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten()),
-                                                zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten()))]
+    e2v = [geo_metric(p1, p2) for p1, p2 in zip(list(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten())),
+                                                list(zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten())))]
 
 
     # f grid sapcing
     e1f = [geo_metric(p1, p2) for p1, p2 in
-           zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0),
-               zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx * 1.5))]
+           zip(list(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0)),
+               list(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx * 1.5)))]
 
     e2f = [geo_metric(p1, p2) for p1, p2 in
-           zip(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0),
-               zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten() + dom_props.dx / 2.0))]
+           zip(list(zip(lats_rot.flatten() + dom_props.dy / 2.0, lons_rot.flatten() + dom_props.dx / 2.0)),
+               list(zip(lats_rot.flatten() + dom_props.dy * 1.5, lons_rot.flatten() + dom_props.dx / 2.0)))]
 
     scales = [e1t, e2t, e1u, e2u, e1v, e2v, e1f, e2f]
 
@@ -121,7 +121,7 @@ def generate_grid_coordinates():
         scales[i] = np.asarray(scales[i])
         scales[i].shape = lons_rot.shape
         scales[i] = scales[i].transpose()
-        print scales[i].min(), scales[i].max()
+        print(scales[i].min(), scales[i].max())
 
     e1t, e2t, e1u, e2u, e1v, e2v, e1f, e2f = scales
 
@@ -141,7 +141,7 @@ def generate_grid_coordinates():
     f_rot_lons, f_rot_lats = lons_rot + dom_props.dx / 2.0, lats_rot + dom_props.dy / 2.0
     flons, flats = b(f_rot_lons, f_rot_lats, inverse=True)
     result["F"] = (flons.transpose(), flats.transpose(), e1f, e2f)
-    print flons.shape
+    print(flons.shape)
 
     return result
 
@@ -154,7 +154,7 @@ def main():
     if not os.path.isdir(out_folder):
         os.mkdir(out_folder)
 
-    print dom_props.nx, dom_props.ny
+    print(dom_props.nx, dom_props.ny)
 
     ds.createDimension("x", size=dom_props.nx)
     ds.createDimension("y", size=dom_props.ny)

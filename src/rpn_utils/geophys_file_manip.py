@@ -41,7 +41,7 @@ def main():
 
     proj_params = rObj.get_proj_parameters_for_the_last_read_rec()
 
-    print me.shape
+    print(me.shape)
     lons2d, lats2d = rObj.get_longitudes_and_latitudes_for_the_last_read_rec()
 
     lons2d[lons2d > 180] -= 360
@@ -145,7 +145,7 @@ def plot_lake_fraction_field():
 
     basemap.drawmapboundary(fill_color="0.75")
     lkf_plot = maskoceans(lons2d, lats2d, lkf, inlands=False)
-    print "Percentage of lakes in the sim domain: {}".format(lkf_plot.mean() * 100)
+    print("Percentage of lakes in the sim domain: {}".format(lkf_plot.mean() * 100))
 
     img = basemap.pcolormesh(x, y, lkf_plot, norm=bn, cmap=cMap)
     basemap.drawcoastlines()
@@ -204,4 +204,4 @@ if __name__ == "__main__":
 
     plot_utils.apply_plot_params(font_size=18, width_pt=None, width_cm=20.0 / 1.2, height_cm=17.0 / 1.2)
     main()
-    print "Hello world"
+    print("Hello world")

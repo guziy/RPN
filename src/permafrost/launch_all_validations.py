@@ -2,9 +2,9 @@ from util import plot_utils
 
 __author__ = 'huziy'
 
-import temperature_validation as tmp_val
-import swe_validation as swe_val
-import compare_mean_alt_and_from_climatology as alt_val
+from . import temperature_validation as tmp_val
+from . import swe_validation as swe_val
+from . import compare_mean_alt_and_from_climatology as alt_val
 
 from multiprocessing import Process
 
@@ -31,5 +31,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -1,4 +1,4 @@
-import data_types
+from . import data_types
 
 __author__ = "huziy"
 __date__ = "$Apr 5, 2011 12:26:05 PM$"
@@ -8,7 +8,7 @@ import numpy as np
 
 import os
 
-import level_kinds
+from . import level_kinds
 
 from datetime import datetime
 from datetime import timedelta
@@ -392,15 +392,15 @@ class RPN():
             data = self._get_data_by_key(key)
             lev = self.get_current_level(level_kind=level_kind)
 
-            if lev in res.keys():
+            if lev in list(res.keys()):
                 msg = "WARNING: this file contains more than one field {0} for the level {1}, " \
                       "eading only the first one".format(var_name, lev)
-                print colored(msg, color="red")
+                print(colored(msg, color="red"))
                 break
 
             res[lev] = data
             key = self._dll.fstsui_wrapper(self._file_unit, byref(ni), byref(nj), byref(nk))
-        print in_typvar.value
+        print(in_typvar.value)
 
         #  if key < 0: raise Exception('varname = {0},
         # at level {1} is not found  in {2}.'.format(varname, level, self.path))
@@ -532,7 +532,7 @@ class RPN():
         :type record_key: c_int
         """
         self._get_record_info(record_key)
-        print self._current_info['varname'].value
+        print(self._current_info['varname'].value)
         the_type = self._get_current_data_type()
         ni, nj, nk = self._current_info["shape"]
         data = np.zeros((nk.value * nj.value * ni.value,), dtype=the_type)
@@ -609,7 +609,7 @@ class RPN():
                                         byref(ll_lat), byref(ll_lon), byref(dlat), byref(dlon),
                                         ig[0], ig[1], ig[2], ig[3])
 
-            ni, nj, nk = map(lambda x: x.value, self._current_info["shape"])
+            ni, nj, nk = [x.value for x in self._current_info["shape"]]
 
             ll_latv = ll_lat.value
             ll_lonv = ll_lon.value
@@ -627,7 +627,7 @@ class RPN():
         datev = c_int(-1)
         etiket = create_string_buffer(self.ETIKET_DEFAULT)
 
-        print ig
+        print(ig)
         ip1, ip2, ip3 = ig[:3]
         in_typvar = create_string_buffer(self.VARTYPE_DEFAULT)
 
@@ -666,7 +666,7 @@ class RPN():
         self._dll.gdll_wrapper(ezgdef, lats_2d.ctypes.data_as(POINTER(c_float)),
                                lons_2d.ctypes.data_as(POINTER(c_float)))
 
-        print "lon params = ", lons_2d.shape, np.min(lons_2d), np.max(lons_2d)
+        print("lon params = ", lons_2d.shape, np.min(lons_2d), np.max(lons_2d))
         return np.transpose(lons_2d), np.transpose(lats_2d)
 
         pass
@@ -818,10 +818,10 @@ class RPN():
                                  byref(extra1), byref(extra2), byref(extra3))
 
         if verbose:
-            print 'ip ', [ip1.value, ip2.value, ip3.value]
-            print 'grtype', grid_type.value
-            print 'ig', [ig1.value, ig2.value, ig3.value, ig4.value]
-            print 'varname: ', nomvar.value
+            print('ip ', [ip1.value, ip2.value, ip3.value])
+            print('grtype', grid_type.value)
+            print('ig', [ig1.value, ig2.value, ig3.value, ig4.value])
+            print('varname: ', nomvar.value)
 
         if '>>' in nomvar.value or '^^' in nomvar.value:
             self.current_grid_reference = grid_type.value
@@ -832,10 +832,10 @@ class RPN():
         try:
             dateo_s = self._dateo_to_string(extra1.value)
             the_dateo = datetime.strptime(dateo_s, self._dateo_format)
-        except Exception, e:
-            print e
-            print( dateo.value )
-            print "dateo is corrupted using default: 20010101000000"
+        except Exception as e:
+            print(e)
+            print(( dateo.value ))
+            print("dateo is corrupted using default: 20010101000000")
             the_dateo = datetime.strptime("20010101000000", self._dateo_format)
 
         #        if the_dateo.year // 100 != self.start_century:
@@ -960,19 +960,19 @@ class RPN():
                     self.dateo_fallback = self._current_info["dateo"]
 
                 d = self._current_info["dateo"] + timedelta(hours=forecastHour)
-                print d, forecastHour, self._current_info["dateo"]
+                print(d, forecastHour, self._current_info["dateo"])
 
                 if d < self.dateo_fallback:
-                    print "sim date appears to be earlier than the start date"
-                    print "falling back to the previous date of origin"
-                    print self._current_info["dt_seconds"].value / 60.0 / 60.0
-                    print self.dateo_fallback, self._current_info["dateo"]
-                    print forecastHour
+                    print("sim date appears to be earlier than the start date")
+                    print("falling back to the previous date of origin")
+                    print(self._current_info["dt_seconds"].value / 60.0 / 60.0)
+                    print(self.dateo_fallback, self._current_info["dateo"])
+                    print(forecastHour)
                     raise Exception()
 
                 return d
-            except Exception, exc:
-                print exc
+            except Exception as exc:
+                print(exc)
                 raise Exception("problem when reading file {0}".format(self.path))
         else:
             raise Exception("No current info has been stored: please make sure you read some records first.")
@@ -989,7 +989,7 @@ class RPN():
             level = self.get_current_level(level_kind=level_kind)
             time = self.get_current_validity_date()
 
-            if not result.has_key(time):
+            if time not in result:
                 result[time] = {}
 
             time_slice = result[time]
@@ -1113,7 +1113,7 @@ class RPN():
             ip2 = c_int(0)
             ip3 = c_int(0)
         else:
-            ip1, ip2, ip3 = map(c_int, ip)
+            ip1, ip2, ip3 = list(map(c_int, ip))
 
         [ni, nj] = data.shape[:2]
         ni = c_int(ni)
@@ -1121,17 +1121,17 @@ class RPN():
 
         #figure out the ig values
         if None not in [lon1, lat1, lon2, lat2]:
-            c_lon1, c_lat1, c_lon2, c_lat2 = map(c_float, [lon1, lat1, lon2, lat2])
-            ig1, ig2, ig3, ig4 = map(c_int, [0, 0, 0, 0])
+            c_lon1, c_lat1, c_lon2, c_lat2 = list(map(c_float, [lon1, lat1, lon2, lat2]))
+            ig1, ig2, ig3, ig4 = list(map(c_int, [0, 0, 0, 0]))
             self._dll.cxg_to_ig_wrapper(c_char_p(grid_type),
                                         byref(ig1), byref(ig2), byref(ig3), byref(ig4),
                                         byref(c_lat1), byref(c_lon1), byref(c_lat2), byref(c_lon2)
             )
-            print ig1, ig2, ig3, ig4
+            print(ig1, ig2, ig3, ig4)
         elif ig is not None:
-            ig1, ig2, ig3, ig4 = map(c_int, ig)
+            ig1, ig2, ig3, ig4 = list(map(c_int, ig))
         else:
-            ig1, ig2, ig3, ig4 = map(c_int, [0, 0, 0, 0])
+            ig1, ig2, ig3, ig4 = list(map(c_int, [0, 0, 0, 0]))
 
         typvar = create_string_buffer(typ_var)
         nomvar = create_string_buffer(name)
@@ -1240,13 +1240,13 @@ def test():
 
     os.system("r.diag ggstat {0}".format(path))
 
-    print "Min = {0}, Mean = {1}, Max = {2}, Var = {3}".format(np.min(precip), np.mean(precip), np.max(precip),
-                                                               np.var(precip))
+    print("Min = {0}, Mean = {1}, Max = {2}, Var = {3}".format(np.min(precip), np.mean(precip), np.max(precip),
+                                                               np.var(precip)))
 
     datev = rpnObj.get_current_validity_date()
-    print 'validity date = ', datev
-    print rpnObj._current_info
-    print rpnObj.get_number_of_records()
+    print('validity date = ', datev)
+    print(rpnObj._current_info)
+    print(rpnObj.get_number_of_records())
     rpnObj.get_longitudes_and_latitudes()
     rpnObj.close()
 
@@ -1261,12 +1261,12 @@ def test_get_all_records_for_name():
 
     rpnObj.close()
 
-    print np.mean(lons2d1), np.mean(lats2d1)
-    print np.mean(lons2d2), np.mean(lats2d2)
+    print(np.mean(lons2d1), np.mean(lats2d1))
+    print(np.mean(lons2d2), np.mean(lats2d2))
 
-    for t, v in date_to_field.iteritems():
-        for z, v1 in v.iteritems():
-            print t, z, v1.min(), v1.mean(), v1.max()
+    for t, v in date_to_field.items():
+        for z, v1 in v.items():
+            print(t, z, v1.min(), v1.mean(), v1.max())
 
 
 def test_select_by_date():
@@ -1277,7 +1277,7 @@ def test_select_by_date():
     res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour=0)
     rObj.close()
 
-    print res.keys()
+    print(list(res.keys()))
 
 
 if __name__ == "__main__":
@@ -1288,4 +1288,4 @@ if __name__ == "__main__":
     #test_dateo()
     test()
     # test_get_all_records_for_name()
-    print "Hello World"
+    print("Hello World")

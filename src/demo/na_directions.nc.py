@@ -54,7 +54,7 @@ def main():
     #    llcrnrlat=min_lat,
     #    urcrnrlon=max_lon, urcrnrlat=max_lat, resolution="i")
     myproj = RotatedLatLon(lon1=lon_1, lat1=lat_1, lon2=lon_2, lat2=lat_2)
-    print lons2d.shape
+    print(lons2d.shape)
     b = myproj.get_basemap_object_for_lons_lats(lons2d[100:150, 70:132], lats2d[100:150, 70:132])
 
     x, y = b(lons2d, lats2d)
@@ -85,8 +85,8 @@ def main():
 
 
 
-    i_indices_1d = range(dirs.shape[0])
-    j_indices_1d = range(dirs.shape[1])
+    i_indices_1d = list(range(dirs.shape[0]))
+    j_indices_1d = list(range(dirs.shape[1]))
 
     j_indices_2d, i_indices_2d = np.meshgrid(j_indices_1d, i_indices_1d)
 
@@ -130,5 +130,5 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

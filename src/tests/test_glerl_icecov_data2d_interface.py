@@ -71,7 +71,7 @@ class TestGLERLIceCoverManager(GLERLIceCoverManager):
 
         i, j = self.lon_lat_to_ij(lon, lat)
 
-        print(self.ij_to_lon_lat(0, 0))
+        print((self.ij_to_lon_lat(0, 0)))
 
         # eq_(0, i)
         # eq_(0, j)

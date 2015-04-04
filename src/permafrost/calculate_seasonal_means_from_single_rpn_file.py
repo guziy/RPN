@@ -25,9 +25,9 @@ def main():
 
 
     times = sorted(records.keys())
-    vals =  np.array( map(lambda t: records[t] , times))
+    vals =  np.array( [records[t] for t in times])
 
-    year_range = range(2006, 2101)
+    year_range = list(range(2006, 2101))
     nc_file_name = "{0:s}_{1:d}_{2:d}.nc".format(varname, year_range[0], year_range[-1])
     nx, ny = vals[0].shape
 
@@ -44,7 +44,7 @@ def main():
 
 
     for i, the_year in enumerate(year_range):
-        bool_vector = map( lambda t: t.year == the_year and t.month in months, times)
+        bool_vector = [t.year == the_year and t.month in months for t in times]
         bool_vector = np.array(bool_vector)
         the_var[i,:,:] = np.mean(vals[bool_vector], axis=0).transpose()
 
@@ -69,5 +69,5 @@ import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

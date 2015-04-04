@@ -40,7 +40,7 @@ def demo_north_pole():
 def demo_arctic_proj():
     rll = RotatedLatLon(lon1=60, lat1=90, lon2=-30, lat2=0)
 
-    print rll.get_north_pole_coords(), rll.get_true_pole_coords_in_rotated_system()
+    print(rll.get_north_pole_coords(), rll.get_true_pole_coords_in_rotated_system())
 
     pass
 
@@ -63,5 +63,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
     #demo_north_pole()
-    print "Hello world"
+    print("Hello world")
   

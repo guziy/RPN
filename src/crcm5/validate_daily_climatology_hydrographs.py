@@ -29,17 +29,17 @@ def validate_daily_climatology():
     selected_ids = None
     start_date = datetime(start_year, 1, 1)
     end_date = datetime(end_year, 12, 31)
-    print "start reading cehq obs data"
+    print("start reading cehq obs data")
 #    stations = cehq_station.read_station_data(selected_ids = selected_ids,
 #            start_date=start_date, end_date=end_date
 #    )
     stations = []
 
-    print "start reading hydat obs data"
+    print("start reading hydat obs data")
     stations.extend(cehq_station.read_hydat_station_data(folder_path="/home/huziy/skynet3_rech1/HYDAT",
             start_date = start_date, end_date = end_date))
 
-    print "finished reading station data"
+    print("finished reading station data")
 
     varname = "STFL"
     sim_name_to_manager = {}
@@ -49,7 +49,7 @@ def validate_daily_climatology():
 
 
     for sim_name in sim_name_list:
-        print sim_name
+        print(sim_name)
         rpn_folder = rpn_folder_path_form.format(sim_name)
 
         dmManager = Crcm5ModelDataManager(samples_folder_path=rpn_folder, file_name_prefix="dm",
@@ -60,7 +60,7 @@ def validate_daily_climatology():
         nc_sim_folder = os.path.join(nc_db_folder, sim_name)
         nc_path = os.path.join(nc_sim_folder, "{0}_all.nc".format(varname))
 
-        print "get model points for the stations"
+        print("get model points for the stations")
 
         st_to_mp = dmManager.get_model_points_for_stations(stations, nc_path=nc_path, npoints=1,
             nc_sim_folder=nc_sim_folder
@@ -74,7 +74,7 @@ def validate_daily_climatology():
     #for tests
     #test(sim_name_to_station_to_model_point)
 
-    print "finished reading data in memory"
+    print("finished reading data in memory")
 
 
     from matplotlib.backends.backend_pdf import PdfPages
@@ -90,7 +90,7 @@ def validate_daily_climatology():
 
         years = s.get_list_of_complete_years()
 
-        print s
+        print(s)
         if len(years) < 6: continue
 
         dates, obs_data = s.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=day_stamps, years=years)
@@ -101,7 +101,7 @@ def validate_daily_climatology():
         mp = None
         for sim_name in sim_name_list:
             manager = sim_name_to_manager[sim_name]
-            if not sim_name_to_station_to_model_point[sim_name].has_key(s):
+            if s not in sim_name_to_station_to_model_point[sim_name]:
                 continue
 
             mp = sim_name_to_station_to_model_point[sim_name][s]
@@ -115,7 +115,7 @@ def validate_daily_climatology():
                 assert isinstance(ax, Axes)
 
                 ax.xaxis.set_major_formatter(DateFormatter("%d/%b"))
-                ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13,3), bymonthday=15 ))
+                ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13,3)), bymonthday=15 ))
 
 
             plt.legend(prop = FontProperties(size=8))
@@ -153,10 +153,10 @@ def validate_daily_climatology():
 
 def dotest(sim_name_to_station_to_model_point):
     day_stamps = Station.get_stamp_days(2001)
-    for sim_name, station_to_mp in sim_name_to_station_to_model_point.iteritems():
+    for sim_name, station_to_mp in sim_name_to_station_to_model_point.items():
         st_to_mp = sim_name_to_station_to_model_point[sim_name]
 
-        for station, mp in st_to_mp.iteritems():
+        for station, mp in st_to_mp.items():
             assert isinstance(mp, ModelPoint)
             years = station.get_list_of_complete_years()
             d,v = mp.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=day_stamps, years=years)
@@ -168,12 +168,12 @@ def dotest(sim_name_to_station_to_model_point):
 
 
 def main():
-    print "start"
+    print("start")
     import application_properties
     application_properties.set_current_directory()
     from util import plot_utils
 
-    print "finished imports and set ups"
+    print("finished imports and set ups")
     plot_utils.apply_plot_params(width_pt=None, width_cm=15, height_cm=15, font_size=16)
     validate_daily_climatology()
 
@@ -181,5 +181,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

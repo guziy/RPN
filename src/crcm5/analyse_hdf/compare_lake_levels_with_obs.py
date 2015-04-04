@@ -27,9 +27,9 @@ from swe import SweDataManager
 
 __author__ = 'huziy'
 
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 # TODO: this is to compare streamflow simulation results with station data
 #   input: station ids or list of station objects and
 #          the list of simulations, to compare with
@@ -127,7 +127,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     if not success:
         return success
 
-    print "Number of good upstream points is {0}".format(ngood_points)
+    print("Number of good upstream points is {0}".format(ngood_points))
 
     basin_area_km2 = np.sum(cell_area_km2[good_points])
     area_matrix = cell_area_km2 * upstream_mask
@@ -151,7 +151,7 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
 
         # plot max temperature
         df_tmax = _apply_running_mean(daily_dates, basin_tmax)
-        print df_tmax.tail(20)
+        print(df_tmax.tail(20))
         p = ax.plot(df_tmax.index, df_tmax["values"], label="tmax-obs", lw=1, color="k")
 
         # plot min temperature
@@ -159,9 +159,9 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
         ax.plot(df_tmin.index, df_tmin["values"], label="tmin-obs", color=p[0].get_color(), lw=1)
         ax.fill_between(df_tmin.index, df_tmax["values"], df_tmin["values"], alpha=0.3, color=p[0].get_color())
 
-        print "--" * 20
-        print "tmin ranges: from {0} to {1}".format(np.min(basin_tmin), np.max(basin_tmin))
-        print "tmin ranges: from {0} to {1}".format(np.min(df_tmin["values"]), np.max(df_tmin["values"]))
+        print("--" * 20)
+        print("tmin ranges: from {0} to {1}".format(np.min(basin_tmin), np.max(basin_tmin)))
+        print("tmin ranges: from {0} to {1}".format(np.min(df_tmin["values"]), np.max(df_tmin["values"])))
 
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
     ax.yaxis.set_label_position("right")
@@ -353,7 +353,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     """
     assert model_points is None or stations is None or len(stations) == len(model_points)
 
-    path0 = os.path.join(hdf_folder, sim_name_to_file_name.items()[0][1])
+    path0 = os.path.join(hdf_folder, list(sim_name_to_file_name.items())[0][1])
     flow_directions = analysis.get_array_from_file(path=path0, var_name="flow_direction")
     lake_fraction = analysis.get_array_from_file(path=path0, var_name="lake_fraction")
 
@@ -366,7 +366,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     # plt.show()
     # exit()
 
-    file_scores = open("scores_{0}_{1}-{2}.txt".format("_".join(sim_name_to_file_name.keys()), start_year, end_year),
+    file_scores = open("scores_{0}_{1}-{2}.txt".format("_".join(list(sim_name_to_file_name.keys())), start_year, end_year),
                        "w")
     #write the following columns to the scores file
     header_format = "{0:10s}\t{1:10s}\t{2:10s}\t" + "\t".join(["{" + str(i + 3) + ":10s}"
@@ -475,12 +475,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         if the_station is not None:
             assert isinstance(the_station, Station)
             year_list = the_station.get_list_of_complete_years()
-            year_list = list(itertools.ifilter(lambda yi: start_year <= yi <= end_year, year_list))
+            year_list = list(filter(lambda yi: start_year <= yi <= end_year, year_list))
 
             if len(year_list) < 1:
                 continue
 
-            print "Working on station: {0}".format(the_station.id)
+            print("Working on station: {0}".format(the_station.id))
         else:
             year_list = all_years
 
@@ -573,8 +573,8 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
             values_model /= float(lf_total)
             values_model = values_model - np.mean(values_model)
-            print "lake level anomaly ranges for {0}:{1:.8g};{2:.8g}".format(label, values_model.min(),
-                                                                             values_model.max())
+            print("lake level anomaly ranges for {0}:{1:.8g};{2:.8g}".format(label, values_model.min(),
+                                                                             values_model.max()))
             ax.plot(dates, values_model, label=label, lw=2)
             ax_panel.plot(dates, values_model, label=label, lw=2)
 
@@ -616,7 +616,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
         ax.xaxis.set_minor_locator(MonthLocator())
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
         ax.grid()
         streamflow_axes = ax  # save streamflow axes for later use
 
@@ -624,7 +624,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             ax_panel.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
             ax_panel.xaxis.set_major_formatter(DateFormatter("%b"))
             ax_panel.xaxis.set_minor_locator(MonthLocator())
-            ax_panel.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 3)))
+            ax_panel.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 3))))
             ax_panel.set_ylabel(r"Level variation ${\rm m}$")
             legend_added = True
 
@@ -745,8 +745,8 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
         #"CRCM5-HCD-RL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
     }
 
-    path0 = os.path.join(hdf_folder, sim_name_to_file_name.items()[0][1])
-    path1 = os.path.join(hdf_folder, sim_name_to_file_name.items()[1][1])
+    path0 = os.path.join(hdf_folder, list(sim_name_to_file_name.items())[0][1])
+    path1 = os.path.join(hdf_folder, list(sim_name_to_file_name.items())[1][1])
     flow_directions = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
     lake_fraction = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_LAKE_FRACTION_NAME)
     slope = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_SLOPE_NAME)
@@ -772,11 +772,11 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
 
     mp_list = mp_list[-12:]  # get 12 most important outlets
 
-    print "The following outlets were chosen for analysis"
+    print("The following outlets were chosen for analysis")
     pattern = "({0}, {1}): acc_index = {2} cells; fldr = {3}; lake_fraction = {4}"
     for mp in mp_list:
-        print pattern.format(mp.ix, mp.jy, mp.acc_index, cell_manager.flow_directions[mp.ix, mp.jy],
-                             lake_fraction[mp.ix, mp.jy])
+        print(pattern.format(mp.ix, mp.jy, mp.acc_index, cell_manager.flow_directions[mp.ix, mp.jy],
+                             lake_fraction[mp.ix, mp.jy]))
 
     draw_model_comparison(model_points=mp_list, sim_name_to_file_name=sim_name_to_file_name, hdf_folder=hdf_folder,
                           start_year=start_year, end_year=end_year, cell_manager=cell_manager)
@@ -863,13 +863,13 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
 
 
     #Do not process skip stations
-    stations = filter(lambda the_s: the_s.id not in skip_list, stations)
+    stations = [the_s for the_s in stations if the_s.id not in skip_list]
 
     #debug:
     for s in stations:
         assert isinstance(s, Station)
-        print s.get_list_of_complete_years()
-        print s.drainage_km2
+        print(s.get_list_of_complete_years())
+        print(s.drainage_km2)
 
     assert len(stations)
 

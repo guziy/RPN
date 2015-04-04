@@ -24,7 +24,7 @@ def main():
 
         path = os.path.join(source_dir, f_name)
         ds = SD(path)
-        print ds.datasets()
+        print(ds.datasets())
         target_path = os.path.join(target_dir, f_name + ".rpn")
         r_obj = RPN(target_path, mode="w")
         for varname in varnames:

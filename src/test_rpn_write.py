@@ -15,11 +15,11 @@ def test():
     ny = 40
 
     data = np.zeros((nx, ny))
-    for i in xrange(nx):
-        for j in xrange(ny):
+    for i in range(nx):
+        for j in range(ny):
             data[i, j] = i ** 2 + j ** 2
 
-    print 'before ', data.shape, data.min(), data.max(), data.mean()
+    print('before ', data.shape, data.min(), data.max(), data.mean())
     plt.figure()
     plt.title('before')
     plt.pcolormesh(data)
@@ -33,7 +33,7 @@ def test():
     x = rObj.get_first_record_for_name('test')
     rObj.close()
 
-    print 'after ', x.shape, x.min(), x.max(), x.mean()
+    print('after ', x.shape, x.min(), x.max(), x.mean())
 
 
     plt.figure()
@@ -46,4 +46,4 @@ def test():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     test()
-    print "Hello World"
+    print("Hello World")

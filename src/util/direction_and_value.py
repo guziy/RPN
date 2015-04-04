@@ -63,5 +63,5 @@ def flowdir_values_to_shift(flowdir_values):
 
 
 if __name__ == "__main__":
-    print "Hello World"
+    print("Hello World")
   

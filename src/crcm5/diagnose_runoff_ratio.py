@@ -21,7 +21,7 @@ def main():
 
     start_date = datetime(1986, 1, 1)
     end_date = datetime(1990, 12, 31)
-    months = range(4,6)
+    months = list(range(4,6))
 
     traf1 = base_data_manager1.get_monthly_climatology(start_date=start_date, end_date=end_date, months=months,
                                                         varname="TRAF", level = 1)
@@ -38,9 +38,9 @@ def main():
     ratio1[denom_pos] /= (traf1 + tdra1)[denom_pos]
     ratio1 = np.ma.masked_where(~denom_pos, ratio1)
 
-    print np.min(ratio1), np.max(ratio1)
-    print np.min(tdra1), np.max(tdra1)
-    print np.min(traf1), np.max(traf1)
+    print(np.min(ratio1), np.max(ratio1))
+    print(np.min(tdra1), np.max(tdra1))
+    print(np.min(traf1), np.max(traf1))
 
 
 
@@ -102,5 +102,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

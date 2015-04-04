@@ -24,11 +24,11 @@ def main(var_name = "sst"):
     latVar = ds.variables["lat"]
 
     assert isinstance(lonVar, Variable)
-    print lonVar.ndim
+    print(lonVar.ndim)
 
 
 
-    panel = pd.Panel(data=data, items=time_objs, major_axis=range(ny), minor_axis=range(nx))
+    panel = pd.Panel(data=data, items=time_objs, major_axis=list(range(ny)), minor_axis=list(range(nx)))
     mean_clim = panel.groupby(lambda d: d.month, axis="items").mean()
 
     data_out = [

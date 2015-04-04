@@ -7,7 +7,7 @@ from crcm5 import infovar
 from data import cehq_station
 from data.cehq_station import Station
 from data.cell_manager import CellManager
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +16,7 @@ __author__ = 'huziy'
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
 
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
 
 def plot_one_to_one_line(the_ax):
@@ -96,7 +96,7 @@ def main():
     q10_mod1_list = []
     q10_mod2_list = []
 
-    for the_station, the_mp in station_to_mp.iteritems():
+    for the_station, the_mp in station_to_mp.items():
         assert isinstance(the_station, Station)
         compl_years = the_station.get_list_of_complete_years()
         if len(compl_years) < 3:

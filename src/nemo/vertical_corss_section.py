@@ -37,7 +37,7 @@ for fname in os.listdir(EXP_DIR):
     elif fname.endswith("_grid_V.nc"):
         V_FILE_PATH = os.path.join(EXP_DIR, fname)
 
-import nemo_commons
+from . import nemo_commons
 
 EXP_NAME = os.path.basename(EXP_DIR)
 NEMO_IMAGES_DIR = os.path.join("nemo", EXP_NAME)
@@ -59,7 +59,7 @@ def get_section_hor_indices(i_start = 0, j_start = 0, i_end = -1, j_end = -1):
     i_list = [i_start + int(di * k) for k in range(npoints)]
 
     assert len(i_list) == len(j_list)
-    print i_list, j_list
+    print(i_list, j_list)
     return np.array(i_list, dtype=int), np.array(j_list, dtype=int)
 
 
@@ -88,7 +88,7 @@ def plot_cross_section_for_seasons(data_path = "", i_start = 0, j_start = 0, i_e
 
     b, lons, lats = nemo_commons.get_basemap_and_coordinates_from_file(T_FILE_PATH, resolution="i")
 
-    print "lons shape: ", lons.shape
+    print("lons shape: ", lons.shape)
 
     gs = gridspec.GridSpec(ncols=ncols + 1, nrows=nrows + 1, width_ratios=[1, 1, 0.05], hspace=0.3)  # +1 for the colorbar and for map
 
@@ -110,7 +110,7 @@ def plot_cross_section_for_seasons(data_path = "", i_start = 0, j_start = 0, i_e
     nx, ny = None, None
     dists_2d = None
     season_to_section = {}
-    for i, season in zip(range(nplots), cube_seasonal.coord("season").points):
+    for i, season in zip(list(range(nplots)), cube_seasonal.coord("season").points):
 
         data = cube_seasonal.extract(iris.Constraint(season=season)).data.squeeze()
 
@@ -123,8 +123,8 @@ def plot_cross_section_for_seasons(data_path = "", i_start = 0, j_start = 0, i_e
             j_end = ny - 1
 
         j_mask, i_mask = np.where(~the_mask)
-        print "mask shape: ", the_mask.shape
-        print "data shape: ", data.shape
+        print("mask shape: ", the_mask.shape)
+        print("data shape: ", data.shape)
         data[:, j_mask, i_mask] = np.ma.masked
 
         i_list, j_list = get_section_hor_indices(i_start=i_start, i_end = i_end, j_start=j_start, j_end=j_end)
@@ -133,7 +133,7 @@ def plot_cross_section_for_seasons(data_path = "", i_start = 0, j_start = 0, i_e
 
         data_sel = data[:, j_list, i_list]
         data_sel = np.ma.masked_where(vert_mask[:, j_list, i_list].mask, data_sel)
-        print "data_sel shape: ", data_sel.shape
+        print("data_sel shape: ", data_sel.shape)
         if lons_sel is None:
             lons_sel = lons[j_list, i_list]
             lats_sel = lats[j_list, i_list]
@@ -165,18 +165,18 @@ def plot_cross_section_for_seasons(data_path = "", i_start = 0, j_start = 0, i_e
     else:
         bn = None
 
-    print "{0}: ".format(var_name), vmin, vmax
+    print("{0}: ".format(var_name), vmin, vmax)
     cs = None
     ax = None
-    for i, season in zip(range(nplots), cube_seasonal.coord("season").points):
-        print season
+    for i, season in zip(list(range(nplots)), cube_seasonal.coord("season").points):
+        print(season)
         row = i // ncols
         col = i % ncols
         ax = fig.add_subplot(gs[row, col])
 
         ax.set_title(season.upper())
         data = season_to_section[season]
-        print data.min(), data.max()
+        print(data.min(), data.max())
 
 
         #to_plot = np.ma.masked_where(~the_mask, data)
@@ -227,7 +227,7 @@ def main():
     i_start, j_start = 0, 0
     i_end, j_end = -1, -1
 
-    print get_section_hor_indices(i_start=5, j_start = 0, i_end = 10, j_end = 20)
+    print(get_section_hor_indices(i_start=5, j_start = 0, i_end = 10, j_end = 20))
 
 
     # #Superior

@@ -7,7 +7,7 @@ from crcm5.model_point import ModelPoint
 from data import cehq_station
 from data.cehq_station import Station
 from data.cell_manager import CellManager
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
 __author__ = 'huziy'
 import numpy as np
@@ -26,11 +26,11 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
     labels = []
 
     if None not in stations:
-        st_to_mp = dict(zip(stations, model_points))
+        st_to_mp = dict(list(zip(stations, model_points)))
         stlist_sorted = list(sorted(stations, key=lambda st: st.drainage_km2, reverse=True))
         mplist_sorted = [st_to_mp[s] for s in stlist_sorted]
     else:
-        mp_to_st = dict(zip(model_points, stations))
+        mp_to_st = dict(list(zip(model_points, stations)))
         mplist_sorted = list(sorted(model_points, key=lambda mp: mp.latitude, reverse=True))
         stlist_sorted = [mp_to_st[mp] for mp in mplist_sorted]
 

@@ -49,7 +49,7 @@ def get_basemap_from_hdf(file_path=""):
 def get_array_from_file(path="", var_name=""):
     with tb.open_file(path) as h:
         if var_name not in h.root:
-            print "Warning: no {0} in {1}".format(var_name, path)
+            print("Warning: no {0} in {1}".format(var_name, path))
             return None
 
         data = h.get_node("/", var_name)[:]
@@ -90,7 +90,7 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     ts = ts.sort_index()
 
     dt = ts.index[1] - ts.index[0]
-    print "dt = ", dt
+    print("dt = ", dt)
     ts_cldp = ts.cumsum() * dt.total_seconds()
     return ts_cldp
 
@@ -113,14 +113,14 @@ def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=N
         lambda d: datetime(2001, d.month, d.day, 1) if not (d.month == 2 and d.day == 29) else
         datetime(2001, d.month, d.day - 1, 1)).mean()
 
-    print type(ts_clim)
-    print dir(ts_clim)
+    print(type(ts_clim))
+    print(dir(ts_clim))
 
     assert isinstance(ts_clim, pd.Series)
     ts_clim = ts_clim.sort_index()
 
     # assert isinstance(ts_clim, pd.TimeSeries)
-    print ts_clim.index
+    print(ts_clim.index)
     return ts_clim.index, ts_clim.values
 
 
@@ -167,7 +167,7 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
         sel_for_years_and_level = var_table.where(
             "({0}) & ({1}) & ~((month == 2) & (day == 29))".format(selbylevel, selbyyear))
     else:
-        print "({0}) & ((month != 2) | (day != 29))".format(selbyyear)
+        print("({0}) & ((month != 2) | (day != 29))".format(selbyyear))
         sel_for_years_and_level = var_table.where(
             "({0}) & ((month != 2) | (day != 29))".format(selbyyear))
 
@@ -324,7 +324,7 @@ def get_daily_climatology_of_3d_field(path_to_hdf_file="", var_name="STFL", star
 
     sorted_dates = list(sorted(date_to_level_to_mean.keys()))
 
-    sorted_levels = list(sorted(date_to_level_to_mean.items()[0][1].keys()))
+    sorted_levels = list(sorted(list(date_to_level_to_mean.items())[0][1].keys()))
 
     data = np.asarray(
         [[date_to_level_to_mean[d][lev] for lev in sorted_levels] for d in sorted_dates]
@@ -382,7 +382,7 @@ def calculate_daily_mean_fields():
     # plot a mean for each month
     for the_month in range(1, 13):
         month_mean_for_day[month_vals == the_month] = monthly_diff_ts[the_month - 1]
-        month_dates = list(itertools.ifilter(lambda d: d.month == the_month, dates))
+        month_dates = list(filter(lambda d: d.month == the_month, dates))
         month_vals = np.ones((len(month_dates),)) * monthly_diff_ts[the_month - 1]
         ax.plot(month_dates, month_vals, "r", lw=1.5)
 
@@ -449,7 +449,7 @@ if __name__ == "__main__":
     t0 = time.clock()
     main()
     # calculate_daily_mean_fields()
-    print "Elapsed time {0} seconds".format(time.clock() - t0)
+    print("Elapsed time {0} seconds".format(time.clock() - t0))
 
-    print "Hello world"
+    print("Hello world")
 

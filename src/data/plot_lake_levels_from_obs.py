@@ -3,7 +3,7 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
 __author__ = 'huziy'
 
 import numpy as np
-import cehq_station
+from . import cehq_station
 from permafrost import draw_regions
 import matplotlib.pyplot as plt
 import application_properties
@@ -86,5 +86,5 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

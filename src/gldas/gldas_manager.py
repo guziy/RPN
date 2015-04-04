@@ -30,12 +30,12 @@ class GldasManager():
 
     def plot_subsrof_ts(self, i=0, j=0):
         all_dates = list(sorted(self.date_to_path.keys()))
-        vals = map(lambda x: self.get_field_for_date(x, var_name=self.subsurface_rof_varname)[i, j], all_dates)
-        vals1 = map(lambda x: self.get_field_for_date(x, var_name=self.surface_rof_varname)[i, j], all_dates)
+        vals = [self.get_field_for_date(x, var_name=self.subsurface_rof_varname)[i, j] for x in all_dates]
+        vals1 = [self.get_field_for_date(x, var_name=self.surface_rof_varname)[i, j] for x in all_dates]
 
-        print min(vals), max(vals)
+        print(min(vals), max(vals))
         dates_num = date2num(all_dates)
-        print min(dates_num), max(dates_num)
+        print(min(dates_num), max(dates_num))
         import matplotlib.pyplot as plt
 
         plt.figure()
@@ -63,10 +63,10 @@ class GldasManager():
         Has to be called after self._init_date_to_path_dict
         """
         if not len(self.date_to_path):
-            print "You should call {0} first".format("self._init_date_to_path_dict")
+            print("You should call {0} first".format("self._init_date_to_path_dict"))
             raise Exception()
 
-        for d, path in self.date_to_path.iteritems():
+        for d, path in self.date_to_path.items():
             ds = Dataset(path)
 
             lons1d = ds.variables["g0_lon_1"][:]
@@ -75,7 +75,7 @@ class GldasManager():
             self.lats2d, self.lons2d = np.meshgrid(lats1d, lons1d)
 
             x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-            self.kdtree = KDTree(zip(x, y, z))
+            self.kdtree = KDTree(list(zip(x, y, z)))
             return
 
         pass
@@ -123,13 +123,13 @@ class GldasManager():
         #interpolation
         x1, y1, z1 = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
 
-        dists, indices = self.kdtree.query(zip(x1, y1, z1))
+        dists, indices = self.kdtree.query(list(zip(x1, y1, z1)))
 
         mask1d = mask.flatten().astype(int)
         areas1d = areas2d.flatten()
 
         result = {}
-        for the_date in self.date_to_path.keys():
+        for the_date in list(self.date_to_path.keys()):
             if start_date is not None:
                 if start_date > the_date: continue
 
@@ -140,8 +140,8 @@ class GldasManager():
             result[the_date] = np.sum(data.flatten()[indices][mask1d == 1] * areas1d[mask1d == 1])
 
         times = list(sorted(result.keys()))
-        values = map(lambda x: result[x], times)
-        print "nvals, min, max", len(values), min(values), max(values)
+        values = [result[x] for x in times]
+        print("nvals, min, max", len(values), min(values), max(values))
         return TimeSeries(time=times, data=values)
 
 
@@ -154,5 +154,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

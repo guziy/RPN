@@ -62,13 +62,13 @@ def get_glob_lakes_mask(dirs, lakefr, lake_outlets, glob_lakefr_limit = 0.6):
         i_prev, j_prev = get_previous_ij_list(i0,j0, dirs, lake_fr=lakefr, glob_lakefr_limit=glob_lakefr_limit)
         i_prev = np.array( [i0,] + i_prev )
         j_prev = np.array([j0,] + j_prev )
-        print len(j_prev)
+        print(len(j_prev))
 
         if np.any(lakes_mask[i_prev,j_prev] >= 0):
-            print "Overlap error"
+            print("Overlap error")
 
         lakes_mask[i_prev,j_prev] = lake_id
-        print "lake id = {0}, ncells = {1}".format(lake_id, len(i_prev))
+        print("lake id = {0}, ncells = {1}".format(lake_id, len(i_prev)))
         lake_id += 1
 
 
@@ -88,14 +88,14 @@ def main():
 
     glob_lakefr_limit = 0.6
     lkou = rObj.get_first_record_for_name("LKOU")[7:-7,7:-7]
-    print "lkou(min-max):", lkou.min(), lkou.max()
-    print "n_outlets = {0}".format(lkou.sum())
+    print("lkou(min-max):", lkou.min(), lkou.max())
+    print("n_outlets = {0}".format(lkou.sum()))
 
     lkfr = rObj.get_first_record_for_name("LKFR")[7:-7,7:-7]
-    print "lkfr(min-max):", lkfr.min(), lkfr.max()
+    print("lkfr(min-max):", lkfr.min(), lkfr.max())
 
     dirs = rObj.get_first_record_for_name("FLDR")[7:-7,7:-7]
-    print "fldr(min-max):", dirs.min(), dirs.max()
+    print("fldr(min-max):", dirs.min(), dirs.max())
 
     rObj.close()
 
@@ -120,5 +120,5 @@ if __name__ == "__main__":
     import  application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

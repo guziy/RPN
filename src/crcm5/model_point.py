@@ -15,7 +15,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
 
 
 

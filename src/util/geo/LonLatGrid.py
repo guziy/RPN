@@ -132,10 +132,10 @@ class LonLatGrid(object):
 
 def test():
     grid = LonLatGrid(grid_shape = (100,150), lower_left_point = GeoPoint(longitude = -180, latitude = -90))
-    print grid.get_2d_latitudes().shape
-    print np.min(grid.get_2d_longitudes())
-    print len(grid.get_1d_latitudes()) == 150
-    print grid
+    print(grid.get_2d_latitudes().shape)
+    print(np.min(grid.get_2d_longitudes()))
+    print(len(grid.get_1d_latitudes()) == 150)
+    print(grid)
 
 
 if __name__ == "__main__":

@@ -35,7 +35,7 @@ def _get_year_list_from_name(filename = ""):
         return [year, ]
 
     start, end = [int(token) for token in groups[-2:]]
-    return range(start, end + 1)
+    return list(range(start, end + 1))
 
 
 
@@ -59,8 +59,8 @@ class DFSDataManager(object):
         ds = Dataset(os.path.join(self.var_folder, fname))
         lons = None
         lats = None
-        for vname, varnc in ds.variables.iteritems():
-            print vname
+        for vname, varnc in ds.variables.items():
+            print(vname)
             if vname.lower().startswith("lon"):
                 lons = varnc[:]
             elif vname.lower().startswith("lat"):
@@ -70,8 +70,8 @@ class DFSDataManager(object):
             lons, lats = np.meshgrid(lons, lats)
 
 
-        print lons.shape
-        print lats.shape
+        print(lons.shape)
+        print(lats.shape)
         assert lons.shape == lats.shape
         ds.close()
         return lons, lats
@@ -88,50 +88,50 @@ class DFSDataManager(object):
         if season_name_to_months is None:
             season_name_to_months = OrderedDict([
                 ("Winter", (1, 2, 12)),
-                ("Spring", range(3, 6)),
-                ("Summer", range(6, 9)),
-                ("Fall", range(9, 12))])
+                ("Spring", list(range(3, 6))),
+                ("Summer", list(range(6, 9))),
+                ("Fall", list(range(9, 12)))])
 
         if None in [start_year, end_year]:
             start_year = min(self.year_2_path.keys())
             end_year = max(self.year_2_path.keys())
 
-        seasonal_cache_file_name = "seasonal_{0}_".format("-".join(season_name_to_months.keys()))
+        seasonal_cache_file_name = "seasonal_{0}_".format("-".join(list(season_name_to_months.keys())))
         seasonal_cache_file_name += "{0}_{1}-{2}.cache".format(self.var_name, start_year, end_year)
         cache_path = os.path.join(self.folder_path, seasonal_cache_file_name)
-        print "Cache file {0}".format(cache_path)
+        print("Cache file {0}".format(cache_path))
         if os.path.isfile(cache_path):
             return pickle.load(open(cache_path))
 
         #create month to season map
         month_to_season = {}
-        for sname, months in season_name_to_months.iteritems():
+        for sname, months in season_name_to_months.items():
             for m in months:
                 month_to_season[m] = sname
 
 
         seasonal_panels = []
         for the_year in range(start_year, end_year + 1):
-            print "DFS: processing year {0}".format(the_year)
+            print("DFS: processing year {0}".format(the_year))
             ds = Dataset(self.year_2_path[the_year])
             data = ds.variables[self.var_name][:]
             ds.close()
             nt, ny, nx = data.shape
-            print "nt = {0}, ny = {1}, nx = {2}".format(nt, ny, nx)
+            print("nt = {0}, ny = {1}, nx = {2}".format(nt, ny, nx))
             year_start = datetime(the_year, 1, 1)
             year_end = datetime(the_year + 1, 1, 1)
 
             dt = (year_end - year_start) / nt
             panel = pd.Panel(data=data, items=[year_start + i * dt for i in range(nt)],
-                             major_axis=range(ny), minor_axis=range(nx))
+                             major_axis=list(range(ny)), minor_axis=list(range(nx)))
             panel_seasons = panel.groupby(lambda d: month_to_season[d.month], axis = "items").mean()
             seasonal_panels.append(panel_seasons)
 
 
         season_to_mean = OrderedDict()
-        for sname, _ in season_name_to_months.iteritems():
+        for sname, _ in season_name_to_months.items():
             season_to_mean[sname] = np.asarray([p[sname].values for p in seasonal_panels]).mean(axis = 0)
-            print season_to_mean[sname].shape
+            print(season_to_mean[sname].shape)
 
 
         pickle.dump(season_to_mean, open(cache_path, "w"))
@@ -155,7 +155,7 @@ def check():
     dm = DFSDataManager()
     s2m = dm.get_seasonal_means(start_year=1979, end_year=1980)
     import os
-    print os.getcwd()
+    print(os.getcwd())
 
 
     import matplotlib.pyplot as plt
@@ -163,7 +163,7 @@ def check():
     b = Basemap(lon_0=180)
     lons, lats = dm.get_lons_and_lats_2d()
     x, y = b(lons, lats)
-    for sname, smean in s2m.iteritems():
+    for sname, smean in s2m.items():
         plt.figure()
         plt.title(sname)
         im = b.pcolormesh(x, y, smean - 273.15)

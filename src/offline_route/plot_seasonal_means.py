@@ -77,7 +77,7 @@ def main(months=None, season="DJF"):
             df["year"] = df.index.map(lambda d: d.year)
             df["month"] = df.index.map(lambda d: d.month)
 
-            print df.shape
+            print(df.shape)
             mean_data = df.ix[(df.year >= start_year) & (df.year <= end_year) & df.month.isin(months), :].mean(axis=0)
             mean_data = mean_data.drop(["year", "month"])  # no need of month and year
             pickle.dump(mean_data, open(cache_file, mode="w"))
@@ -86,12 +86,12 @@ def main(months=None, season="DJF"):
 
         plt.figure()
         to_plot = np.ma.masked_all_like(lons2d)
-        print x_index.shape
-        print mean_data.values.shape
+        print(x_index.shape)
+        print(mean_data.values.shape)
 
         to_plot[x_index, y_index] = mean_data.values
 
-        print to_plot.min(), to_plot.max()
+        print(to_plot.min(), to_plot.max())
 
         x, y = b(lons2d, lats2d)
 
@@ -130,5 +130,5 @@ if __name__ == "__main__":
 
     for smonths, sname in zip(season_months, season_names):
         main(months=smonths, season=sname)
-    print "Hello world"
+    print("Hello world")
   

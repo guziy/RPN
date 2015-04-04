@@ -16,7 +16,7 @@ def read_coordinates(coords_file = "data/1950-1960-ECHO-G-profiles/coords.txt"):
     """
     f = open(coords_file)
 
-    lines = map(lambda x: x.strip(), f.readlines())
+    lines = [x.strip() for x in f.readlines()]
     id_to_hor_indices = {}
     ni = 0
     nj = 0
@@ -24,7 +24,7 @@ def read_coordinates(coords_file = "data/1950-1960-ECHO-G-profiles/coords.txt"):
     for line in lines:
         if line == "": continue
         fields = line.split()
-        id, j, i = map(int, fields[:3])
+        id, j, i = list(map(int, fields[:3]))
         if i > ni: ni = i
         if j > nj: nj = j
         j -= 1
@@ -37,8 +37,8 @@ def read_coordinates(coords_file = "data/1950-1960-ECHO-G-profiles/coords.txt"):
 
 
     land_sea = np.zeros((ni, nj))
-    for i in xrange(ni):
-        for j in xrange(nj):
+    for i in range(ni):
+        for j in range(nj):
             land_sea[i,j] = land_sea_mask[(i,j)]
 
 
@@ -58,8 +58,8 @@ def read_data(folder = "data/1950-1960-ECHO-G-profiles"):
         for file in os.listdir(year_folder_path):
             file_path = os.path.join(year_folder_path, file)
             f = open(file_path)
-            lines = map(lambda x: x.strip(), f.readlines())
-            lines = list(itertools.ifilter(lambda x: len(x) > 0, lines))
+            lines = [x.strip() for x in f.readlines()]
+            lines = list(filter(lambda x: len(x) > 0, lines))
 
             if data is None:
                 nz = len(lines)
@@ -67,7 +67,7 @@ def read_data(folder = "data/1950-1960-ECHO-G-profiles"):
 
             the_id = int(re.findall("\d+", file)[0])
             i, j = id_to_hor_indices[the_id]
-            profile = map(lambda x: float(x.split()[-1]), lines)
+            profile = [float(x.split()[-1]) for x in lines]
             data[i, j, :] = np.array(profile)[:]
             f.close()
         all_data.append( np.fliplr( data ))
@@ -77,7 +77,7 @@ def read_data(folder = "data/1950-1960-ECHO-G-profiles"):
 
     rpn_obj.write_2D_field(grid_type="A", ig = [0, 0, 0, 0],data=np.fliplr(land_sea_mask), name = "MASK")
 
-    for level in xrange(nz):
+    for level in range(nz):
         #longitudinal grid length is 360/NI. For such a grid,
         #IG1 contains the domain of the grid: 0: Global
         #1: Northern Hemisphere
@@ -99,5 +99,5 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

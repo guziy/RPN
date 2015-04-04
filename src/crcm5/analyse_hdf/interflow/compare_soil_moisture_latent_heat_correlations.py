@@ -13,7 +13,7 @@ import numpy as np
 __author__ = 'san'
 
 import matplotlib.pyplot as plt
-from calculate_interflow_correlations import calculate_correlation_field_for_climatology
+from .calculate_interflow_correlations import calculate_correlation_field_for_climatology
 import crcm5.analyse_hdf.do_analysis_using_pytables as analysis
 from mpl_toolkits.basemap import maskoceans
 
@@ -30,7 +30,7 @@ def plot_for_simulation(axis=None, sim_path="", cmap=None, cnorm=None,
     """
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     lons, lats, bm = analysis.get_basemap_from_hdf(sim_path)
 
@@ -58,7 +58,7 @@ def plot_for_simulation(axis=None, sim_path="", cmap=None, cnorm=None,
 def plot_correlation_diff(sim_label_to_corr, file_for_basemap="", ax=None, cnorm=None, cmap=None):
     lons, lats, bm = analysis.get_basemap_from_hdf(file_path=file_for_basemap)
     x, y = bm(lons, lats)
-    im = bm.pcolormesh(x, y, sim_label_to_corr.values()[1] - sim_label_to_corr.values()[0], cmap=cmap, norm=cnorm)
+    im = bm.pcolormesh(x, y, list(sim_label_to_corr.values())[1] - list(sim_label_to_corr.values())[0], cmap=cmap, norm=cnorm)
     ax.set_title("(2) - (1)")
     bm.drawmapboundary(fill_color="0.75")
     return im
@@ -102,7 +102,7 @@ def main(months=None):
 
     im = None
     sim_label_to_corr = OrderedDict()
-    for col, (sim_label, sim_path) in enumerate(label_to_path.iteritems()):
+    for col, (sim_label, sim_path) in enumerate(label_to_path.items()):
         ax = fig.add_subplot(gs[0, col])
         im, corr = plot_for_simulation(axis=ax, sim_path=sim_path, cmap=cmap, cnorm=cnorm,
                                        start_year=start_year, end_year=end_year, months=months)
@@ -118,7 +118,7 @@ def main(months=None):
     cnorm = BoundaryNorm(clevels, len(clevels) - 1)
     cmap = cm.get_cmap("RdBu_r", len(clevels) - 1)
 
-    im = plot_correlation_diff(sim_label_to_corr, file_for_basemap=label_to_path.values()[0],
+    im = plot_correlation_diff(sim_label_to_corr, file_for_basemap=list(label_to_path.values())[0],
                                ax=fig.add_subplot(gs[0, nsims + 1]), cnorm=cnorm, cmap=cmap)
 
     plt.colorbar(im, cax=fig.add_subplot(gs[0, nsims + 2]))
@@ -129,9 +129,9 @@ if __name__ == '__main__':
     import application_properties
     application_properties.set_current_directory()
     seasons = (
-        range(3, 6),
-        range(6, 9),
-        range(9, 12)
+        list(range(3, 6)),
+        list(range(6, 9)),
+        list(range(9, 12))
     )
 
     for months in seasons:

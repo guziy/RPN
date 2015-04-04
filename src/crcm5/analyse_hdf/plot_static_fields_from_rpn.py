@@ -1,7 +1,7 @@
 __author__ = 'huziy'
 
 
-import plot_static_fields as psf
+from . import plot_static_fields as psf
 from rpn.rpn import RPN
 import numpy as np
 import pandas as pd
@@ -26,7 +26,7 @@ def main(path = "/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_Quebec_0.1deg_2
         data = np.ma.masked_where(data < 0, data)
         lons2d, lats2d = r.get_longitudes_and_latitudes_for_the_last_read_rec()
         params = r.get_proj_parameters_for_the_last_read_rec()
-        print params
+        print(params)
         rll = RotatedLatLon(**params)
         b = rll.get_basemap_object_for_lons_lats(lons2d, lats2d)
         x, y = b(lons2d, lats2d)

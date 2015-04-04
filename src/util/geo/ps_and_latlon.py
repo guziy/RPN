@@ -71,9 +71,9 @@ if __name__ == "__main__":
     d = 45000.0
     lat, lon = psxy2latlon(10.0 / d, 0.0 / d)
 
-    print lon, lat
+    print(lon, lat)
 
     x, y = latlon2psxy(lat, lon)
-    print x * d, y * d
+    print(x * d, y * d)
 
-    print "Hello World"
+    print("Hello World")

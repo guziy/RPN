@@ -15,7 +15,7 @@ def _get_data(nc):
     lats = nc.variables['lat'][:, :]
     lons = nc.variables['lon'][:, :]
 
-    print nc.variables.keys()
+    print(list(nc.variables.keys()))
     if "PR" in nc.variables:
         data = nc.variables["PR"][0].squeeze()
     elif "air" in nc.variables:
@@ -32,7 +32,7 @@ def demo1():
     data = np.ma.masked_values(data, -999.)
     m = Basemap(projection='npstere', lon_0=10, boundinglat=30, resolution='l')
     x, y = m(lons, lats)
-    print data.min(), data.max()
+    print(data.min(), data.max())
     m.drawcoastlines()
     m.contourf(x, y, data, 20)
     m.drawmeridians(np.arange(-180, 180, 20))
@@ -60,9 +60,9 @@ def demo2():
     lonp = 0
     latp = 90.0
     lon_0 = -180
-    if nc.variables.has_key("rotated_pole"):
+    if "rotated_pole" in nc.variables:
         prj_info = nc.variables["rotated_pole"]
-        print dir(prj_info)
+        print(dir(prj_info))
         lonp = prj_info.grid_north_pole_longitude
         latp = prj_info.grid_north_pole_latitude
         lon_0 = prj_info.north_pole_grid_longitude
@@ -90,5 +90,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -28,17 +28,17 @@ def select_last_year(inPath, outPath = None, label = "last 6 year", npas_range =
         varname = info["varname"].value
         #
         if (npas not in npas_range) and varname.strip() not in [">>", "^^"]  : continue
-        print npas
+        print(npas)
 
         dateo = info["dateo"]
         if nbits > 0:
             nbits = -nbits
 
-        print "nbits = {0}, data_type = {1}".format(nbits, data_type)
+        print("nbits = {0}, data_type = {1}".format(nbits, data_type))
 
         rObjOut.write_2D_field(name = varname,
-            data = data, ip = map(lambda x: x.value, info["ip"]),
-            ig = map(lambda x: x.value, info["ig"]),
+            data = data, ip = [x.value for x in info["ip"]],
+            ig = [x.value for x in info["ig"]],
             npas = npas, deet=deet, label=label, dateo = dateo,
             grid_type=info["grid_type"].value, typ_var=info["var_type"].value,
             nbits = nbits, data_type = data_type
@@ -70,5 +70,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

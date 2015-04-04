@@ -93,8 +93,8 @@ def plot_default_topo(bmap,x, y, data):
     #axins.set_xlim(lower_left_xy[0], lower_left_xy[0] + 400000)
     #axins.set_ylim(lower_left_xy[1], lower_left_xy[1] + 5000000)
 
-    print lower_left_xy
-    print upper_right_xy
+    print(lower_left_xy)
+    print(upper_right_xy)
 
 
     #bm_zoom.etopo(ax=axins)

@@ -16,7 +16,7 @@ def combine():
     path2 = "/skynet1_rech3/huziy/Converters/NetCDF_converter/champs_st.rpnw"
     r = RPN(path2)
     mk = r.get_first_record_for_name("MK")
-    print r.get_dateo_of_last_read_record()
+    print(r.get_dateo_of_last_read_record())
     lons2d, lats2d = r.get_longitudes_and_latitudes_for_the_last_read_rec()
     r.close()
 
@@ -47,7 +47,7 @@ def main():
     #path = "/skynet1_rech3/huziy/Converters/NetCDF_converter/champs_st.rpnw"
     r = RPN(path)
     mk = r.get_first_record_for_name("MK")
-    print r.get_dateo_of_last_read_record()
+    print(r.get_dateo_of_last_read_record())
     lons2d, lats2d = r.get_longitudes_and_latitudes_for_the_last_read_rec()
     r.close()
 

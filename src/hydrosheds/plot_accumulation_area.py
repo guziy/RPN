@@ -64,7 +64,7 @@ def main():
 
     data = np.ma.masked_where(data <= 0, data)
 
-    print ds.variables.keys()
+    print(list(ds.variables.keys()))
 
     lons = ds.variables["lon"][:]
     lats = ds.variables["lat"][:]

@@ -30,7 +30,7 @@ def main(path = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NE
         f_path = os.path.join(path, f)
         ds = Dataset(f_path)
 
-        for vname, var in ds.variables.iteritems():
+        for vname, var in ds.variables.items():
 
 
             if vname not in ["u10", "v10"]:
@@ -45,12 +45,12 @@ def main(path = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NE
                     end_date = start_date + ntimes * dt
                     dates = pd.DatetimeIndex(start = start_date, end = end_date,
                                              freq = pd.DateOffset(seconds = dtsec))
-                    print vname
-                    print dt, start_date, end_date
-                    print dates[0], dates[-1]
+                    print(vname)
+                    print(dt, start_date, end_date)
+                    print(dates[0], dates[-1])
 
                     ny, nx = data[0, :, :].shape
-                    p = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
+                    p = pd.Panel(data=data, items=dates, major_axis=list(range(ny)), minor_axis=list(range(nx)))
 
 
 

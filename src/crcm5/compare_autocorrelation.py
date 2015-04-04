@@ -52,12 +52,12 @@ def main():
         #line_obs = ax.plot(t, s_data, label = "Observation", lw = 3, color = "r")
 
         model_ts = model_ts.get_ts_of_daily_means()
-        print model_ts.time[0], model_ts.time[-1]
-        print model_ts.data[0:10]
+        print(model_ts.time[0], model_ts.time[-1])
+        print(model_ts.data[0:10])
 
         mod_vals = model_ts.get_data_for_dates(s.dates)
-        print mod_vals[:20]
-        print "+" * 20
+        print(mod_vals[:20])
+        print("+" * 20)
         assert len(mod_vals) == len(s.dates)
 
         #model_acorr = [1] + [ np.corrcoef([mod_vals[i:], mod_vals[:-i]])[0,1] for i in range(1,len(mod_vals)) ]
@@ -65,7 +65,7 @@ def main():
 
 
 
-        npoints = np.array(range(len(mod_vals), 0, -1))
+        npoints = np.array(list(range(len(mod_vals), 0, -1)))
 
         model_acorr = np.correlate(mod_vals, mod_vals, mode="full")
         model_acorr = model_acorr[len(model_acorr) / 2:] / max(model_acorr)
@@ -75,7 +75,7 @@ def main():
         obs_acorr = obs_acorr[len(obs_acorr) / 2 :] / max(obs_acorr)
         obs_acorr /= npoints
 
-        print len(model_acorr), len(s.dates)
+        print(len(model_acorr), len(s.dates))
 
         line_model = ax.plot(s.dates, model_acorr, label = "Model (CRCM5)", lw = 1, color = "b")
         line_obs = ax.plot(s.dates, obs_acorr, label = "Observation", lw = 3, color = "r", alpha = 0.5)
@@ -88,7 +88,7 @@ def main():
                         model_ts.metadata["distance_to_obs"]))
 
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1,13, 2)))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1,13, 2))))
 
     lines = (line_model, line_obs)
     labels = ("Model (CRCM5)", "Observation" )
@@ -101,5 +101,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

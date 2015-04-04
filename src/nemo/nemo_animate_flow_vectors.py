@@ -26,7 +26,7 @@ def main_for_lake(bathy_path = "",
     :return:
     """
     the_mask = nemo_commons.get_mask(bathy_path)
-    print the_mask.shape
+    print(the_mask.shape)
     scalar_levels = np.arange(-25, 30, 5)
 
 
@@ -47,7 +47,7 @@ def main_for_lake(bathy_path = "",
 
         if scalar_manager is not None:
             data = scalar_manager.get_next_time_frame_data()
-            print data.shape
+            print(data.shape)
             img = basemap.pcolormesh(x, y, np.ma.masked_where(~the_mask, data),
                                      vmin=scalar_levels[0], vmax=scalar_levels[-1], zorder=-6)
             basemap.colorbar()
@@ -61,7 +61,7 @@ def main_for_lake(bathy_path = "",
         basemap.drawcoastlines()
         basemap.drawmapboundary(fill_color="gray")
         plt.title(str(manager_u.get_current_time()).split()[0])
-        print str(manager_u.get_current_time()).split()[0]
+        print(str(manager_u.get_current_time()).split()[0])
 
         fig.savefig(os.path.join(img_dir, "{0:08d}.png".format(frame)))
         plt.close(fig)

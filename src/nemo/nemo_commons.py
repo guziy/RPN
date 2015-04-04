@@ -10,7 +10,7 @@ mean_earth_radius_km_crcm5 = mean_earth_radius_m_crcm5 * 1.0e-3
 
 varname_to_colorlevels = {
     "sosstsst": [0, 2, 4, 8, 10, 12, 13, 14, 15, 18, 20, 25, 30],
-    "votemper": range(0, 30, 2)
+    "votemper": list(range(0, 30, 2))
 
 }
 
@@ -18,7 +18,7 @@ varname_to_cmapname = {
     "sosstsst": "coolwarm",
     "votemper": "jet"
 }
-import generate_grid.nemo_domain_properties as domprops
+from . import generate_grid.nemo_domain_properties as domprops
 
 
 lake_to_folder_with_sim_data_1981_2000_seplakes_exp = {

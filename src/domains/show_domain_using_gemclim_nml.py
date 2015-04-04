@@ -47,7 +47,7 @@ def _parse_parameters(path):
             # parse the values of the parameters
             if select_in_progress:
                 fields = line.split(",")
-                print line
+                print(line)
                 for the_field in fields:
                     # skip fields that do not contain "="
                     if "=" not in the_field:
@@ -69,7 +69,7 @@ def _parse_parameters(path):
 
 def main(path="/skynet3_rech1/huziy/gemclim_settings.nml"):
     params = _parse_parameters(path)
-    print params
+    print(params)
 
     ni, nj = 140, 140  # params[Grd_ni_name], params[Grd_nj_name]
     dx, dy = params[Grd_dx_name], params[Grd_dy_name]
@@ -83,7 +83,7 @@ def main(path="/skynet3_rech1/huziy/gemclim_settings.nml"):
     lats_rot = np.arange(latRef + (0 - jRef) * dy, latRef + (nj - jRef) * dy, dy)
 
     lats_rot, lons_rot = np.meshgrid(lats_rot, lons_rot)
-    print lats_rot.shape
+    print(lats_rot.shape)
     # lons_rot[lons_rot > 180] -= 360
 
     rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
@@ -96,7 +96,7 @@ def main(path="/skynet3_rech1/huziy/gemclim_settings.nml"):
 
     b = Basemap(projection="rotpole", lon_0=truepole_lonr - 180, o_lat_p=rotpole_lat, o_lon_p=rotpole_lon,
                 llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat)
-    print lons_rot[0, 0], lats_rot[0, 0], lons_rot[-1, -1], lats_rot[-1, -1]
+    print(lons_rot[0, 0], lats_rot[0, 0], lons_rot[-1, -1], lats_rot[-1, -1])
     b.contourf(lons_rot, lats_rot, lons_rot)
     b.colorbar()
 
@@ -107,5 +107,5 @@ def main(path="/skynet3_rech1/huziy/gemclim_settings.nml"):
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -12,11 +12,11 @@ def main():
     gd = gdal.Open(path, GA_ReadOnly)
     assert isinstance(gd, gdal.Dataset)
     data = gd.ReadAsArray()
-    print np.min(data), np.max(data)
-    print data.shape
-    print type(data)
+    print(np.min(data), np.max(data))
+    print(data.shape)
+    print(type(data))
 
-    print gd.RasterXSize, gd.RasterYSize
+    print(gd.RasterXSize, gd.RasterYSize)
 
     geo_transform = gd.GetGeoTransform()
 
@@ -27,7 +27,7 @@ def main():
 
     lat_1d = lat_1d[::-1]
 
-    print lon_1d.shape, lat_1d.shape
+    print(lon_1d.shape, lat_1d.shape)
 
 
     data = np.flipud(data)

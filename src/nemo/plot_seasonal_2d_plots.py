@@ -48,7 +48,7 @@ for fname in os.listdir(EXP_DIR):
     elif fname.endswith("_grid_V.nc"):
         V_FILE_PATH = os.path.join(EXP_DIR, fname)
 
-import nemo_commons
+from . import nemo_commons
 
 EXP_NAME = os.path.basename(EXP_DIR)
 NEMO_IMAGES_DIR = os.path.join("nemo", EXP_NAME)
@@ -93,7 +93,7 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
 
     cube_seasonal = cube.aggregated_by("season", analysis.MEAN)
 
-    print cube_seasonal.shape
+    print(cube_seasonal.shape)
 
     #plot results
     fig = plt.figure(figsize=(7, 4))
@@ -110,7 +110,7 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
     vmin = None
     vmax = None
 
-    for i, season in zip(range(nplots), cube_seasonal.coord("season").points):
+    for i, season in zip(list(range(nplots)), cube_seasonal.coord("season").points):
 
         data = cube_seasonal.extract(iris.Constraint(season=season)).data
         the_min = data[the_mask].min()
@@ -122,10 +122,10 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
             vmin = min(the_min, vmin)
             vmax = max(the_max, vmax)
 
-    print "{0}: ".format(var_name), vmin, vmax
+    print("{0}: ".format(var_name), vmin, vmax)
     cs = None
-    for i, season in zip(range(nplots), cube_seasonal.coord("season").points):
-        print season
+    for i, season in zip(list(range(nplots)), cube_seasonal.coord("season").points):
+        print(season)
         row = i // ncols
         col = i % ncols
         ax = fig.add_subplot(gs[row, col])
@@ -140,7 +140,7 @@ def draw_seasonal_means_panel(path="", var_name="sosstsst"):
                 data = data[:, :, 0]
 
         to_plot = np.ma.masked_where(~the_mask, data)
-        print to_plot.min(), to_plot.max()
+        print(to_plot.min(), to_plot.max())
 
         cs = b.pcolormesh(x, y, to_plot, ax=ax, vmin=vmin, vmax=vmax, cmap=cm.get_cmap("jet", 20))
         b.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
@@ -185,7 +185,7 @@ def plot_vector_fields(u_path="", v_path="", u_name="vozocrtx", v_name="vomecrty
     cmap = cm.get_cmap("Accent", len(levels) - 1)
 
     for season in u_cube_seasonal.coord("season").points:
-        print season
+        print(season)
         fig = plt.figure(figsize=(8, 4))
 
         ax = fig.add_subplot(111)

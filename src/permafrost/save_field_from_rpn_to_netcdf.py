@@ -3,8 +3,8 @@ from netCDF4 import Dataset
 import os
 from scipy.spatial.kdtree import KDTree
 import application_properties
-import draw_regions
-from active_layer_thickness import CRCMDataManager
+from . import draw_regions
+from .active_layer_thickness import CRCMDataManager
 from util.geo import lat_lon
 
 __author__ = 'huziy'
@@ -27,14 +27,14 @@ def main(nc_path = "swe_era40_b1.nc"):
     #data_folder = "/skynet1_rech3/huziy/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1_dm"
     data_folder = "/skynet1_rech3/huziy/cordex/CORDEX_DIAG/era40_driven_b1"
 
-    year_range = range(1958, 2009)
+    year_range = list(range(1958, 2009))
 
 
     dm = CRCMDataManager(data_folder=data_folder)
     pool = Pool(processes=10)
     n_years = len(year_range)
     months = [12,1,2]
-    input = zip([dm] * n_years, year_range, [var_name] * n_years, [months] * n_years)
+    input = list(zip([dm] * n_years, year_range, [var_name] * n_years, [months] * n_years))
     data = pool.map(_get_average, input)
     data = np.array(data)
 
@@ -85,12 +85,12 @@ def test_evol_for_point():
     xo,yo,zo = lat_lon.lon_lat_to_cartesian(sel_lons, sel_lats)
 
     xi, yi, zi = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-    ktree = KDTree(zip(xi,yi,zi))
-    dists, indexes =  ktree.query(zip(xo,yo,zo))
+    ktree = KDTree(list(zip(xi,yi,zi)))
+    dists, indexes =  ktree.query(list(zip(xo,yo,zo)))
 
 
-    print len(indexes)
-    print indexes
+    print(len(indexes))
+    print(indexes)
     idx = indexes[0]
 
     import matplotlib.pyplot as plt
@@ -113,5 +113,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     test_evol_for_point()
     #main()
-    print "Hello world"
+    print("Hello world")
   

@@ -180,13 +180,13 @@ def get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False, varname = None, d
             delta = max(abs(vmax), abs(vmin))
             assert ncolors % 2 == 1
             d = 2.0 * delta / float(ncolors)
-            print d, np.log10(d)
+            print(d, np.log10(d))
             ndec = -int(np.floor(np.log10(d)))
-            print ndec
+            print(ndec)
             d = np.round(d, decimals=ndec)
 
             assert d > 0
-            print "ncolors = {0}".format(ncolors)
+            print("ncolors = {0}".format(ncolors))
 
             negats = [-d / 2.0 - d * i for i in range((ncolors - 1) / 2)]
             bounds = negats[::-1] + [-the_bound for the_bound in negats]

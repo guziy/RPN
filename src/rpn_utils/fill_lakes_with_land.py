@@ -55,12 +55,12 @@ def main():
     sand_glob = inRpnObj.get_2D_field_on_all_levels(name="SAND")
 
     lonsG, latsG = inRpnObj.get_longitudes_and_latitudes_for_the_last_read_rec()
-    print lonsG.shape
-    print lonsG.min(), lonsG.max(), lonsG.mean()
+    print(lonsG.shape)
+    print(lonsG.min(), lonsG.max(), lonsG.mean())
     sandg1 = sand_glob[1]
-    print "min: {0}; max: {1}; mean: {2}".format(sandg1.min(), sandg1.max(), sandg1.mean())
+    print("min: {0}; max: {1}; mean: {2}".format(sandg1.min(), sandg1.max(), sandg1.mean()))
     info = inRpnObj.get_current_info
-    print info[RPN.GRID_TYPE].value
+    print(info[RPN.GRID_TYPE].value)
 
 
     thirdLevelIp1 = inRpnObj.get_ip1_from_level(3)
@@ -83,9 +83,9 @@ def main():
         if nbits > 0:
             nbits = -nbits
 
-        print "nbits = {0}, data_type = {1}".format(nbits, data_type)
+        print("nbits = {0}, data_type = {1}".format(nbits, data_type))
 
-        ips =  map(lambda x: x.value, info["ip"])
+        ips =  [x.value for x in info["ip"]]
         dateo = info["dateo_rpn_format"].value
 
 
@@ -102,7 +102,7 @@ def main():
 
         outRpnObj.write_2D_field(name = info["varname"].value,
             data = data, ip = ips,
-            ig = map(lambda x: x.value, info["ig"]),
+            ig = [x.value for x in info["ig"]],
             npas = info["npas"].value, deet=info["dt_seconds"].value,
             label="IC,lake infl.exp.(nolakes)", dateo = dateo,
             grid_type=info["grid_type"].value, typ_var=info["var_type"].value,
@@ -134,5 +134,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

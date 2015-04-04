@@ -126,7 +126,7 @@ def plot_at_indices(ix,jy):
 
         sim_label_to_profiles[label] = np.array(profiles)
 
-    x = range(12)
+    x = list(range(12))
     y = layer_depths
 
     y2d, x2d = np.meshgrid(y, x)
@@ -215,14 +215,14 @@ def main():
 
 
     sim_label_to_profiles = {}
-    for s, mp in station_to_mp.iteritems():
+    for s, mp in station_to_mp.items():
         assert isinstance(mp, ModelPoint)
         mask = (mp.flow_in_mask == 1) & (lake_fraction < 0.6)
         fig = plt.figure()
         fmt = ScalarFormatter(useMathText=True)
         fmt.set_powerlimits([-2, 2])
 
-        print mp.ix, mp.jy, s.id
+        print(mp.ix, mp.jy, s.id)
 
         for m, label, color in zip(managers, sim_labels, colors):
             assert isinstance(m, Crcm5ModelDataManager)
@@ -280,5 +280,5 @@ if __name__ == "__main__":
     from util import plot_utils
     plot_utils.apply_plot_params(width_pt=None, width_cm=30, height_cm=15, font_size=20)
     main()
-    print "Hello world"
+    print("Hello world")
   

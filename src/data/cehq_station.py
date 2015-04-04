@@ -55,8 +55,8 @@ class Station:
         return None if there is even a single month for which there is no data
         """
         result = np.zeros((12,))
-        for m in xrange(1, 13):
-            bool_vector = map(lambda x: x.month == m, self.dates)
+        for m in range(1, 13):
+            bool_vector = [x.month == m for x in self.dates]
             indices = np.where(bool_vector)[0]
 
             if not len(indices): return None
@@ -87,9 +87,9 @@ class Station:
 
         daily_means = []
         for stamp_day in year_dates:
-            bool_vector = map(lambda x: x.day == stamp_day.day and
+            bool_vector = [x.day == stamp_day.day and
                                         x.month == stamp_day.month and
-                                        start_date <= x <= end_date, self.dates)
+                                        start_date <= x <= end_date for x in self.dates]
 
             indices = np.where(bool_vector)[0]
             if not len(indices): return None, None
@@ -100,7 +100,7 @@ class Station:
 
     def get_value_for_date(self, the_date):
         if len(self.date_to_value) != len(self.dates):
-            self.date_to_value = dict(zip(self.dates, self.values))
+            self.date_to_value = dict(list(zip(self.dates, self.values)))
         return self.date_to_value[the_date]
 
     def remove_all_observations(self):
@@ -122,7 +122,7 @@ class Station:
         for d, v in zip(to_remove_dates, to_remove_values):
             self.dates.remove(d)
             self.values.remove(v)
-            if self.date_to_value.has_key(d):
+            if d in self.date_to_value:
                 del self.date_to_value[d]
         assert len(self.dates) == len(self.date_to_value)
 
@@ -131,7 +131,7 @@ class Station:
         if self.dates[0].year >= year:
             return
 
-        for the_year in xrange(self.dates[0].year, year):
+        for the_year in range(self.dates[0].year, year):
             self.delete_data_for_year(the_year)
 
 
@@ -139,7 +139,7 @@ class Station:
         if self.dates[-1].year <= year:
             return
 
-        for the_year in xrange(year + 1, self.dates[-1].year + 1):
+        for the_year in range(year + 1, self.dates[-1].year + 1):
             self.delete_data_for_year(the_year)
 
 
@@ -164,7 +164,7 @@ class Station:
                 result[the_date] = value
                 previous_date = the_date
 
-        print len(result)
+        print(len(result))
         return result
         pass
 
@@ -186,7 +186,7 @@ class Station:
 
         series_list = sorted(series_list, key=lambda x: len(x))
 
-        print map(len, series_list)
+        print(list(map(len, series_list)))
         return series_list[-1]
 
 
@@ -235,7 +235,7 @@ class Station:
 
             if '(nad83)' in line_lower:
                 groups = re.findall(r"-\d+|\d+", line_lower.replace(' ', '').replace('(nad83)', ''))
-                groups = map(float, groups)
+                groups = list(map(float, groups))
 
                 self.latitude = _get_degrees(groups[0:3])
                 self.longitude = _get_degrees(groups[3:])
@@ -259,9 +259,9 @@ class Station:
                 dates.append(fields[1])
                 values.append(fields[2])
 
-        self.dates = map(lambda t: datetime.strptime(t, '%Y/%m/%d'), dates)
-        self.values = map(float, values)
-        self.date_to_value = dict(zip(self.dates, self.values))
+        self.dates = [datetime.strptime(t, '%Y/%m/%d') for t in dates]
+        self.values = list(map(float, values))
+        self.date_to_value = dict(list(zip(self.dates, self.values)))
 
 
     def info(self):
@@ -295,7 +295,7 @@ class Station:
         delete values corresponding to the dates later than the_date,
         does not delete the value corresponding to the_date
         """
-        vector = map(lambda x: x > the_date, self.dates)
+        vector = [x > the_date for x in self.dates]
 
         if True not in vector:
             return
@@ -319,7 +319,7 @@ class Station:
         delete values corresponding to the dates earlier than the_date,
         does not delete the value corresponding to the_date
         """
-        vector = map(lambda x: x < the_date, self.dates)
+        vector = [x < the_date for x in self.dates]
 
         if True not in vector:
             return
@@ -338,7 +338,7 @@ class Station:
 
     def passes_rough_continuity_test(self, start_date, end_date):
         nyears = end_date.year - start_date.year + 1
-        nentries = sum(map(lambda t: int(start_date <= t <= end_date), self.dates))
+        nentries = sum([int(start_date <= t <= end_date) for t in self.dates])
         return nentries >= 365 * nyears
 
     def get_list_of_complete_years(self):
@@ -402,7 +402,7 @@ class Station:
 
 
     def __str__(self):
-        return u"Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
+        return "Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
                                                                                          self.longitude,
                                                                                          self.latitude,
                                                                                          self.drainage_km2)
@@ -452,7 +452,7 @@ class Station:
                 self.dates.append(date)
                 self.values.append(val)
 
-        self.date_to_value = dict(zip(self.dates, self.values))
+        self.date_to_value = dict(list(zip(self.dates, self.values)))
 
     def read_data_from_hydat_db_results(self, data, start_date=None, end_date=None, variable="streamflow"):
         """
@@ -498,7 +498,7 @@ class Station:
 
         self.dates = df.index
         self.values = df.values.flatten()
-        self.date_to_value = dict(zip(self.dates, self.values))
+        self.date_to_value = dict(list(zip(self.dates, self.values)))
 
         pass
 
@@ -518,11 +518,11 @@ def print_info_of(station_ids):
         s = Station()
         path = 'data/cehq_measure_data/%06d_Q.txt' % the_id
         s.parse_from_cehq(path)
-        print s.info()
+        print(s.info())
 
 
 def _get_station_for_id(the_id, st_list):
-    return itertools.ifilter(lambda x: x.id == the_id, st_list).next()
+    return next(itertools.ifilter(lambda x: x.id == the_id, st_list))
 
 
 def read_station_data(folder='data/cehq_measure_data',
@@ -570,9 +570,9 @@ def read_station_data(folder='data/cehq_measure_data',
                 stations.append(s)
 
     if selected_ids is not None:
-        stations = map(lambda x: _get_station_for_id(x, stations), selected_ids)
+        stations = [_get_station_for_id(x, stations) for x in selected_ids]
 
-    print u"Got {0} stations from {1}".format(len(stations), folder)
+    print("Got {0} stations from {1}".format(len(stations), folder))
     return stations
 
 
@@ -626,8 +626,8 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
     descr_file.close()
 
     fields = lines[0].split()
-    print fields
-    print fields[3], fields[-2], fields[-1], fields[4], fields[6]
+    print(fields)
+    print(fields[3], fields[-2], fields[-1], fields[4], fields[6])
 
     for line in lines[1:]:
         line = line.strip()
@@ -728,15 +728,15 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     cur.execute("SELECT * FROM Version;")
     for the_row in cur:
-        print the_row.keys()
-        print "using hydat version {0} generated on " \
-              "{1}".format(the_row["Version"], datetime.fromtimestamp(the_row["Date"] / 1000.0))
+        print(list(the_row.keys()))
+        print("using hydat version {0} generated on " \
+              "{1}".format(the_row["Version"], datetime.fromtimestamp(the_row["Date"] / 1000.0)))
 
     cur.execute("SELECT name FROM sqlite_master WHERE type = 'table';")
 
     table_names = cur.fetchall()
 
-    print table_names
+    print(table_names)
 
     for table_data in table_names:
         #print "Table: {0}".format(table_data["name"])
@@ -753,8 +753,8 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         cur.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;", (table_data["name"],))
 
         scheme = cur.fetchone()
-        print scheme
-        print "++++" * 20
+        print(scheme)
+        print("++++" * 20)
 
 
     #create station objects using data from sqlite db
@@ -766,15 +766,15 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
                                                                             station_regulation_table,
                                                                             province_field,
                                                                             int(not natural))
-    print "query = {0}".format(query)
+    print("query = {0}".format(query))
     cur.execute(query, (province, province.lower()))
 
     data = cur.fetchall()
 
-    print data[0].keys()
+    print(list(data[0].keys()))
 
-    print "Fetched the following station: "
-    print "There are {0} non-regulated stations in {1}.".format(len(data), province)
+    print("Fetched the following station: ")
+    print("There are {0} non-regulated stations in {1}.".format(len(data), province))
 
     #the_row = cur.fetchone()
 
@@ -821,7 +821,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     #print the_row[province_field]
     connect.close()
     if len(stations) == 0:
-        print "Warning: could not find acceptable stations for hydat in {0} region".format(province)
+        print("Warning: could not find acceptable stations for hydat in {0} region".format(province))
     return stations
     #pickle.dump(stations, open(cache_file, mode="w"))
 
@@ -847,7 +847,7 @@ if __name__ == "__main__":
     #print np.max(s.dates)
     t0 = time.clock()
     load_from_hydat_db(province='ON', start_date=datetime(1979, 1, 1), end_date=datetime(1988, 12, 31))
-    print "Execution time is: {0} seconds".format(time.clock() - t0)
+    print("Execution time is: {0} seconds".format(time.clock() - t0))
     #slist = read_grdc_stations(st_id_list=["2903430", "2909150", "2912600", "4208025"],
     #    descriptor_file_path="/skynet3_rech1/huziy/GRDC_all_stations/GRDC663Sites.txt")
     #
@@ -855,4 +855,4 @@ if __name__ == "__main__":
     #    assert isinstance(s, Station)
     #    print s.drainage_km2
 
-    print "Hello World"
+    print("Hello World")

@@ -68,17 +68,17 @@ rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0
 
 
 def _get_values(sim_name, varname, start_year, end_year, months = None):
-    print varname, sim_name
+    print(varname, sim_name)
 
     if months is None:
-        months_local = np.array(range(12))
+        months_local = np.array(list(range(12)))
     else:
         months_local = np.array(months) - 1
 
 
     nc_data_folder = os.path.join(nc_db_folder, sim_name)
     path = os.path.join(nc_data_folder, "{0}.nc4".format(varname))
-    print "reading {0}".format(path)
+    print("reading {0}".format(path))
     ds = Dataset(path)
     years = ds.variables["year"][:]
     sel = np.where( (start_year <= years) & (years <= end_year) )[0]
@@ -139,7 +139,7 @@ def main(months = None):
         elif var_name == "AV":
             coef = 3 * 60 * 60
         #cmap.set_bad("0.6")
-        print var_name
+        print(var_name)
         v1 = _get_values(sim_name1, var_name, start_year, end_year, months = months)
         v2 = _get_values(sim_name2, var_name, start_year, end_year, months = months)
 
@@ -161,12 +161,12 @@ def main(months = None):
         if var_name in ["STFL"]:
             dv = np.ma.masked_where((lkfr >= 0.6), dv)
 
-            print months
+            print(months)
 
             i_interest, j_interest = np.where(dv > 53)
-            print i_interest, j_interest
+            print(i_interest, j_interest)
             dv = maskoceans(lons, lats, dv)
-            print 10 * "*"
+            print(10 * "*")
         elif var_name in ["TDRA", "TRAF"]:
             dv = maskoceans(lons, lats, dv)
         else:
@@ -175,8 +175,8 @@ def main(months = None):
         dv = np.ma.masked_where(p > 1, dv) #mask changes not significant to the 10 % level
 
         if not np.all(dv.mask):
-            print "{0}: min = {1}; max = {2}".format(var_name, dv.min(), dv.max())
-            print ""
+            print("{0}: min = {1}; max = {2}".format(var_name, dv.min(), dv.max()))
+            print("")
             max_abs = np.ma.max(np.abs(dv))
             delta = max_abs
             the_power = np.log10(delta)
@@ -213,7 +213,7 @@ def main(months = None):
 
             bn = BoundaryNorm(levels, cmap.N) if len(levels) > 0 else None
 
-            print "delta={0}; step={1}; the_power={2}".format(delta, step, the_power)
+            print("delta={0}; step={1}; the_power={2}".format(delta, step, the_power))
 
             the_img = basemap.pcolormesh(x, y, dv, cmap=cmap, vmin = -delta, vmax = delta, norm = bn)
 
@@ -233,7 +233,7 @@ def main(months = None):
 
 
     bbox_props = dict(boxstyle="rarrow,pad=0.3", fc="wheat", ec="b", lw=2)
-    label = "-".join(map(lambda d: d.strftime("%b"), month_dates)) + "\n({0}-{1})".format(start_year, end_year)
+    label = "-".join([d.strftime("%b") for d in month_dates]) + "\n({0}-{1})".format(start_year, end_year)
     ax.annotate(label, xy = (0.1, 0.85), xycoords = "figure fraction", bbox = bbox_props,
         font_properties = FontProperties(size=15, weight="bold"))
 
@@ -242,7 +242,7 @@ def main(months = None):
     if months is None:
         fig.savefig("annual_mean_diffs_{0}_minus_{1}.jpeg".format(sim_name2, sim_name1))
     else:
-        print month_dates, months
+        print(month_dates, months)
         fig.savefig("seasonal_mean_{0}_diffs_{1}_minus_{2}.png".format("_".join(map(str, months)),
             sim_name2, sim_name1) )
     pass
@@ -259,5 +259,5 @@ if __name__ == "__main__":
         main(months= list( range(m,m+1) ))
     #main(months=range(6,9))
     #main(months=range(9,12))
-    print "Hello world"
+    print("Hello world")
   

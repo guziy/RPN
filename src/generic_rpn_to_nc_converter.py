@@ -65,7 +65,7 @@ def main():
 
     nx, ny = lons2d.shape
 
-    levels = data.items()[0][1].keys()
+    levels = list(data.items())[0][1].keys()
 
     ds.createDimension("lon", nx)
     ds.createDimension("lat", ny)
@@ -104,5 +104,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
     diagnose_mean()
-    print "Hello world"
+    print("Hello world")
   

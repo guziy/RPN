@@ -33,7 +33,7 @@ def main():
     img_name_prefix = "max_ice_cover_"
 
 
-    for col, lake_name in column_to_lake_name_glsea.iteritems():
+    for col, lake_name in column_to_lake_name_glsea.items():
         folder_path = nemo_commons.lake_to_folder_with_sim_data_1981_2000_seplakes_exp[lake_name]
         fname_tgrid = None
         for fname in os.listdir(folder_path):

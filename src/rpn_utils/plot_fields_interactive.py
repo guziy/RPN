@@ -41,8 +41,8 @@ for the_field, the_title in zip( the_fields, the_titles ):
     plt.pcolormesh(the_field.transpose() % 1)
 
     dec = the_field % 1
-    print "dec-min,dec-max = {0};{1}".format(dec.min(), dec.max())
-    print coef_bf.min(), coef_bf.max()
+    print("dec-min,dec-max = {0};{1}".format(dec.min(), dec.max()))
+    print(coef_bf.min(), coef_bf.max())
     numrows, numcols = the_field.shape
 
     plt.title(the_title)
@@ -59,10 +59,10 @@ sorted_dates = sorted( data.keys() )
 
 
 for d in sorted_dates:
-    field2d = data[d].items()[0][1]
+    field2d = list(data[d].items())[0][1]
     #field2d = np.ma.masked_where(field2d < 0.001, field2d)
 
-    print "min={0}, max = {1}".format(field2d.min(), field2d.max())
+    print("min={0}, max = {1}".format(field2d.min(), field2d.max()))
 
     numrows, numcols = field2d.shape
     def format_coord(x, y):
@@ -81,7 +81,7 @@ for d in sorted_dates:
     plt.pcolormesh(field2d.transpose() % 1)
 
     dec = field2d % 1
-    print "dec-min,dec-max = {0};{1}".format(dec.min(), dec.max())
+    print("dec-min,dec-max = {0};{1}".format(dec.min(), dec.max()))
 
      
     plt.gca().format_coord = format_coord

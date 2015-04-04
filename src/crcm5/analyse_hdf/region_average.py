@@ -9,9 +9,9 @@ import pandas
 
 __author__ = 'huziy'
 
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 import matplotlib.pyplot as plt
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 import numpy as np
 import matplotlib as mpl
 from matplotlib import gridspec
@@ -99,7 +99,7 @@ def main():
         ax_graph.plot(t1, dv, label = "({0})-({1})".format(label2, label1), lw = 1)
         ax_graph.xaxis.set_major_formatter(DateFormatter("%b"))
         ax_graph.xaxis.set_minor_locator(MonthLocator())
-        ax_graph.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        ax_graph.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
         ax_graph.yaxis.set_major_locator(MaxNLocator(nbins=5))
         ax_graph.grid()
 

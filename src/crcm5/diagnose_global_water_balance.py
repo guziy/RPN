@@ -114,10 +114,10 @@ def main():
 
         ds += (sl_end + sr_end + sgw_end) - (sl_start + sr_start + sgw_start)
 
-        print "year = {0}".format(year)
-        print "Sgw(start, end), dSgw = {0}, {1}, {2}".format(sgw_start, sgw_end, sgw_end - sgw_start)
-        print "Slake(start, end), dSlake = {0}, {1}, {2}".format(sl_start, sl_end, sl_end - sl_start)
-        print "Sriv(start, end) = {0}, {1}, {2}".format(sr_start, sr_end, sr_end - sr_start)
+        print("year = {0}".format(year))
+        print("Sgw(start, end), dSgw = {0}, {1}, {2}".format(sgw_start, sgw_end, sgw_end - sgw_start))
+        print("Slake(start, end), dSlake = {0}, {1}, {2}".format(sl_start, sl_end, sl_end - sl_start))
+        print("Sriv(start, end) = {0}, {1}, {2}".format(sr_start, sr_end, sr_end - sr_start))
 
 
     ds /= float(end_year - start_year + 1)
@@ -131,25 +131,25 @@ def main():
 
     roff_sum = 0
     stfl_sum = 0
-    for year in sroff.keys():
+    for year in list(sroff.keys()):
         stfl_sum += np.sum( outlet_mask * stfl[year] )
         roff_sum += np.sum( rout_domain_mask * (sroff[year] + subsroff[year]) * base_data_manager.cell_area * 1e-3)
 
 
-    print "number of selected years = {0}".format(len(stfl))
+    print("number of selected years = {0}".format(len(stfl)))
     stfl_mean = stfl_sum / float(len(stfl))
     roff_mean = roff_sum / float(len(sroff))
 
-    print "Total runoff (annual mean, m**3/s): {0:g}".format( roff_mean )
-    print "Streamflow (annual mean, m**3/s): {0:g}".format( stfl_mean )
-    print "stfl - runoff (annual mean, m**3/s): {0:g}".format( stfl_mean - roff_mean )
+    print("Total runoff (annual mean, m**3/s): {0:g}".format( roff_mean ))
+    print("Streamflow (annual mean, m**3/s): {0:g}".format( stfl_mean ))
+    print("stfl - runoff (annual mean, m**3/s): {0:g}".format( stfl_mean - roff_mean ))
 
     #print "dS_riv = {0} m**3".format(sr_end - sr_start)
     #print "dS_lake = {0} m**3".format(sl_end - sl_start)
 
-    print "dS actual = {0:g} m**3".format(ds)
+    print("dS actual = {0:g} m**3".format(ds))
 
-    print "dS from balance = {0:g} m**3".format((roff_mean - stfl_mean) * 365 * 24 * 60 * 60)
+    print("dS from balance = {0:g} m**3".format((roff_mean - stfl_mean) * 365 * 24 * 60 * 60))
 
 
 
@@ -159,5 +159,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

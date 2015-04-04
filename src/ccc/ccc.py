@@ -103,7 +103,7 @@ class champ_ccc :
         # long_rec est ecrit en 32 bit (i.e. 4 bytes)
         long_rec = struct.unpack('>l',self._u.read(4))[0]
 
-        if debug : print 'longueur du record=',long_rec
+        if debug : print('longueur du record=',long_rec)
 
         if lecture : 
         
@@ -119,15 +119,15 @@ class champ_ccc :
                 # on ajuste la longueur du record a lire
                 long_rec=long_rec-16
 
-                if debug : print 'xmin,xmax=',xmin,xmax
-                if debug : print 'long_rec apres lecture xmin,xmax=',long_rec
+                if debug : print('xmin,xmax=',xmin,xmax)
+                if debug : print('long_rec apres lecture xmin,xmax=',long_rec)
             
 
             # choix du format selon le packing
             #format={1:'d',2:'l',4:'H'}[npack]
             # nouveau format car probleme sous python2.6 avec packing a 1 et 2
             format={1:'d',2:'I',4:'H'}[npack]
-            if debug : print 'format=',format
+            if debug : print('format=',format)
 
             # calcul de xscali (voir paccrn)
             if npack != 1 :
@@ -144,19 +144,19 @@ class champ_ccc :
             # on calcule la longueur minimum a lire
             nij=ibuf['ibuf5']*ibuf['ibuf6']
             if option_lecture == 1 :
-                if debug : print 'lecture option 1'
+                if debug : print('lecture option 1')
                 itemsize=struct.calcsize(format)
                 nb_elements_a_lire=long_rec/itemsize
                 format='>'+str(nb_elements_a_lire)+format
                 if debug :
-                    print 'format=',format
-                    print 'itemsize=',itemsize
-                    print 'long_rec=',long_rec
-                    print 'nij*itemsize=',nij*itemsize
+                    print('format=',format)
+                    print('itemsize=',itemsize)
+                    print('long_rec=',long_rec)
+                    print('nij*itemsize=',nij*itemsize)
                 vec_lu=struct.unpack(format,self._u.read(long_rec))
                 if debug : sys.exit()
             elif option_lecture == 2 :
-                if debug : print 'lecture option 2'
+                if debug : print('lecture option 2')
                 import array
                 vec_lu=array.array(format)
                 vec_lu.fromstring(self._u.read(long_rec))
@@ -164,24 +164,24 @@ class champ_ccc :
                 # si machine avec little indian, on
                 # ajuste le champ lu
                 if sys.byteorder == 'little' :
-                    if debug : print 'correction little endian'
+                    if debug : print('correction little endian')
                     vec_lu.byteswap()
                 
             # on ajuste la longueur du vecteur lu selon
             # les blancs lus
             nb_elements_lus = long_rec/itemsize
-            if debug : print 'itemsize=',itemsize
-            if debug : print 'nb_elements_lus=',nb_elements_lus
+            if debug : print('itemsize=',itemsize)
+            if debug : print('nb_elements_lus=',nb_elements_lus)
             if nb_elements_lus != nij :
                 # on enleve les elements lus pour rien
                 nb_val_par_64bits=8/itemsize
                 ###nb_val_par_64bits=8/vec_lu.itemsize
                 nb_elements_a_enlever=nb_val_par_64bits-nij%nb_val_par_64bits
                 if nb_elements_a_enlever > 0 :
-                    if debug : print 'on enleve ',nb_elements_a_enlever,' elements a vec_lu'
-                    if debug : print 'vec_lu avant =',vec_lu
+                    if debug : print('on enleve ',nb_elements_a_enlever,' elements a vec_lu')
+                    if debug : print('vec_lu avant =',vec_lu)
                     vec_lu=vec_lu[:-nb_elements_a_enlever]
-                    if debug : print 'vec_lu apres =',vec_lu
+                    if debug : print('vec_lu apres =',vec_lu)
                 
 
             ni=ibuf['ibuf5']
@@ -189,9 +189,9 @@ class champ_ccc :
 
             # verification de la coherence de taille des champs lus
             if ni*nj != len(vec_lu) :
-                print 50*'*'
-                print 'PROBLEME'
-                print "champ lu n'a pas la meme grosseur que specifie dans ibuf"
+                print(50*'*')
+                print('PROBLEME')
+                print("champ lu n'a pas la meme grosseur que specifie dans ibuf")
 
             # option
             # on tente differentes option pour accelerer le code
@@ -214,7 +214,7 @@ class champ_ccc :
             if debug == 1 :
                 for i in range(1,ni+1) :
                     for j in range (1,nj+1) :
-                        print '(%5i,%5i) val=%14.6e' % (i,j,champ[i-1,j-1])
+                        print('(%5i,%5i) val=%14.6e' % (i,j,champ[i-1,j-1]))
 
         else :
             # on ne fait qu'avancer le fichier
@@ -242,11 +242,11 @@ class champ_ccc :
             try :
                 ibuf=self._lit_ibuf()
             except self._message_fin_fichier :
-                print 'lecture de ',self.fichier,' terminee'
+                print('lecture de ',self.fichier,' terminee')
                 break
             compteur+=1
-            if compteur == 1 : print entete % self.fichier
-            print "%5i %4s %10i %4s %5i %5i %5i %5i %5i" % (compteur,ibuf['ibuf1'],ibuf['ibuf2'],ibuf['ibuf3'],ibuf['ibuf4'],ibuf['ibuf5'],ibuf['ibuf6'],ibuf['ibuf7'],ibuf['ibuf8'])
+            if compteur == 1 : print(entete % self.fichier)
+            print("%5i %4s %10i %4s %5i %5i %5i %5i %5i" % (compteur,ibuf['ibuf1'],ibuf['ibuf2'],ibuf['ibuf3'],ibuf['ibuf4'],ibuf['ibuf5'],ibuf['ibuf6'],ibuf['ibuf7'],ibuf['ibuf8']))
             self._decode_champ(ibuf)
                                  
 
@@ -268,14 +268,14 @@ class champ_ccc :
             try :
                 ibuf=self._lit_ibuf()
             except self._message_fin_fichier :
-                print 'lecture de ',self.fichier,' terminee'
+                print('lecture de ',self.fichier,' terminee')
                 break
             compteur+=1
             champ=self._decode_champ(ibuf,lecture=1,debug=debug,option_lecture=option_lecture)
-            if compteur == 1 : print entete % self.fichier
+            if compteur == 1 : print(entete % self.fichier)
             var=(champ-champ.mean())**2
             var=var.mean()
-            print "%5i %4s %10i %4s %5i %5i %5i %5i %5i %14.6e %14.6e %14.6e %14.6e" % (compteur,ibuf['ibuf1'],ibuf['ibuf2'],ibuf['ibuf3'],ibuf['ibuf4'],ibuf['ibuf5'],ibuf['ibuf6'],ibuf['ibuf7'],ibuf['ibuf8'],champ.min(),champ.max(),champ.mean(),var)
+            print("%5i %4s %10i %4s %5i %5i %5i %5i %5i %14.6e %14.6e %14.6e %14.6e" % (compteur,ibuf['ibuf1'],ibuf['ibuf2'],ibuf['ibuf3'],ibuf['ibuf4'],ibuf['ibuf5'],ibuf['ibuf6'],ibuf['ibuf7'],ibuf['ibuf8'],champ.min(),champ.max(),champ.mean(),var))
             
             
     def charge_champs(self, debug = 0, i1 = None,i2 = None, j1 = None, j2 = None):
@@ -295,10 +295,10 @@ class champ_ccc :
                 if debug:
                     t2 = time.time()
                     dt = t2-t1
-                    print 'lecture de ',self.fichier,' terminee'
+                    print('lecture de ',self.fichier,' terminee')
                     #print compteur,' champ lus'
                     txt = ('%10i champs lus en %3im%2is') % (compteur,dt/60,dt%60)
-                    print txt
+                    print(txt)
                 return champ_lu
 
 
@@ -314,9 +314,9 @@ class champ_ccc :
                 ibuf['ibuf5'] = ni
                 ibuf['ibuf6'] = nj
                 #
-            if compteur == 1 and debug : print entete % self.fichier
+            if compteur == 1 and debug : print(entete % self.fichier)
             if debug:
-                print "%5i %4s %10i %4s %5i %5i %5i %5i %5i" % (compteur,ibuf['ibuf1'],ibuf['ibuf2'],ibuf['ibuf3'],ibuf['ibuf4'],ibuf['ibuf5'],ibuf['ibuf6'],ibuf['ibuf7'],ibuf['ibuf8'])
+                print("%5i %4s %10i %4s %5i %5i %5i %5i %5i" % (compteur,ibuf['ibuf1'],ibuf['ibuf2'],ibuf['ibuf3'],ibuf['ibuf4'],ibuf['ibuf5'],ibuf['ibuf6'],ibuf['ibuf7'],ibuf['ibuf8']))
             record={'ibuf':ibuf,'field':champ}
             champ_lu.append(record)
         
@@ -327,7 +327,7 @@ class champ_ccc :
 import application_properties
 application_properties.set_current_directory()
 if __name__ == '__main__' :
-    print 'appel en programme'
+    print('appel en programme')
 
     option_test=1
 
@@ -336,12 +336,12 @@ if __name__ == '__main__' :
 
     import matplotlib.pyplot as plt
     fichier = test_path
-    print 'file: ',test_path
+    print('file: ',test_path)
     x = champ_ccc(fichier = test_path)
     x.ggstat(debug = 0, option_lecture = 2)
     field = x.charge_champs(0)
     plt.imshow(field[0]['field'])
     plt.savefig('field.png')
-    print field[0]['ibuf']
+    print(field[0]['ibuf'])
 
 

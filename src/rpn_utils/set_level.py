@@ -24,8 +24,8 @@ def main():
     inFile = os.path.join(folder, inFile)
     outFile = os.path.join(folder, outFile)
 
-    print "input: {0}".format(inFile)
-    print "output: {0}".format(outFile)
+    print("input: {0}".format(inFile))
+    print("output: {0}".format(outFile))
 
     inRObj = RPN(inFile)
 
@@ -37,7 +37,7 @@ def main():
     ipOfLevel1 = inRObj.get_ip1_from_level(1, level_kind = level_kinds.ARBITRARY)
     ipOfZeroMb = inRObj.get_ip1_from_level(0, level_kind = level_kinds.PRESSURE)
 
-    print "ip1(old, new) = {0}, {1}".format(oldLevelIp, newLevelIp)
+    print("ip1(old, new) = {0}, {1}".format(oldLevelIp, newLevelIp))
 
     outRObj = RPN(outFile, mode="w")
 
@@ -57,13 +57,13 @@ def main():
             break
         info = inRObj.get_current_info
 
-        ips =  map(lambda x: x.value, info["ip"])
+        ips =  [x.value for x in info["ip"]]
 
         the_var_name = info["varname"].value.strip()
 
         if the_var_name == "I5":
             i += 1
-            print "skipping swe from analysis, will be calculated from class data"
+            print("skipping swe from analysis, will be calculated from class data")
             continue
 
 
@@ -75,7 +75,7 @@ def main():
         if the_var_name == varname and ips[0] == oldLevelIp:
              #since CRCM expects snow depth in cm
             ips[0] = newLevelIp
-            print ips
+            print(ips)
             pass
 
         if the_var_name == varname and (ips[0] == oldLevelIp or ips[0] == newLevelIp):
@@ -92,7 +92,7 @@ def main():
         data_type = info["data_type"].value
         if nbits > 0:
             nbits = -nbits
-        print the_var_name, conv_coef
+        print(the_var_name, conv_coef)
 
         if the_var_name == "SD" and ips[0] == ipOfLevel1: #get snowdepth only for soil
             saved_vars[the_var_name] = data
@@ -105,27 +105,27 @@ def main():
 
         outRObj.write_2D_field(name = info["varname"].value,
             data = data * conv_coef, ip = ips,
-            ig = map(lambda x: x.value, info["ig"]),
+            ig = [x.value for x in info["ig"]],
             npas = npas, deet=deet, label="IC, lake infl. exp.", dateo = dateo,
             grid_type=info["grid_type"].value, typ_var=info["var_type"].value,
             nbits = nbits, data_type = data_type
         )
 
-        print   info["varname"].value, "->", nbits
+        print(info["varname"].value, "->", nbits)
 
 
         #calculate and write swe to the file
         if saved_vars is not None and len(saved_vars) == 3:
-            print "calculating swe"
+            print("calculating swe")
             ips = saved_info["ip"]
-            print saved_info["nbits"].value
+            print(saved_info["nbits"].value)
 
-            print ips
+            print(ips)
 
             swe = calclulate_swe(saved_vars["DN"], saved_vars["5P"], saved_vars["SD"])
             outRObj.write_2D_field(name = "I5",
-                data = swe, ip = map(lambda x: x.value, ips),
-                ig = map(lambda x: x.value, saved_info["ig"]),
+                data = swe, ip = [x.value for x in ips],
+                ig = [x.value for x in saved_info["ig"]],
                 npas = npas, deet=deet, label="IC, lake infl. exp.", dateo = dateo,
                 grid_type=saved_info["grid_type"].value, typ_var=saved_info["var_type"].value,
                 nbits = -saved_info["nbits"].value, data_type = saved_info["data_type"].value
@@ -158,5 +158,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

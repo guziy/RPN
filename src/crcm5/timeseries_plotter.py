@@ -41,7 +41,7 @@ class TimeseriesPlotter:
         self.cell_area = cell_area
 
         x, y, z = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-        self.kdtree = KDTree(zip(x,y,z))
+        self.kdtree = KDTree(list(zip(x,y,z)))
         ax.figure.canvas.mpl_connect("button_press_event", self)
         self.ax = ax
         self.lons2d = lons2d
@@ -54,7 +54,7 @@ class TimeseriesPlotter:
 
         self.lons_flat = lons2d.flatten()
         self.lats_flat = lats2d.flatten()
-        self.dates_sorted = list( sorted(name_to_date_to_field.items()[0][1].keys()) )
+        self.dates_sorted = list( sorted(list(name_to_date_to_field.items())[0][1].keys()) )
 
 
         self.counter = 0
@@ -111,7 +111,7 @@ class TimeseriesPlotter:
         mask = self.cell_manager.get_mask_of_cells_connected_with(self.cell_manager.cells[i][j])
 
 
-        print "sum(mask) = ", np.sum(mask)
+        print("sum(mask) = ", np.sum(mask))
 
         vals1 = [
            np.sum( self.date_to_traf_field[d][mask == 1] ) for d in self.dates_sorted
@@ -144,7 +144,7 @@ class TimeseriesPlotter:
 
 
         if self.upin_mean_field is None:
-            self.upin_mean_field = np.mean(self.date_to_upin_field.values(), axis = 0)
+            self.upin_mean_field = np.mean(list(self.date_to_upin_field.values()), axis = 0)
 
 
         plt.legend()
@@ -264,15 +264,15 @@ class TimeseriesPlotter:
 
         #traf -> dict( date -> value in m**3/s )
 
-        traf_dict = dict(zip(self.dates_sorted,
-            [self.date_to_traf_field[d][i,j] for d in self.dates_sorted]) )
+        traf_dict = dict(list(zip(self.dates_sorted,
+            [self.date_to_traf_field[d][i,j] for d in self.dates_sorted])) )
 
         traf_dict = {"TRAF": traf_dict}
 
         info.update(traf_dict)
 
-        upin_dict = dict(zip(self.dates_sorted,
-            [self.date_to_upin_field[d][i,j] for d in self.dates_sorted]) )
+        upin_dict = dict(list(zip(self.dates_sorted,
+            [self.date_to_upin_field[d][i,j] for d in self.dates_sorted])) )
         upin_dict = {"UPIN": upin_dict}
         info.update(upin_dict)
 
@@ -282,23 +282,23 @@ class TimeseriesPlotter:
 #        gwdi_dict = {"GWDI": gwdi_dict}
 #        info.update(gwdi_dict)
 
-        swsr_dict = dict(zip(self.dates_sorted,
-                            [self.date_to_swsr_field[d][i,j] for d in self.dates_sorted]) )
+        swsr_dict = dict(list(zip(self.dates_sorted,
+                            [self.date_to_swsr_field[d][i,j] for d in self.dates_sorted])) )
         swsr_dict = {"SWSR": swsr_dict }
         info.update(swsr_dict)
 
-        swsl_dict = dict(zip(self.dates_sorted,
-                                    [self.date_to_swsl_field[d][i,j] for d in self.dates_sorted]) )
+        swsl_dict = dict(list(zip(self.dates_sorted,
+                                    [self.date_to_swsl_field[d][i,j] for d in self.dates_sorted])) )
         swsl_dict = {"SWSL": swsl_dict }
         info.update(swsl_dict)
 
-        stfl_dict = dict(zip(self.dates_sorted,
-                            [self.date_to_stfl_field[d][i,j] for d in self.dates_sorted]) )
+        stfl_dict = dict(list(zip(self.dates_sorted,
+                            [self.date_to_stfl_field[d][i,j] for d in self.dates_sorted])) )
         stfl_dict = {"STFL": stfl_dict }
         info.update(stfl_dict)
 
-        swst_dict = dict(zip(self.dates_sorted,
-                            [self.date_to_swst_field[d][i,j] for d in self.dates_sorted]) )
+        swst_dict = dict(list(zip(self.dates_sorted,
+                            [self.date_to_swst_field[d][i,j] for d in self.dates_sorted])) )
         swst_dict = {"SWST": swst_dict }
         info.update(swst_dict)
 
@@ -340,5 +340,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

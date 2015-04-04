@@ -11,11 +11,11 @@ def test():
     rObj = RPN(path)
     data = rObj.get_first_record_for_name('STBM')
 
-    print data[data < 0]
-    print data.min(), data.max(), data.mean()
+    print(data[data < 0])
+    print(data.min(), data.max(), data.mean())
     data = np.ma.masked_where(data < 0, data)
 
-    print np.ma.min(data)
+    print(np.ma.min(data))
 
     plt.pcolormesh(data.transpose())
     plt.colorbar()
@@ -27,4 +27,4 @@ def test():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     test()
-    print "Hello World"
+    print("Hello World")

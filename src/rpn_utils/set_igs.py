@@ -30,9 +30,9 @@ def main():
         if nbits > 0:
             nbits = -nbits
 
-        print "nbits = {0}, data_type = {1}".format(nbits, data_type)
+        print("nbits = {0}, data_type = {1}".format(nbits, data_type))
 
-        ips = map(lambda x: x.value, info["ip"])
+        ips = [x.value for x in info["ip"]]
 
         npas = info["npas"].value
         deet = info["dt_seconds"].value
@@ -45,7 +45,7 @@ def main():
 
         rObjOut.write_2D_field(name=info["varname"].value,
                                data=data, ip=ips,
-                               ig=map(lambda x: x.value, info["ig"]),
+                               ig=[x.value for x in info["ig"]],
                                npas=npas, deet=deet, label="", dateo=dateo,
                                grid_type=info["grid_type"].value, typ_var=info["var_type"].value,
                                nbits=nbits, data_type=data_type

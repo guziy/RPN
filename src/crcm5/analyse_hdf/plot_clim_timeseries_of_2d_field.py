@@ -9,7 +9,7 @@ from crcm5 import infovar
 from crcm5.analyse_hdf.input_params import InputParams
 from util.geo.index_shapes import IndexRectangle, IndexPoint
 import matplotlib.pyplot as plt
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
 __author__ = 'huziy'
 
@@ -71,7 +71,7 @@ def compare_two_simulations():
 
     #calculate and plot differences
     for vindex, var_name in enumerate(params0.var_list):
-        print "plotting {0} ...".format(var_name)
+        print("plotting {0} ...".format(var_name))
         dates, levels, data2 = params2.calculate_mean_clim_for_3d_var(var_name=var_name)
         _, _, data0 = params0.calculate_mean_clim_for_3d_var(var_name=var_name)
 
@@ -116,7 +116,7 @@ def compare_two_simulations():
         cb.ax.set_aspect(10)
 
         ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
         if vindex < len(params0.var_list) - 1:
             ax.xaxis.set_ticklabels([])
         ax.invert_yaxis()

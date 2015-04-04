@@ -10,10 +10,10 @@ from crcm5.model_point import ModelPoint
 from data import cehq_station
 from data.cehq_station import Station
 from data.cell_manager import CellManager
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 import numpy as np
 import matplotlib.pyplot as plt
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
 
 __author__ = 'huziy'
@@ -71,8 +71,8 @@ def main(start_year = 1980, end_year = 1989):
         start_year=start_year,
         end_year=end_year
     )
-    print "read I1 - 1"
-    print "Spent {0} seconds ".format(time.clock() - t0)
+    print("read I1 - 1")
+    print("Spent {0} seconds ".format(time.clock() - t0))
 
     _, _, i1_intfl = analysis.get_daily_climatology_of_3d_field(
         path_to_hdf_file=path2,
@@ -80,7 +80,7 @@ def main(start_year = 1980, end_year = 1989):
         start_year=start_year,
         end_year=end_year
     )
-    print "read I1 - 2"
+    print("read I1 - 2")
 
     #get climatologic frozen soil moisture and convert fractions to mm
     _, _, i2_nointfl = analysis.get_daily_climatology_of_3d_field(
@@ -89,7 +89,7 @@ def main(start_year = 1980, end_year = 1989):
         start_year=start_year,
         end_year=end_year
     )
-    print "read I2 - 1"
+    print("read I2 - 1")
 
     _, _, i2_intfl = analysis.get_daily_climatology_of_3d_field(
         path_to_hdf_file=path2,
@@ -97,7 +97,7 @@ def main(start_year = 1980, end_year = 1989):
         start_year=start_year,
         end_year=end_year
     )
-    print "read I2 - 2"
+    print("read I2 - 2")
     #
     sm_intfl = i1_intfl + i2_intfl
     sm_nointfl = i1_nointfl + i2_nointfl
@@ -111,18 +111,18 @@ def main(start_year = 1980, end_year = 1989):
     )
 
 
-    print "sm_noinfl, min, max = {0}, {1}".format(sm_nointfl.min(), sm_nointfl.max())
-    print "sm_infl, min, max = {0}, {1}".format(sm_intfl.min(), sm_intfl.max())
+    print("sm_noinfl, min, max = {0}, {1}".format(sm_nointfl.min(), sm_nointfl.max()))
+    print("sm_infl, min, max = {0}, {1}".format(sm_intfl.min(), sm_intfl.max()))
     diff = (sm_intfl - sm_nointfl)
     #diff *= soil_layer_widths[np.newaxis, :, np.newaxis, np.newaxis] * 1000  # to convert in mm
 
     #print "number of nans", np.isnan(diff).astype(int).sum()
 
-    print "cell area min,max = {0}, {1}".format(cell_areas.min(), cell_areas.max())
-    print "acc area min,max = {0}, {1}".format(acc_areakm2.min(), acc_areakm2.max())
+    print("cell area min,max = {0}, {1}".format(cell_areas.min(), cell_areas.max()))
+    print("acc area min,max = {0}, {1}".format(acc_areakm2.min(), acc_areakm2.max()))
 
     assert np.all(lake_fractions >= 0)
-    print "lake fractions (min, max): ", lake_fractions.min(), lake_fractions.max()
+    print("lake fractions (min, max): ", lake_fractions.min(), lake_fractions.max())
 
     #Non need to go very deep
     nlayers = 3
@@ -132,7 +132,7 @@ def main(start_year = 1980, end_year = 1989):
 
     plotted_global = False
 
-    for the_station, mp in station_to_mp.iteritems():
+    for the_station, mp in station_to_mp.items():
         assert isinstance(mp, ModelPoint)
         assert isinstance(the_station, Station)
         fig = plt.figure()
@@ -147,10 +147,10 @@ def main(start_year = 1980, end_year = 1989):
 
 
         profiles = np.tensordot(diff, umaskf) / umaskf.sum()
-        print profiles.shape, profiles.min(), profiles.max(), umaskf.sum(), umaskf.min(), umaskf.max()
+        print(profiles.shape, profiles.min(), profiles.max(), umaskf.sum(), umaskf.min(), umaskf.max())
 
         d = np.abs(profiles).max()
-        print "d = {0}".format(d)
+        print("d = {0}".format(d))
         clevs = np.round(np.linspace(-d, d, 12), decimals=5)
 
         diff_cmap = cm.get_cmap("RdBu_r", lut=len(clevs) - 1)
@@ -173,7 +173,7 @@ def main(start_year = 1980, end_year = 1989):
 
 
 
-        print u"processed: {0}".format(the_station)
+        print("processed: {0}".format(the_station))
         if not plotted_global:
             plotted_global = True
             fig = plt.figure()
@@ -184,10 +184,10 @@ def main(start_year = 1980, end_year = 1989):
 
 
             profiles = np.tensordot(diff, umaskf) / umaskf.sum()
-            print profiles.shape, profiles.min(), profiles.max(), umaskf.sum(), umaskf.min(), umaskf.max()
+            print(profiles.shape, profiles.min(), profiles.max(), umaskf.sum(), umaskf.min(), umaskf.max())
 
             d = np.abs(profiles).max()
-            print "d = {0}".format(d)
+            print("d = {0}".format(d))
             clevs = np.round(np.linspace(-d, d, 12), decimals=5)
 
             diff_cmap = cm.get_cmap("RdBu_r", lut=len(clevs) - 1)

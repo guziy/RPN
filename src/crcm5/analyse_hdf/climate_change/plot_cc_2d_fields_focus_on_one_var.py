@@ -8,9 +8,9 @@ from matplotlib.ticker import MaxNLocator, LogLocator
 from mpl_toolkits.basemap import maskoceans
 from crcm5.analyse_hdf.run_config import RunConfig
 import matplotlib.pyplot as plt
-import plot_cc_2d_fields
+from . import plot_cc_2d_fields
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
-from plot_cc_2d_fields import compute_seasonal_means_for_each_year
+from .plot_cc_2d_fields import compute_seasonal_means_for_each_year
 from util import plot_utils
 import numpy as np
 
@@ -97,7 +97,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     field_cmap = cm.get_cmap("jet", 10)
     diff_cmap = cm.get_cmap("RdBu_r", 10)
 
-    for season in data_dict[base_config_c].keys():
+    for season in list(data_dict[base_config_c].keys()):
 
         fig = plt.figure()
         fig.suptitle("{} ({})".format(vname, season), font_properties=FontProperties(weight="bold"))
@@ -117,14 +117,14 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         }
 
         # Apply multipliers for unit conversion
-        for k in ij_to_data.keys():
+        for k in list(ij_to_data.keys()):
             ij_to_data[k] *= multiplier_dict.get(vname, 1)
 
             # mask oceans
             ij_to_data[k] = maskoceans(lonsin=lons, latsin=lats, datain=ij_to_data[k])
 
         # get all means to calculate the ranges of mean fields
-        all_means = ij_to_data.values()
+        all_means = list(ij_to_data.values())
 
         # Add all differences in a list
         all_diffs = []
@@ -190,12 +190,12 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                     bounds = locator.tick_values(the_min, the_max)
 
 
-                    print bounds
+                    print(bounds)
 
                     norm = LogNorm(vmin=bounds[0], vmax=bounds[-1])
 
                     plot_data[i][j] = np.ma.masked_where(plot_data[i][j] <= the_min, plot_data[i][j])
-                    print "the_max = {}".format(the_max)
+                    print("the_max = {}".format(the_max))
 
                     the_cmap = cm.get_cmap("jet", len(bounds) - 1)
 
@@ -205,7 +205,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                 extend = "both" if not plotting_values else "neither"
 
                 if plotting_values:
-                    print i, j, the_min, the_max
+                    print(i, j, the_min, the_max)
 
 
                 im = bmp.pcolormesh(xx, yy, plot_data[i][j][:, :], cmap=the_cmap, norm=norm)

@@ -17,7 +17,7 @@ def get_screen_coords_of_shapes():
     area_els = dom.getElementsByTagName("area")
     a = area_els[0]
     assert isinstance(a, Element)
-    return map(lambda x: x.getAttribute("coords"), area_els)
+    return [x.getAttribute("coords") for x in area_els]
 
 def transform_to_lon_lat(x, y, coefs):
     a, b, c, d, e, f = coefs
@@ -73,7 +73,7 @@ def main():
     driverName = "ESRI Shapefile"
     drv = ogr.GetDriverByName( driverName )
     if drv is None:
-        print "%s driver not available.\n" % driverName
+        print("%s driver not available.\n" % driverName)
         sys.exit( 1 )
     shape_file_name = "india_met_regions.shp"
     if os.path.isfile(shape_file_name):
@@ -82,7 +82,7 @@ def main():
     print(ds)
     assert isinstance(ds, ogr.DataSource)
     if ds is None:
-        print "Creation of output file failed.\n"
+        print("Creation of output file failed.\n")
         sys.exit( 1 )
 
     srs = osr.SpatialReference()
@@ -91,7 +91,7 @@ def main():
     lyr = ds.CreateLayer( "regions", srs, ogr.wkbPolygon )
     assert isinstance(lyr, ogr.Layer)
     if lyr is None:
-        print "Layer creation failed.\n"
+        print("Layer creation failed.\n")
         sys.exit( 1 )
 
 
@@ -99,7 +99,7 @@ def main():
     y = None
     for cl in coords_lists:
         fields = cl.split(",")
-        fields = map(lambda f: float(f.strip()), fields)
+        fields = [float(f.strip()) for f in fields]
         region = ogr.Geometry(ogr.wkbPolygon)
         ring = ogr.Geometry(ogr.wkbLinearRing)
         for i, f in enumerate( fields ):
@@ -116,7 +116,7 @@ def main():
 
         feat.SetGeometry(region)
         if lyr.CreateFeature(feat):
-            print "Failed to create feature in shapefile.\n"
+            print("Failed to create feature in shapefile.\n")
             sys.exit( 1 )
 
         feat.Destroy()
@@ -127,5 +127,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

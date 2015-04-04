@@ -32,7 +32,7 @@ class CellManager:
             self.characteristic_distance = np.sqrt(np.dot(dv, dv))
 
             x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-            self.kdtree = cKDTree(zip(x, y, z))
+            self.kdtree = cKDTree(list(zip(x, y, z)))
 
         if None not in [nx, ny]:
             self.nx = nx
@@ -94,7 +94,7 @@ class CellManager:
             for j in range(self.ny):
                 the_cell = self.cells[i][j]
                 assert isinstance(the_cell, Cell)
-                if the_cell.next is not None:
+                if the_cell.__next__ is not None:
                     continue
 
                 result[i, j] = the_cell.get_number_of_upstream_cells()
@@ -181,7 +181,7 @@ class CellManager:
 
         station_to_model_point_list = {}
         nx, ny = self.lons2d.shape
-        i1d, j1d = range(nx), range(ny)
+        i1d, j1d = list(range(nx)), list(range(ny))
         j2d, i2d = np.meshgrid(j1d, i1d)
         i_flat, j_flat = i2d.flatten(), j2d.flatten()
 
@@ -220,7 +220,7 @@ class CellManager:
                     continue
 
             station_to_model_point_list[s] = mp_list
-            print u"Found model point for the station {0}".format(s)
+            print("Found model point for the station {0}".format(s))
 
         return station_to_model_point_list
 
@@ -241,7 +241,7 @@ class CellManager:
 
         for s in station_list:
             if s.drainage_km2 < self.characteristic_distance ** 2 * 1e-12:
-                print "skipping {0}, because drainage area is too small: {1} km**2".format(s.id, s.drainage_km2)
+                print("skipping {0}, because drainage area is too small: {1} km**2".format(s.id, s.drainage_km2))
                 continue
 
             assert isinstance(s, Station)
@@ -269,14 +269,14 @@ class CellManager:
 
             #check if difference in drainage areas is not too big less than 10 %
             if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
-                print deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2
+                print(deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2)
                 continue
 
 
             #check if the accumulation area of the selected model point is of reasonable size
             if self.accumulation_area_km2[ix, jy] < self.characteristic_distance ** 2 * 1e-12:
-                print "skipping the station {0}, because the upstream area " \
-                      "for the corresponding model point is too small".format(s.id)
+                print("skipping the station {0}, because the upstream area " \
+                      "for the corresponding model point is too small".format(s.id))
                 continue
 
             mp = ModelPoint()
@@ -291,9 +291,9 @@ class CellManager:
 
             station_to_model_point[s] = mp
 
-            print "mp.accumulation_area_km2={}; s.drainage_km2={}".format(mp.accumulation_area, s.drainage_km2)
+            print("mp.accumulation_area_km2={}; s.drainage_km2={}".format(mp.accumulation_area, s.drainage_km2))
 
-            print u"Found model point for the station {0}".format(s)
+            print("Found model point for the station {0}".format(s))
 
         return station_to_model_point
 
@@ -305,5 +305,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

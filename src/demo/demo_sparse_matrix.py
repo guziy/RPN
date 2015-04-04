@@ -14,14 +14,14 @@ def main():
 
     mat1 = sparse.coo_matrix((data[good], (i, j)), shape=data.shape)
     mat2 = sparse.coo_matrix((data[good], (i, j)), shape=data.shape)
-    print mat1.toarray()
-    print mat1.tocsr()[0, 0]
+    print(mat1.toarray())
+    print(mat1.tocsr()[0, 0])
 
-    print 10 * "*"
+    print(10 * "*")
 
-    print mat1 + mat2 * 5
+    print(mat1 + mat2 * 5)
 
-    print np.prod((5, 6, 7))
+    print(np.prod((5, 6, 7)))
 
 
 if __name__ == "__main__":

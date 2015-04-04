@@ -10,7 +10,7 @@ from rpn.rpn import RPN
 import scipy
 from scipy.stats import stats
 import my_colormaps
-from plot_seasonal_means import TIME_FORMAT, get_arctic_basemap, get_arctic_basemap_nps
+from .plot_seasonal_means import TIME_FORMAT, get_arctic_basemap, get_arctic_basemap_nps
 
 __author__ = 'huziy'
 
@@ -74,11 +74,11 @@ def main(months=None, season="DJF", ax = None, clevels = None,
             df["year"] = df.index.map(lambda d: d.year)
             df["month"] = df.index.map(lambda d: d.month)
 
-            print df.shape, df.columns
+            print(df.shape, df.columns)
 
             data_current = df.ix[
                            (df.year >= start_year_current) & (df.year <= end_year_current) & df.month.isin(months), :]
-            print data_current.columns
+            print(data_current.columns)
             data_current = data_current.drop(["year", "month"], axis=1)
             seasonal_means_current = data_current.groupby(
                 by=lambda d: d.year).mean()  #calculate mean for the season for each year
@@ -129,8 +129,8 @@ def main(months=None, season="DJF", ax = None, clevels = None,
 
         to_plot[x_index, y_index] = mean_change
 
-        print to_plot.min(), to_plot.max()
-        print pvalue.min(), pvalue.max()
+        print(to_plot.min(), to_plot.max())
+        print(pvalue.min(), pvalue.max())
 
         x, y = b(lons2d, lats2d)
 
@@ -235,4 +235,4 @@ if __name__ == "__main__":
         plt.savefig(imfile, dpi=400)
 
 
-    print "Hello world"
+    print("Hello world")

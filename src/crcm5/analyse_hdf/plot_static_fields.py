@@ -13,8 +13,8 @@ __author__ = 'huziy'
 
 import numpy as np
 import matplotlib.pyplot as plt
-import do_analysis_using_pytables as analysis
-import common_plot_params as cpp
+from . import do_analysis_using_pytables as analysis
+from . import common_plot_params as cpp
 from matplotlib import cm
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
@@ -132,7 +132,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
     the_hist, positions = np.histogram(dd_flat, bins=25, range=[0, np.percentile(dd_flat, 90)])
     the_hist = the_hist.astype(np.float)
     the_hist /= the_hist.sum()
-    print the_hist.max(), the_hist.min()
+    print(the_hist.max(), the_hist.min())
     barwidth = (positions[1] - positions[0]) * 0.9
     ax.bar(positions[:-1], the_hist, color="0.75", linewidth=0, width=barwidth)
     ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
@@ -152,7 +152,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         the_hist, positions = np.histogram(vshc_flat, bins=25, range=[0, np.percentile(vshc_flat, 90)])
         the_hist = the_hist.astype(np.float)
         the_hist /= the_hist.sum()
-        print the_hist.max(), the_hist.min()
+        print(the_hist.max(), the_hist.min())
         barwidth = (positions[1] - positions[0]) * 0.9
         ax.bar(positions[:-1], the_hist, color="0.75", linewidth=0, width=barwidth)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
@@ -173,14 +173,14 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         # 1e-3 is to convert drainage density to m^-1
         the_prod = dd_flat * 1e-3 * vshc_flat * ch_slope_flat * 48 * interflow_h
 
-        print "product median: {0}".format(np.median(the_prod))
-        print "product maximum: {0}".format(the_prod.max())
-        print "product 90-quantile: {0}".format(np.percentile(the_prod, 90))
+        print("product median: {0}".format(np.median(the_prod)))
+        print("product maximum: {0}".format(the_prod.max()))
+        print("product 90-quantile: {0}".format(np.percentile(the_prod, 90)))
 
         the_hist, positions = np.histogram(the_prod, bins=25, range=[0, np.percentile(the_prod, 90)])
         the_hist = the_hist.astype(np.float)
         the_hist /= the_hist.sum()
-        print the_hist.max(), the_hist.min()
+        print(the_hist.max(), the_hist.min())
         barwidth = (positions[1] - positions[0]) * 0.9
         ax.bar(positions[:-1], the_hist, color="0.75", linewidth=0, width=barwidth)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
@@ -200,8 +200,8 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         cell_manager = CellManager(flow_directions)
         acc_index = cell_manager.get_accumulation_index()
         acc_index_flat = acc_index[acc_index > 1]
-        print "acc_index: min={0}; max={1}; median={2}; 90-quantile={3}".format(
-            acc_index_flat.min(), acc_index_flat.max(), np.median(acc_index_flat), np.percentile(acc_index_flat, 90))
+        print("acc_index: min={0}; max={1}; median={2}; 90-quantile={3}".format(
+            acc_index_flat.min(), acc_index_flat.max(), np.median(acc_index_flat), np.percentile(acc_index_flat, 90)))
 
         #plot the range of the accumulation index
         ax = fig.add_subplot(gs[0, 2])
@@ -209,7 +209,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         the_hist, positions = np.histogram(acc_index_flat, bins=25, range=[0, np.percentile(acc_index_flat, 90)])
         the_hist = the_hist.astype(np.float)
         the_hist /= the_hist.sum()
-        print the_hist.max(), the_hist.min()
+        print(the_hist.max(), the_hist.min())
         barwidth = (positions[1] - positions[0]) * 0.9
         ax.bar(positions[:-1], the_hist, color="0.75", linewidth=0, width=barwidth)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
@@ -287,7 +287,7 @@ def main():
     where_glob_lakes = lake_fraction >= 0.6
     where_land = (lake_fraction > 0) | ~slope.mask
     percetage_lakes = np.sum(np.sum(where_glob_lakes.astype(float))) / np.sum(where_lakes.astype(float)) * 100
-    print "percentage of global lakes: {0}".format(percetage_lakes)
+    print("percentage of global lakes: {0}".format(percetage_lakes))
 
     #plt.show()
 
@@ -315,8 +315,8 @@ def main():
     ax = fig.add_subplot(gs[1, 0])
     sand = analysis.get_array_from_file(path=path, var_name="sand")
 
-    print "sand variable shape: {0} ".format(",".join([str(length) for length in sand.shape]))
-    print "layer depths shape: ", soil_layer_depths.shape
+    print("sand variable shape: {0} ".format(",".join([str(length) for length in sand.shape])))
+    print("layer depths shape: ", soil_layer_depths.shape)
     sand[sand < 0] = 0.0
     sand_height = np.tensordot(soil_layer_depths, sand, axes=(0, 0))
     #sand_height[depth_to_bedrock > 0] /= depth_to_bedrock[depth_to_bedrock > 0]
@@ -329,7 +329,7 @@ def main():
     # clay
     ax = fig.add_subplot(gs[1, 1])
     clay = analysis.get_array_from_file(path=path, var_name="clay")
-    print "clay variable shape: {0} ".format(",".join([str(length) for length in clay.shape]))
+    print("clay variable shape: {0} ".format(",".join([str(length) for length in clay.shape])))
     clay[clay < 0] = 0.0
     clay_height = np.tensordot(soil_layer_depths, clay, axes=(0, 0))
     #clay_height[depth_to_bedrock > 0] /= depth_to_bedrock[depth_to_bedrock > 0]
@@ -360,7 +360,7 @@ def main():
     all_axes.append(ax)
     field = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_VERT_SOIL_HYDR_COND_NAME)
     field = np.ma.masked_where(slope.mask, field[0, :, :])
-    print field.shape
+    print(field.shape)
     _plot_soil_hydraulic_conductivity(ax, basemap, x, y, field, title="f) Kv, m/s", cmap=cmap)
 
     #soil anisotropy ratio
@@ -382,5 +382,5 @@ if __name__ == "__main__":
     #plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf")
     main()
 
-    print Basemap(projection="npstere", lon_0=-115, boundinglat=60).proj4string
-    print "Hello world"
+    print(Basemap(projection="npstere", lon_0=-115, boundinglat=60).proj4string)
+    print("Hello world")

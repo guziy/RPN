@@ -22,14 +22,14 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
 
     for s in stations:
         assert isinstance(s, cehq_station.Station)
-        print s.id
+        print(s.id)
 
 
         ##Monthly normals
         if plot_monthly_normals:
             values_monthly = s.get_monthly_normals()
             if values_monthly is None:
-                print "Skipping {0} since the data series is not continuous enough".format(s.id)
+                print("Skipping {0} since the data series is not continuous enough".format(s.id))
                 continue # skip stations with incomplete data
             low = min(values_monthly)
             up = max(values_monthly)
@@ -45,7 +45,7 @@ def create_kml_file_for_level_stations(data_path = "data/cehq_levels",
         if plot_daily_normals:
             times, values_daily = s.get_daily_normals()
             if values_daily is None:
-                print "Skipping {0} since the data series is not continuous enough".format(s.id)
+                print("Skipping {0} since the data series is not continuous enough".format(s.id))
                 continue
             low = min(values_daily)
             up = max(values_daily)
@@ -116,5 +116,5 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

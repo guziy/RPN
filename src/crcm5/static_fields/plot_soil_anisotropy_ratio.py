@@ -49,4 +49,4 @@ if __name__ == "__main__":
 
     plot_utils.apply_plot_params(width_pt=None, height_cm=25, width_cm=39)
     main()
-    print "Hello world"
+    print("Hello world")

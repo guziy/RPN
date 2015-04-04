@@ -25,8 +25,8 @@ def get_active_storages(h_list, area_km2):
     """
     h_min = max( min(h_list) - 5, 0)
     if h_min == 0.1:
-        print h_min
-    return map(lambda x: (x - h_min) * area_km2 * 1e6, h_list)
+        print(h_min)
+    return [(x - h_min) * area_km2 * 1e6 for x in h_list]
 
 
 def get_streamflows_from_active_stores(stores, area_km2, kd = 0.01 / (24.0*60.0*60.0)):
@@ -35,7 +35,7 @@ def get_streamflows_from_active_stores(stores, area_km2, kd = 0.01 / (24.0*60.0*
     """
     h0 = 5.0
     s0 = h0 * area_km2 * 1.0e6
-    return map(lambda x: x * (x / s0) ** 1.5 * kd, stores )
+    return [x * (x / s0) ** 1.5 * kd for x in stores]
     pass
 
 
@@ -48,7 +48,7 @@ def get_streamflows_from_active_stores_bowling(stores, area_km2):
     g = 9.81
 
     area_m2 = area_km2 * 1.0e6
-    return map( lambda s: ( 4.0 / 3.0 ) * cd * f * (g * np.pi) ** 0.5 * s ** 1.5 / area_m2, stores)
+    return [( 4.0 / 3.0 ) * cd * f * (g * np.pi) ** 0.5 * s ** 1.5 / area_m2 for s in stores]
 
 
 
@@ -93,10 +93,10 @@ def plot_for_different_months(start_date = None, end_date = None):
         all_b = []
 
 
-        intersection_dates = list( sorted( itertools.ifilter( lambda d: d in stfl_station.dates, lev_station.dates) ) )
+        intersection_dates = list( sorted( filter( lambda d: d in stfl_station.dates, lev_station.dates) ) )
 
-        q_vals = map( lambda d: stfl_station.get_value_for_date(d), intersection_dates )
-        h_vals = map( lambda d: lev_station.get_value_for_date(d), intersection_dates )
+        q_vals = [stfl_station.get_value_for_date(d) for d in intersection_dates]
+        h_vals = [lev_station.get_value_for_date(d) for d in intersection_dates]
         #change the way streamflow calculated here
         q_calc = get_streamflows_from_active_stores_bowling(get_active_storages(h_vals,lake_area_km2), lake_area_km2)
 
@@ -113,29 +113,29 @@ def plot_for_different_months(start_date = None, end_date = None):
 
         if end_date is None:
             end_date = intersection_dates[-1]
-        print "lake name: {0}".format(lake_name)
-        print "data are from " + str( intersection_dates[0] ) + " to " + str( intersection_dates[-1] )
+        print("lake name: {0}".format(lake_name))
+        print("data are from " + str( intersection_dates[0] ) + " to " + str( intersection_dates[-1] ))
 
 
         ##As a base month we are using August (assuming that we don't have ice in August)
         base_month = 8
-        the_dates = list( itertools.ifilter( lambda d: (start_date <= d <= end_date) and
+        the_dates = list( filter( lambda d: (start_date <= d <= end_date) and
                                                         d.month == base_month, intersection_dates) )
-        q_base = np.mean(map( lambda d: stfl_station.get_value_for_date(d), the_dates ))
-        h_vals = map( lambda d: lev_station.get_value_for_date(d), the_dates )
+        q_base = np.mean([stfl_station.get_value_for_date(d) for d in the_dates])
+        h_vals = [lev_station.get_value_for_date(d) for d in the_dates]
         store_base = np.mean(get_active_storages(h_vals,lake_area_km2))
 
         ice_factors = []
-        for month in xrange(1, 13):
+        for month in range(1, 13):
             ax = fig.add_subplot(gs[(month - 1)//4, (month - 1) % 4])
 
-            the_dates = list( itertools.ifilter( lambda d: (start_date <= d <= end_date) and
+            the_dates = list( filter( lambda d: (start_date <= d <= end_date) and
                                                            d.month == month, intersection_dates) )
 
-            q_vals = map( lambda d: stfl_station.get_value_for_date(d), the_dates )
-            h_vals = map( lambda d: lev_station.get_value_for_date(d), the_dates )
+            q_vals = [stfl_station.get_value_for_date(d) for d in the_dates]
+            h_vals = [lev_station.get_value_for_date(d) for d in the_dates]
             s_vals = get_active_storages(h_vals,lake_area_km2)
-            print len(h_vals)
+            print(len(h_vals))
             q_calc = get_streamflows_from_active_stores_bowling(s_vals, lake_area_km2)
 
 
@@ -147,7 +147,7 @@ def plot_for_different_months(start_date = None, end_date = None):
 
             ax.scatter(q_vals, q_calc, linewidths = 0)
 
-            print "len(q_vals) = {0}".format(len(q_vals))
+            print("len(q_vals) = {0}".format(len(q_vals)))
 
             ax.set_xlabel("$Q_{\\rm obs}$")
             ax.set_ylabel("$Q_{\\rm mod}$")
@@ -158,7 +158,7 @@ def plot_for_different_months(start_date = None, end_date = None):
             all_k.append(k)
             all_b.append(b)
 
-            ax.scatter(q_vals, map( lambda x: (x - b) / k, q_calc), c ="r", linewidth = 0, zorder = 6)
+            ax.scatter(q_vals, [(x - b) / k for x in q_calc], c ="r", linewidth = 0, zorder = 6)
 
 
 
@@ -183,7 +183,7 @@ def plot_for_different_months(start_date = None, end_date = None):
         ax = fig.add_subplot(1,1,1)
         assert isinstance(ax, Axes)
         ax.set_title("Correction coefficients applied \n q'=(1/k)*q-b/k")
-        ax.plot(range(1,13), 1.0 / np.array(all_k), lw = 3, label = "1/k")
+        ax.plot(list(range(1,13)), 1.0 / np.array(all_k), lw = 3, label = "1/k")
         ax.legend()
         fig.savefig("{0}_coefs_1_k.png".format(lake_name))
 
@@ -191,13 +191,13 @@ def plot_for_different_months(start_date = None, end_date = None):
         ax = fig.add_subplot(1,1,1)
         assert isinstance(ax, Axes)
         ax.set_title("Correction coefficients applied \n q'=(1/k)*q-b/k")
-        ax.plot(range(1,13), -np.array(all_b) / np.array(all_k), lw = 3, label = "-b/k")
+        ax.plot(list(range(1,13)), -np.array(all_b) / np.array(all_k), lw = 3, label = "-b/k")
         ax.legend()
         fig.savefig("{0}_coefs_b_k.png".format(lake_name))
 
 
         plt.figure()
-        plt.plot(range(1,13), ice_factors, lw = 3)
+        plt.plot(list(range(1,13)), ice_factors, lw = 3)
         plt.title("Ice factor for {0}".format(lake_name))
         plt.savefig("{0}_ice_factors.png".format(lake_name))
 
@@ -211,18 +211,18 @@ def plot_for_different_months(start_date = None, end_date = None):
         the_poly = np.polyfit(all_q_obs, all_q_calc, 1)
         k,b = the_poly
 
-        print k, b
-        print "len(all_q) = {0}".format(len(all_q_calc))
+        print(k, b)
+        print("len(all_q) = {0}".format(len(all_q_calc)))
 
-        ax.scatter(all_q_obs, map( lambda x:  (x - b) / k, all_q_calc), c ="r",
+        ax.scatter(all_q_obs, [(x - b) / k for x in all_q_calc], c ="r",
             linewidth = 0, zorder = 6)
         ax.annotate("k={0:.2f}; \nb={1:.2f}".format(k, b), xy = (0.6, 0.05),
                         xycoords = "axes fraction", zorder = 7
                     )
 
-        print np.polyfit(all_q_obs, map( lambda x: (x - b) / k, all_q_calc),1)
+        print(np.polyfit(all_q_obs, [(x - b) / k for x in all_q_calc],1))
 
-        print "min(all_q_calc) = {0}, max(all_q_calc) = {1}".format(min(all_q_calc), max(all_q_calc))
+        print("min(all_q_calc) = {0}, max(all_q_calc) = {1}".format(min(all_q_calc), max(all_q_calc)))
 
 
 #        ax.plot([q_min, q_max], [k * q_min + b, k * q_max + b], "g" )
@@ -240,7 +240,7 @@ def plot_for_different_months(start_date = None, end_date = None):
         ax.xaxis.set_major_locator(MultipleLocator(base = np.round((q_max - q_min )/ 10) * 10 / 2  ))
         ax.yaxis.set_major_locator(MultipleLocator(base = np.round((q_max - q_min ) / 10) * 10 / 2))
 
-        print "all_{0}.png".format(lake_name)
+        print("all_{0}.png".format(lake_name))
         #plt.show()
         fig1.subplots_adjust(left = 0.2)
         fig1.savefig("all_{0}.png".format(lake_name))
@@ -276,28 +276,28 @@ def main():
         assert isinstance(lev_station, Station)
         assert isinstance(stfl_station, Station)
 
-        count_intersection = sum( map(lambda d: int(d in stfl_station.dates), lev_station.dates) )
-        intersection_dates = list( itertools.ifilter( lambda d: d in stfl_station.dates, lev_station.dates) )
+        count_intersection = sum( [int(d in stfl_station.dates) for d in lev_station.dates] )
+        intersection_dates = list( filter( lambda d: d in stfl_station.dates, lev_station.dates) )
 
-        q_vals = map( lambda d: stfl_station.get_value_for_date(d), intersection_dates )
-        h_vals = map( lambda d: lev_station.get_value_for_date(d), intersection_dates )
+        q_vals = [stfl_station.get_value_for_date(d) for d in intersection_dates]
+        h_vals = [lev_station.get_value_for_date(d) for d in intersection_dates]
 
 
         q_obs.append(q_vals)
         q_calc.append(get_streamflows_from_active_stores_bowling(get_active_storages(h_vals,lake_area_km2), lake_area_km2))
 
         #Calculate correlation between Q and H
-        print 10 * "-" + lake_name
-        print "r = {0}".format(np.corrcoef([q_vals, h_vals])[0,1])
-        print(lev_station.latitude, lev_station.longitude)
+        print(10 * "-" + lake_name)
+        print("r = {0}".format(np.corrcoef([q_vals, h_vals])[0,1]))
+        print((lev_station.latitude, lev_station.longitude))
 
-        print "dist_m = {0} km ".format( 1.0e-3 * lat_lon.get_distance_in_meters(lev_station.longitude, lev_station.latitude,
-                                                                                stfl_station.longitude, stfl_station.latitude))
+        print("dist_m = {0} km ".format( 1.0e-3 * lat_lon.get_distance_in_meters(lev_station.longitude, lev_station.latitude,
+                                                                                stfl_station.longitude, stfl_station.latitude)))
 
 
 
-        print "{0} and {1} have {2} measurements at the same time ({3}).".format(lev_station.id, stfl_station.id,
-            count_intersection, lake_name )
+        print("{0} and {1} have {2} measurements at the same time ({3}).".format(lev_station.id, stfl_station.id,
+            count_intersection, lake_name ))
 
         #plot storage-discharge relation
         plt.title(lake_name)
@@ -328,7 +328,7 @@ def main():
     plt.ylabel("$Q_{\\rm mod}$")
 
     xmin, xmax = plt.xlim()
-    print plt.xlim()
+    print(plt.xlim())
     plt.plot([xmin, xmax], [xmin, xmax], "k-",lw = 3, zorder = 5)
 
 
@@ -345,5 +345,5 @@ if __name__ == "__main__":
     #main()
     plot_utils.apply_plot_params(width_pt=None, width_cm=30, height_cm=20, font_size=10)
     plot_for_different_months()
-    print "Hello world"
+    print("Hello world")
   

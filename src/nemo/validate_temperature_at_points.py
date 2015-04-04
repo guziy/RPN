@@ -30,7 +30,7 @@ for fname in os.listdir(EXP_DIR):
     elif fname.endswith("_grid_V.nc"):
         V_FILE_PATH = os.path.join(EXP_DIR, fname)
 
-import nemo_commons
+from . import nemo_commons
 
 EXP_NAME = os.path.basename(EXP_DIR)
 NEMO_IMAGES_DIR = os.path.join("nemo", EXP_NAME, "temp_ts_validate")
@@ -42,7 +42,7 @@ if not os.path.isdir(NEMO_IMAGES_DIR):
 
 class LakeObsStation(object):
     def __init__(self, path = None):
-        print path
+        print(path)
         self.longitude = None
         self.latitude = None
         self.id = None
@@ -110,7 +110,7 @@ class LakeObsStation(object):
                 line = f.readline()
 
 
-            print dates[0], dates[-1], self.latitude, self.longitude
+            print(dates[0], dates[-1], self.latitude, self.longitude)
 
             data = (np.asarray(data) - 32.0) * 5.0 / 9.0
 
@@ -126,7 +126,7 @@ class LakeObsStation(object):
         """
 
         assert isinstance(data_cube, iris.cube.Cube)
-        print self.id
+        print(self.id)
 
         time = data_cube.coord("time")
         dates_model = [num2date(t, units=str(time.units)) for t in time.points[:]]
@@ -134,7 +134,7 @@ class LakeObsStation(object):
 
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(self.longitude, self.latitude)
 
-        dists, inds = ktree.query(zip([xt,], [yt,], [zt,]))
+        dists, inds = ktree.query(list(zip([xt,], [yt,], [zt,])))
 
         data_model = data_cube.data
         ntimes = data_model.shape[0]
@@ -147,7 +147,7 @@ class LakeObsStation(object):
         dates_obs, vals_obs = self.get_dates_and_values_to_plot()
         ax.plot(dates_obs, vals_obs, label = "Obs")
         ax.plot(dates_model, data_model, label = "Mod")
-        print data_model.min(), data_model.max()
+        print(data_model.min(), data_model.max())
 
         if data_model.sum() < 0.0001:
             plt.gcf().savefig(os.path.join(img_folder, "{0}.jpeg".format(self.id)))
@@ -186,10 +186,10 @@ def main():
 
     lons = data_cube.coord("longitude").points[:]
     lats = data_cube.coord("latitude").points[:]
-    print lons.shape, lats.shape
+    print(lons.shape, lats.shape)
 
     x, y, z = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
-    ktree = cKDTree(data=zip(x, y, z))
+    ktree = cKDTree(data=list(zip(x, y, z)))
 
 
     for st in get_obs_data(data_folder="/home/huziy/skynet3_rech1/nemo_obs_for_validation/temperature_at_points_ts"):

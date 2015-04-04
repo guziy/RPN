@@ -75,7 +75,7 @@ def reproject_to_latlon_and_save_shape(path = 'data/shape/contour_bv_MRCC/Bassin
     latlong = osr.SpatialReference()
     latlong.ImportFromProj4("+proj=latlong")
 
-    print latlong
+    print(latlong)
 
     shapeData = driver.CreateDataSource(path_new)
     newLayer = shapeData.CreateLayer('basin_boundaries', latlong, osgeo.ogr.wkbPolygon)
@@ -99,4 +99,4 @@ def reproject_to_latlon_and_save_shape(path = 'data/shape/contour_bv_MRCC/Bassin
 if __name__ == "__main__":
     get_features_from_shape(None)
 #    reproject_to_latlon_and_save_shape()
-    print "Hello World"
+    print("Hello World")

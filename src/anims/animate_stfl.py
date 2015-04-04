@@ -45,11 +45,11 @@ def main():
 
     fig = plt.figure()
     data = data_manager.get_date_to_field_dict()
-    print data.keys()
-    print len(data.keys())
-    times = list( sorted( map( lambda s: datetime.strptime(s, "%Y-%m-%d %H:%M") ,  data.keys() )) )
+    print(list(data.keys()))
+    print(len(list(data.keys())))
+    times = list( sorted( [datetime.strptime(s, "%Y-%m-%d %H:%M") for s in list(data.keys())]) )
 
-    times = map(lambda t: t.strftime("%Y-%m-%d %H:%M"), times)
+    times = [t.strftime("%Y-%m-%d %H:%M") for t in times]
 
 
     ims = []
@@ -68,5 +68,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

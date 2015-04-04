@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 
 
 
-def compare_means_2d(manager_list, start_date = None, end_date = None, months = range(1,13),
+def compare_means_2d(manager_list, start_date = None, end_date = None, months = list(range(1,13)),
                      var_name = "STFL", level = -1 , level_kind = level_kinds.ARBITRARY, out_img = None, impose_min = None,
                      bounds = None):
 
@@ -71,7 +71,7 @@ def compare_means_2d(manager_list, start_date = None, end_date = None, months = 
     if impose_min is not None:
         vmin = impose_min
 
-    print vmin, vmax
+    print(vmin, vmax)
 
     cmap = my_colormaps.get_lighter_jet_cmap(ncolors=15)
 
@@ -89,7 +89,7 @@ def compare_means_2d(manager_list, start_date = None, end_date = None, months = 
         cbar_pad="5%", share_all=True)
 
     i = 0
-    for theId, data_field in run_id_to_field.iteritems():
+    for theId, data_field in run_id_to_field.items():
         ax = imgGrid[i] #fig.add_subplot(gs[i // ncols, i % ncols])
         ax.set_title(theId)
         b = run_id_to_basemap[theId]
@@ -136,18 +136,18 @@ def plot_station_positions(manager, station_list):
     ax = fig.add_subplot(1,1,1)
     b = manager.get_omerc_basemap()
 
-    sx = map(lambda s: s.longitude, station_list)
-    sy = map(lambda s: s.latitude, station_list)
+    sx = [s.longitude for s in station_list]
+    sy = [s.latitude for s in station_list]
 
     sx, sy = b( sx, sy )
     b.scatter(sx, sy, c = "r", s = 40, ax = ax, zorder = 5)
-    s_id = map(lambda s: s.id, station_list)
+    s_id = [s.id for s in station_list]
 
     for x,y, theId in zip(sx, sy, s_id):
         ax.annotate(theId, (x, y), ha = "left", bbox = dict(fc = "w"))
     b.drawcoastlines()
     b.drawrivers()
-    fig.savefig("station_pos{0}.png".format("_".join(map(lambda s: s.id, station_list))))
+    fig.savefig("station_pos{0}.png".format("_".join([s.id for s in station_list])))
     pass
 
 def compare_hydrographs_at_stations(manager_list,
@@ -189,7 +189,7 @@ def compare_hydrographs_at_stations(manager_list,
     stations = filtered_stations
 
 
-    print len(filtered_stations)
+    print(len(filtered_stations))
 #    if True: raise Exception()
 
     #save all run ids
@@ -208,10 +208,10 @@ def compare_hydrographs_at_stations(manager_list,
         df = df.groupby(lambda i: datetime(2001,i.month+1, 1)
                                  if i.month == 2 and i.day == 29 else datetime(2001, i.month, i.day) ).mean()
 
-        print df
+        print(df)
 
         #again filter the stations with data time interval overlapping with model time interval
-        stations = list( itertools.ifilter(lambda s: s.id in df.columns, stations) )
+        stations = list( filter(lambda s: s.id in df.columns, stations) )
         run_id_to_dataframe[manager.run_id] = df
 
 
@@ -254,7 +254,7 @@ def compare_hydrographs_at_stations(manager_list,
         ) #integral flow since those values are daily normals
 
 
-        for run_id, color, color_index in zip( run_id_list, colors, range(len(colors)) ):
+        for run_id, color, color_index in zip( run_id_list, colors, list(range(len(colors))) ):
             df = run_id_to_dataframe[run_id]
             the_line = ax.plot(year_dates, df[s.id], color= color, label = run_id, lw = 1)
             ax.annotate("{0:.3g}".format( sum(df[s.id]) * one_day_sec ),
@@ -268,7 +268,7 @@ def compare_hydrographs_at_stations(manager_list,
         #dt_sec = dt.days * 24 * 60 * 60 + dt.seconds
         #ax.annotate( "{0:g}".format( sum(mod_vals) * dt_sec ) + " ${\\rm m^3}$", xy = (0.7,0.7), xycoords= "axes fraction", color = "b")
         #ax.annotate( "{0:g}".format( sum(s.values) * dt_sec) + " ${\\rm m^3}$", xy = (0.7,0.6), xycoords= "axes fraction", color = "r")
-        metadata = run_id_to_cell_props.items()[0][1][s.id]
+        metadata = list(run_id_to_cell_props.items())[0][1][s.id]
         da_mod = metadata["acc_area_km2"]
         dist = metadata["distance_to_obs_km"]
         #ax.set_title("{0}: $\delta DA = {1:.1f}$ %, dist = {2:.1f} km".format(s.id,
@@ -484,5 +484,5 @@ if __name__ == "__main__":
     #compare_level_num_influence()
     #compare_sim_with_obs()
     compare_level_num_influence()
-    print "Hello world"
+    print("Hello world")
   

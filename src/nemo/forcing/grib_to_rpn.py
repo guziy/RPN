@@ -39,7 +39,7 @@ def main(out_folder=""):
             fname = "ERAI_0.75_{}h_{}{:02d}.rpn".format(fcst_hour_list[0], year, month)
             fpath = os.path.join(out_folder, fname)
             if os.path.isfile(fpath):
-                print "{} -- already exists, delete to regenerate".format(fpath)
+                print("{} -- already exists, delete to regenerate".format(fpath))
                 raise Exception("Unfortunately the program cannot be run in parallel for consistency of the data!"
                                 " Please delete all previously generated files before proceeding.")
 
@@ -48,15 +48,15 @@ def main(out_folder=""):
             for i, grb_message in enumerate(ind.select(year=year, month=month)):
 
                 if grb_message.startStep not in fcst_hour_list:
-                    print "Start step is: ", grb_message.startStep
+                    print("Start step is: ", grb_message.startStep)
                     continue
 
-                print grb_message
+                print(grb_message)
                 # for k in grb_message.keys():
                 # print "{}: {}".format(k, grb_message[k])
-                print grb_message.startStep
-                print [grb_message[k] for k in ["year", "month", "day", "hour"]]
-                print grb_message.validityDate, grb_message.validityTime
+                print(grb_message.startStep)
+                print([grb_message[k] for k in ["year", "month", "day", "hour"]])
+                print(grb_message.validityDate, grb_message.validityTime)
 
                 if grb_message.startStep == fcst_hour_list[0]:
                     data_previous = 0
@@ -77,7 +77,7 @@ def main(out_folder=""):
 
                 data = np.flipud(data[:, :])
 
-                print data.shape
+                print(data.shape)
                 r_out.write_2D_field(name=varname,
                                      data=data.transpose(), ip=[0, npas * fcst_hour_list[0], 0],
                                      ig=[0] * 4,

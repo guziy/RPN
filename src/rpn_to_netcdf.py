@@ -51,7 +51,7 @@ def extract_runoff_to_netcdf_file(filePath='data/pm1957090100_00589248p', outDir
     level_tdra = 5
     level_traf = 5
 
-    print filePath
+    print(filePath)
 
     #get data from the rpn file
     rpnObj = RPN(filePath)
@@ -110,7 +110,7 @@ def extract_runoff_to_nc_process(args):
     tdra_data = r.get_all_time_records_for_name(varname=tdra_name)
     r.close()
 
-    nx, ny = traf_data.items()[0][1].shape
+    nx, ny = list(traf_data.items())[0][1].shape
 
     ds = nc.Dataset(outPath, "w", format="NETCDF3_CLASSIC")
     ds.createDimension("lon", nx)
@@ -151,7 +151,7 @@ def runoff_to_netcdf_parallel(indir, outdir):
     out_paths = [os.path.join(outdir, inName + ".nc") for inName in in_names]
 
     ppool = Pool(processes=20)
-    ppool.map(extract_runoff_to_nc_process, zip(in_paths, out_paths))
+    ppool.map(extract_runoff_to_nc_process, list(zip(in_paths, out_paths)))
 
 
 def extract_sand_and_clay_from_rpn(rpn_path='data/geophys_africa', outpath=""):
@@ -169,8 +169,8 @@ def extract_sand_and_clay_from_rpn(rpn_path='data/geophys_africa', outpath=""):
     sand = np.zeros((nx, ny, nz))
     clay = np.zeros((nx, ny, nz))
 
-    for i in xrange(nz):
-        print i
+    for i in range(nz):
+        print(i)
         sand[:, :, i] = sandField[i + 1][:, :]
         clay[:, :, i] = clayField[i + 1][:, :]
 
@@ -205,7 +205,7 @@ def delete_files_with_nrecords(folder_path='data/CORDEX/Africa/Samples', n_recor
             rpnObj.close()
             if delete:
                 os.remove(filePath)
-                print 'removing %s' % filePath
+                print('removing %s' % filePath)
 
     pass
 
@@ -230,4 +230,4 @@ if __name__ == "__main__":
     runoff_to_netcdf_parallel("/b2_fs2/huziy/Arctic_0.5deg_OMSC_26L_ERA40I/",
                               "/skynet3_rech1/huziy/runoff_arctic_nc/ERA40")
 
-    print "Hello World"
+    print("Hello World")

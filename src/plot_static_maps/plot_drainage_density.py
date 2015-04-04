@@ -54,7 +54,7 @@ def main():
     slope = ds.variables["slope"][20:-20, 20:-20]
 
     fig = plt.figure()
-    print data.min(), data.max()
+    print(data.min(), data.max())
     ax = plt.gca()
 
     data = np.ma.masked_where(slope < 0, data)
@@ -85,5 +85,5 @@ if __name__ == "__main__":
 
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

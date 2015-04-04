@@ -134,16 +134,16 @@ def interpolate_slopes(in_path_template="",
     mat = None
     params, lons2d_source, lat2d_source = None, None, None
     ktree = None
-    for sc, med in SLOPE_CLASS_TO_MEDIAN.iteritems():
+    for sc, med in SLOPE_CLASS_TO_MEDIAN.items():
         inpath = in_path_template.format(sc)
         if mat is None:
             params, lons2d_source, lat2d_source = _get_source_lon_lat(path=inpath)
-            print lons2d_target.min(), lons2d_target.max()
-            print lons2d_source.shape
+            print(lons2d_target.min(), lons2d_target.max())
+            print(lons2d_source.shape)
             xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons2d_source.flatten(), lat2d_source.flatten())
-            print "processing slopes of class sc={0}".format(sc)
-            ktree = cKDTree(zip(xs, ys, zs))
-            print "created kdtree.."
+            print("processing slopes of class sc={0}".format(sc))
+            ktree = cKDTree(list(zip(xs, ys, zs)))
+            print("created kdtree..")
 
         tmp_mat = med * _get_slope_data(path=inpath)
         if mat is None:
@@ -164,10 +164,10 @@ def interpolate_slopes(in_path_template="",
         (lats2d_target[-1, -1], lons2d_target[-1, -1])).km ** 2 / np.prod(lons2d_target.shape)
 
     nnegihbours = max(int(a_target / a_source), 2)
-    print "nneighbours = {0}".format(nnegihbours)
-    print "a_target = {0} km**2; a_source = {1} km**2".format(a_target, a_source)    
+    print("nneighbours = {0}".format(nnegihbours))
+    print("a_target = {0} km**2; a_source = {1} km**2".format(a_target, a_source))    
 
-    dists, inds = ktree.query(zip(xt, yt, zt), k=nnegihbours)
+    dists, inds = ktree.query(list(zip(xt, yt, zt)), k=nnegihbours)
     interpolated_slopes = mat.flatten()[inds].mean(axis=1).reshape(lons2d_target.shape)
 
     r_obj_out.write_2D_field(name="ITFS",
@@ -195,7 +195,7 @@ def main(use_half_of_cols=True):
     ds = Dataset(out_path, "w")
 
     for cl in range(1, nclasses + 1):
-        print "cl = {0}".format(cl)
+        print("cl = {0}".format(cl))
         inpath = os.path.join(folder_path, in_fname_pattern.format(cl))
         if cl == 1:  # generate lon/lat
             params, lon2d, lat2d = _get_source_lon_lat(path=inpath)
@@ -226,4 +226,4 @@ if __name__ == "__main__":
     t0 = time.time()
     interpolate_slopes(in_path_template="/gs/project/ugh-612-aa/huziy/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
                        in_path_rpn_geophy="/gs/project/ugh-612-aa/huziy/geophysics_fields/geophys_Quebec_0.1deg_260x260_with_dd_v6")
-    print "Execution time is {0} seconds.".format(time.time() - t0)
+    print("Execution time is {0} seconds.".format(time.time() - t0))

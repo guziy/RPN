@@ -30,7 +30,7 @@ def get_runoff_diff_composit(swe_table_intf=None, traf_table_intf=None,
     total_diff = None
 
     for year in range(start_year, end_year + 1):
-        print "Processing year {}".format(year)
+        print("Processing year {}".format(year))
 
         # Get data for the simulation with interflow
         traf_intf = analysis.get_np_arr_sorted_for_year(year, traf_table_intf, level_index=0)
@@ -50,7 +50,7 @@ def get_runoff_diff_composit(swe_table_intf=None, traf_table_intf=None,
             total_diff[place_where_melts] += traf_intf[t][place_where_melts] - traf_no_intf[t][place_where_melts]
 
         # print "Number of relevant points: ", np.count_nonzero(the_diff)
-        print "Finished processing {}".format(year)
+        print("Finished processing {}".format(year))
     return total_diff
 
 

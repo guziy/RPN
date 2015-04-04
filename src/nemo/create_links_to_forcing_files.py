@@ -34,14 +34,14 @@ def get_years_from_name(fname):
     groups1 = re.findall(r"\d+-\d+", fname)
 
     if len(groups1):
-        s_year, e_year = map(int, groups1[-1].split("-"))
-        return range(s_year, e_year + 1)
+        s_year, e_year = list(map(int, groups1[-1].split("-")))
+        return list(range(s_year, e_year + 1))
     elif "_to_" not in fname:
         return [int(groups[-1])]
     else:
         s_year = int(groups[-2])
         e_year = int(groups[-1])
-        return range(s_year, e_year + 1)
+        return list(range(s_year, e_year + 1))
 
 
 def create_links(expdir = "", forcing_dir = ""):

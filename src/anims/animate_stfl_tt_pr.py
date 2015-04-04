@@ -59,7 +59,7 @@ class Animator():
 
 
     def animate(self, t):
-        print "current frame: {0}".format(self.current_frame_index)
+        print("current frame: {0}".format(self.current_frame_index))
         #clear axes
         #for ax in self.axesDict.values():
         #    ax.cla()
@@ -208,12 +208,12 @@ def main():
         lons2d=lons, lats2d = lats
     )
     x, y = basemap(lons, lats)
-    print x.shape
+    print(x.shape)
 
 
     month_dates = [ datetime(year, month, 15)  for year in range(start_year, end_year + 1) for month in range(1,13) ]
 
-    print len(month_dates), " month of animation "
+    print(len(month_dates), " month of animation ")
 
     nc_data_folder = os.path.join(nc_db_folder, sim_name)
     dsDict = {}
@@ -245,5 +245,5 @@ if __name__ == "__main__":
     from util import plot_utils
     plot_utils.apply_plot_params(width_pt=None, width_cm=30, height_cm=30, font_size=26)
     main()
-    print "Hello world"
+    print("Hello world")
   

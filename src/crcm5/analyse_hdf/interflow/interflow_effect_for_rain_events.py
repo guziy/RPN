@@ -65,7 +65,7 @@ def get_mean_diffs(interflow_data_path="", base_data_path="",
     i1_diff = None  # soil moisture difference
     months_query = "{}".format("|".join(["(month=={})".format(m) for m in months_of_interest]))
     year_query = "(year >= {}) & (year <= {})".format(start_year, end_year)
-    print "months_query = {}".format(months_query)
+    print("months_query = {}".format(months_query))
 
     depth_to_bedrock = pt_analysis.get_array_from_file(base_data_path, var_name=infovar.HDF_DEPTH_TO_BEDROCK_NAME)
 
@@ -81,7 +81,7 @@ def get_mean_diffs(interflow_data_path="", base_data_path="",
         assert isinstance(traf_intf_table, tb.Table)
         assert isinstance(tdra_intf_table, tb.Table)
 
-        print len(pr_intf_table), len(tt_intf_table), len(traf_intf_table)
+        print(len(pr_intf_table), len(tt_intf_table), len(traf_intf_table))
 
         with tb.open_file(base_data_path) as h_nointf:
 
@@ -169,17 +169,17 @@ def get_mean_diffs(interflow_data_path="", base_data_path="",
                 )
 
                 if rownum % 100 == 0:
-                    print "Precipitation ranges in M/s"
-                    print pr_intf_field.min(), pr_intf_field.max()
-                    print pr_nointf_field.min(), pr_nointf_field.max()
+                    print("Precipitation ranges in M/s")
+                    print(pr_intf_field.min(), pr_intf_field.max())
+                    print(pr_nointf_field.min(), pr_nointf_field.max())
 
                 if traf_intf_field is None:
-                    print "intf field is none"
-                    print traf_query
+                    print("intf field is none")
+                    print(traf_query)
 
                 if traf_nointf_field is None:
-                    print "nointf field is none"
-                    print traf_query
+                    print("nointf field is none")
+                    print(traf_query)
 
                 traf_diff[points_of_interest] += traf_intf_field[points_of_interest] - \
                                                  traf_nointf_field[points_of_interest]

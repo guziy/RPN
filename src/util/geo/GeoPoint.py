@@ -30,13 +30,13 @@ def test():
     p1 = GeoPoint(1,1)
     p2 = p1.clone()
 
-    print p1 == p2
-    print p1 is p2
-    print p1, p1.clone()
+    print(p1 == p2)
+    print(p1 is p2)
+    print(p1, p1.clone())
 
     p2.longitude = 5
-    print p1.longitude
-    print p2.longitude 
+    print(p1.longitude)
+    print(p2.longitude) 
 
 
 if __name__ == "__main__":

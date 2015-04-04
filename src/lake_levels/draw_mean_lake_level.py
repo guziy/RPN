@@ -19,7 +19,7 @@ def _plot_depth(data, lons2d, lats2d, basemap = None,
                 clevels = None, lowest_value = 0.1,
                 ax = None):
     if clevels is None:
-        clevels = range(-2100, -300, 600) + range(-300, 0, 20) + range(0, 300, 20)
+        clevels = list(range(-2100, -300, 600)) + list(range(-300, 0, 20)) + list(range(0, 300, 20))
     cmap = cm.get_cmap(name="jet_r", lut = len(clevels))
     norm = colors.BoundaryNorm(clevels, cmap.N)
 
@@ -49,7 +49,7 @@ def plot_initial_lake_depth(path = "data/from_guillimin/vary_lake_level1/pm19850
     r = RPN(path)
     field = r.get_first_record_for_name(var_name)
     r.close()
-    _plot_depth(field, lons2d, lats2d, basemap = basemap, clevels=xrange(0,310, 10))
+    _plot_depth(field, lons2d, lats2d, basemap = basemap, clevels=range(0,310, 10))
     return field
 
 def plot_lake_fraction(path = "data/from_guillimin/vary_lake_level1/pm1985010100_00000000p",
@@ -68,11 +68,11 @@ def _get_seasonal_mean_anomaly(data, the_mean, months = None):
     """
     :type data: dict
     """
-    sitems = sorted( data.items(), key = lambda x: x[0])
-    times = map(lambda x: x[0], sitems)
-    values = map(lambda x: x[1], sitems)
+    sitems = sorted( list(data.items()), key = lambda x: x[0])
+    times = [x[0] for x in sitems]
+    values = [x[1] for x in sitems]
 
-    bool_vector = map(lambda x: x.month in months, times)
+    bool_vector = [x.month in months for x in times]
     bool_vector = np.array(bool_vector)
     values = np.array(values)
     return np.mean(values[bool_vector,:,:], axis = 0) - the_mean
@@ -94,7 +94,7 @@ def plot_mean(data_path = "", file_prefix = "pm"):
         r = RPN(file_path)
         levels = r.get_all_time_records_for_name(varname=var_name)
         means_dict.update(levels)
-        means.append(np.mean( levels.values() , axis = 0))
+        means.append(np.mean( list(levels.values()) , axis = 0))
     mean_level = np.array(means).mean(axis = 0)
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords(
         file_path="data/from_guillimin/vary_lake_level1/pm1985010100_00000000p",
@@ -106,7 +106,7 @@ def plot_mean(data_path = "", file_prefix = "pm"):
 
     #plot mean
     plt.figure()
-    _plot_depth(mean_level, lons2d, lats2d, basemap=b, clevels=xrange(0,310, 10))
+    _plot_depth(mean_level, lons2d, lats2d, basemap=b, clevels=range(0,310, 10))
     plt.savefig("mean_lake_levels.png")
 
 
@@ -161,5 +161,5 @@ def main(data_path = "data/from_guillimin/vary_lake_level1"):
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

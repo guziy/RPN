@@ -79,15 +79,15 @@ def test():
 
     from geopy import distance
 
-    print EARTH_RADIUS_METERS, distance.EARTH_RADIUS
+    print(EARTH_RADIUS_METERS, distance.EARTH_RADIUS)
     distance.EARTH_RADIUS = EARTH_RADIUS_METERS / 1000.0
-    print distance.GreatCircleDistance((-86.67, 36.12)[::-1], (-118.4, 33.94)[::-1]).m
+    print(distance.GreatCircleDistance((-86.67, 36.12)[::-1], (-118.4, 33.94)[::-1]).m)
 
-    print get_distance_in_meters(p1, p2)
-    print get_distance_in_meters(p1.longitude, p1.latitude, p2.longitude, p2.latitude)
-    print 'Theoretical distance: %f km' % 2887.26
+    print(get_distance_in_meters(p1, p2))
+    print(get_distance_in_meters(p1.longitude, p1.latitude, p2.longitude, p2.latitude))
+    print('Theoretical distance: %f km' % 2887.26)
 
 
 if __name__ == "__main__":
     test()
-    print "Hello World"
+    print("Hello World")

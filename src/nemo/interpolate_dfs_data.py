@@ -53,19 +53,19 @@ def interpolate_bathymetry(in_data, kdtree,
     d_source_x = np.median(np.sqrt(d_source_x))
     d_source_y = np.median(np.sqrt(d_source_y))
 
-    print d_source_x, d_source_y, d_target_x, d_target_y
+    print(d_source_x, d_source_y, d_target_x, d_target_y)
     nneighbours = int((d_target_x * d_target_y) / (d_source_x * d_source_y))
 
-    print "nneighbours = ", nneighbours
+    print("nneighbours = ", nneighbours)
 
     in_data_flat = in_data.flatten()
     if nneighbours <= 1:
-        dists, inds = kdtree.query(zip(*target_coords))
+        dists, inds = kdtree.query(list(zip(*target_coords)))
         return in_data_flat[inds].reshape(out_data_shape)
     else:
-        dists, inds = kdtree.query(zip(*target_coords), k=nneighbours)
+        dists, inds = kdtree.query(list(zip(*target_coords)), k=nneighbours)
         w = 1.0 / dists ** 2
-        print w.shape
+        print(w.shape)
         out_data_flat = np.sum(in_data_flat[inds] * w, axis=1) / w.sum(axis=1)
 
         #count 0
@@ -88,7 +88,7 @@ class Interpolator(object):
         self.target_lons = ds.variables["glamt"][:]
         self.target_lats = ds.variables["gphit"][:]
 
-        print "target lons shape = ", self.target_lons.shape
+        print("target lons shape = ", self.target_lons.shape)
         ds.close()
 
 
@@ -100,10 +100,10 @@ class Interpolator(object):
         """
         #check if the output file already exists
         if os.path.isfile(outpath):
-            print "{0} already exists, remove to recreate ...".format(outpath)
+            print("{0} already exists, remove to recreate ...".format(outpath))
             return
 
-        print "working on {0}".format(inpath)
+        print("working on {0}".format(inpath))
         ds_in = Dataset(inpath)
 
 
@@ -139,7 +139,7 @@ class Interpolator(object):
 
 
         #find the name of the field to be interpolated, and read it into memory
-        varnames = ds_in.variables.keys()
+        varnames = list(ds_in.variables.keys())
 
         #write interpolated data
         ds_out = Dataset(outpath, "w", format="NETCDF3_CLASSIC")
@@ -164,8 +164,8 @@ class Interpolator(object):
         xs, ys, zs = lon_lat_to_cartesian(source_lons.flatten(), source_lats.flatten())
         xt, yt, zt = lon_lat_to_cartesian(self.target_lons.flatten(), self.target_lats.flatten())
 
-        ktree = cKDTree(data=zip(xs[good_points], ys[good_points], zs[good_points]))
-        dists, inds = ktree.query(zip(xt, yt, zt), k=1)
+        ktree = cKDTree(data=list(zip(xs[good_points], ys[good_points], zs[good_points])))
+        dists, inds = ktree.query(list(zip(xt, yt, zt)), k=1)
 
 
 
@@ -219,8 +219,8 @@ class Interpolator(object):
                 in_data = in_var[:]
                 if time_data is not None:
                     p = pd.Panel(data=in_data, items=time_data,
-                                 major_axis=range(in_data.shape[1]),
-                                 minor_axis=range(in_data.shape[2]))
+                                 major_axis=list(range(in_data.shape[1])),
+                                 minor_axis=list(range(in_data.shape[2])))
 
                     if in_data.shape[0] > 365 and skip_feb_29:
                         p = p.select(lambda d: not (d.day == 29 and d.month == 2))
@@ -228,7 +228,7 @@ class Interpolator(object):
                     in_data = p.values
 
                 # reshape to 2d
-                print in_data.shape, self.target_lons.shape
+                print(in_data.shape, self.target_lons.shape)
                 in_data.shape = (in_data.shape[0], -1)
                 out_data = in_data[:, inds]
                 out_data.shape = (out_data.shape[0], ) + self.target_lons.shape
@@ -274,7 +274,7 @@ class Interpolator(object):
 
 
 def ignore_copy_func(dirpath, files):
-    return filter(lambda f: os.path.isfile(os.path.join(dirpath, f)) and not f.endswith(".nc"), files)
+    return [f for f in files if os.path.isfile(os.path.join(dirpath, f)) and not f.endswith(".nc")]
 
 
 def apply_interpolator(arg):
@@ -317,14 +317,14 @@ def main(infolder="DFS4.3", coord_file="", outfolder=None):
             if not os.path.isdir(dpath):
                 os.mkdir(dpath)
 
-        ncfiles = filter(lambda fname: fname.endswith(".nc") and not fname.startswith("interpolated"), files)
+        ncfiles = [fname for fname in files if fname.endswith(".nc") and not fname.startswith("interpolated")]
         in_ncpaths += [os.path.join(root, f) for f in ncfiles]
         out_ncpaths += [os.path.join(out_root, f) for f in ncfiles]
 
     assert len(in_ncpaths) == len(out_ncpaths)
     pool = Pool()
     workers = [worker] * len(in_ncpaths)
-    res = pool.map(apply_interpolator, zip(workers, in_ncpaths, out_ncpaths))
+    res = pool.map(apply_interpolator, list(zip(workers, in_ncpaths, out_ncpaths)))
     assert sum(res) == 0
     # for in_path, out_path in zip(in_ncpaths, out_ncpaths):
     #     worker.interpolate_file(in_path, out_path)

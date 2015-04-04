@@ -1,6 +1,6 @@
 __author__ = 'huziy'
 
-from model_data import Crcm5ModelDataManager
+from .model_data import Crcm5ModelDataManager
 import tables as tb
 
 
@@ -16,11 +16,11 @@ def test_export_to_hdf():
     the_table = h.root.TT
     assert isinstance(the_table, tb.Table)
 
-    print the_table.cols.year[:20]
-    print the_table.cols.day[:20]
-    print the_table.cols.level[:10]
+    print(the_table.cols.year[:20])
+    print(the_table.cols.day[:20])
+    print(the_table.cols.level[:10])
 
-    print the_table.description
+    print(the_table.description)
     h.close()
 
 if __name__ == "__main__":

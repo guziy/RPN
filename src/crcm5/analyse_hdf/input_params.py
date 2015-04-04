@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle
 
 from crcm5 import infovar
 from util.geo.index_shapes import IndexRectangle, IndexPoint
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 
 
 class InputParams(object):
@@ -52,7 +52,7 @@ class InputParams(object):
     def _create_image_folder(self):
         if not os.path.isdir(self.img_folder):
             os.makedirs(self.img_folder)
-        print "image files will be stored in {0}".format(self.img_folder)
+        print("image files will be stored in {0}".format(self.img_folder))
 
     def _check_myself(self):
         assert self.start_date <= self.end_date, "End date should be after the start date !"

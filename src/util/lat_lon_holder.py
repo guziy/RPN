@@ -104,7 +104,7 @@ class LatLonHolder():
 
 
 if __name__ == "__main__":
-    print get_distance_km(-86.67, 36.12, -118.40, 33.94)
+    print(get_distance_km(-86.67, 36.12, -118.40, 33.94))
     holder = LatLonHolder()
-    print holder.get_num_cells_along_x()
-    print holder.get_num_cells_along_y()
+    print(holder.get_num_cells_along_x())
+    print(holder.get_num_cells_along_y())

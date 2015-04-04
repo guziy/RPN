@@ -39,7 +39,7 @@ def main():
     max_lat = lats2d.max() - 4
 
     #plot_utils.apply_plot_params(width_pt=None, width_cm=80)
-    print max_lon
+    print(max_lon)
 
     fig = plt.figure(dpi=500, figsize=(11, 8.5))
     b = Basemap(projection="mill", llcrnrlon=min_lon,
@@ -74,8 +74,8 @@ def main():
 
 
 
-    i_indices_1d = range(dirs.shape[0])
-    j_indices_1d = range(dirs.shape[1])
+    i_indices_1d = list(range(dirs.shape[0]))
+    j_indices_1d = list(range(dirs.shape[1]))
 
     j_indices_2d, i_indices_2d = np.meshgrid(j_indices_1d, i_indices_1d)
 
@@ -108,5 +108,5 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -1,7 +1,7 @@
 from netCDF4 import Dataset
 import os
 import Ngl
-import draw_regions
+from . import draw_regions
 
 __author__ = 'huziy'
 
@@ -18,10 +18,10 @@ def main():
     hm = ds.variables["alt"][:]
     years = ds.variables["year"][:]
     years_sel = np.where(( start_year <= years ) & (years <= end_year))[0]
-    print years_sel
+    print(years_sel)
 
     hm = hm[np.array(years_sel),:,:]
-    print hm.shape
+    print(hm.shape)
 
     good_points = ~np.any(hm < 0, axis = 0)
 
@@ -50,7 +50,7 @@ def main():
     lons2d[lons2d > 180] -= 360
 
     x, y = basemap(lons2d, lats2d)
-    print x.min(), x.max()
+    print(x.min(), x.max())
     permafrost_mask = draw_regions.get_permafrost_mask(lons2d, lats2d)
     mask_cond = (permafrost_mask <= 0) | (permafrost_mask >= 3)
 
@@ -98,5 +98,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

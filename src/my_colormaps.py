@@ -22,7 +22,7 @@ def get_cmap_from_ncl_spec_file(path = "", ncolors = None):
             ncolors = int( line.split("=")[1].strip() )
             continue
         if not line.startswith("#") and not line.lower().startswith("ncolors"):
-            vals = map( lambda x: float(x.strip())/Nmax, line.split()[:3])
+            vals = [float(x.strip())/Nmax for x in line.split()[:3]]
             all_numbers.append(vals)
 
     all_numbers = np.array(all_numbers)
@@ -581,13 +581,13 @@ def cmap_map(function,cmap):
     cdict = cmap._segmentdata
     step_dict = {}
     # Firt get the list of points where the segments start or end
-    for key in ('red','green','blue'):         step_dict[key] = map(lambda x: x[0], cdict[key])
-    step_list = sum(step_dict.values(), [])
+    for key in ('red','green','blue'):         step_dict[key] = [x[0] for x in cdict[key]]
+    step_list = sum(list(step_dict.values()), [])
     step_list = np.array(list(set(step_list)))
     # Then compute the LUT, and apply the function to the LUT
     reduced_cmap = lambda step : np.array(cmap(step)[0:3])
-    old_LUT = np.array(map( reduced_cmap, step_list))
-    new_LUT = np.array(map( function, old_LUT))
+    old_LUT = np.array(list(map( reduced_cmap, step_list)))
+    new_LUT = np.array(list(map( function, old_LUT)))
     # Now try to make a minimal segment definition of the new LUT
     cdict = {}
     for i,key in enumerate(('red','green','blue')):
@@ -597,7 +597,7 @@ def cmap_map(function,cmap):
                 this_cdict[step] = new_LUT[j,i]
             elif new_LUT[j,i]!=old_LUT[j,i]:
                 this_cdict[step] = new_LUT[j,i]
-        colorvector=  map(lambda x: x + (x[1], ), this_cdict.items())
+        colorvector=  [x + (x[1], ) for x in list(this_cdict.items())]
         colorvector.sort()
         cdict[key] = colorvector
 
@@ -690,4 +690,4 @@ if __name__ == "__main__":
     #test()
     test_ncl_map()
     #dem_cmap()
-    print "Hello World"
+    print("Hello World")

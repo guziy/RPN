@@ -50,9 +50,9 @@ class Tester(unittest.TestCase):
             result.append(Polygon(coords, facecolor = 'none', linewidth = 1))
             assert isinstance(feature, Feature), type(feature)
 
-            print 20 * "*"
+            print(20 * "*")
             for fid in range(feature.GetFieldCount()):
-                print feature.GetField(fid)
+                print(feature.GetField(fid))
 
             feature = layer.GetNextFeature()
 
@@ -63,4 +63,4 @@ class Tester(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    print "Hello World"
+    print("Hello World")

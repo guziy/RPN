@@ -52,7 +52,7 @@ class Cell:
         """
         current = aCell
         while current is not None:
-            current = current.next
+            current = current.__next__
             if current == self:
                 return True
         return False
@@ -67,5 +67,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

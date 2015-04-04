@@ -18,8 +18,8 @@ __author__ = 'huziy'
 import matplotlib.pyplot as plt
 import numpy as np
 
-import do_analysis_using_pytables as analysis
-import common_plot_params as cpp
+from . import do_analysis_using_pytables as analysis
+from . import common_plot_params as cpp
 
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
@@ -54,7 +54,7 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     vmin = None
     vmax = None
 
-    for season, months in season_to_months.iteritems():
+    for season, months in season_to_months.items():
         model_field = analysis.get_seasonal_climatology(start_year=start_year, end_year=end_year,
                                                         months=months,
                                                         level=model_level,
@@ -92,10 +92,10 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     vmax = d
     bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=False)
 
-    print "bounds: ", bounds
+    print("bounds: ", bounds)
 
     cs = None
-    for season, field in season_to_field.iteritems():
+    for season, field in season_to_field.items():
         row, col = season_to_plot_indices[season]
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
@@ -115,7 +115,7 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     cax = fig.add_subplot(gs[:, 2])
     cax.set_title("mm/day\n")
     plt.colorbar(im, cax=cax, extend="both")
-    seasons_str = "_".join(sorted([str(s) for s in season_to_field.keys()]))
+    seasons_str = "_".join(sorted([str(s) for s in list(season_to_field.keys())]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
         os.mkdir(atm_val_folder)
@@ -153,7 +153,7 @@ def validate_temperature(
     vmin = None
     vmax = None
 
-    for season, months in season_to_months.iteritems():
+    for season, months in season_to_months.items():
         model_field = analysis.get_seasonal_climatology(start_year=start_year, end_year=end_year,
                                                         months=months,
                                                         level=model_level,
@@ -188,10 +188,10 @@ def validate_temperature(
     vmax = d
     bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors)
 
-    print "bounds: ", bounds
+    print("bounds: ", bounds)
 
     cs = None
-    for season, field in season_to_field.iteritems():
+    for season, field in season_to_field.items():
         row, col = season_to_plot_indices[season]
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
@@ -213,7 +213,7 @@ def validate_temperature(
     var_str = r"$T_{\max}$" if model_var_name.endswith("_max") else r"$T_{\min}$"
     cax.set_title("{0}, {1}".format(var_str, units_str))
     plt.colorbar(im, cax=cax, extend = "both")
-    seasons_str = "_".join(sorted([str(s) for s in season_to_field.keys()]))
+    seasons_str = "_".join(sorted([str(s) for s in list(season_to_field.keys())]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
         os.mkdir(atm_val_folder)
@@ -229,7 +229,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     reasonable_error_mm = 100.0
     assert isinstance(obs_manager, SweDataManager)
 
-    print "lake fraction ranges: {0}, {1}".format(lake_fraction.min(), lake_fraction.max())
+    print("lake fraction ranges: {0}, {1}".format(lake_fraction.min(), lake_fraction.max()))
 
     fig = plt.figure()
     obs_manager.name = "Obs."
@@ -249,7 +249,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     vmax = None
 
     season_to_obs_field = {}
-    for season, months in season_to_months.iteritems():
+    for season, months in season_to_months.items():
         model_field = analysis.get_seasonal_climatology(start_year=start_year, end_year=end_year,
                                                         months=months,
                                                         level=model_level,
@@ -293,13 +293,13 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     bn = BoundaryNorm(bounds, ncolors=len(bounds) - 1)
     cmap = cm.get_cmap("RdBu_r", len(bounds) - 1)
 
-    print "bounds: ", bounds
+    print("bounds: ", bounds)
 
     cs = None
-    for season, field in season_to_field.iteritems():
+    for season, field in season_to_field.items():
 
         if season.lower() == "summer":
-            print "Warning: skipping summer season for SWE"
+            print("Warning: skipping summer season for SWE")
             continue
 
         row, col = season_to_plot_indices[season]
@@ -331,7 +331,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     plt.colorbar(im, cax=cax, ticks = bounds, extend = "both")
 
 
-    seasons_str = "_".join(sorted([str(s) for s in season_to_months.keys()]))
+    seasons_str = "_".join(sorted([str(s) for s in list(season_to_months.keys())]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
         os.mkdir(atm_val_folder)
@@ -344,9 +344,9 @@ def do_4_seasons(start_year=1980, end_year=2010):
     # Creates one file per simulation containing biases for 4 seasons
     season_to_months = {
         "Winter": [12, 1, 2],
-        "Spring": range(3, 6),
-        "Summer": range(6, 9),
-        "Fall": range(9, 11)
+        "Spring": list(range(3, 6)),
+        "Summer": list(range(6, 9)),
+        "Fall": list(range(9, 11))
     }
 
     season_to_plot_indices = {
@@ -364,9 +364,9 @@ def do_4_seasons(start_year=1980, end_year=2010):
 #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
     }
 
-    print "Period of interest: {0}-{1}".format(start_year, end_year)
+    print("Period of interest: {0}-{1}".format(start_year, end_year))
 
-    lake_fraction = analysis.get_array_from_file(simlabel_to_path.items()[-1][1],
+    lake_fraction = analysis.get_array_from_file(list(simlabel_to_path.items())[-1][1],
                                                  var_name=infovar.HDF_LAKE_FRACTION_NAME)
 
     pcp_obs_manager = AnuSplinManager(variable="pcp")
@@ -375,7 +375,7 @@ def do_4_seasons(start_year=1980, end_year=2010):
 
     swe_obs_manager = SweDataManager(var_name="SWE")
 
-    for simlabel, path in simlabel_to_path.iteritems():
+    for simlabel, path in simlabel_to_path.items():
         # Validate precipitations
         validate_precip(model_file=path, obs_manager=pcp_obs_manager,
                         season_to_months=season_to_months, simlabel=simlabel,

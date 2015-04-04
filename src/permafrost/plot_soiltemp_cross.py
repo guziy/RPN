@@ -4,8 +4,8 @@ from matplotlib.dates import date2num, num2date
 from matplotlib.ticker import FuncFormatter, ScalarFormatter
 from mpl_toolkits.basemap import Basemap
 from scipy.spatial.kdtree import KDTree
-import draw_regions
-from active_layer_thickness import CRCMDataManager
+from . import draw_regions
+from .active_layer_thickness import CRCMDataManager
 from util.geo import lat_lon
 from matplotlib import cm
 
@@ -51,7 +51,7 @@ def main_for_spinup():
     lons2d[lons2d > 180] -= 360
 
     x, y, z = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-    the_kd_tree = KDTree(zip(x, y, z))
+    the_kd_tree = KDTree(list(zip(x, y, z)))
     lon_p = -107-13.0/60.0 #-96.65
     lat_p = 26.0 + 10.0/60.0#29.75
 
@@ -60,7 +60,7 @@ def main_for_spinup():
 
     levels = dm.level_heights
 
-    years = xrange(start_year, end_year + 1)
+    years = range(start_year, end_year + 1)
 
     all_months, t4d = dm.get_monthly_mean_soiltemps(year_range=years)
     t4d -= T0
@@ -72,7 +72,7 @@ def main_for_spinup():
 
 
 
-    ids = xrange(10)
+    ids = range(10)
     lons_p = [-124.306,-116.205,-112.291,-110.215,-87.881,-87.7899,-87.6967,-86.2741,-86.1661,-85.5195]
     lats_p = [60.2532,61.9556,61.483,60.7783,54.8701,55.307,55.7438,55.1947,55.6304,55.1322]
 
@@ -159,7 +159,7 @@ def main():
     lons2d[lons2d > 180] -= 360
 
     x, y, z = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-    the_kd_tree = KDTree(zip(x, y, z))
+    the_kd_tree = KDTree(list(zip(x, y, z)))
     lon_p = -130.97578#-132.3739 #-113.25241, #-100.0
     lat_p = 66.152588#66.360443 #59.584538 #60.0
     #flat_idx = get_flat_index(lon_p, lat_p, the_kd_tree = the_kd_tree)
@@ -169,7 +169,7 @@ def main():
 
     levels = dm.level_heights[1:10]
 
-    years = xrange(start_year, end_year + 1)
+    years = range(start_year, end_year + 1)
     t1 = np.zeros((len(years), len(levels)))
     for iy, y in enumerate(years):
         t3d = dm.get_annual_mean_3d_field(var_name="I0", year=y)
@@ -218,5 +218,5 @@ if __name__ == "__main__":
 
     #main()
     main_for_spinup()
-    print "Hello world"
+    print("Hello world")
   

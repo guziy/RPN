@@ -20,7 +20,7 @@ def configure():
 
 
 def explore_seasonal_interflow():
-    import explore_interflow_field
+    from . import explore_interflow_field
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=17)
     # hdf_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
@@ -33,7 +33,7 @@ def explore_seasonal_interflow():
 
 
 def compare_simulations():
-    import compare_modelled_2d_fields
+    from . import compare_modelled_2d_fields
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=34, height_cm=30)
     p = Process(target=compare_modelled_2d_fields.main)
@@ -45,7 +45,7 @@ def compare_simulations_differences():
     Plot changes for different variables for different seasons for 2 simulations
 
     """
-    import compare_modelled_2d_fields_increments_only as comp_incrs
+    from . import compare_modelled_2d_fields_increments_only as comp_incrs
 
 
     # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
@@ -63,9 +63,9 @@ def compare_simulations_differences():
 
     season_to_months = OrderedDict([
         ("Winter", [12, 1, 2]),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12))
+        ("Spring", list(range(3, 6))),
+        ("Summer", list(range(6, 9))),
+        ("Fall", list(range(9, 12)))
     ])
 
     # season_to_months = OrderedDict([
@@ -88,7 +88,7 @@ def compare_simulations_differences():
 
 def compare_obs_and_model_at_points():
     plot_utils.apply_plot_params(font_size=20, width_pt=None, width_cm=17, height_cm=10)
-    import compare_streamflow_with_obs
+    from . import compare_streamflow_with_obs
 
     start_date = datetime(1980, 1, 1)
     end_date = datetime(2010, 12, 31)
@@ -99,13 +99,13 @@ def compare_obs_and_model_at_points():
 
 
 def compare_obs_and_model_at_river_outlet_points():
-    import compare_streamflow_with_obs
+    from . import compare_streamflow_with_obs
 
     compare_streamflow_with_obs.point_comparisons_at_outlets()
 
 
 def do_plot_static_fields():
-    import plot_static_fields
+    from . import plot_static_fields
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=17)
     p = Process(target=plot_static_fields.main)
@@ -113,20 +113,20 @@ def do_plot_static_fields():
 
 
 def plot_vertical_soil_moisture_cross_section():
-    import compare_soil_moisture_profiles_upstream_of_stations as profiles
+    from . import compare_soil_moisture_profiles_upstream_of_stations as profiles
 
     profiles.main(start_year=1980, end_year=1989)
 
 
 def plot_static_fields_histograms():
-    import plot_static_fields
+    from . import plot_static_fields
 
     plot_static_fields.plot_histograms(
         path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf")
 
 
 def compare_2d_seasonal_means_from_simulations():
-    import compare_modelled_2d_fields as comp
+    from . import compare_modelled_2d_fields as comp
 
     varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
 
@@ -141,9 +141,9 @@ def compare_2d_seasonal_means_from_simulations():
 
     season_to_months = OrderedDict([
         ("Winter", [12, 1, 2]),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12))
+        ("Spring", list(range(3, 6))),
+        ("Summer", list(range(6, 9))),
+        ("Fall", list(range(9, 12)))
     ])
 
     # season_to_months = OrderedDict([
@@ -166,7 +166,7 @@ def compare_2d_seasonal_means_from_simulations():
 
 def validate_seasonal_mean_atm_fields():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=15)
-    import validate_model_fields
+    from . import validate_model_fields
 
     p = Process(target=validate_model_fields.do_4_seasons, kwargs=dict(
         start_year=1980, end_year=2010))
@@ -174,14 +174,14 @@ def validate_seasonal_mean_atm_fields():
 
 
 def plot_soil_profiles():
-    import plot_soil_profile_in_time_mean_for_region
+    from . import plot_soil_profile_in_time_mean_for_region
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
     plot_soil_profile_in_time_mean_for_region.exp_plot_one_simulation()
 
 
 def compare_quantiles():
-    import lake_effect_on_streamflow_quantiles as lkeff
+    from . import lake_effect_on_streamflow_quantiles as lkeff
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=10)
     # plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=24, height_cm=12)
@@ -189,7 +189,7 @@ def compare_quantiles():
 
 
 def compare_obs_and_model_lake_levels_at_points():
-    import compare_lake_levels_with_obs
+    from . import compare_lake_levels_with_obs
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
 
@@ -222,7 +222,7 @@ def plot_veg_fractions_for_a_random_run():
 
 
 def plot_diff_in_soil_profiles():
-    import plot_soil_profile_in_time_mean_for_region
+    from . import plot_soil_profile_in_time_mean_for_region
 
     plot_utils.apply_plot_params(font_size=7, width_pt=None, width_cm=20, height_cm=10)
     plot_soil_profile_in_time_mean_for_region.main_compare_two_simulations()
@@ -269,4 +269,4 @@ if __name__ == "__main__":
     # plot_diff_in_soil_profiles()
 
     # compare_simulations_differences()
-    print "Execution time: {0} seconds".format(time.clock() - t0)
+    print("Execution time: {0} seconds".format(time.clock() - t0))

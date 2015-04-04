@@ -1,5 +1,5 @@
 from matplotlib.ticker import FuncFormatter, FixedFormatter, ScalarFormatter
-from model_data import Crcm5ModelDataManager
+from .model_data import Crcm5ModelDataManager
 
 __author__ = 'huziy'
 
@@ -14,7 +14,7 @@ fixedFormatter = ScalarFormatter()
 
 def get_label( curText, pos):
     v = float(curText)
-    print type(curText), curText, pos
+    print(type(curText), curText, pos)
     return fixedFormatter.format_data_short( np.exp(v) )
     pass
 
@@ -64,8 +64,8 @@ def main():
     dimat = di[kmat]
     djmat = dj[kmat]
 
-    i = range(x.shape[0])
-    j = range(x.shape[1])
+    i = list(range(x.shape[0]))
+    j = list(range(x.shape[1]))
 
     jmat, imat = np.meshgrid(j,i)
 
@@ -121,5 +121,5 @@ if __name__ == "__main__":
     from util import plot_utils
     plot_utils.apply_plot_params(width_cm=15, height_cm=15)
     main()
-    print "Hello world"
+    print("Hello world")
   

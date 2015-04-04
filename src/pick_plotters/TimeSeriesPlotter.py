@@ -33,7 +33,7 @@ class TimeSeriesPlotter:
         self.counter = 0
         self.ax = ax
         x, y, z = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-        self.kdtree = KDTree(zip(x,y,z))
+        self.kdtree = KDTree(list(zip(x,y,z)))
 
         self.sel_time_indices = np.where([start_date <= t <= end_date for t in times])[0]
         self.times = times[self.sel_time_indices]
@@ -68,7 +68,7 @@ class TimeSeriesPlotter:
         ax_monthly = plt.gca()
 
 
-        for varName, ncVar in self.ncVarDict.iteritems():
+        for varName, ncVar in self.ncVarDict.items():
             sel_values = ncVar[self.sel_time_indices, 0, ix, jy]
             ax.plot(self.times, sel_values, label = varName)
 
@@ -99,9 +99,9 @@ class TimeSeriesPlotter:
 
 
     def __call__(self, event):
-        print event.xdata, event.ydata
+        print(event.xdata, event.ydata)
 
-        print event.button
+        print(event.button)
         if event.button != 3:
             return
         ix, jy = self._get_closest_ij(event)
@@ -126,5 +126,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

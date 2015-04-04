@@ -19,7 +19,7 @@ def get_data_and_coords():
     vname = "D9"
 
     r = RPN(path)
-    data = r.get_4d_field(name=vname).items()[0][1]
+    data = list(r.get_4d_field(name=vname).items())[0][1]
 
     params = r.get_proj_parameters_for_the_last_read_rec()
     lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
@@ -42,7 +42,7 @@ def main():
 
     data, lons, lats, bmp = get_data_and_coords()
     lons[lons > 180] -= 360
-    print data.keys()
+    print(list(data.keys()))
 
     # reproject coords
     x, y = bmp(lons, lats)
@@ -50,7 +50,7 @@ def main():
     clevs = np.arange(0, 0.5, 0.02)
     cmap = cm.get_cmap("rainbow", lut=len(clevs))
     # plot for all levels right away
-    for lev, field in data.iteritems():
+    for lev, field in data.items():
         fig = plt.figure()
         plt.title(r"$\theta_{\rm fc}$, " + "soil lev = {}".format(lev))
         to_plot = maskoceans(lons, lats, field, inlands=True)
@@ -59,7 +59,7 @@ def main():
 
         bmp.drawcoastlines()
 
-        print "lev={}, fc-min={}, fc-max={}".format(lev, field.min(), field.max())
+        print("lev={}, fc-min={}, fc-max={}".format(lev, field.min(), field.max()))
 
         fname = "thfc_lev_{}.png".format(lev)
         fig.savefig(os.path.join(img_folder, fname))

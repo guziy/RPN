@@ -5,7 +5,7 @@ from matplotlib.font_manager import FontProperties
 __author__ = 'huziy'
 
 import numpy as np
-from sounding_plotter import SoundingPlotter
+from .sounding_plotter import SoundingPlotter
 import matplotlib.pyplot as plt
 
 class SoundingAndCrossSectionPlotter(SoundingPlotter):
@@ -21,7 +21,7 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
         self.i_inds = []
         self.j_inds = []
         self.annual_means = temporal_data
-        print self.annual_means.shape
+        print(self.annual_means.shape)
 
 
     def plot_cross_sections_for(self, i_inds, j_inds):
@@ -50,7 +50,7 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
 
     def _plot_cross_section(self, fig, ax, ix, jy):
 
-        tvals = range(self.annual_means.shape[0])
+        tvals = list(range(self.annual_means.shape[0]))
         zvals = self.level_heights
 
         z, t = np.meshgrid(zvals, tvals)
@@ -71,9 +71,9 @@ class SoundingAndCrossSectionPlotter(SoundingPlotter):
 
         self.i_inds.append(ix)
         self.j_inds.append(jy)
-        print self.i_inds
-        print self.j_inds
-        print 20 * "="
+        print(self.i_inds)
+        print(self.j_inds)
+        print(20 * "=")
 
         fig = plt.figure()
         assert isinstance(fig, Figure)
@@ -104,5 +104,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

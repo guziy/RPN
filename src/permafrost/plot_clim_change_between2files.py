@@ -2,7 +2,7 @@ import os
 from matplotlib import gridspec
 from matplotlib.figure import Figure
 import my_colormaps
-import draw_regions
+from . import draw_regions
 from rpn.rpn import RPN
 from util import plot_utils
 
@@ -78,5 +78,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(width_pt=None, width_cm=23,height_cm=40, font_size=25)
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -47,7 +47,7 @@ def _get_slope_data(path=""):
     """
     cols - the list of column indices to be read
     """
-    data = np.loadtxt(path, skiprows=6, dtype=np.uint8, usecols=range(100))
+    data = np.loadtxt(path, skiprows=6, dtype=np.uint8, usecols=list(range(100)))
     return np.flipud(data)[:100, :100]
 
 
@@ -85,12 +85,12 @@ def fill_missing_values(route_slope, interpolated_slopes,
     correct_slopes = interpolated_slopes >= 0
 
     x, y, z = lat_lon.lon_lat_to_cartesian(lons2d[correct_slopes], lats2d[correct_slopes])
-    ktree = cKDTree(zip(x, y, z))
+    ktree = cKDTree(list(zip(x, y, z)))
 
 
 
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons2d[to_fill], lats2d[to_fill])
-    dists, inds = ktree.query(zip(xt, yt, zt))
+    dists, inds = ktree.query(list(zip(xt, yt, zt)))
 
     interpolated_slopes[to_fill] = interpolated_slopes[correct_slopes][inds]
 
@@ -183,11 +183,11 @@ def interpolate_slopes(in_path_template="",
     index_map = {}
     imin, jmin = np.Inf, np.Inf
     imax, jmax = -1, -1
-    for sc, med in SLOPE_CLASS_TO_MEDIAN.iteritems():
+    for sc, med in SLOPE_CLASS_TO_MEDIAN.items():
         inpath = in_path_template.format(sc)
         if mat is None:
             params, lons1d_source, lats1d_source = _get_source_lon_lat(path=inpath)
-            print params
+            print(params)
             #build the map of closest indices
             nx, ny = lons2d_target.shape
             for i in range(nx):
@@ -216,16 +216,16 @@ def interpolate_slopes(in_path_template="",
         #i <-> longitude <-> columns in the file
         #j <-> latitude <-> rows in the file
         tmp_mat = _get_slope_data_by_cols_and_rows(path=inpath,
-                                                   cols=range(imin, imax + 1),
-                                                   rows=range(jmin, jmax + 1),
+                                                   cols=list(range(imin, imax + 1)),
+                                                   rows=list(range(jmin, jmax + 1)),
                                                    missing_value=params["NODATA_value"],
                                                    ncols_total = params["ncols"], nrows_total = params["nrows"])
         #tmp_mat = tmp_mat.astype(int)
 
         #nodata_pts = (tmp_mat == params["NODATA_value"])
         #tmp_mat = np.ma.masked_where(nodata_pts, tmp_mat)
-        print tmp_mat.shape
-        print tmp_mat.min(), tmp_mat.max(), tmp_mat.mean()
+        print(tmp_mat.shape)
+        print(tmp_mat.min(), tmp_mat.max(), tmp_mat.mean())
         if mat is None:
             mat = med * tmp_mat
         else:
@@ -237,15 +237,15 @@ def interpolate_slopes(in_path_template="",
     #compare length scales
     interpolated_slopes = np.zeros_like(lons2d_target)
 
-    for ij, inds in index_map.iteritems():
+    for ij, inds in index_map.items():
         data = mat[inds[0] - jmin, inds[1] - imin]
-        print len(data[~data.mask]), np.prod(data.shape, dtype=np.float32), data.shape
+        print(len(data[~data.mask]), np.prod(data.shape, dtype=np.float32), data.shape)
         if float(len(data[~data.mask])) / np.prod(data.shape, dtype=np.float32) < 0.4:
             interpolated_slopes[ij[0], ij[1]] = -1
         else:
             interpolated_slopes[ij[0], ij[1]] = data[~data.mask].mean()
 
-    print "ITFS: ", interpolated_slopes.min(), interpolated_slopes.max()
+    print("ITFS: ", interpolated_slopes.min(), interpolated_slopes.max())
 
 
 
@@ -282,7 +282,7 @@ def main(use_half_of_cols=True):
     ds = Dataset(out_path, "w")
 
     for cl in range(1, nclasses + 1):
-        print "cl = {0}".format(cl)
+        print("cl = {0}".format(cl))
         inpath = os.path.join(folder_path, in_fname_pattern.format(cl))
         if cl == 1:  # generate lon/lat
             params, lon2d, lat2d = _get_source_lon_lat(path=inpath)
@@ -313,4 +313,4 @@ if __name__ == "__main__":
     t0 = time.time()
     interpolate_slopes(in_path_template="/home/huziy/skynet3_rech1/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
                        in_path_rpn_geophy="/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6")
-    print "Execution time is {0} seconds.".format(time.time() - t0)
+    print("Execution time is {0} seconds.".format(time.time() - t0))

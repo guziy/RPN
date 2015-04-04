@@ -15,7 +15,7 @@ __author__ = 'huziy'
 
 import numpy as np
 
-from model_data import Crcm5ModelDataManager
+from .model_data import Crcm5ModelDataManager
 import matplotlib.pyplot as plt
 #Produces a plot (v_mean1 - v_mean_base)/v_mean_base for the given 2d variable
 #with the option to mask the points where the changes are not significant
@@ -283,5 +283,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

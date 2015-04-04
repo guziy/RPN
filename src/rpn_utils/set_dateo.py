@@ -33,7 +33,7 @@ def main():
         if nbits > 0:
             nbits = -nbits
 
-        print "nbits = {0}, data_type = {1}".format(nbits, data_type)
+        print("nbits = {0}, data_type = {1}".format(nbits, data_type))
 
         ips = info["ip"]
         if ips[1] == ip2old:
@@ -66,5 +66,5 @@ if __name__ == "__main__":
 
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

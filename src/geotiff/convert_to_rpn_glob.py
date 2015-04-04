@@ -38,28 +38,28 @@ def convert(inPath, lonlats):
     ds = gdal.Open(inPath, gdal.GA_ReadOnly)
     assert isinstance(ds, Dataset)
     (Xul, deltaX, rotation, Yul, rotation, deltaY) = ds.GetGeoTransform()
-    print dir(ds)
-    print ds.GetMetadata_Dict()
-    print ds.GetDescription()
+    print(dir(ds))
+    print(ds.GetMetadata_Dict())
+    print(ds.GetDescription())
 
     srs_wkt = ds.GetProjection()
     Nx = ds.RasterXSize
     Ny = ds.RasterYSize
-    print ds.RasterCount
+    print(ds.RasterCount)
 
 
     nxToRead = Nx / 2
     nyToRead = int(Ny / 1.5)
 
     data = ds.GetRasterBand(1).ReadAsArray(0, 0, nxToRead, nyToRead).transpose()
-    print srs_wkt
-    print data.shape
+    print(srs_wkt)
+    print(data.shape)
 
     #plt.imshow(data)
     #plt.show()
     ds = None
 
-    print Xul, Yul, deltaX, deltaY, rotation
+    print(Xul, Yul, deltaX, deltaY, rotation)
 
 
     x1d = np.arange(Xul, Xul + deltaX * nxToRead, deltaX)
@@ -82,7 +82,7 @@ def convert(inPath, lonlats):
     no_data = name_to_nodata_value[fieldName]
     usable = (data != no_data)
 
-    print x.shape, usable.shape
+    print(x.shape, usable.shape)
 
     x0 = x[usable]
     y0 = y[usable]
@@ -90,14 +90,14 @@ def convert(inPath, lonlats):
     cartx, carty, cartz = lat_lon.lon_lat_to_cartesian(x0, y0)
 
     data_1d = data[usable]
-    print "useful data points : {0}".format(len(x0))
+    print("useful data points : {0}".format(len(x0)))
 
-    tree = KDTree(zip(cartx, carty, cartz))
+    tree = KDTree(list(zip(cartx, carty, cartz)))
 
-    print "constructed the kdtree"
+    print("constructed the kdtree")
 
     xi, yi, zi = lat_lon.lon_lat_to_cartesian(lonlats[:,0], lonlats[:,1])
-    dists, inds = tree.query(zip(xi, yi, zi), k = AGGR_SIZE)
+    dists, inds = tree.query(list(zip(xi, yi, zi)), k = AGGR_SIZE)
 
 
     npoints = dists.shape[0]
@@ -123,7 +123,7 @@ def convert(inPath, lonlats):
 
 
 
-    print "completed interpolation"
+    print("completed interpolation")
     return interp_data
 
 
@@ -143,7 +143,7 @@ def do_conversion_in_parallel(nprocs = 1):
         out_paths.append(rpn_path)
 
     pool = Pool(processes=nprocs)
-    pool.map(main, zip(in_paths, out_paths))
+    pool.map(main, list(zip(in_paths, out_paths)))
 
 
 
@@ -153,8 +153,8 @@ def do_conversion_in_parallel(nprocs = 1):
 
 def main(inout_paths):
     tiff_path, rpn_path = inout_paths
-    print "tif path = {0}".format(tiff_path)
-    print "rpn path = {0}".format(rpn_path)
+    print("tif path = {0}".format(tiff_path))
+    print("rpn path = {0}".format(rpn_path))
 
     outGrid = RotatedLatLon(lon1=-90.0, lat1=50.0, lon2=0.0, lat2=0.0)
     Grd_dx  = 0.5
@@ -173,13 +173,13 @@ def main(inout_paths):
 
     lats2d, lons2d = np.meshgrid(lats1d, lons1d)
 
-    lonlats = np.array( map( lambda x, y: outGrid.toGeographicLonLat(x, y), lons2d.flatten(), lats2d.flatten() ) )
-    print lonlats.shape
+    lonlats = np.array( list(map( lambda x, y: outGrid.toGeographicLonLat(x, y), lons2d.flatten(), lats2d.flatten() )) )
+    print(lonlats.shape)
 
 
     rObj = RPN(rpn_path, mode = "w")
     data = convert(tiff_path, lonlats)
-    print "interpolated data"
+    print("interpolated data")
     data.shape = lons2d.shape
 
     fieldName = os.path.basename(tiff_path).split("_")[0].lower()
@@ -197,12 +197,12 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     t0 = time.clock()
-    print "start time ", datetime.now()
+    print("start time ", datetime.now())
     #main()
 
     do_conversion_in_parallel()
-    print "end time ", datetime.now()
+    print("end time ", datetime.now())
     t1 = time.clock()
-    print "execution {0}".format(t1-t0)
-    print "Hello world"
+    print("execution {0}".format(t1-t0))
+    print("Hello world")
   

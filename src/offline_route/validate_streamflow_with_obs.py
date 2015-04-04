@@ -36,7 +36,7 @@ def get_dataless_model_points_for_stations(station_list, accumulation_area_km2_2
     result = {}
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lons, lats)
-    kdtree = cKDTree(zip(x0, y0, z0))
+    kdtree = cKDTree(list(zip(x0, y0, z0)))
 
     for s in station_list:
         #list of model points which could represent the station
@@ -54,7 +54,7 @@ def get_dataless_model_points_for_stations(station_list, accumulation_area_km2_2
             selected_cell_index = inds[imin]
             #check if difference in drainage areas is not too big less than 10 %
 
-            print s.river_name, deltaDaMin / s.drainage_km2
+            print(s.river_name, deltaDaMin / s.drainage_km2)
             #if deltaDaMin / s.drainage_km2 > 0.2:
             #    continue
 
@@ -106,7 +106,7 @@ def main():
 
     monthly_dates = [datetime(2001, m, 15) for m in range(1, 13)]
     fmt = DateFormatter("%d\n%b")
-    locator = MonthLocator(bymonth=range(2, 13, 3))
+    locator = MonthLocator(bymonth=list(range(2, 13, 3)))
 
     fig = plt.figure()
 
@@ -178,7 +178,7 @@ def main():
 
             mp = statins_to_mp[s]
             data = ds.variables["water_discharge_accumulated"][:, mp.cell_index]
-            print path
+            print(path)
             df = DataFrame(data=data, index=sim_to_time[sim_label], columns=["value"])
             df["year"] = df.index.map(lambda d: d.year)
             df_current = df.ix[df.year.between(start_year_current, end_year_current), :]
@@ -224,4 +224,4 @@ if __name__ == "__main__":
     plot_utils.apply_plot_params(width_pt=None, width_cm=19, height_cm=40, font_size=22)
 
     main()
-    print "Hello world"
+    print("Hello world")

@@ -34,10 +34,10 @@ def calculate_mean_field(data_path = "", field_name = "STFL", file_prefix = None
             originDate = rObj.get_dateo_of_last_read_record()
 
 
-            print "-" * 10
-            print "validity date, origin date", vDate, originDate
-            print rObj.get_datetime_for_the_last_read_record()
-            print "-" * 10
+            print("-" * 10)
+            print("validity date, origin date", vDate, originDate)
+            print(rObj.get_datetime_for_the_last_read_record())
+            print("-" * 10)
 
 
             if result is None:
@@ -77,9 +77,9 @@ def calculate_seasonal_mean(data_path = "", field_name = "STFL", file_prefix = N
             originDate = rObj.get_dateo_of_last_read_record()
 
 
-            print "-" * 10
-            print "validity date, origin date", vDate, originDate
-            print "-" * 10
+            print("-" * 10)
+            print("validity date, origin date", vDate, originDate)
+            print("-" * 10)
 
             if result is None:
                 result = field
@@ -107,7 +107,7 @@ def calculate_and_plot():
     lons, lats = basemap(lons, lats)
     lons[lons > 180] -= 360
 
-    print np.min(lons), np.max(lons)
+    print(np.min(lons), np.max(lons))
     basemap.pcolormesh(lons, lats, np.ma.masked_where(data < 0, data, copy = False))
     basemap.drawcoastlines()
     plt.colorbar()

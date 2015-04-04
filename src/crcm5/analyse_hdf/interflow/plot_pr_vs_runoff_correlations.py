@@ -19,7 +19,7 @@ def plot_pr_runoff_correlations(start_year=1980, end_year=2010, months=None):
     # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     img_folder = os.path.join("interflow_corr_images", os.path.basename(default_path))
     if not os.path.isdir(img_folder):
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
 
     seasons = (
-        range(3, 6), range(6, 9), range(9, 12)
+        list(range(3, 6)), list(range(6, 9)), list(range(9, 12))
     )
 
     start_year = 1980

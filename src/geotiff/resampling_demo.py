@@ -8,11 +8,11 @@ from pyresample import plot
 
 def main():
 
-    lons1 = range(10)
-    lats1 = range(10)
+    lons1 = list(range(10))
+    lats1 = list(range(10))
 
-    lons2 = range(0, 10, 2)
-    lats2 = range(0, 10, 2)
+    lons2 = list(range(0, 10, 2))
+    lats2 = list(range(0, 10, 2))
 
     lats1, lons1 = np.meshgrid(lats1, lons1)
     lats2, lons2 = np.meshgrid(lats2, lons2)
@@ -36,5 +36,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

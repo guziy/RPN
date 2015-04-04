@@ -3,11 +3,11 @@ import pickle
 from matplotlib.colors import BoundaryNorm
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
-from active_layer_thickness import CRCMDataManager
+from .active_layer_thickness import CRCMDataManager
 import my_colormaps
-import draw_regions
-from sounding_plotter import SoundingPlotter
-from sounding_and_cross_section_plotter import SoundingAndCrossSectionPlotter
+from . import draw_regions
+from .sounding_plotter import SoundingPlotter
+from .sounding_and_cross_section_plotter import SoundingAndCrossSectionPlotter
 from rpn.rpn import RPN
 
 __author__ = 'huziy'
@@ -93,12 +93,12 @@ def main():
 
         temp = rpnObj.get_4d_field_fc_hour_as_time(name="I0")
         #temp = rpnObj.get_4d_field(name="I0")
-        times = temp.keys()
+        times = list(temp.keys())
 
         sorted_times = list(sorted(times))
-        print "Start time: ", sorted_times[0]
-        print "End time: ", sorted_times[-1]
-        print "n times = ", len(times)
+        print("Start time: ", sorted_times[0])
+        print("End time: ", sorted_times[-1])
+        print("n times = ", len(times))
 
         last_months = sorted_times[-12:]
 
@@ -106,9 +106,9 @@ def main():
 
         temp0 = temp[sorted_times[0]][levels[0]]
         # array shape (t, x, y, z)
-        print "trying to allocate a large array"
+        print("trying to allocate a large array")
         temp_arr = -np.ones((len(last_months), temp0.shape[0], temp0.shape[1], len(levels)))
-        print temp_arr.shape
+        print(temp_arr.shape)
         for ti, t in enumerate(last_months):
             for levi, lev in enumerate(levels):
                 temp_arr[ti, :, :, levi] = temp[t][lev]
@@ -127,7 +127,7 @@ def main():
 
             temp_arr_derivs.annual_means[y, :, :, :] = data.mean(axis=0)
 
-        print temp_arr.shape
+        print(temp_arr.shape)
         #pickle.dump(temp_arr_derivs, open(cache_file, mode="w"))
     else:
         temp_arr_derivs = pickle.load(open(cache_file))
@@ -135,7 +135,7 @@ def main():
     temp_arr_last = temp_arr_derivs.temp_arr_last
     tmax = np.max(temp_arr_last, axis=0)
     tmin = np.min(temp_arr_last, axis=0)
-    print tmax.shape
+    print(tmax.shape)
 
     crcm = CRCMDataManager()
     #alt = crcm.get_alt(tmax + crcm.T0)
@@ -145,7 +145,7 @@ def main():
 
     alt = crcm.get_alt_considering_min_temp(tmax, tmin)
 
-    print "plotting"
+    print("plotting")
 
     #proj_Andrey
     lon1, lat1 = 60, 89.9
@@ -165,5 +165,5 @@ if __name__ == "__main__":
 
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

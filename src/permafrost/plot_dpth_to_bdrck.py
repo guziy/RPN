@@ -2,7 +2,7 @@ import os
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-import draw_regions
+from . import draw_regions
 import my_colormaps
 from rpn.rpn import RPN
 from util import plot_utils
@@ -42,7 +42,7 @@ def main():
     x,y = basemap(lons2d, lats2d)
     fig = plt.figure()
     CS = basemap.pcolormesh(x, y, dpth_to_bdrck, norm = norm, cmap = cmap)
-    print( dpth_to_bdrck.min(), dpth_to_bdrck.max())
+    print(( dpth_to_bdrck.min(), dpth_to_bdrck.max()))
     basemap.drawcoastlines()
     basemap.drawparallels(np.arange(-80.,81.,20.))
     basemap.drawmeridians(np.arange(-180.,181.,20.))
@@ -72,5 +72,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(width_pt=None, width_cm=28,height_cm=30, font_size=25)
     main()
-    print "Hello world"
+    print("Hello world")
   

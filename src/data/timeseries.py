@@ -27,8 +27,8 @@ class TimeSeries:
         """
         Used to select data for the same dates as for obsevations
         """
-        the_dict = dict(zip(self.time, self.data))
-        return np.array(map(lambda x: the_dict[x], the_dates))
+        the_dict = dict(list(zip(self.time, self.data)))
+        return np.array([the_dict[x] for x in the_dates])
 
 
     def get_ts_of_dt_means(self, dt = timedelta(days = 1)):
@@ -36,9 +36,9 @@ class TimeSeries:
         pass
 
     def time_slice(self, start_date, end_date):
-        bool_vector = np.array( map(lambda t: start_date <= t <= end_date, self.time) )
+        bool_vector = np.array( [start_date <= t <= end_date for t in self.time] )
 
-        new_times =  list( itertools.ifilter( lambda t: start_date <= t <= end_date, self.time))
+        new_times =  list( filter( lambda t: start_date <= t <= end_date, self.time))
         #print bool_vector
         new_data = np.array(self.data)[bool_vector]
         ts = TimeSeries(time=new_times, data=new_data)
@@ -64,10 +64,10 @@ class TimeSeries:
                 end_date = end_date.replace(year=end_date.year + 1, month=1, day=1)
 
         self.data = np.array(self.data)
-        print end_date
+        print(end_date)
         while t0 < end_date:
-            bool_vector = np.array( map(lambda x: (x.month == t0.month) and
-                                                  (x.year == t0.year), self.time) )
+            bool_vector = np.array( [(x.month == t0.month) and
+                                                  (x.year == t0.year) for x in self.time] )
 
             assert np.any(bool_vector), t0
             new_times.append(t0)
@@ -78,8 +78,8 @@ class TimeSeries:
             else:
                 t0 = t0.replace(year=t0.year + 1,month=1)
 
-        print "initial data = from {0} to {1}".format(min(self.data), max(self.data))
-        print "monthly means = from {0} to {1}".format(min(new_data), max(new_data))
+        print("initial data = from {0} to {1}".format(min(self.data), max(self.data)))
+        print("monthly means = from {0} to {1}".format(min(new_data), max(new_data)))
         ts = TimeSeries(data=np.array(new_data), time=new_times)
         ts.metadata = self.metadata
         return ts
@@ -102,10 +102,10 @@ class TimeSeries:
                 end_date = end_date.replace(year=end_date.year + 1, month=1, day=1)
 
         self.data = np.array(self.data)
-        print end_date
+        print(end_date)
         while t0 < end_date:
-            bool_vector = np.array( map(lambda x: (x.month == t0.month) and
-                                                  (x.year == t0.year), self.time) )
+            bool_vector = np.array( [(x.month == t0.month) and
+                                                  (x.year == t0.year) for x in self.time] )
 
             assert np.any(bool_vector), t0
             new_times.append(t0)
@@ -135,9 +135,9 @@ class TimeSeries:
 
         self.data = np.array(self.data)
         while t0 <= self.time[-1]:
-            bool_vector = np.array( map(lambda x: (x.day == t0.day) and
+            bool_vector = np.array( [(x.day == t0.day) and
                                                   (x.month == t0.month) and
-                                                  (x.year == t0.year), self.time) )
+                                                  (x.year == t0.year) for x in self.time] )
 
 
             assert np.any(bool_vector), t0
@@ -145,19 +145,19 @@ class TimeSeries:
             new_data.append(np.mean(self.data[bool_vector]))
             t0 += day
 
-        print "initial data = from {0} to {1}".format(min(self.data), max(self.data))
-        print "daily means = from {0} to {1}".format(min(new_data), max(new_data))
+        print("initial data = from {0} to {1}".format(min(self.data), max(self.data)))
+        print("daily means = from {0} to {1}".format(min(new_data), max(new_data)))
         ts = TimeSeries(data=np.array(new_data), time=new_times)
         ts.metadata = self.metadata
         return ts
         pass
 
-    def get_mean(self, months = xrange(1,13)):
+    def get_mean(self, months = range(1,13)):
         """
         returns mean over the months speciifed in the
         months parameter
         """
-        bool_vector = map(lambda x: x.month in months, self.time)
+        bool_vector = [x.month in months for x in self.time]
         indices = np.where(bool_vector)[0]
         return np.mean(self.data[indices])
 
@@ -167,8 +167,8 @@ class TimeSeries:
         to the 12 months [0->Jan, ..., 11->Dec]
         """
         result = np.zeros((12,))
-        for m in xrange(1, 13):
-            bool_vector = map(lambda x : x.month == m, self.time)
+        for m in range(1, 13):
+            bool_vector = [x.month == m for x in self.time]
             indices = np.where(bool_vector)[0]
             result[m - 1] = np.mean(np.array(self.data)[indices])
         return result
@@ -223,5 +223,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

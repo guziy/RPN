@@ -11,4 +11,4 @@ def fib(n):
 if __name__ == '__main__':
     t0 = time.clock()
     fib(30)
-    print "Ellapsed time: {} s".format(time.clock() - t0)
+    print("Ellapsed time: {} s".format(time.clock() - t0))

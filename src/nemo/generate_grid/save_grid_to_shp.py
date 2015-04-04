@@ -2,7 +2,7 @@ from rpn.domains.rotated_lat_lon import RotatedLatLon
 
 __author__ = 'huziy'
 
-import nemo_domain_properties
+from . import nemo_domain_properties
 
 from shapely.geometry import mapping, Polygon
 import fiona
@@ -39,7 +39,7 @@ def main():
 
     b = rll.get_basemap_params(-20, -20, 20, 20)
 
-    print dir(b)
+    print(dir(b))
 
     # Write a new Shapefile
     with fiona.open('my_shp2.shp', 'w', 'ESRI Shapefile', schema) as c:

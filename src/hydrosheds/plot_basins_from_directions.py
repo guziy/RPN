@@ -94,7 +94,7 @@ def main():
     rll = RotatedLatLon(lon1=-97, lat1=47.5, lon2=-7.0, lat2=0.0)
 
     ds = Dataset(path)
-    print ds.variables.keys()
+    print(list(ds.variables.keys()))
 
     # read data from the infocell file
     fdv = ds.variables["flow_direction_value"][:]
@@ -119,4 +119,4 @@ if __name__ == '__main__':
     import time
     t0 = time.clock()
     main()
-    print "Elapsed time: {} s".format(time.clock() - t0)
+    print("Elapsed time: {} s".format(time.clock() - t0))

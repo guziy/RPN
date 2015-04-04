@@ -7,10 +7,10 @@ from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 import my_colormaps
-import draw_regions
-from active_layer_thickness import CRCMDataManager
+from . import draw_regions
+from .active_layer_thickness import CRCMDataManager
 import matplotlib.pyplot as plt
-import compare_mean_alt_and_from_climatology as alt_mod
+from . import compare_mean_alt_and_from_climatology as alt_mod
 from rpn import level_kinds
 from util import plot_utils
 
@@ -161,8 +161,8 @@ def plot_climate_change():
         #hf = alt_mod.get_alt_using_nyear_rule(hft, nyears = 2)
 
         dm = CRCMDataManager(data_folder=path)
-        hc = dm.get_alt_using_monthly_mean_climatology(xrange(start_year_current,end_year_current+1))
-        hf = dm.get_alt_using_monthly_mean_climatology(xrange(start_year_future,end_year_future+1))
+        hc = dm.get_alt_using_monthly_mean_climatology(range(start_year_current,end_year_current+1))
+        hf = dm.get_alt_using_monthly_mean_climatology(range(start_year_future,end_year_future+1))
 
         good_points = (hf >= 0) & (hc > 0) & (~mask_cond)
         d = np.ma.masked_all(hf.shape)
@@ -170,7 +170,7 @@ def plot_climate_change():
         name_to_delta[name] = d
 
         d = (hf - hc) / hc * 100.0
-        print name
+        print(name)
         the_is, the_js = np.where((hf < hc) & good_points)
 
 #        for i,j in zip(the_is, the_js):
@@ -235,5 +235,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     plot_utils.apply_plot_params(width_pt=None, width_cm=28,height_cm=30, font_size=25)
     main()
-    print "Hello world"
+    print("Hello world")
   

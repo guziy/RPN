@@ -34,7 +34,7 @@ class SoundingPlotter:
         self.counter = 0
         self.ax = ax
         x, y, z = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-        self.kdtree = KDTree(zip(x,y,z))
+        self.kdtree = KDTree(list(zip(x,y,z)))
         ax.figure.canvas.mpl_connect("button_press_event", self)
         pass
 
@@ -70,9 +70,9 @@ class SoundingPlotter:
 
 
     def __call__(self, event):
-        print event.xdata, event.ydata
+        print(event.xdata, event.ydata)
 
-        print event.button
+        print(event.button)
         if event.button != 3:
             return
         ix, jy = self._get_closest_ij(event)
@@ -101,5 +101,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

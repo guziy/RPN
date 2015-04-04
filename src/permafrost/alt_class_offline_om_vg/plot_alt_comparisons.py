@@ -88,7 +88,7 @@ def plot_differences(basemap, lons2d, lats2d, depth_to_bedrock, delta, label="Fi
 
 
     # Plot depth to bedrock
-    print "plotting depth to bedrock"
+    print("plotting depth to bedrock")
     clevs = [0, 0.1, 0.2, 0.5, 1, 2, 3, 4, 5]
     cmap = cm.get_cmap("jet", len(clevs) - 1)
     norm = BoundaryNorm(clevs, len(clevs) - 1)
@@ -102,7 +102,7 @@ def plot_differences(basemap, lons2d, lats2d, depth_to_bedrock, delta, label="Fi
 
 
     #Plot swe
-    print "plotting swe differences"
+    print("plotting swe differences")
     clevs = [0.5, 1, 2, 3, 5, 10]
     clevs = [-lev for lev in reversed(clevs)] + [0, ] + clevs
     cmap = cm.get_cmap("seismic", len(clevs) - 1)
@@ -146,7 +146,7 @@ def main():
                     1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
                     1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5]
 
-    print len(layer_widths)
+    print(len(layer_widths))
 
     crcm_data_manager = CRCMDataManager(layer_widths=layer_widths)
 
@@ -163,7 +163,7 @@ def main():
     r2.close()
 
     dates_sorted = list(sorted(soiltemp1.keys()))
-    levels_sorted = list(sorted(soiltemp1.items()[0][1].keys()))
+    levels_sorted = list(sorted(list(soiltemp1.items())[0][1].keys()))
 
     # group dates for each year
     alt1_list = []
@@ -179,7 +179,7 @@ def main():
         t1max = np.max(t1, axis=0).transpose(1, 2, 0)
         t2max = np.max(t2, axis=0).transpose(1, 2, 0)
 
-        print t1max.shape, t2max.shape
+        print(t1max.shape, t2max.shape)
 
         #calculate and save alts
         h1 = crcm_data_manager.get_alt(t1max)
@@ -205,7 +205,7 @@ def main():
     alt1 = np.mean(alt1_list_pf, axis=0)
     alt2 = np.mean(alt2_list_pf, axis=0)
 
-    print np.isnan(alt1).any(), np.isnan(alt2).any()
+    print(np.isnan(alt1).any(), np.isnan(alt2).any())
 
     #mask nans
     alt1 = np.ma.masked_where(np.isnan(alt1), alt1)
@@ -233,7 +233,7 @@ def main():
     swe1 = r1.get_all_time_records_for_name("SNO")
     r1.close()
     swe1_winter_clim = np.mean(
-        [field for key, field in swe1.iteritems() if key.month in [1, 2, 12]], axis=0)
+        [field for key, field in swe1.items() if key.month in [1, 2, 12]], axis=0)
     swe1_winter_clim = np.ma.masked_where((swe1_winter_clim >= 999) | dpth.mask, swe1_winter_clim)
 
     path_swe_2 = path2.replace("TBAR.rpn", "SNO.rpn")
@@ -241,14 +241,14 @@ def main():
     swe2 = r2.get_all_time_records_for_name("SNO")
     r2.close()
     swe2_winter_clim = np.mean(
-        [field for key, field in swe2.iteritems() if key.month in [1, 2, 12]], axis=0)
+        [field for key, field in swe2.items() if key.month in [1, 2, 12]], axis=0)
     swe2_winter_clim = np.ma.masked_where((swe2_winter_clim >= 999) | dpth.mask, swe2_winter_clim)
 
 
 
 
     #plotting
-    print "Start plotting ..."
+    print("Start plotting ...")
     plot_differences(b, lons2d, lats2d, dpth, delta, label="ALT(DPTH=3.6m) - ALT(DPTH~)", pvalue=None,
                      swe_diff=swe2_winter_clim - swe1_winter_clim)
     #plot_values(b, lons2d, lats2d, alt1, "ALT(DPTH=3.6m)", alt2, "ALT(DPTH~)", dpth)

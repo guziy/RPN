@@ -90,8 +90,8 @@ def main():
     dv = dj / np.sqrt(di ** 2 + dj ** 2)
 
 
-    for i in xrange(100):
-        print du[i], dv[i], np.log2(dirs[dirs > 0][i])
+    for i in range(100):
+        print(du[i], dv[i], np.log2(dirs[dirs > 0][i]))
 
     du2d = np.ma.masked_all(dirs.shape)
     dv2d = np.ma.masked_all(dirs.shape)
@@ -99,10 +99,10 @@ def main():
     du2d[dirs>0] = du
     dv2d[dirs>0] = dv
 
-    print du2d[161,145],dv2d[161,145],dirs[161,145]
+    print(du2d[161,145],dv2d[161,145],dirs[161,145])
 
-    iv = xrange(dirs.shape[0])
-    jv = xrange(dirs.shape[1])
+    iv = range(dirs.shape[0])
+    jv = range(dirs.shape[1])
 
     jv, iv = meshgrid(jv, iv)
 
@@ -113,7 +113,7 @@ def main():
     iv -= 0.5
     jv -= 0.5
 
-    print iv.min(), iv.max()
+    print(iv.min(), iv.max())
 
     plt.figure()
     #field = np.ma.masked_where((field > 1e10) | (field < 1e7) , field)
@@ -127,13 +127,13 @@ def main():
     
     plt.figure()
     lkid = lkid.astype(int)
-    print lkid[161,146], lkid[161,145],lkid[160,145:148]
+    print(lkid[161,146], lkid[161,145],lkid[160,145:148])
 
     
-    for i in xrange(1,121):
+    for i in range(1,121):
         x = np.ma.masked_where(lkid != i, lkid)
         if x.count() == 1 or x.count() == 0:
-            print i, x.count()
+            print(i, x.count())
     #lkid = np.ma.masked_where(~((lkid == 27)|(lkid == 28)) , lkid)
 
     lkid = np.ma.masked_where(lkid <= 0, lkid)
@@ -144,7 +144,7 @@ def main():
     x,y = b(lons2d, lats2d)
     img = b.pcolormesh(x,y,lkid,cmap = cm.get_cmap("jet", 100))
     plt.colorbar(img, ticks = MultipleLocator(base = 10))
-    b.contour(x, y,tile, levels = xrange(48), colors = "k", linewidth = 0.5)
+    b.contour(x, y,tile, levels = range(48), colors = "k", linewidth = 0.5)
     b.drawcoastlines(linewidth=0.5)
 
     #plt.quiver(iv+0.5, jv+0.5, du2d, dv2d, scale = 30, width = 0.005, color="k", pivot="middle")
@@ -175,7 +175,7 @@ def main():
     plt.pcolormesh(iv, jv, np.ma.masked_where( larea < 1.0e8, np.log(larea) ),cmap = cm.get_cmap("jet", 8))
     #plt.xlim(155, 165)
     #plt.ylim(140,150)
-    print larea.min(), larea.max()
+    print(larea.min(), larea.max())
     plt.colorbar(ticks = LinearLocator(numticks = 10))
     #plt.quiver(iv+0.5, jv+0.5, du2d, dv2d, scale = 4.5, width = 0.035, color="k", pivot="middle", units="inches")
 
@@ -225,7 +225,7 @@ def read_directions():
 
 
     assert isinstance(delta_indices, np.ndarray)
-    print delta_indices.shape
+    print(delta_indices.shape)
 
 
 
@@ -241,8 +241,8 @@ def read_directions():
     dj_field = dj_field.astype(int)
 
     nx, ny = dirs.shape
-    i_p = xrange(nx)
-    j_p = xrange(ny)
+    i_p = range(nx)
+    j_p = range(ny)
 
     j_p, i_p = meshgrid(j_p, i_p)
     i_n, j_n = np.zeros(i_p.shape), np.zeros(j_p.shape)
@@ -253,13 +253,13 @@ def read_directions():
 
 
     cells = []
-    for i in xrange(nx):
+    for i in range(nx):
         cells.append([])
-        for j in xrange(ny):
+        for j in range(ny):
             cells[i].append(Cell(i, j))
 
-    for i in xrange(nx):
-        for j in xrange(ny):
+    for i in range(nx):
+        for j in range(ny):
             cells[i][j].lakefr = lkfr[i,j]
             if dirs[i, j] <= 0:
                 cells[i][j].set_next(None)
@@ -275,9 +275,9 @@ def read_directions():
     iou, jou = np.where(lkou == 1)
 
     for i,j in zip(iou, jou):
-        print(i,j, cells[i][j].get_lake_size_in_indexes(), cells[i][j].lakefr)
+        print((i,j, cells[i][j].get_lake_size_in_indexes(), cells[i][j].lakefr))
 
-    print dirs[54, 150], dirs[53, 151]
+    print(dirs[54, 150], dirs[53, 151])
 
     ii = 33
     jj = 96
@@ -309,7 +309,7 @@ def read_directions():
     plt.pcolormesh(i_p, j_p, dirs)
     plt.colorbar()
 
-    print map( lambda x, p: x ** p, [2]*8, range(8))
+    print(list(map( lambda x, p: x ** p, [2]*8, list(range(8)))))
     #plt.colorbar()
 
 
@@ -324,5 +324,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
     #read_directions()
-    print "Hello world"
+    print("Hello world")
   

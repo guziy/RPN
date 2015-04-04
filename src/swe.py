@@ -22,12 +22,12 @@ class SweDataManager(CRUDataManager):
         self.times = None
         self.var_data = None
         CRUDataManager.__init__(self, path=path, var_name=var_name)
-        print self.nc_dataset.variables.keys()
+        print(list(self.nc_dataset.variables.keys()))
 
         pass
 
     def _init_fields(self, nc_dataset):
-        print "init_fields"
+        print("init_fields")
         nc_vars = nc_dataset.variables
         times = nc_vars["time"][:]
 
@@ -43,17 +43,17 @@ class SweDataManager(CRUDataManager):
         self.var_data = nc_vars[self.var_name][:]
 
         x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-        self.kdtree = KDTree(zip(x_in, y_in, z_in))
+        self.kdtree = KDTree(list(zip(x_in, y_in, z_in)))
 
-        print "SWE obs time limits: ", self.times[0], self.times[-1]
+        print("SWE obs time limits: ", self.times[0], self.times[-1])
         pass
 
     def get_mean_for_year_and_months(self, year, months=None):
-        bool_vector = np.array(map(lambda x: (x.year == year) and (x.month in months), self.times))
+        bool_vector = np.array([(x.year == year) and (x.month in months) for x in self.times])
         return np.mean(self.var_data[bool_vector, :, :], axis=0)
 
 
-    def save_period_means_to_file(self, months=None, year_range=xrange(1980, 1997),
+    def save_period_means_to_file(self, months=None, year_range=range(1980, 1997),
                                   path="djf_swe_ross_brown.nc"):
         ds = Dataset(path, mode="w", format="NETCDF3_CLASSIC")
         ds.createDimension('year', len(year_range))
@@ -77,7 +77,7 @@ class SweDataManager(CRUDataManager):
         ds.close()
 
 
-    def save_projected_means_to_file(self, months=None, year_range=xrange(1980, 1997),
+    def save_projected_means_to_file(self, months=None, year_range=range(1980, 1997),
                                      path="djf_swe_ross_brown_on_cordex.nc",
                                      dest_lons2d=None, dest_lats2d=None):
 
@@ -119,7 +119,7 @@ class SweDataManager(CRUDataManager):
         #Use cache file for performance
         cache_file = "swe_obs_{0}-{1}_".format(start_year, end_year) + "-".join([str(x) for x in months]) + ".cache"
         if os.path.isfile(cache_file):
-            print "Using cached SWE data from {0}".format(cache_file)
+            print("Using cached SWE data from {0}".format(cache_file))
             return pickle.load(open(cache_file))
 
         if self.lazy:
@@ -128,7 +128,7 @@ class SweDataManager(CRUDataManager):
         else:
             nx, ny = self.lons2d.shape
             data_panel = pd.Panel(data=self.nc_vars[self.var_name][:], items=self.times,
-                                  major_axis=range(nx), minor_axis=range(ny))
+                                  major_axis=list(range(nx)), minor_axis=list(range(ny)))
             data_panel = data_panel.select(
                 lambda d: (d.month in months) and (d.year >= start_year) and d.year <= end_year)
             df = data_panel.mean(axis="items")
@@ -170,7 +170,7 @@ def main():
     start_year = 1981
     end_year = 1997
 
-    levels = [10, ] + range(20, 120, 20) + [150, 200, 300, 500, 1000]
+    levels = [10, ] + list(range(20, 120, 20)) + [150, 200, 300, 500, 1000]
     cmap = mpl.cm.get_cmap(name="jet_r", lut=len(levels))
     norm = colors.BoundaryNorm(levels, cmap.N)
 
@@ -206,12 +206,12 @@ def test1():
     dm = SweDataManager(var_name="SWE")
     #b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
     #dm.save_projected_means_to_file(months=[12,1,2], dest_lons2d=lons2d, dest_lats2d=lats2d)
-    print dm.kdtree
+    print(dm.kdtree)
 
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
     test1()
-    print "Hello world"
+    print("Hello world")
   

@@ -11,11 +11,11 @@ from util.geo.index_shapes import IndexRectangle, IndexPoint
 __author__ = 'huziy'
 
 import matplotlib.pyplot as plt
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 import numpy as np
 from class_scheme import configuration as class_conf
 from matplotlib import cm
-from input_params import InputParams
+from .input_params import InputParams
 
 
 def main_compare_two_simulations():
@@ -71,7 +71,7 @@ def main_compare_two_simulations():
 
     #calculate and plot differences
     for vindex, var_name in enumerate(params0.var_list):
-        print "plotting {0} ...".format(var_name)
+        print("plotting {0} ...".format(var_name))
         dates, levels, data2 = params2.calculate_mean_clim_for_3d_var(var_name=var_name)
         _, _, data0 = params0.calculate_mean_clim_for_3d_var(var_name=var_name)
 
@@ -122,7 +122,7 @@ def main_compare_two_simulations():
         cb.ax.set_aspect(10)
 
         ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
         if vindex < len(params0.var_list) - 1:
             ax.xaxis.set_ticklabels([])
         ax.invert_yaxis()
@@ -154,7 +154,7 @@ def main_plot_for_one_simulation(input_params=None):
 
     #Read the 3D climatological field and levels, generate dates for a generic year (daily)
     for var_name in input_params.var_list:
-        print "plotting {0} ...".format(var_name)
+        print("plotting {0} ...".format(var_name))
 
         #construct the path to the output figure
         impath = os.path.join(input_params.img_folder, input_params.get_imfilename_for_var(var_name=var_name))
@@ -185,7 +185,7 @@ def main_plot_for_one_simulation(input_params=None):
         ax.invert_yaxis()
 
         ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
 
         plt.colorbar(img)
         #save the figure

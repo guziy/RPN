@@ -144,7 +144,7 @@ def get_longest_rain_durations_for_files(intf_file="", no_intf_file="",
         total_acc_runoff_nointf = 0
         total_acc_runoff_intf = 0
         for the_year in range(start_year, end_year + 1):
-            print "Start processing year: {}".format(the_year)
+            print("Start processing year: {}".format(the_year))
             # we need level_index == 0 in both cases, so the query will be the same for
             # runoff and precipitation
             query = "(year == {}) & (level_index == 0)".format(the_year)
@@ -152,27 +152,27 @@ def get_longest_rain_durations_for_files(intf_file="", no_intf_file="",
             # Get data for a year into a pandas Panel.
             coords = pr_table_no_intf.get_where_list(query)
             pr_no_intf_panel = get_pandas_panel(pr_table_no_intf.read_coordinates(coords))
-            print len(coords)
+            print(len(coords))
 
             coords = pr_table_intf.get_where_list(query)
             pr_intf_panel = get_pandas_panel(pr_table_intf.read_coordinates(coords))
-            print len(coords)
+            print(len(coords))
 
             coords = traf_table_no_intf.get_where_list(query)
             traf_no_intf_panel = get_pandas_panel(traf_table_no_intf.read_coordinates(coords))
-            print len(coords)
+            print(len(coords))
 
             coords = traf_table_intf.get_where_list(query)
             traf_intf_panel = get_pandas_panel(traf_table_intf.read_coordinates(coords))
-            print len(coords)
+            print(len(coords))
 
             coords = t2m_table_no_intf.get_where_list(query)
             t2m_no_intf_panel = get_pandas_panel(t2m_table_no_intf.read_coordinates(coords))
-            print len(coords)
+            print(len(coords))
 
             coords = t2m_table_intf.get_where_list(query)
             t2m_intf_panel = get_pandas_panel(t2m_table_intf.read_coordinates(coords))
-            print len(coords)
+            print(len(coords))
 
             # Sort by date
             pr_no_intf_panel = pr_no_intf_panel.sort_index(axis="items")
@@ -184,11 +184,11 @@ def get_longest_rain_durations_for_files(intf_file="", no_intf_file="",
             t2m_no_intf_panel = t2m_no_intf_panel.sort_index(axis="items")
             t2m_intf_panel = t2m_intf_panel.sort_index(axis="items")
 
-            print "No intf panels: "
-            print pr_no_intf_panel
+            print("No intf panels: ")
+            print(pr_no_intf_panel)
 
-            print "With intf panels: "
-            print pr_intf_panel
+            print("With intf panels: ")
+            print(pr_intf_panel)
 
             # Get durations of the longest events during the year when no interflow is present
             max_durations_nointf, acc_runoff_nointf = get_longest_rain_event_durations_from_tables(
@@ -211,7 +211,7 @@ def get_longest_rain_durations_for_files(intf_file="", no_intf_file="",
             total_acc_runoff_intf += acc_runoff_intf
             total_acc_runoff_nointf += acc_runoff_nointf
 
-            print "Finished processing year: {}".format(the_year)
+            print("Finished processing year: {}".format(the_year))
 
     nyears = float(end_year - start_year + 1)
     total_acc_runoff_nointf /= nyears
@@ -239,7 +239,7 @@ def plot_nevents_duration_curves(no_intf_max_durations, intf_max_durations,
     plt.figure()
 
     minlength = max(no_intf_max_durations.max(), intf_max_durations.max()) + 5
-    print minlength
+    print(minlength)
 
     max_duration_limit = 10  # output steps
 
@@ -248,7 +248,7 @@ def plot_nevents_duration_curves(no_intf_max_durations, intf_max_durations,
 
     delta = nevents_intf - nevents_no_intf
 
-    durations = dt_hours * np.array(range(1, minlength + 1))
+    durations = dt_hours * np.array(list(range(1, minlength + 1)))
     plt.plot(durations, nevents_intf, label="(Intf.)", lw=2)
     plt.plot(durations, nevents_no_intf, label="(No Intf.)", lw=2)
     plt.plot(durations, delta, "--", label="(Intf.) - (No Intf.)", lw=2)
@@ -272,7 +272,7 @@ def plot_surface_runoff_differences(x, y, basemap, mask, no_intf_acc_runoff, int
     fig = plt.figure()
 
     assert isinstance(fig, Figure)
-    print fig.get_figwidth()
+    print(fig.get_figwidth())
     # fig.set_size_inches(fig.get_figwidth() * 3, fig.get_figheight() * 1.4)
 
     # gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1.3, 0.05])
@@ -361,7 +361,7 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     basemap.drawcoastlines()
     plt.title("no - intf")
     plt.colorbar(im)
-    print mean_max_durations_nointf.min(), mean_max_durations_nointf.max(), mean_max_durations_nointf.mean()
+    print(mean_max_durations_nointf.min(), mean_max_durations_nointf.max(), mean_max_durations_nointf.mean())
     plt.savefig(os.path.join(img_folder, "no-intf-durations.png"))
 
     plt.figure()
@@ -370,7 +370,7 @@ def main(intf_file="", no_intf_file="", start_year=1980, end_year=2010, dt_hours
     basemap.drawcoastlines()
     plt.title("intf")
     plt.colorbar(im)
-    print mean_max_durations_intf.min(), mean_max_durations_intf.max(), mean_max_durations_intf.mean()
+    print(mean_max_durations_intf.min(), mean_max_durations_intf.max(), mean_max_durations_intf.mean())
     plt.savefig(os.path.join(img_folder, "intf-durations.png"))
 
     # Plot the interflow effect on the longest rain events

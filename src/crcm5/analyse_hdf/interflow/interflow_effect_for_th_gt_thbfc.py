@@ -60,7 +60,7 @@ def get_runoff_differences_composit(traf_table_intf=None, th_table_intf=None,
             cond = (th1 > thbfc_field) & (th2 > thbfc_field)
             total_diff[cond] += (r2 - r1)[cond]
 
-        print "Finished processing : {} from {}-{}".format(y, start_year, end_year)
+        print("Finished processing : {} from {}-{}".format(y, start_year, end_year))
 
     total_diff *= dt
     total_diff /= float(end_year - start_year + 1)

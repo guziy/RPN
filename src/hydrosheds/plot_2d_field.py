@@ -87,7 +87,7 @@ def plot_source_flow_accumulation(sub=-1, vmin=0, vmax=10):
         plt.figure()
     x, y = basemap(lons, lats)
     # print np.log(data).shape
-    print np.min(data), np.max(data)
+    print(np.min(data), np.max(data))
     #    print np.min(np.log(data)), np.max(np.log(data))
     ax = basemap.pcolormesh(x, y, np.ma.log10(data), vmin=vmin, vmax=vmax)
     basemap.drawcoastlines()
@@ -112,7 +112,7 @@ def plot_target_flow_accumulations(sub=-1, vmin=0, vmax=10):
         plt.figure()
     x, y = basemap(lons, lats)
     # print np.log(data).shape
-    print np.min(data), np.max(data)
+    print(np.min(data), np.max(data))
     #   print np.min(np.log(data)), np.max(np.log(data))
     ax = basemap.pcolormesh(x, y, np.ma.log10(data), vmin=vmin, vmax=vmax)
     basemap.drawcoastlines()
@@ -148,8 +148,8 @@ def plot_scatter(path='data/hydrosheds/corresponding_DA.nc', margin=20):
     v1 = v11
     v2 = v22
 
-    print len(v1), v1.shape
-    print len(v2), v2.shape
+    print(len(v1), v1.shape)
+    print(len(v2), v2.shape)
 
     plt.figure()
     plt.grid(True)
@@ -224,4 +224,4 @@ if __name__ == "__main__":
     main()
     # plot_drainage_areas()
     # plot_me_from_margin()
-    print "Hello World"
+    print("Hello World")

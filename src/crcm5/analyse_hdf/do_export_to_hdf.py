@@ -39,7 +39,7 @@ def correct_proj_table():
     data_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_crcm5-hcd-rl-intfl_spinup3"
     from rpn.rpn import RPN
     hdf_file = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup3.hdf"
-    import hdf_table_schemes
+    from . import hdf_table_schemes
 
     for fName in os.listdir(data_folder):
         if not fName.startswith("dm"):
@@ -149,5 +149,5 @@ if __name__ == "__main__":
     main()
     #multiply_table_column_by()
     #skynet3_test()
-    print "Elapsed time {0} seconds".format(time.clock() - t0)
-    print "Hello world"
+    print("Elapsed time {0} seconds".format(time.clock() - t0))
+    print("Hello world")

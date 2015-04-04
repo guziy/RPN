@@ -37,7 +37,7 @@ def main():
 
     dates = [datetime(int(data[row, 0]), int(data[row, 2]), int(data[row, 3])) for row in range(data.shape[0])]
 
-    for col, lake_name in column_to_lake_name_glsea.iteritems():
+    for col, lake_name in column_to_lake_name_glsea.items():
         folder_path = nemo_commons.lake_to_folder_with_sim_data_1981_2000_seplakes_exp[lake_name]
         fname_tgrid = None
         for fname in os.listdir(folder_path):
@@ -48,7 +48,7 @@ def main():
         if fname_tgrid is None:
             continue
 
-        print "Processing {}".format(lake_name)
+        print("Processing {}".format(lake_name))
         fig = plt.figure()
         ax = plt.gca()
         fpath = os.path.join(folder_path, fname_tgrid)

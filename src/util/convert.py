@@ -12,7 +12,7 @@ application_properties.set_current_directory()
 def amno_convert_list(the_list): 
     holder = LatLonHolder()
     nx = holder.Nx
-    print 'nx = ', nx
+    print('nx = ', nx)
     result = []
     for pair in the_list:
         composite_index = (pair[1] - 1) * nx + (pair[0] - 1)
@@ -27,8 +27,8 @@ def amno_from_index_space_to_lat_lon(ix, iy):
     ix in [1, IXMAX], iy in [1, IYMAX]
     '''
     model = LatLonHolder()
-    print ix, iy
-    print model.get_lon_lat(ix, iy)
+    print(ix, iy)
+    print(model.get_lon_lat(ix, iy))
 
 
 
@@ -43,6 +43,6 @@ if __name__ == "__main__":
         [117, 108]
     ]
 
-    print amno_convert_list(the_list)
+    print(amno_convert_list(the_list))
 
-    print 'Execution time is %f seconds' % (time.clock() - t0)
+    print('Execution time is %f seconds' % (time.clock() - t0))

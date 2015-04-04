@@ -44,9 +44,9 @@ class AnuSplinManager:
             self.folder_path = folder_path
         else:
             # Try a folder from skynet3
-            print "{} does not exist".format(folder_path)
+            print("{} does not exist".format(folder_path))
             self.folder_path = folder_path.replace("skynet1_rech3", "skynet3_rech1")
-            print "Using {} instead".format(self.folder_path)
+            print("Using {} instead".format(self.folder_path))
 
         self.fname_format = "{0}{1}_%Y_%m.nc".format(file_name_preifx, variable)
         self._read_lon_lats()
@@ -69,7 +69,7 @@ class AnuSplinManager:
         self.lats2d = ds.variables["lat"][:].transpose()
 
         x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-        self.kdtree = cKDTree(zip(x, y, z))
+        self.kdtree = cKDTree(list(zip(x, y, z)))
 
         ds.close()
 
@@ -111,7 +111,7 @@ class AnuSplinManager:
                 fpath = os.path.join(self.folder_path, fname)
                 ds = Dataset(fpath)
 
-                month_days = ds.variables["time"][:] if month != 2 else range(1, 29)
+                month_days = ds.variables["time"][:] if month != 2 else list(range(1, 29))
                 ds.close()
                 for day in month_days:
                     key = (month, int(day))
@@ -133,13 +133,13 @@ class AnuSplinManager:
         #    for day, ds_list in zip(day_list, ds_lists)
         #]
 
-        daily_clim_fields = pool.map(_reader, zip(path_lists, day_of_month_list, varname_list))
+        daily_clim_fields = pool.map(_reader, list(zip(path_lists, day_of_month_list, varname_list)))
         daily_clim_fields = np.asarray(daily_clim_fields)
         daily_clim_fields = np.ma.masked_where(np.isnan(daily_clim_fields), daily_clim_fields)
 
         ni, nj = daily_clim_fields[0].shape
-        panel = pd.Panel(data=daily_clim_fields.transpose((1, 0, 2)), major_axis=times, minor_axis=range(nj),
-                         items=range(ni))
+        panel = pd.Panel(data=daily_clim_fields.transpose((1, 0, 2)), major_axis=times, minor_axis=list(range(nj)),
+                         items=list(range(ni)))
 
         store = pd.HDFStore(cache_file)
         store.put("dailyClimFrame", panel)
@@ -150,7 +150,7 @@ class AnuSplinManager:
 
     def getMeanFieldForMonths(self, months=None, start_year=1979, end_year=1988):
         if months is None:
-            months = range(1, 13)
+            months = list(range(1, 13))
 
         df = self.get_daily_climatology_fields(start_year=start_year, end_year=end_year)
 
@@ -161,7 +161,7 @@ class AnuSplinManager:
         df_mean = df_monthly.apply(np.mean)
 
         assert isinstance(df_mean, pd.DataFrame)
-        print df_mean.values.shape
+        print(df_mean.values.shape)
 
         field = df_mean.values
         return np.ma.masked_where(np.isnan(field), field)
@@ -193,7 +193,7 @@ class AnuSplinManager:
         lons1d, lats1d = lonstarget.flatten(), latstarget.flatten()
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons1d, lats1d)
 
-        dists, indices = self.kdtree.query(zip(xt, yt, zt))
+        dists, indices = self.kdtree.query(list(zip(xt, yt, zt)))
         return mean_field.flatten()[indices].reshape(lonstarget.shape)
 
 
@@ -207,7 +207,7 @@ class AnuSplinManager:
         lons1d, lats1d = lons_target.flatten(), lats_target.flatten()
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons1d, lats1d)
 
-        dists, indices = self.kdtree.query(zip(xt, yt, zt))
+        dists, indices = self.kdtree.query(list(zip(xt, yt, zt)))
 
         clim_fields = [
             df.loc[:, day, :].values.flatten()[indices].reshape(lons_target.shape) for day in df.major_axis
@@ -250,12 +250,12 @@ def demo():
     am = AnuSplinManager()
     t0 = time.clock()
     df = am.get_daily_climatology_fields()
-    print "Execution time: {0} seconds".format(time.clock() - t0)
+    print("Execution time: {0} seconds".format(time.clock() - t0))
     # x,t,y - the order of the axes
 
 
 
-    print dir(df)
+    print(dir(df))
     df = df.fillna(value=np.nan)
 
     annual_mean = np.mean(df.values[:, :, :], axis=1)
@@ -330,9 +330,9 @@ def demo_interolate_daily_clim():
     basemap.colorbar(im)
     basemap.drawcoastlines()
     plt.title("Anusplin")
-    print "Obs stdev = {}".format(mean_obs[~mean_obs.mask].std())
+    print("Obs stdev = {}".format(mean_obs[~mean_obs.mask].std()))
 
-    print "Obs correlations: ", np.corrcoef(mean_obs[~mean_obs.mask], topo[~mean_obs.mask])
+    print("Obs correlations: ", np.corrcoef(mean_obs[~mean_obs.mask], topo[~mean_obs.mask]))
 
     # Plot model data
     plt.figure()
@@ -346,8 +346,8 @@ def demo_interolate_daily_clim():
     basemap.drawcoastlines()
     plt.title("Model")
 
-    print "Model correlations: ", np.corrcoef(mean_mod[~mean_obs.mask], topo[~mean_obs.mask])
-    print "Model stdev = {}".format(mean_mod[~mean_obs.mask].std())
+    print("Model correlations: ", np.corrcoef(mean_mod[~mean_obs.mask], topo[~mean_obs.mask]))
+    print("Model stdev = {}".format(mean_mod[~mean_obs.mask].std()))
 
     plt.show()
 

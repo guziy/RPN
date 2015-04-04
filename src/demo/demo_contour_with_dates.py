@@ -18,7 +18,7 @@ def demo():
     nz = 20
     data = np.random.randn(365, nz)
 
-    z = range(nz)
+    z = list(range(nz))
     numdates = date2num(dates)
 
     z, t = np.meshgrid(z, numdates)

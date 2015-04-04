@@ -75,12 +75,12 @@ def main():
         #line_obs = ax.plot(t, s_data, label = "Observation", lw = 3, color = "r")
 
         model_ts = model_ts.get_ts_of_daily_means()
-        print model_ts.time[0], model_ts.time[-1]
-        print model_ts.data[0:10]
+        print(model_ts.time[0], model_ts.time[-1])
+        print(model_ts.data[0:10])
 
         mod_vals = model_ts.get_data_for_dates(s.dates)
-        print mod_vals[:20]
-        print "+" * 20
+        print(mod_vals[:20])
+        print("+" * 20)
         assert len(mod_vals) == len(s.dates)
 
         line_model = ax.plot(s.dates, mod_vals, label = "Model (CRCM5)", lw = 1, color = "b")
@@ -105,5 +105,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

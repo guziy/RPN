@@ -39,8 +39,8 @@ def plot_field_2d(lons_2d, lats_2d, field_2d, start_lon = -180, end_lon = 0, col
     m = Basemap(llcrnrlon = start_lon,llcrnrlat = np.min(lats_2d),
                 urcrnrlon = end_lon,urcrnrlat = np.max(lats_2d), resolution = 'l')
 
-    m.drawmeridians(xrange(start_lon,end_lon,10))
-    m.drawparallels(xrange(-90,90,10))
+    m.drawmeridians(range(start_lon,end_lon,10))
+    m.drawparallels(range(-90,90,10))
 
 
  #   y, x = meshgrid(lats_2d, lons_2d)
@@ -69,13 +69,13 @@ def test():
 
     lons, lats = rpn.get_longitudes_and_latitudes()
 
-    print lons.shape, np.min(lons), np.max(lons)
-    print lats.shape, np.min(lats), np.max(lats)
+    print(lons.shape, np.min(lons), np.max(lons))
+    print(lats.shape, np.min(lats), np.max(lats))
 #    print data.shape
 
 #    plot_field_2d(lons, lats, data[:,:,0])
 
-    print data.shape
+    print(data.shape)
     plot_field_2d(lons, lats, data)
 
 
@@ -91,4 +91,4 @@ import application_properties
 if __name__ == "__main__":
     application_properties.set_current_directory()
     test()
-    print "Hello World"
+    print("Hello World")

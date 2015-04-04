@@ -97,4 +97,4 @@ def get_ranges(x_interest, y_interest):
 
 
 if __name__ == "__main__":
-    print "Hello World"
+    print("Hello World")

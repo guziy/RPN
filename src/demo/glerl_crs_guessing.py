@@ -13,7 +13,7 @@ def print_header(path="~/NEMO/validation/glerl_ice_data/g20030403.ct"):
     path = os.path.expanduser(path)
     with open(path) as f:
         for i in range(6):
-            print f.next()
+            print(next(f))
 
 
 def print_min_lon_and_lat():
@@ -23,15 +23,15 @@ def print_min_lon_and_lat():
     path="~/NEMO/validation/glerl_ice_data/Latgrid.txt"
     arr_lat = np.loadtxt(os.path.expanduser(path))
 
-    print "min lon: {}".format(arr_lon.min())
-    print "min lat: {}".format(arr_lat.min())
+    print("min lon: {}".format(arr_lon.min()))
+    print("min lat: {}".format(arr_lat.min()))
 
 
 def main():
     print_min_lon_and_lat()
     lon = -92.36612
     lat = 38.84815
-    print to_projection(lon=lon, lat=lat)
+    print(to_projection(lon=lon, lat=lat))
 
     print_header()
 

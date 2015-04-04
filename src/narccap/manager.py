@@ -42,7 +42,7 @@ class NarccapDataManager():
         When months is None, then annual climatology is calculated
         """
         if months is None:
-            months = range(1,13)
+            months = list(range(1,13))
 
         return "{0}_{1}-{2}_{3}_{4}_{5}.bin".format(varname, gcm, rcm, start_year, end_year, "_".join(map(str, months)))
 
@@ -87,7 +87,7 @@ class NarccapDataManager():
         t_sel = t[(t_start <= t) & (t < t_end)]
         dates_sel = num2date(t_sel, t_units, calendar=t_calendar)
 
-        bool_vect = np.array( map(lambda x: x.month in months, dates_sel), dtype=np.bool )
+        bool_vect = np.array( [x.month in months for x in dates_sel], dtype=np.bool )
         data_sel = mfds.variables[varname][ np.where( (t_start <= t) & (t < t_end) )[0],:,:]
 
 
@@ -107,13 +107,13 @@ class NarccapDataManager():
         """
         x, y, z = lat_lon.lon_lat_to_cartesian(model_lons.flatten(), model_lats.flatten())
 
-        d, inds = self.kdtree.query(zip(x, y, z), k = nneighbors)
+        d, inds = self.kdtree.query(list(zip(x, y, z)), k = nneighbors)
 
         if nneighbors == 1:
            data1d = data.flatten()
-           print "interpolation inds = ", inds
-           print model_lats.shape, len(inds)
-           print data.shape
+           print("interpolation inds = ", inds)
+           print(model_lats.shape, len(inds))
+           print(data.shape)
            return data1d[inds].reshape(model_lons.shape)
         else:
             raise NotImplementedError("The interpolation is not yet implemented for more than one neighbor.")
@@ -127,14 +127,14 @@ class NarccapDataManager():
         Init KDTree used for interpolation
         """
         x0, y0, z0 = lat_lon.lon_lat_to_cartesian(self.lon2d.flatten(), self.lat2d.flatten())
-        self.kdtree = KDTree(zip(x0, y0, z0))
+        self.kdtree = KDTree(list(zip(x0, y0, z0)))
 
 
 def main():
     import  matplotlib.pyplot as plt
     nObj = NarccapDataManager()
     x = nObj.get_climatologic_field(start_year=1985, end_year=1990, months=[1,2], gcm="ccsm", rcm="crcm")
-    print x.shape, x.min(), x.max()
+    print(x.shape, x.min(), x.max())
     plt.figure()
     plt.pcolormesh(x.transpose())
     plt.show()
@@ -144,5 +144,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -28,7 +28,7 @@ def fix_file(path="/RESCUE/skynet3_rech1/huziy/test_export_to_hdf/test/pm1950010
         if nbits > 0:
             nbits = -nbits
 
-        print "nbits = {0}, data_type = {1}".format(nbits, data_type)
+        print("nbits = {0}, data_type = {1}".format(nbits, data_type))
 
         # ips = map(lambda x: x.value, info["ip"])
         ips = info["ip"]
@@ -40,7 +40,7 @@ def fix_file(path="/RESCUE/skynet3_rech1/huziy/test_export_to_hdf/test/pm1950010
             # get the start of the current month
             hours_total = int(info["npas"] * info["dt_seconds"] / 3600)
             year = start_date.year + hours_total // (365 * 24)
-            print year
+            print(year)
             d_temp = datetime(2001, 1, 1) + timedelta(days=hours_total % (365 * 24), hours=hours_total % 24)
 
             new_start_date = datetime(year, d_temp.month, d_temp.day, d_temp.hour)

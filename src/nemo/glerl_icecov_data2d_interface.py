@@ -96,7 +96,7 @@ class GLERLIceCoverManager(object):
             self.location_info_dict["cellsize"] = float(f.next().split()[1])
             self.location_info_dict["nodata_value"] = int(f.next().split()[1])
 
-            for key, val in self.location_info_dict.iteritems():
+            for key, val in self.location_info_dict.items():
                 setattr(self, key, val)
 
     def get_location_info(self):
@@ -113,7 +113,7 @@ class GLERLIceCoverManager(object):
                                      r_earth_m=6400e3):
 
 
-        print self.location_info_dict
+        print(self.location_info_dict)
 
         lons2d_target[lons2d_target > 180] -= 360
 
@@ -123,7 +123,7 @@ class GLERLIceCoverManager(object):
         yt = r_earth_m * lats2d_target_r
         xt = r_earth_m * lons2d_target_r * np.cos(lats2d_target_r)
 
-        print xt.min(), xt.max()
+        print(xt.min(), xt.max())
 
         i0 = ((xt - self.xllcorner) / float(self.cellsize * np.cos(lats2d_target_r))).astype(int)
         j0 = ((yt - self.yllcorner) / float(self.cellsize)).astype(int)
@@ -131,7 +131,7 @@ class GLERLIceCoverManager(object):
         nxagg = (xt.max() - xt.min()) / (self.cellsize * xt.shape[0])
         nyagg = (yt.max() - yt.min()) / (self.cellsize * yt.shape[1])
 
-        print "nxagg={}; nyagg={}".format(nxagg, nyagg)
+        print("nxagg={}; nyagg={}".format(nxagg, nyagg))
 
         data_source = self.get_data_for_day(the_date=the_date)
 
@@ -144,8 +144,8 @@ class GLERLIceCoverManager(object):
         j0 = np.maximum(j0, 0)
         j0 = np.minimum(j0, ny - 1)
 
-        print i0.min(), i0.max()
-        print j0.min(), j0.max()
+        print(i0.min(), i0.max())
+        print(j0.min(), j0.max())
 
         i0 = np.maximum(i0, 0)
         i0 = np.minimum(i0, nx - 1)
@@ -169,19 +169,19 @@ class GLERLIceCoverManager(object):
         for i in range(len(result)):
             result[i] = data_source[imin[i]:imax[i] + 1, jmin[i]:jmax[i] + 1]
 
-        print result.min(), result.max()
+        print(result.min(), result.max())
         result[np.isnan(result)] = np.ma.masked
         return result.reshape(xt.shape)
 
 
     def get_data_from_path(self, path):
         data = []
-        print path
+        print(path)
         with open(path) as f:
 
             # Skip the first 6 lines
             for i in range(6):
-                f.next()
+                next(f)
 
             for i, line in enumerate(f):
 

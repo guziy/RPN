@@ -226,5 +226,5 @@ if __name__ == "__main__":
 
     #doAll()
     main()
-    print "Hello world"
+    print("Hello world")
   

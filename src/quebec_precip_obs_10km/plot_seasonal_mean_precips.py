@@ -33,11 +33,11 @@ def get_lat_lons():
 
         if fields[0] in ["xllcenter", "yllcenter", "cellsize", "nodata_value"]:
             descr[fields[0]] = float(fields[1])
-        print descr
+        print(descr)
         if len(descr) == 6: break
         line = f.readline()
 
-    print "Read header"
+    print("Read header")
     f.close()
 
 
@@ -61,7 +61,7 @@ def get_lat_lons():
     x_flat, y_flat = x2d.flatten(), y2d.flatten()
 
 
-    print "creating points"
+    print("creating points")
     points = [
         ogr.CreateGeometryFromWkt( "POINT({0} {1})".format(the_x, the_y), utm_srs )
             for the_x, the_y in zip(x_flat, y_flat)
@@ -128,5 +128,5 @@ if __name__ == "__main__":
     plot_utils.apply_plot_params(width_pt=None, width_cm=20, height_cm=20, font_size=26)
 
     main()
-    print "Hello world"
+    print("Hello world")
   

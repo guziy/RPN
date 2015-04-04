@@ -90,7 +90,7 @@ def reproject_rivers_to_latlon_and_save_shape(path = 'data/shp/rivers_qc/Riviere
     latlong = osr.SpatialReference()
     latlong.ImportFromProj4("+proj=latlong")
 
-    print latlong
+    print(latlong)
 
     shapeData = driver.CreateDataSource(path_new)
     newLayer = shapeData.CreateLayer('qc_rivers', latlong, osgeo.ogr.wkbLineString)
@@ -122,5 +122,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -22,8 +22,8 @@ def main():
 
     rs = np.arange(1, 500, 1)
 
-    old_snc = map(prev_func, rs)
-    sturm_snc = map(sturm_func, rs)
+    old_snc = list(map(prev_func, rs))
+    sturm_snc = list(map(sturm_func, rs))
     plt.plot(rs, old_snc, label = "old")
     plt.plot(rs, sturm_snc, label = "new")
     plt.legend()
@@ -35,5 +35,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

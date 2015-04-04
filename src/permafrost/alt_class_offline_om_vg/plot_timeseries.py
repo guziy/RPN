@@ -30,7 +30,7 @@ def plot_time_series(data=None, i_interest=-1, j_interest=-1, soil_levels=None,
     ax2 = fig.add_subplot(gs[1, 0])
     assert isinstance(ax2, Axes)
 
-    t = range(1, data.shape[0] + 1)
+    t = list(range(1, data.shape[0] + 1))
     h2d, t2d = np.meshgrid(soil_levels, t)
 
     clevs = [0, 0.04, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5]
@@ -80,7 +80,7 @@ def read_and_plot_ts_cross(path="", exp_name=""):
     nt = 200*12
     layer_widths = layer_widths[:nlayers]
 
-    print len(layer_widths)
+    print(len(layer_widths))
 
 
     #calculate depths of soil layer centers
@@ -94,7 +94,7 @@ def read_and_plot_ts_cross(path="", exp_name=""):
     r = RPN(path)
 
     data = r.get_4d_field_fc_hour_as_time(name=var_interest)
-    lev_sorted = list(sorted(data.items()[0][1].keys()))[:nlayers]
+    lev_sorted = list(sorted(list(data.items())[0][1].keys()))[:nlayers]
     fc_sorted = list(sorted(data.keys()))[:nt]
 
     for i_interest, j_interest in zip(i_interest_list, j_interest_list):

@@ -93,13 +93,13 @@ class TempProfileObs(ObservationPoint):
                 if look_for_levels:
                     try:
                         self.levels.append(float(line.split()[4]))
-                    except ValueError, e:
+                    except ValueError as e:
                         pass
 
                 if line.startswith("***"):
                     look_for_levels = True
 
-        print self.levels
+        print(self.levels)
 
     def _extract_lonlat_from_line(self, line):
         finished_reading = False
@@ -171,7 +171,7 @@ def get_profile_for_testing():
 
     header_path = os.path.join(folder, "08-01T-013A054.120.290.header")
     data_path = os.path.join(folder, "08-01T-013A054.120.290.data")
-    print data_path
+    print(data_path)
     po.read_metadata_and_data(header_path=header_path, data_path=data_path)
     # po.plot_vertical_section()
     return po
@@ -189,7 +189,7 @@ if __name__ == '__main__':
 
     header_path = os.path.join(folder, "08-01T-013A054.120.290.header")
     data_path = os.path.join(folder, "08-01T-013A054.120.290.data")
-    print data_path
+    print(data_path)
     po.read_metadata_and_data(header_path=header_path, data_path=data_path)
     po.plot_vertical_section()
 

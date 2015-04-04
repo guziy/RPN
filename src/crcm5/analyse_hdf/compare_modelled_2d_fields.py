@@ -13,15 +13,15 @@ from scipy.stats import ttest_ind
 from tables import NoSuchNodeError
 
 from crcm5 import infovar
-import common_plot_params as cpp
+from . import common_plot_params as cpp
 
 
 __author__ = 'huziy'
 
-import do_analysis_using_pytables as analysis
+from . import do_analysis_using_pytables as analysis
 import matplotlib.pyplot as plt
 import numpy as np
-import common_plot_params
+from . import common_plot_params
 from matplotlib import cm
 
 
@@ -30,7 +30,7 @@ cache_folder = os.path.join(images_folder, "cache")
 
 
 def compare_annual_mean_fields(paths=None, labels=None, varnames=None):
-    compare(paths=paths, varnames=varnames, labels=labels, months_of_interest=range(1, 13))
+    compare(paths=paths, varnames=varnames, labels=labels, months_of_interest=list(range(1, 13)))
 
 
 def _offset_multiplier(colorbar):
@@ -112,7 +112,7 @@ def compare(paths=None, path_to_control_data=None, control_label="",
 
         sel_axes = [ax]
 
-        for the_path, the_label, column in zip(paths, labels, range(1, len(paths) + 1)):
+        for the_path, the_label, column in zip(paths, labels, list(range(1, len(paths) + 1))):
 
             means_for_years = analysis.get_mean_2d_fields_for_months(path=the_path, var_name=var_name,
                                                                      months=months_of_interest,
@@ -226,7 +226,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     exclude_0_from_diff_colorbar = False
 
     assert isinstance(domain_props, DomainProperties)
-    print "plotting row for {0}; increments = ({1})".format(var_name, increments)
+    print("plotting row for {0}; increments = ({1})".format(var_name, increments))
 
     lons2d, lats2d, basemap = domain_props.get_lon_lat_and_basemap()
     x, y = domain_props.x, domain_props.y
@@ -234,7 +234,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     vmin = None
     vmax = None
     # determine vmin and vmax for the row
-    for season, field in data.iteritems():
+    for season, field in data.items():
         # field = _get_to_plot(var_name, field, lake_fraction=domain_props.lake_fraction, lons=lons2d, lats = lats2d)
         min_current, max_current = np.percentile(field[~field.mask], 1), np.percentile(field[~field.mask], 99)
         if vmin is None or min_current < vmin:
@@ -266,7 +266,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     else:
         # determine colorabr extent and spacing
         field_cmap, field_norm = infovar.get_colormap_and_norm_for(var_name, vmin=vmin, vmax=vmax, ncolors=ncolors)
-    print "vmin = {0}; vmax = {1}".format(vmin, vmax)
+    print("vmin = {0}; vmax = {1}".format(vmin, vmax))
 
     col = 0
     axes[0].set_ylabel(sim_label)
@@ -316,7 +316,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                                                               season_to_months=None,
                                                               start_year=None,
                                                               end_year=None):
-    season_list = season_to_months.keys()
+    season_list = list(season_to_months.keys())
 
     pvalue_max = 0.1
 
@@ -393,7 +393,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     row_labels = [
         r"$\Delta$({0})".format(s) for s in labels
     ]
-    print labels
+    print(labels)
 
     # varnames = ["QQ", ]
     # levels = [None, ]
@@ -430,8 +430,8 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
         try:
             # Calculate the difference for each season, and save the results to dictionaries
             # to access later when plotting
-            for season, months_of_interest in season_to_months.iteritems():
-                print "working on season: {0}".format(season)
+            for season, months_of_interest in season_to_months.items():
+                print("working on season: {0}".format(season))
 
                 control_means = analysis.get_mean_2d_fields_for_months(path=control_path, var_name=var_name,
                                                                        months=months_of_interest,
@@ -450,7 +450,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
                 season_to_control_mean[season] = control_mean
 
-                print "calculated mean from {0}".format(control_path)
+                print("calculated mean from {0}".format(control_path))
 
                 # calculate the difference for each simulation
                 for the_path, the_label in zip(paths, row_labels):
@@ -461,7 +461,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
                     tval, pval = ttest_ind(modified_means, control_means, axis=0, equal_var=False)
                     significance = ((pval <= pvalue_max) & (~control_mean.mask)).astype(int)
-                    print "pval ranges: {} to {}".format(pval.min(), pval.max())
+                    print("pval ranges: {} to {}".format(pval.min(), pval.max()))
 
                     modified_mean = np.mean(modified_means, axis=0)
                     if the_label not in label_to_season_to_difference:
@@ -478,13 +478,13 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
                     diff_vals = modified_mean - control_mean
 
-                    print "diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max())
+                    print("diff ranges: min: {0};  max: {1}".format(diff_vals.min(), diff_vals.max()))
                     label_to_season_to_difference[the_label][season] = diff_vals
                     label_to_season_to_significance[the_label][season] = significance
 
-                    print "Calculated mean and diff from {0}".format(the_path)
+                    print("Calculated mean and diff from {0}".format(the_path))
         except NoSuchNodeError:
-            print "Could not find {0}, skipping...".format(var_name)
+            print("Could not find {0}, skipping...".format(var_name))
             continue
 
         # Do the plotting for each variable
@@ -501,7 +501,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                   season_list=season_list)
 
         the_row = 1
-        for the_label, data in label_to_season_to_difference.iteritems():
+        for the_label, data in label_to_season_to_difference.items():
             axes = []
             for col in range(ncols):
                 axes.append(fig.add_subplot(gs[the_row, col]))
@@ -511,7 +511,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
             the_row += 1
 
         folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(
-            "_".join(labels), control_label, "-".join(season_to_months.keys()), start_year, end_year))
+            "_".join(labels), control_label, "-".join(list(season_to_months.keys())), start_year, end_year))
         if not os.path.isdir(folderpath):
             os.mkdir(folderpath)
 
@@ -538,7 +538,7 @@ def study_lake_effect_on_atmosphere():
     end_year = 1988
 
     season_list = [
-        [12, 1, 2], range(3, 6), range(6, 9), range(9, 12)
+        [12, 1, 2], list(range(3, 6)), list(range(6, 9)), list(range(9, 12))
     ]
 
     for months in season_list:
@@ -571,7 +571,7 @@ def study_interflow_effect():
     end_year = 1985
 
     season_list = [
-        [12, 1, 2], range(3, 6), range(6, 9), range(9, 12)
+        [12, 1, 2], list(range(3, 6)), list(range(6, 9)), list(range(9, 12))
     ]
 
     for months in season_list:
@@ -590,7 +590,7 @@ def main():
     t0 = time.clock()
     # study_interflow_effect()
     study_lake_effect_on_atmosphere()
-    print "Execution time: {0} seconds".format(time.clock() - t0)
+    print("Execution time: {0} seconds".format(time.clock() - t0))
 
 
 if __name__ == "__main__":

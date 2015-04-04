@@ -53,7 +53,7 @@ def main():
         lon = float(fields[1])
         lat = float(fields[2])
 
-        if not id_to_points.has_key(the_id):
+        if the_id not in id_to_points:
             id_to_points[the_id] = []
 
         if int(the_id) >= 16:
@@ -71,7 +71,7 @@ def main():
 
     polygons = []
     featureIndex = 0
-    for the_id, points in id_to_points.iteritems():
+    for the_id, points in id_to_points.items():
 
         if not len(points): continue
 
@@ -100,5 +100,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

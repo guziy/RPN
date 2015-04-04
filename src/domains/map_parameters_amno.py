@@ -41,7 +41,7 @@ class MapParameters():
         """
         if self._kdtree is None:
             x, y, z = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten() )
-            self._kdtree = KDTree(zip(x,y,z))
+            self._kdtree = KDTree(list(zip(x,y,z)))
         return self._kdtree
 
     def get_indices_of_the_closest_point_to(self, lon, lat):
@@ -69,7 +69,7 @@ class MapParameters():
         self.dx = dx
         self.dy = dx
 
-        print 'Coordinates of the grid center ', xc * dx, yc * dx
+        print('Coordinates of the grid center ', xc * dx, yc * dx)
         
 
         xmin = xc - (nx - 1) / 2.0
@@ -78,9 +78,9 @@ class MapParameters():
         self.x_min = xmin
         self.y_min = ymin
 
-        print 'These coordinates can be verified with cccma site points (2,2) and (181, 173) respectively'
-        print 'lower left: ', psxy2latlon(xmin, ymin)
-        print 'upper right: ', psxy2latlon(xmin + nx - 1 , ymin + ny - 1)
+        print('These coordinates can be verified with cccma site points (2,2) and (181, 173) respectively')
+        print('lower left: ', psxy2latlon(xmin, ymin))
+        print('upper right: ', psxy2latlon(xmin + nx - 1 , ymin + ny - 1))
 
         longitudes = np.zeros((nx, ny))
         latitudes = np.zeros((nx, ny))
@@ -123,10 +123,10 @@ def test():
     polar_stereographic = MapParameters()
     clon = polar_stereographic.lon_center
     clat = polar_stereographic.lat_center
-    print clon, clat
+    print(clon, clat)
     [i, j] = polar_stereographic.get_indices_of_the_closest_point_to(clon, clat)
-    print i,j
+    print(i,j)
 
 if __name__ == "__main__":
     test()
-    print "Hello World"
+    print("Hello World")

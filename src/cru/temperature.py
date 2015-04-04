@@ -58,21 +58,21 @@ class CRUDataManager:
             self.var_data = np.transpose(nc_vars[self.var_name][:], axes=[0, 2, 1])
 
         x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
-        self.kdtree = cKDTree(zip(x_in, y_in, z_in))
+        self.kdtree = cKDTree(list(zip(x_in, y_in, z_in)))
 
 
     def get_seasonal_means(self, season_name_to_months=None, start_year = None, end_year = None):
         if season_name_to_months is None:
             season_name_to_months = OrderedDict([
                 ("Winter", (1, 2, 12)),
-                ("Spring", range(3, 6)),
-                ("Summer", range(6, 9)),
-                ("Fall", range(9, 12))])
+                ("Spring", list(range(3, 6))),
+                ("Summer", list(range(6, 9))),
+                ("Fall", list(range(9, 12)))])
 
 
 
         season_name_to_coef = {}
-        for sname, months in season_name_to_months.iteritems():
+        for sname, months in season_name_to_months.items():
             season_name_to_coef[sname] = 1
 
             if self.var_name.lower() == "pre":
@@ -81,7 +81,7 @@ class CRUDataManager:
 
 
         month_to_season = {}
-        for sname, mlist in season_name_to_months.iteritems():
+        for sname, mlist in season_name_to_months.items():
             for m in mlist:
                 month_to_season[m] = sname
 
@@ -89,7 +89,7 @@ class CRUDataManager:
             self.var_data = np.transpose(self.nc_dataset.variables[self.var_name][:], axes=[0, 2, 1])
 
         nt, nx, ny = self.var_data.shape
-        panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=range(nx), minor_axis=range(ny))
+        panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)), minor_axis=list(range(ny)))
         panel = panel.select(lambda d: start_year <= d.year <= end_year)
 
         if self.var_name == "pre":
@@ -98,7 +98,7 @@ class CRUDataManager:
             panel_seasonal = panel.groupby(lambda d: month_to_season[d.month], axis = "items").mean()
 
         season_to_mean = OrderedDict()
-        for sname, _ in season_name_to_months.iteritems():
+        for sname, _ in season_name_to_months.items():
             season_to_mean[sname] = panel_seasonal[sname].values * season_name_to_coef[sname]
 
         return season_to_mean
@@ -126,7 +126,7 @@ class CRUDataManager:
 
         sel_dates = num2date(sel_dates, self.times_var.units)
 
-        ind_vector = np.where(map(lambda x: (x.month in months), sel_dates))[0]
+        ind_vector = np.where([(x.month in months) for x in sel_dates])[0]
         return np.mean(sel_data[ind_vector, :, :], axis=0)
 
 
@@ -136,19 +136,19 @@ class CRUDataManager:
         """
         day = timedelta(days=1)
         the_date = datetime(stamp_year, 1, 1)
-        stamp_days = [the_date + i * day for i in xrange(365)]
+        stamp_days = [the_date + i * day for i in range(365)]
         result = []
 
         nt, nx, ny = self.var_data.shape
-        data_panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=range(nx), minor_axis=range(ny))
+        data_panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)), minor_axis=list(range(ny)))
         data_panel = data_panel.select(
             lambda d: (start_year <= d.year <= end_year) and not (d.day == 29 and d.month == 2))
 
         data_panel = data_panel.groupby(lambda d: datetime(stamp_year, d.month, d.day), axis="items").mean()
         assert isinstance(data_panel, pandas.Panel)
         data_panel = data_panel.sort_index()
-        print data_panel.values.shape
-        print data_panel.items
+        print(data_panel.values.shape)
+        print(data_panel.items)
 
 
         #for the_date in stamp_days:
@@ -171,7 +171,7 @@ class CRUDataManager:
         nt = clim_data.shape[0]
         data_help = np.reshape(clim_data, (nt, -1))
 
-        dists, inds = self.kdtree.query(zip(x, y, z))
+        dists, inds = self.kdtree.query(list(zip(x, y, z)))
 
         return data_help[:, inds].reshape((nt,) + lons2d_target.shape)
 
@@ -183,7 +183,7 @@ class CRUDataManager:
         nt, nx, ny = daily_temps_clim.shape
         result = np.zeros((nx, ny))
 
-        for t in xrange(nt):
+        for t in range(nt):
             tfield = daily_temps_clim[t, :, :]
             result += tfield * np.array(tfield >= t0).astype(int)
         return result
@@ -193,7 +193,7 @@ class CRUDataManager:
 
     def create_monthly_means_file(self, start_year, end_year):
         fname = "{0}_monthly_means.nc".format(self.var_name)
-        year_range = range(start_year, end_year + 1)
+        year_range = list(range(start_year, end_year + 1))
         dsm = Dataset(fname, "w", format="NETCDF3_CLASSIC")
         dsm.createDimension('year', len(year_range))
         dsm.createDimension("month", 12)
@@ -206,8 +206,8 @@ class CRUDataManager:
 
         variable = dsm.createVariable(self.var_name, "f4", ('year', "month", 'lon', 'lat'))
         for i, the_year in enumerate(year_range):
-            print the_year
-            for j, the_month in enumerate(xrange(1, 13)):
+            print(the_year)
+            for j, the_month in enumerate(range(1, 13)):
                 variable[i, j, :, :] = self.get_mean(the_year, the_year, months=[the_month])
 
         lonVariable[:] = self.lons2d
@@ -229,25 +229,24 @@ class CRUDataManager:
         sum(mi * vi) - in space
         """
 
-        bool_vect = np.array(map(lambda t: start_date <= t <= end_date, self.times))
+        bool_vect = np.array([start_date <= t <= end_date for t in self.times])
 
-        new_times = list(itertools.ifilter(lambda t: start_date <= t <= end_date, self.times))
+        new_times = list(filter(lambda t: start_date <= t <= end_date, self.times))
         new_vals = self.var_data[bool_vect, :, :]
         x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
 
-        print len(new_times)
+        print(len(new_times))
         flat_mask = mask.flatten()
         x_out = x_out[flat_mask == 1]
         y_out = y_out[flat_mask == 1]
         z_out = z_out[flat_mask == 1]
         mults = multipliers_2d.flatten()[flat_mask == 1]
 
-        data_interp = map(lambda t: self._interp_and_sum(new_vals[t, :, :].flatten(), mults, x_out, y_out, z_out),
-                          range(len(new_times)))
+        data_interp = [self._interp_and_sum(new_vals[t, :, :].flatten(), mults, x_out, y_out, z_out) for t in range(len(new_times))]
 
-        print "Interpolated data", data_interp
+        print("Interpolated data", data_interp)
 
-        print "Interpolated all"
+        print("Interpolated all")
         return TimeSeries(time=new_times, data=data_interp).get_ts_of_monthly_means()
 
 
@@ -269,18 +268,18 @@ class CRUDataManager:
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_targ, lats_targ)
 
         nxs, nys = self.lons2d.shape
-        i_source, j_source = range(nxs), range(nys)
+        i_source, j_source = list(range(nxs)), list(range(nys))
 
         j_source, i_source = np.meshgrid(j_source, i_source)
 
         i_source = i_source.flatten()
         j_source = j_source.flatten()
 
-        dists, inds = self.kdtree.query(zip(xt, yt, zt), k=1)
+        dists, inds = self.kdtree.query(list(zip(xt, yt, zt)), k=1)
         ixsel = i_source[inds]
         jysel = j_source[inds]
 
-        print "Calculating spatial mean"
+        print("Calculating spatial mean")
         #calculate spatial mean
         #calculate spatial mean
         if self.lazy:
@@ -294,7 +293,7 @@ class CRUDataManager:
         else:
             data_series = np.mean(self.var_data[:, ixsel, jysel], axis=1)
 
-        print "Finished calculating spatial mean"
+        print("Finished calculating spatial mean")
 
         #calculate daily climatology
         df = pandas.DataFrame(data=data_series, index=self.times, columns=["values"])
@@ -327,14 +326,14 @@ class CRUDataManager:
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_targ, lats_targ)
 
         nxs, nys = self.lons2d.shape
-        i_source, j_source = range(nxs), range(nys)
+        i_source, j_source = list(range(nxs)), list(range(nys))
 
         j_source, i_source = np.meshgrid(j_source, i_source)
 
         i_source = i_source.flatten()
         j_source = j_source.flatten()
 
-        dists, inds = self.kdtree.query(zip(xt, yt, zt), k=1)
+        dists, inds = self.kdtree.query(list(zip(xt, yt, zt)), k=1)
         ixsel = i_source[inds]
         jysel = j_source[inds]
 
@@ -369,23 +368,22 @@ class CRUDataManager:
         sum(mi * vi) - in space
         """
 
-        bool_vect = np.array(map(lambda t: start_date <= t <= end_date, self.times))
+        bool_vect = np.array([start_date <= t <= end_date for t in self.times])
 
-        new_times = list(itertools.ifilter(lambda t: start_date <= t <= end_date, self.times))
+        new_times = list(filter(lambda t: start_date <= t <= end_date, self.times))
         new_vals = self.var_data[bool_vect, :, :]
         x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d_target.flatten(), lats2d_target.flatten())
 
-        print len(new_times)
+        print(len(new_times))
 
         flat_mask = mask.flatten()
         x_out = x_out[flat_mask == 1]
         y_out = y_out[flat_mask == 1]
         z_out = z_out[flat_mask == 1]
         mults = multipliers_2d.flatten()[flat_mask == 1]
-        data_interp = map(lambda t: self._interp_and_sum(new_vals[t, :, :].flatten(), flat_mask, x_out, y_out, z_out),
-                          range(len(new_times)))
+        data_interp = [self._interp_and_sum(new_vals[t, :, :].flatten(), flat_mask, x_out, y_out, z_out) for t in range(len(new_times))]
 
-        print "Interpolated all"
+        print("Interpolated all")
         return TimeSeries(time=new_times, data=data_interp).get_ts_of_daily_means()
 
 
@@ -393,9 +391,9 @@ class CRUDataManager:
         """
         len(data_in_flat) , len(x) == len(y) == len(z) == len(data_out_flat) - all 1D
         """
-        print "start query"
-        dst, ind = self.kdtree.query(zip(x, y, z), k=nneighbours)
-        print "end query"
+        print("start query")
+        dst, ind = self.kdtree.query(list(zip(x, y, z)), k=nneighbours)
+        print("end query")
 
         inverse_square = 1.0 / dst ** 2
         if len(dst.shape) > 1:
@@ -420,7 +418,7 @@ class CRUDataManager:
         """
 
         x_out, y_out, z_out = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
-        dst, ind = self.kdtree.query(zip(x_out, y_out, z_out), k=nneighbours)
+        dst, ind = self.kdtree.query(list(zip(x_out, y_out, z_out)), k=nneighbours)
 
         data_in_flat = data_in.flatten()
 
@@ -503,5 +501,5 @@ if __name__ == "__main__":
     plot_thawing_index()
     #create_monthly_means()
     #main()
-    print "Hello world"
+    print("Hello world")
   

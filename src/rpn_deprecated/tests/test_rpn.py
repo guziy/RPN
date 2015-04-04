@@ -20,8 +20,8 @@ class TestRpn(RPN):
 
         """
         field = self.get_first_record_for_name("I5")
-        print(self.get_dateo_of_last_read_record())
-        print(self._dateo_to_string(-1274695862))
+        print((self.get_dateo_of_last_read_record()))
+        print((self._dateo_to_string(-1274695862)))
 
     def test2(self):
         """
@@ -44,18 +44,18 @@ class TestRpn(RPN):
 
 
     def setup(self):
-        print "setting up the object"
+        print("setting up the object")
 
     def teardown(self):
         self.close()
-        print "tearing down the object"
+        print("tearing down the object")
 
 
 def setup():
     import application_properties
 
     application_properties.set_current_directory()
-    print "setting up the test suite"
+    print("setting up the test suite")
 
 
 def test_get_records_for_foreacst_hour():
@@ -64,7 +64,7 @@ def test_get_records_for_foreacst_hour():
     rObj = RPN(path)
     nRecords = rObj.get_number_of_records()
 
-    print nRecords
+    print(nRecords)
 
     res = rObj.get_records_for_foreacst_hour(var_name="I5", forecast_hour=0)
     ok_(len(res) == 1, msg="SWE has only one vertical level ..., not {0} ".format(len(res)))
@@ -81,6 +81,6 @@ def test_get_records_for_foreacst_hour():
 
 
 def teardown():
-    print "tearing down the test suite"
+    print("tearing down the test suite")
 
 

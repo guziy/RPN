@@ -64,7 +64,7 @@ def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=Non
         if len(paths) < 12:  # Consider only years with complete dataset
             continue
 
-        print year
+        print(year)
 
         # loop over all var names
         for varname, multiplier, var_units, offset in zip(varnames, multipliers, units, offsets):
@@ -75,7 +75,7 @@ def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=Non
 
             var_nc_path = os.path.join(var_folder, "{}_{}.nc".format(varname, year))
             if os.path.isfile(var_nc_path):
-                print "{} -- already exists, remove in order to regenerate".format(var_nc_path)
+                print("{} -- already exists, remove in order to regenerate".format(var_nc_path))
                 continue
 
             ds = Dataset(var_nc_path, "w", format="NETCDF3_CLASSIC")
@@ -98,10 +98,10 @@ def create_yearly_from_rpn(in_folder, out_folder, varnames=None, multipliers=Non
                     if indices is None:
                         lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
                         xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
-                        tree = cKDTree(zip(xs, ys, zs))
-                        d, indices = tree.query(zip(xt, yt, zt))
+                        tree = cKDTree(list(zip(xs, ys, zs)))
+                        d, indices = tree.query(list(zip(xt, yt, zt)))
 
-                    data.append(data_dict[k].items()[0][1].flatten()[indices].reshape(lonst.shape))
+                    data.append(list(data_dict[k].items())[0][1].flatten()[indices].reshape(lonst.shape))
 
                 r.close()
 

@@ -59,26 +59,26 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     ni = gc.ni
     nj = gc.nj
     x = np.zeros((ni, 1))
-    x[:, 0] = [xref + (i - iref + 1) * dx for i in xrange(ni)]
+    x[:, 0] = [xref + (i - iref + 1) * dx for i in range(ni)]
 
     y = np.zeros((1, nj))
-    y[0, :] = [yref + (j - jref + 1) * dy for j in xrange(nj)]
+    y[0, :] = [yref + (j - jref + 1) * dy for j in range(nj)]
 
     #write coordinates
-    rObj.write_2D_field(name="^^", grid_type="E", data=y, typ_var="X", level=0, ip=range(100, 103),
+    rObj.write_2D_field(name="^^", grid_type="E", data=y, typ_var="X", level=0, ip=list(range(100, 103)),
                         lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2, label="Routing")
 
-    rObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level=0, ip=range(100, 103),
+    rObj.write_2D_field(name=">>", grid_type="E", data=x, typ_var="X", level=0, ip=list(range(100, 103)),
                         lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2, label="Routing")
 
     info = rObj.get_current_info()
     ip_xy = info["ip"]
     ig = ip_xy + [0]
-    print "ig = ", ig
+    print("ig = ", ig)
 
     slope_data = None
     flowdir_data = None
-    for ncName, rpnName in ncNameToRpnName.iteritems():
+    for ncName, rpnName in ncNameToRpnName.items():
         data = ds.variables[ncName][:]
         grid_type = 'Z'
         rObj.write_2D_field(name=rpnName, level=1, data=data,
@@ -90,7 +90,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     rObj.close()
 
     ind = (flowdir_data > 0) & (slope_data < 0)
-    print flowdir_data[ind], slope_data[ind]
+    print(flowdir_data[ind], slope_data[ind])
     assert np.all(~ind)
 
     channel_length = ds.variables['channel_length'][:]
@@ -119,7 +119,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     plt.figure()
     channel_length = np.ma.masked_where(channel_length < 0, channel_length)
     plt.pcolormesh(channel_length.transpose())
-    print "channel_length limits", channel_length.min(), channel_length.max()
+    print("channel_length limits", channel_length.min(), channel_length.max())
     plt.colorbar()
     plt.title('channel length')
     plt.savefig("channel_length.png")
@@ -143,23 +143,23 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     plt.colorbar()
 
     plt.savefig("bankfull_store.png")
-    print ds.variables.keys()
+    print(list(ds.variables.keys()))
 
     plt.figure()
-    print 'fldr where slope is negative'
-    print np.all(fldr[slope < 0] == -1)
+    print('fldr where slope is negative')
+    print(np.all(fldr[slope < 0] == -1))
     fldr = np.ma.masked_where(fldr < 0, fldr)
     plt.pcolormesh(fldr.transpose())
     plt.colorbar()
     plt.title('fldr')
 
-    print fldr.shape
+    print(fldr.shape)
     fldr = fldr[10:-10, 10:-10]
     channel_length = channel_length[10:-10, 10:-10]
     slope = slope[10:-10, 10:-10]
     plt.savefig("fldr.png")
 
-    print len(fldr[fldr == 0])
+    print(len(fldr[fldr == 0]))
 
     ds.close()
     pass
@@ -197,4 +197,4 @@ if __name__ == "__main__":
         nc_path="/skynet3_rech1/huziy/hydrosheds/directions_great_lakes_210_130_0.1deg.nc",
         gc=gc, out_path="directions_0.1deg_GL.rpn")
 
-    print "Hello World"
+    print("Hello World")

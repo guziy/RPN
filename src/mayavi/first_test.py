@@ -25,5 +25,5 @@ if __name__ == "__main__":
     mlab.view(63.4, 73.8, 4, [-0.05, 0, 0])
     mlab.show()
 
-    print "Hello world"
+    print("Hello world")
   

@@ -31,7 +31,7 @@ def delete_points_in_countries(points_lat_long, points, indices, countries=None,
     from osgeo import osr
 
     query = "CNTRY_NAME IN (\'" + "\',\'".join(countries) + "\')"
-    print query
+    print(query)
     ogr.UseExceptions()
     osr.UseExceptions()
     driver = ogr.GetDriverByName("ESRI Shapefile")
@@ -41,14 +41,14 @@ def delete_points_in_countries(points_lat_long, points, indices, countries=None,
 
     feature = layer.GetNextFeature()
     while feature:
-        print feature.items()["CNTRY_NAME"]
+        print(list(feature.items())["CNTRY_NAME"])
         geom = feature.GetGeometryRef()
 
-        if feature.items()["CNTRY_NAME"] != "Russia":
-            print geom.ExportToWkt()
+        if list(feature.items())["CNTRY_NAME"] != "Russia":
+            print(geom.ExportToWkt())
 
-        to_del = itertools.ifilter(lambda x: geom.Distance(x[1]) < 0.2,
-                                   zip(points, points_lat_long, indices))
+        to_del = filter(lambda x: geom.Distance(x[1]) < 0.2,
+                                   list(zip(points, points_lat_long, indices)))
 
         to_del = list(to_del)
         for p_del, p_ll_del, i_del in to_del:
@@ -123,11 +123,11 @@ def create_gdal_point_and_transform(x, y, transformation=None):
 
 
 def create_points_envelope_gdal(points):
-    xs = map(lambda x: x.GetX(), points)
+    xs = [x.GetX() for x in points]
     xmin = min(xs)
     xmax = max(xs)
 
-    ys = map(lambda x: x.GetY(), points)
+    ys = [x.GetY() for x in points]
     ymin = min(ys)
     ymax = max(ys)
 
@@ -154,17 +154,16 @@ def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp
 
     ct = osr.CoordinateTransformation(latlong, layer.GetSpatialRef())
 
-    points = map(lambda x: create_gdal_point_and_transform(x[0], x[1], ct),
-                 zip(lons2d.flatten(), lats2d.flatten()))
+    points = [create_gdal_point_and_transform(x[0], x[1], ct) for x in zip(lons2d.flatten(), lats2d.flatten())]
 
     #points_lat_long = map(lambda x: create_gdal_point_and_transform(x[0], x[1]),
     #                      zip(lons2d.flatten(), lats2d.flatten()))
 
-    i_indices_1d = np.array(xrange(lons2d.shape[0]))
-    j_indices_1d = np.array(xrange(lons2d.shape[1]))
+    i_indices_1d = np.array(range(lons2d.shape[0]))
+    j_indices_1d = np.array(range(lons2d.shape[1]))
 
     j_indices_2d, i_indices_2d = np.meshgrid(j_indices_1d, i_indices_1d)
-    indices = zip(i_indices_2d.flatten(), j_indices_2d.flatten())
+    indices = list(zip(i_indices_2d.flatten(), j_indices_2d.flatten()))
     indices = list(indices)
 
     ##do not consider territories of the following countries
@@ -179,11 +178,11 @@ def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp
     #and those which are close to the area of interest
     #layer.SetSpatialFilter(grid_polygon)
     query = "EXTENT IN  (\'{0}\',\'{1}\',\'{2}\' ,\'{3}\')".format(*permafrost_types)
-    query += "OR EXTENT IN  (\'{0}\',\'{1}\',\'{2}\' ,\'{3}\')".format(*map(lambda x: x.lower(), permafrost_types))
-    print query
+    query += "OR EXTENT IN  (\'{0}\',\'{1}\',\'{2}\' ,\'{3}\')".format(*[x.lower() for x in permafrost_types])
+    print(query)
     layer.SetAttributeFilter(query)
 
-    print layer.GetFeatureCount()
+    print(layer.GetFeatureCount())
     #print grid_polygon.ExportToWkt()
 
     ##read features from the shape file
@@ -196,11 +195,11 @@ def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp
         for ind, p in zip(indices, points):
             assert isinstance(geom, ogr.Geometry)
             if geom.Contains(p):
-                perm_type = feature.items()["EXTENT"]
+                perm_type = list(feature.items())["EXTENT"]
                 permafrost_kind_field[ind] = permafrost_types.index(perm_type) + 1
                 points_to_remove.append(p)
                 indices_to_remove.append(ind)
-                print i
+                print(i)
 
         for the_p, the_i in zip(points_to_remove, indices_to_remove):
             indices.remove(the_i)
@@ -246,7 +245,7 @@ def main():
     cb = plt.colorbar(img, ticks=MultipleLocator(), cax=cax, orientation="horizontal")
 
     basemap.contour(x0, y0, permafrost_kind_field, ax=ax_map,
-                    levels=range(6), linewidths=0.5, colors="k")
+                    levels=list(range(6)), linewidths=0.5, colors="k")
     basemap.drawcoastlines(ax=ax_map)
     plt.savefig("test.png")
 
@@ -259,7 +258,7 @@ def main():
 
 def get_EASE_basemap():
     b = Basemap(projection="nplaea", lon_0=180, lat_0=90, boundinglat=25)
-    print b.proj4string
+    print(b.proj4string)
     return b
 
 
@@ -278,7 +277,7 @@ def save_pf_mask_to_netcdf(path="permafrost_types_arctic.nc",
         file_path=path_to_rpn_with_target_grid,
         field_name=rpn_field_name_with_target_grid
     )
-    print lons2d.shape
+    print(lons2d.shape)
     pf_mask = get_permafrost_mask(lons2d, lats2d)
     ds.createDimension('lon', lons2d.shape[0])
     ds.createDimension('lat', lons2d.shape[1])
@@ -307,5 +306,5 @@ if __name__ == "__main__":
     # save_pf_mask_to_netcdf(path="permafrost_types_arctic_using_test.nc",
     #                        path_to_rpn_with_target_grid="/b2_fs2/huziy/geophy_from_others/pmOMSC26_Can_long_new_v01_204204_moyenne",
     #                        rpn_field_name_with_target_grid="TRAF")
-    print "Hello world"
+    print("Hello world")
   

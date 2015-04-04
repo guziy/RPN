@@ -11,7 +11,7 @@ from matplotlib.patches import Rectangle
 __author__ = 'huziy'
 
 import os
-import nemo_commons
+from . import nemo_commons
 import matplotlib.pyplot as plt
 import application_properties
 import numpy as np
@@ -64,8 +64,8 @@ def draw_timeseries(path=T_FILE_PATH, var_name="sosstsst", nx=1, ny=1,
     """
     cube = iris.load_cube(path, constraint=iris.Constraint(cube_func=lambda c: c.var_name == var_name))
     assert isinstance(cube, Cube)
-    print cube.shape
-    print lower_left_ij
+    print(cube.shape)
+    print(lower_left_ij)
     subcube = cube[:, lower_left_ij[1]:lower_left_ij[1] + ny, lower_left_ij[0]:lower_left_ij[0] + nx]
 
 
@@ -97,7 +97,7 @@ def draw_timeseries(path=T_FILE_PATH, var_name="sosstsst", nx=1, ny=1,
     w, h = x2d[lower_left_ij[1] + ny - 1, lower_left_ij[0] + nx - 1] - x2d[lower_left_ij[1], lower_left_ij[0]], \
            y2d[lower_left_ij[1] + ny - 1, lower_left_ij[0]] - y2d[lower_left_ij[1], lower_left_ij[0]]
 
-    print w, h
+    print(w, h)
 
     r = Rectangle((x2d[lower_left_ij[1], lower_left_ij[0]],
                    y2d[lower_left_ij[1], lower_left_ij[0]]), w, h, facecolor="none")

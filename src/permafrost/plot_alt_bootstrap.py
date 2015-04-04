@@ -4,7 +4,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
-from active_layer_thickness import CRCMDataManager
+from .active_layer_thickness import CRCMDataManager
 import numpy as np
 
 __author__ = 'huziy'
@@ -59,7 +59,7 @@ def main():
     layer_widths = [0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
                     1.0, 3.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, ]
 
-    print len(layer_widths)
+    print(len(layer_widths))
 
     crcm_data_manager = CRCMDataManager(layer_widths=layer_widths, data_folder=data_folder)
 

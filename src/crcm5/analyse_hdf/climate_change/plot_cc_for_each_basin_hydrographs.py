@@ -37,7 +37,7 @@ def calculate_and_plot_climate_change_hydrographs(base_configs,
     modif_c, modif_f = modif_configs
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     assert isinstance(base_c, RunConfig)
 
@@ -78,7 +78,7 @@ def calculate_and_plot_climate_change_hydrographs(base_configs,
     delta = delta_modif - delta_base
 
 
-    items = list(sorted(name_to_indices.items(), key=lambda item: item[1][1], reverse=True))
+    items = list(sorted(list(name_to_indices.items()), key=lambda item: item[1][1], reverse=True))
 
 
     # find the maximum value for plots
@@ -103,8 +103,8 @@ def calculate_and_plot_climate_change_hydrographs(base_configs,
     line_base, line_modif, line_diff = None, None, None
     ax_last = None
     for name, (i, j) in items:
-        print name
-        print i, j, np.max(delta)
+        print(name)
+        print(i, j, np.max(delta))
         row = subplot_count // ncols
         col = subplot_count % ncols
 
@@ -152,7 +152,7 @@ def calculate_and_plot_climate_change_hydrographs(base_configs,
                 tl.set_visible(False)
 
         # ax.xaxis.set_minor_locator(DayLocator(interval=5))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 2)))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
 
     ax_last.legend((line_base[0], line_modif[0], line_diff[0]),
                    (base_c.label, modif_c.label, "{} vs {}".format(modif_c.label, base_c.label)),
@@ -201,14 +201,14 @@ def is_part_of_points_in(basin, x_list, y_list, the_part=0.5):
 def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None, lats=None, bmp=None,
                                     directions=None, accumulation_areas=None):
     driver = ogr.GetDriverByName("ESRI Shapefile")
-    print driver
+    print(driver)
     ds = driver.Open(shape_file, 0)
 
     assert isinstance(ds, ogr.DataSource)
     layer = ds.GetLayer()
 
     assert isinstance(layer, ogr.Layer)
-    print layer.GetFeatureCount()
+    print(layer.GetFeatureCount())
 
     latlong_proj = osr.SpatialReference()
     latlong_proj.ImportFromEPSG(4326)
@@ -218,7 +218,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
     # create Coordinate Transformation
     coord_transform = osr.CoordinateTransformation(latlong_proj, utm_proj)
 
-    utm_coords = coord_transform.TransformPoints(zip(lons.flatten(), lats.flatten()))
+    utm_coords = coord_transform.TransformPoints(list(zip(lons.flatten(), lats.flatten())))
     utm_coords = np.asarray(utm_coords)
     x_utm = utm_coords[:, 0].reshape(lons.shape)
     y_utm = utm_coords[:, 1].reshape(lons.shape)
@@ -291,7 +291,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
                 outlet_index_in_basin += 1
 
             basin_names_out.append(current_basin_name)
-            print len(basins), basin_names_out
+            print(len(basins), basin_names_out)
 
         accumulation_areas_temp[i, j] = -1
 
@@ -307,7 +307,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
     bmp.scatter(xs, ys, c="r", s=40, zorder=2)
 
     cmap = cm.get_cmap("rainbow", index - 1)
-    bn = BoundaryNorm(range(index), index - 1)
+    bn = BoundaryNorm(list(range(index)), index - 1)
 
     bmp.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap)
 
@@ -371,7 +371,7 @@ def main_interflow():
     varname = "STFA"
     calculate_and_plot_climate_change_hydrographs(base_configs, modif_configs,
                                                   name_to_indices=basin_name_to_indexes_map,
-                                                  months=range(1, 13), varname=varname)
+                                                  months=list(range(1, 13)), varname=varname)
 
     # plt.show()
     # b = Basemap()
@@ -432,7 +432,7 @@ def main():
     calculate_and_plot_climate_change_hydrographs(base_configs, modif_configs, varname=varname,
                                                   name_to_indices=basin_name_to_indexes_map)
 
-    print base_config_f
+    print(base_config_f)
     # bmp.readshapefile(BASIN_BOUNDARIES_FILE.split(".")[0].replace("utm18", "latlon"), "basin")
 
     # plt.show()

@@ -5,7 +5,7 @@ from matplotlib.gridspec import GridSpec
 from scipy.spatial.ckdtree import cKDTree
 from crcm5 import infovar
 from cru.temperature import CRUDataManager
-from dfs_data_manager import DFSDataManager
+from .dfs_data_manager import DFSDataManager
 from util.geo import lat_lon
 import os
 
@@ -26,7 +26,7 @@ def plot_errors_in_one_figure(season_to_diff, fig_path="", **kwargs):
     x, y = kwargs["x"], kwargs["y"]
 
     vmin, vmax = None, None
-    for k, field in season_to_diff.iteritems():
+    for k, field in season_to_diff.items():
         pl, ph = field.min(), field.max()
         if vmin is None:
             vmin = pl
@@ -35,7 +35,7 @@ def plot_errors_in_one_figure(season_to_diff, fig_path="", **kwargs):
             vmin = min(vmin, pl)
             vmax = max(vmax, ph)
 
-    print "min,max = ({0}, {1})".format(vmin, vmax)
+    print("min,max = ({0}, {1})".format(vmin, vmax))
     ncolors = 25
     if vmin * vmax <= 0:
         cmap = cm.get_cmap("RdBu_r", ncolors)
@@ -50,7 +50,7 @@ def plot_errors_in_one_figure(season_to_diff, fig_path="", **kwargs):
     gs = GridSpec(len(season_to_diff), 2, width_ratios=[1, 0.05])
     row = 0
     img = None
-    for the_seasson, the_diff in season_to_diff.iteritems():
+    for the_seasson, the_diff in season_to_diff.items():
         ax = fig.add_subplot(gs[row, 0])
         #img = basemap.pcolormesh(x, y, the_diff, ax = ax, norm = bn, cmap = cmap, vmin = vmin, vmax = vmax)
         img = basemap.contourf(x, y, the_diff, ax = ax, norm = bn, cmap = cmap, extend = "both", levels = bounds)
@@ -77,9 +77,9 @@ def main(dfs_var_name="t2", cru_var_name="tmp",
 
     season_name_to_months = OrderedDict([
         ("Winter", (1, 2, 12)),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12))])
+        ("Spring", list(range(3, 6))),
+        ("Summer", list(range(6, 9))),
+        ("Fall", list(range(9, 12)))])
 
     cru_t_manager = CRUDataManager(var_name=cru_var_name, path=cru_file)
     cru_lons, cru_lats = cru_t_manager.lons2d, cru_t_manager.lats2d
@@ -96,8 +96,8 @@ def main(dfs_var_name="t2", cru_var_name="tmp",
     dfs_lons, dfs_lats = dfs_manager.get_lons_and_lats_2d()
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(dfs_lons.flatten(), dfs_lats.flatten())
     xs, ys, zs = lat_lon.lon_lat_to_cartesian(cru_lons.flatten(), cru_lats.flatten())
-    ktree = cKDTree(data=zip(xs, ys, zs))
-    dists, inds = ktree.query(zip(xt, yt, zt))
+    ktree = cKDTree(data=list(zip(xs, ys, zs)))
+    dists, inds = ktree.query(list(zip(xt, yt, zt)))
 
     season_to_err = OrderedDict()
     for k in season_to_mean_dfs:

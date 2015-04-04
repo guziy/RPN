@@ -3,7 +3,7 @@ from matplotlib.dates import DateFormatter
 import numpy as np
 from crcm5.model_point import ModelPoint
 
-print np.__version__
+print(np.__version__)
 
 from datetime import datetime
 import os
@@ -74,8 +74,8 @@ def regenerate_station_to_gridcell_mapping(start_year, end_year, model_manager):
 
         station_to_grid_point[s] = mp
 
-        print "da_diff (sel) = ", deltaDaMin
-        print "dist (sel) = ", dists[imin]
+        print("da_diff (sel) = ", deltaDaMin)
+        print("dist (sel) = ", dists[imin])
 
     return station_to_grid_point
 
@@ -141,7 +141,7 @@ def validate_as_is():
         mp = None
         for sim_name in sim_name_list:
             manager = sim_name_to_manager[sim_name]
-            if not sim_name_to_station_to_model_point[sim_name].has_key(s):
+            if s not in sim_name_to_station_to_model_point[sim_name]:
                 continue
 
             mp = sim_name_to_station_to_model_point[sim_name][s]
@@ -173,5 +173,5 @@ if __name__ == "__main__":
     #validate_as_is()
 
     validate_daily_climatology()
-    print "Hello world"
+    print("Hello world")
   

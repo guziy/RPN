@@ -64,7 +64,7 @@ def plot_impacts_of_intfl_on_seasonal_means(var_name="Tmin", base_label="",
     row = 0
     col = 0
     im = None
-    for season, months in season_to_months.iteritems():
+    for season, months in season_to_months.items():
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
 
@@ -84,9 +84,9 @@ def plot_impacts_of_intfl_on_seasonal_means(var_name="Tmin", base_label="",
     cmap = cm.get_cmap("RdBu_r", 10)
     vmin = -0.5
     vmax = 0.5
-    for label, data_daily in label_to_data_daily.iteritems():
+    for label, data_daily in label_to_data_daily.items():
         col = 0
-        for season, months in season_to_months.iteritems():
+        for season, months in season_to_months.items():
             ax = fig.add_subplot(gs[row, col])
             if not col:
                 ax.set_ylabel(r"$\Delta$" + "{}".format(label))
@@ -118,9 +118,9 @@ def main():
 
     season_to_months = OrderedDict([
         ("Winter", [12, 1, 2]),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12))
+        ("Spring", list(range(3, 6))),
+        ("Summer", list(range(6, 9))),
+        ("Fall", list(range(9, 12)))
     ])
 
     coords = CoordsAndBg(*analysis.get_basemap_from_hdf(base_path))
@@ -134,7 +134,7 @@ def main():
     label_to_tmax_daily = {}
     label_to_tmin_daily = {}
 
-    for label, the_path in label_to_path.iteritems():
+    for label, the_path in label_to_path.items():
         _, label_to_tmax_daily[label] = analysis.get_daily_max_climatology(the_path, var_name="TT_max", level=0,
                                                                            start_year=start_year, end_year=end_year)
 

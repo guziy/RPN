@@ -10,7 +10,7 @@ def vel(z):
 
 def animate(i):
 
-    print animate.x
+    print(animate.x)
 
     pass
 

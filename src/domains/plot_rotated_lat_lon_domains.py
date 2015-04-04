@@ -104,8 +104,8 @@ def plot_domain_for_different_margins(path, margins=None):
     dx = (xur - xll) / float(nx - 1)
     dy = (yur - yll) / float(ny - 1)
 
-    print dx, dy
-    print xur, yur, xll, yll
+    print(dx, dy)
+    print(xur, yur, xll, yll)
 
     x1 = xll - dx / 2.0
     y1 = yll - dy / 2.0
@@ -208,7 +208,7 @@ def plot_domain_using_coords_from_file(path = ""):
 
     x, y = basemap(lons2d, lats2d)
     basemap.scatter(x, y, c = "r", linewidths = 0, s = 1.0)
-    print x.shape
+    print(x.shape)
 
     xll_big, yll_big = g_params.get_ll_point(marginx=20, marginy=20)
     xll_big -= g_params.dx / 2.0
@@ -242,7 +242,7 @@ def plot_domain_using_coords_from_file(path = ""):
     #x1, y1 = basemap(lons2d_1[margin:-margin,margin:-margin], lats2d_1[margin:-margin,margin:-margin])
     x1, y1 = basemap(lons2d_1, lats2d_1)
 
-    print x1.shape, lons2d_1[0,0], lats2d_1[0,0]
+    print(x1.shape, lons2d_1[0,0], lats2d_1[0,0])
 
 
     basemap.scatter(x1, y1, c = "b", linewidths = 0, s = 10)
@@ -320,5 +320,5 @@ if __name__ == "__main__":
     plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=40, font_size=15)
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

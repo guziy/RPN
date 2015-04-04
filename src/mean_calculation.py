@@ -36,7 +36,7 @@ def calculate_monthly_sum(data_folder = '/home/huziy/skynet3_rech1/gemclim/quebe
             continue
 
         the_path = os.path.join(folder_for_month, file)
-        print the_path
+        print(the_path)
         r = RPN(the_path)
         the_data = r.get_first_record_for_name_and_level(var_name, level = level)
         if result_data == None:
@@ -50,7 +50,7 @@ def calculate_monthly_sum(data_folder = '/home/huziy/skynet3_rech1/gemclim/quebe
     pass
 
 #months start from 1 to 12
-def calculate_mean_for_month_range(month_range = xrange(6,8), year_range = xrange(1999,2000), figure_file = 'figure.png',
+def calculate_mean_for_month_range(month_range = range(6,8), year_range = range(1999,2000), figure_file = 'figure.png',
                                    var_name = 'GWDI', level = -1 ):
 
 
@@ -58,7 +58,7 @@ def calculate_mean_for_month_range(month_range = xrange(6,8), year_range = xrang
     the_quantity = 0.0
     for month in month_range:
         for year in year_range:
-            print month, year
+            print(month, year)
             sum1, quantity1 = calculate_monthly_sum(month = month, year = year, var_name = var_name, level = level)
             the_sum += sum1
             the_quantity += quantity1
@@ -66,14 +66,14 @@ def calculate_mean_for_month_range(month_range = xrange(6,8), year_range = xrang
 
 
     lon, lat = get_lon_lat()
-    print 'the_quantity = ',  the_quantity
+    print('the_quantity = ',  the_quantity)
     plot_field_2d(lon, lat, the_sum / the_quantity, color_map = mpl.cm.get_cmap('jet_r', 10), start_lon = -80, end_lon = -50)
     plt.title('${\\rm m^3/s}$')
     plt.savefig(figure_file, bbox_inches = 'tight')
     pass
 
 if __name__ == "__main__":
-    calculate_mean_for_month_range(month_range = range(6,9), year_range = range(1999,2000), figure_file = 'summer_TDR.png', var_name = 'TDR', level = 5)
-    calculate_mean_for_month_range(month_range = range(9,12), year_range = range(1999,2000), figure_file = 'autumn_TDR.png', var_name = 'TDR', level = 5)
-    calculate_mean_for_month_range(month_range = [12,1,2], year_range = range(1999,2000), figure_file = 'winter_TDR.png', var_name = 'TDR', level = 5)
-    print "Hello World"
+    calculate_mean_for_month_range(month_range = list(range(6,9)), year_range = list(range(1999,2000)), figure_file = 'summer_TDR.png', var_name = 'TDR', level = 5)
+    calculate_mean_for_month_range(month_range = list(range(9,12)), year_range = list(range(1999,2000)), figure_file = 'autumn_TDR.png', var_name = 'TDR', level = 5)
+    calculate_mean_for_month_range(month_range = [12,1,2], year_range = list(range(1999,2000)), figure_file = 'winter_TDR.png', var_name = 'TDR', level = 5)
+    print("Hello World")

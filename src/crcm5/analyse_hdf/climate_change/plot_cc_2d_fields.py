@@ -21,9 +21,9 @@ __author__ = 'huziy'
 def get_default_season_to_months_dict():
     return OrderedDict([
         ("Winter", (1, 2, 12)),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12)),
+        ("Spring", list(range(3, 6))),
+        ("Summer", list(range(6, 9))),
+        ("Fall", list(range(9, 12))),
     ])
 
 
@@ -41,7 +41,7 @@ def compute_seasonal_means_for_each_year(sim_config, season_to_months=None, var_
         season_to_months = get_default_season_to_months_dict()
 
     season_to_field = OrderedDict()
-    for season, months in season_to_months.iteritems():
+    for season, months in season_to_months.items():
         season_to_field[season] = analysis.get_mean_2d_fields_for_months(
             path=sim_config.data_path, var_name=var_name, level=level, months=months,
             start_year=sim_config.start_year, end_year=sim_config.end_year
@@ -74,8 +74,8 @@ def _plot_row(vname="", level=0, config_dict=None):
     season_to_diff = OrderedDict()
 
     diff_max = 0
-    print current_base.keys()
-    for season in current_base.keys():
+    print(list(current_base.keys()))
+    for season in list(current_base.keys()):
         season_to_diff[season] = (future_modif[season] - current_modif[season]) - \
                                  (future_base[season] - current_base[season])
         # Convert units if required
@@ -183,7 +183,7 @@ def main_interflow():
     config_dict.basemap = bmp
 
     # Calculate and plot seasonal means
-    for vname, level, the_row in zip(var_names, levels, range(len(levels))):
+    for vname, level, the_row in zip(var_names, levels, list(range(len(levels)))):
         config_dict.the_row = the_row
 
         _plot_row(vname=vname, level=level, config_dict=config_dict)
@@ -195,7 +195,7 @@ def main_interflow():
 
     img_name = "{}_{}-{}_{}-{}.png".format(base_config_f.start_year, base_config_f.end_year,
                                            base_config_c.start_year, base_config_c.end_year,
-                                           "-".join(season_to_months.keys()))
+                                           "-".join(list(season_to_months.keys())))
 
     img_path = os.path.join(img_folder, img_name)
     fig.savefig(img_path, bbox_inches="tight")
@@ -262,7 +262,7 @@ def main():
     config_dict.basemap = bmp
 
     # Calculate and plot seasonal means
-    for vname, level, the_row in zip(var_names, levels, range(len(levels))):
+    for vname, level, the_row in zip(var_names, levels, list(range(len(levels)))):
         config_dict.the_row = the_row
 
         _plot_row(vname=vname, level=level, config_dict=config_dict)
@@ -274,7 +274,7 @@ def main():
 
     img_name = "{}_{}-{}_{}-{}.png".format(base_config_f.start_year, base_config_f.end_year,
                                            base_config_c.start_year, base_config_c.end_year,
-                                           "-".join(season_to_months.keys()))
+                                           "-".join(list(season_to_months.keys())))
 
     img_path = os.path.join(img_folder, img_name)
     fig.savefig(img_path, bbox_inches="tight")

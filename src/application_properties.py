@@ -20,5 +20,5 @@ def set_current_directory():
 
 if __name__ == "__main__":
     set_current_directory()
-    print os.getcwd()
-    print "Hello World"
+    print(os.getcwd())
+    print("Hello World")

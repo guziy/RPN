@@ -34,7 +34,7 @@ water_density = 1000.0 #kg/m^3
 
 #get longitudes and latitudes
 def get_lon_lat(path = 'data/pm1957090100_00589248p'):
-    print 'reading lons and lats from the file %s' % path
+    print('reading lons and lats from the file %s' % path)
     r = RPN(path)
     lons, lats = r.get_longitudes_and_latitudes()
     r.close()
@@ -49,16 +49,16 @@ def test_FV_AV(path = 'data/pm1957090100_00589248p'):
     nx, ny = av[:,:,0].shape
     ratio = np.zeros((nx, ny))
 
-    for i in xrange(nx):
-        for j in xrange(ny):
+    for i in range(nx):
+        for j in range(ny):
             if fv[i, j] != 0:
                 ratio[i, j] = av[i, j] / fv[i, j]
 
     
 
-    print np.max(av)
-    print np.max(fv)
-    print np.max(av) / np.max(fv)
+    print(np.max(av))
+    print(np.max(fv))
+    print(np.max(av) / np.max(fv))
 
     plt.figure()
     plt.imshow(av[:,:,0])
@@ -98,8 +98,8 @@ def calculate_time_integral(data_folder = 'data/crcm_sim_with_lakes/data_selecte
                     continue
 
             r = RPN(file_path)
-            print 'current folder ', current_folder
-            print 'reading file {0}'.format(file)
+            print('current folder ', current_folder)
+            print('reading file {0}'.format(file))
             data = r.get_first_record_for_name_and_level(varname = var_name, level = level, level_kind = level_kind)
             data = data[:,:,0]
             if date == start_date:
@@ -119,7 +119,7 @@ def calculate_time_integral(data_folder = 'data/crcm_sim_with_lakes/data_selecte
 def main():
     
     lake_fraction = get_lakefraction()
-    print lake_fraction.shape
+    print(lake_fraction.shape)
     
  
     start_date = datetime(1985,1,1,0,0,0)
@@ -142,8 +142,8 @@ def main():
         lons, lats = get_lon_lat(path = os.path.join(folder_path, file))
         break
 
-    print np.min(lons), np.max(lons)
-    print np.min(lats), np.max(lats)
+    print(np.min(lons), np.max(lons))
+    print(np.min(lats), np.max(lats))
 
 
 
@@ -168,7 +168,7 @@ def main():
 
     x = (precipitation - evaporation) 
 
-    print 'min, max = ', np.min(x), np.max(x)
+    print('min, max = ', np.min(x), np.max(x))
 
     d_max = np.max(np.abs(x))
     d_min = - d_max
@@ -189,4 +189,4 @@ def main():
 if __name__ == "__main__":
     main()
     #test_FV_AV()
-    print "Hello World"
+    print("Hello World")

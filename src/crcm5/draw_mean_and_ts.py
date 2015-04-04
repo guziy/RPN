@@ -44,19 +44,19 @@ def main():
     swst2d,allSwst = manager.get_mean_2d_field_and_all_data(var_name="SWST")
 
 
-    for k,v in allTraf.iteritems():
+    for k,v in allTraf.items():
         allTraf[k] = v * manager.cell_area * 1.0e-3
-    for k,v in allTdra.iteritems():
+    for k,v in allTdra.items():
         allTdra[k] = v * manager.cell_area * 1.0e-3
 
-    for k,v in allPr.iteritems():
+    for k,v in allPr.items():
         allPr[k] = v * manager.cell_area
 
     #for k,v in allImav.iteritems():
     #    allImav[k] = v * manager.cell_area * 1.0e-3
 
 
-    for k,v in allSwe.iteritems():
+    for k,v in allSwe.items():
         allSwe[k] *= v * manager.cell_area * 1.0e-3 * 1e-6
 
 
@@ -170,5 +170,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

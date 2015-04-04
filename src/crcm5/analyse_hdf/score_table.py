@@ -15,6 +15,6 @@ class ScoreTable(object):
         self.sim_to_var_to_ns_score[sim_label][var_name] = score_value
 
     def print_score_table(self):
-        for sim_label, var_to_ns_score in self.sim_to_var_to_ns_score.iteritems():
-            for var_name, ns_score in var_to_ns_score.iteritems():
-                print "NS: {0}\t{1}\t{2}".format(sim_label, var_name, ns_score)
+        for sim_label, var_to_ns_score in self.sim_to_var_to_ns_score.items():
+            for var_name, ns_score in var_to_ns_score.items():
+                print("NS: {0}\t{1}\t{2}".format(sim_label, var_name, ns_score))

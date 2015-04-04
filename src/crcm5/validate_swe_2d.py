@@ -25,15 +25,15 @@ def upscale(manager_in, manager_out, swe_in, nneighbours = 25):
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lons_in_1d, lats_in_1d)
 
-    kdtree = KDTree(zip(x0,y0,z0))
+    kdtree = KDTree(list(zip(x0,y0,z0)))
 
     lons_out_1d = manager_out.lons2D.flatten()
     lats_out_1d = manager_out.lats2D.flatten()
 
     x1, y1, z1 = lat_lon.lon_lat_to_cartesian(lons_out_1d, lats_out_1d)
-    dd, ii = kdtree.query(zip(x1, y1, z1), k=nneighbours)
+    dd, ii = kdtree.query(list(zip(x1, y1, z1)), k=nneighbours)
 
-    print ii.shape
+    print(ii.shape)
     swe_in_1d = swe_in.flatten()
 
     return np.mean(swe_in_1d[ii], axis=1).reshape(manager_out.lons2D.shape)
@@ -175,5 +175,5 @@ if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
     main()
-    print "Hello world"
+    print("Hello world")
   

@@ -21,7 +21,7 @@ SROF_VARNAME = "TRAF"
 
 
 
-def plot_ratio_for_the_run(run_name, run_folder, ax, months = range(1,13),
+def plot_ratio_for_the_run(run_name, run_folder, ax, months = list(range(1,13)),
                            subsrof_varname = "TDRA", srof_varname = "TRAF",
                            start_year = -np.Inf, end_year = np.Inf
                            ):
@@ -45,7 +45,7 @@ def plot_ratio_for_the_run(run_name, run_folder, ax, months = range(1,13),
 
 
     ratio = maskoceans(dm.lons2D , dm.lats2D, ratio, grid=1.25, resolution="i", inlands=False)
-    print ratio.min(), ratio.max()
+    print(ratio.min(), ratio.max())
 
     b = dm.get_omerc_basemap()
     x, y = b(dm.lons2D, dm.lats2D)
@@ -107,7 +107,7 @@ def plot_ratios_using_narccap_data(start_year = None, end_year = None):
         gs = gridspec.GridSpec(nrows,ncols, height_ratios=[1,1,1,0.5])
         i = 0 #just in case we don't go inside the loop
         for i, the_sim in enumerate(narccap_sims):
-            print "processing {0} ...".format(the_sim)
+            print("processing {0} ...".format(the_sim))
             gcm, rcm = the_sim.split("-")
             ax = fig.add_subplot(gs[i//ncols, i%ncols])
 
@@ -173,9 +173,9 @@ def plot_ratio_for_all_seasons():
 
     seasons = [
             [12,1,2],
-            range(3,6),
-            range(6,9),
-            range(9,12)
+            list(range(3,6)),
+            list(range(6,9)),
+            list(range(9,12))
     ]
 
 
@@ -226,5 +226,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     #main()
     plot_ratios_using_narccap_data(start_year=1985, end_year=1990)
-    print "Hello world"
+    print("Hello world")
   

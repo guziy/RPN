@@ -9,7 +9,7 @@ from util import plot_utils
 __author__ = 'huziy'
 
 import os
-import obs
+from . import obs
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -94,7 +94,7 @@ def main_plot_all_temp_profiles_in_one_figure(
                                                                                  start_date=start_date,
                                                                                  end_date=end_date)
 
-        print "Unique model levels: ", np.unique(zzm)
+        print("Unique model levels: ", np.unique(zzm))
 
         # obs
         ax = fig.add_subplot(gs[row, 0])
@@ -150,7 +150,7 @@ def main_plot_all_temp_profiles_in_one_figure(
     lons, lats, bmp = nemo_manager.get_basemap_and_coords()
     ax = fig.add_subplot(gs[len(temperature_profile_file_prefixes), :-2])
 
-    for i, po, label in zip(range(len(obs_point_list)), obs_point_list, labels):
+    for i, po, label in zip(list(range(len(obs_point_list))), obs_point_list, labels):
         xx, yy = bmp(po.longitude, po.latitude)
         bmp.scatter(xx, yy, c="r")
 

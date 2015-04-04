@@ -19,19 +19,19 @@ def read_observed_bfc(path="/home/huziy/skynet3_rech1/bulk_field_capacity_obs/wc
     ds = gdal.Open(path, gdalconst.GA_ReadOnly)
 
     if ds is None:
-        print "Could not open {}".format(path)
+        print("Could not open {}".format(path))
 
 
     assert isinstance(ds, gdal.Dataset)
 
-    print ds.GetDescription()
+    print(ds.GetDescription())
     extent = ds.GetGeoTransform()
-    print ds.GetGCPProjection()
+    print(ds.GetGCPProjection())
 
     nx, ny = ds.RasterXSize, ds.RasterYSize
 
     dx, dy = extent[1], extent[5]
-    print extent
+    print(extent)
 
     xll, yur = extent[0], extent[3]
     xur = xll + nx * dx
@@ -42,10 +42,10 @@ def read_observed_bfc(path="/home/huziy/skynet3_rech1/bulk_field_capacity_obs/wc
     # plt.pcolormesh(np.flipud(data))
     # plt.show()
 
-    print data.shape
-    print nx, ny
+    print(data.shape)
+    print(nx, ny)
 
-    print [xll, yll, xur, yur]
+    print([xll, yll, xur, yur])
 
     adf = AreaDefinition("source", "lonlat", "lonlat", {"proj": "lonlat"}, nx, ny, [xll, yll, xur, yur])
 

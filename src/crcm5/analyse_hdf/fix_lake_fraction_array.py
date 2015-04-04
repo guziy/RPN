@@ -10,7 +10,7 @@ SOURCE_PATH = "/skynet3_rech1/huziy/hdf_store/pm1979010100_00000000p"
 def correct(path):
     #remove lake_fraction array and create a new one from the source (rpn data)
     #data
-    print "Working on {0} ...".format(path)
+    print("Working on {0} ...".format(path))
     h = tb.open_file(path, "a")
 
     #read data from the rpn file
@@ -25,7 +25,7 @@ def correct(path):
 
 def main():
     hdf_folder = "/skynet3_rech1/huziy/hdf_store"
-    file_list = filter(lambda x: x.endswith(".hdf5"), os.listdir(hdf_folder))
+    file_list = [x for x in os.listdir(hdf_folder) if x.endswith(".hdf5")]
 
     for fname in file_list:
         correct(os.path.join(hdf_folder, fname))

@@ -45,9 +45,9 @@ class GrdcDataManager:
         x, y, z = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
 
         if self.ktree is None:
-            self.ktree = KDTree(zip(x, y, z))
+            self.ktree = KDTree(list(zip(x, y, z)))
 
-        d, i = self.ktree.query(zip(x0, y0, z0))
+        d, i = self.ktree.query(list(zip(x0, y0, z0)))
 
         return data_obs.flatten()[i].reshape(model_lons_2d.shape)
 
@@ -74,7 +74,7 @@ class GrdcDataManager:
             elif line.startswith("NODATA"):
                 self.nodata_value = int(line.split()[1].strip())
             else:
-                vals.append( map(float, map(lambda s: s.strip(), line.split())) )
+                vals.append( list(map(float, [s.strip() for s in line.split()])) )
                 #print len(vals), self.ncols * self.nrows
 
 
@@ -92,7 +92,7 @@ class GrdcDataManager:
         #vals = np.ma.masked_where(vals.astype(int) == self.nodata_value, vals)
         vals = np.ma.masked_where(vals < 0, vals)
 
-        print self.nodata_value, np.min(vals), self.nodata_value == np.min(vals)
+        print(self.nodata_value, np.min(vals), self.nodata_value == np.min(vals))
 
         vals /= 365 * 24 * 60 * 60 #convert to mm/s
 
@@ -120,5 +120,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

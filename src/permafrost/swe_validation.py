@@ -6,7 +6,7 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib.transforms import Affine2D, Bbox
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import maskoceans, Basemap, cm
-from active_layer_thickness import CRCMDataManager
+from .active_layer_thickness import CRCMDataManager
 import matplotlib.pyplot as plt
 import application_properties
 import my_colormaps
@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib import colors
 from swe import SweDataManager
-import draw_regions
+from . import draw_regions
 
 def draw_colorbar(fig, img, ax = None, boundaries = None, ticks = None):
     divider = make_axes_locatable(ax)
@@ -37,7 +37,7 @@ def compare_swe_diff_for_era40_driven():
     end_year = 1997
     the_months = [12,1,2]
 
-    levels = [10] + range(20, 120, 20) + [150,200, 300,500,1000]
+    levels = [10] + list(range(20, 120, 20)) + [150,200, 300,500,1000]
     cmap = mpl.cm.get_cmap(name="jet_r", lut = len(levels))
     norm = colors.BoundaryNorm(levels, cmap.N)
 
@@ -45,7 +45,7 @@ def compare_swe_diff_for_era40_driven():
 
     swe_obs_manager = SweDataManager(var_name="SWE")
     swe_obs = swe_obs_manager.get_mean(start_year, end_year, months=the_months)
-    print "Calculated obs swe"
+    print("Calculated obs swe")
 
     swe_obs_interp = swe_obs_manager.interpolate_data_to(swe_obs, lons2d, lats2d)
 
@@ -98,7 +98,7 @@ def main():
     end_year = 1997
     the_months = [12,1,2]
 
-    levels = [10] + range(20, 120, 20) + [150,200, 300,500,1000]
+    levels = [10] + list(range(20, 120, 20)) + [150,200, 300,500,1000]
     cmap = mpl.cm.get_cmap(name="jet_r", lut = len(levels))
     norm = colors.BoundaryNorm(levels, cmap.N)
 
@@ -106,7 +106,7 @@ def main():
 
     swe_obs_manager = SweDataManager(var_name="SWE")
     swe_obs = swe_obs_manager.get_mean(start_year, end_year, months=the_months)
-    print "Calculated obs swe"
+    print("Calculated obs swe")
 
     swe_obs_interp = swe_obs_manager.interpolate_data_to(swe_obs, lons2d, lats2d, nneighbours=1)
 
@@ -166,7 +166,7 @@ def main():
     swe_model_gcm = CRCMDataManager.get_mean_2d_from_climatologies(path=path, file_prefixes=[prefix],
                     file_suffixes=suffixes, var_name="I5")
     swe_model_gcm = maskoceans(lons2d, lats2d, swe_model_gcm)
-    print "model: min = {0}; max = {1}".format(np.ma.min(swe_model_gcm), np.ma.max(swe_model_gcm))
+    print("model: min = {0}; max = {1}".format(np.ma.min(swe_model_gcm), np.ma.max(swe_model_gcm)))
     img = b.contourf(x, y, swe_model_gcm, levels = levels, norm = norm, cmap = cmap)
     draw_colorbar(fig, img, ax = ax, boundaries=levels_diff)
     ax.set_title("Model (GCM driven, E2, 1979-1997)")
@@ -298,7 +298,7 @@ def validate_using_monthly_diagnostics():
     cb = fig.colorbar(all_img[0], ax = cax, cax = cax, extend = "both", format = formatter)
 
     cax.set_title("mm")
-    print "aspect = ", cax.get_aspect()
+    print("aspect = ", cax.get_aspect())
 
     #fig.tight_layout(h_pad=0)
 
@@ -322,5 +322,5 @@ if __name__ == "__main__":
     #main()
     #compare_swe_diff_for_era40_driven()
     validate_using_monthly_diagnostics()
-    print "Hello world"
+    print("Hello world")
   

@@ -15,7 +15,7 @@ import matplotlib as mpl
 def get_mean_for_day_of_year(stamp_dates, values):
     surfDict = {}
     for stamp_date, value in zip(stamp_dates, values):
-        if surfDict.has_key(stamp_date):
+        if stamp_date in surfDict:
             surfDict[stamp_date].append(value)
         else:
             surfDict[stamp_date] = [value]
@@ -42,7 +42,7 @@ def get_mean_time_series(path = 'data/CORDEX/NA'):
             rpnObj = rpn.RPN(os.path.join(folderPath, theFile))
             # @type rpnObj RPN
             hours = rpnObj.get_current_validity_date()
-            print 'hours = ', hours
+            print('hours = ', hours)
             surf_runoff = rpnObj.get_first_record_for_name_and_level(surface_runoff_name, level_traf)
             subsurf_runoff = rpnObj.get_first_record_for_name_and_level(subsurface_runoff_name, level_tdra)
 
@@ -65,7 +65,7 @@ def toStampDates(hours, startDate, stamp_year = 2000):
 def plot_timeseries(hourToValues, outfile = '', title = ''):
     startDate = datetime.strptime('1957090100', '%Y%m%d%H')
 
-    hours = hourToValues.keys()
+    hours = list(hourToValues.keys())
     hours.sort()
     stamp_dates = toStampDates(hours, startDate)
 
@@ -95,4 +95,4 @@ def main():
 if __name__ == "__main__":
     application_properties.set_current_directory()
     main()
-    print "Hello World"
+    print("Hello World")

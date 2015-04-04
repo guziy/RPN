@@ -26,7 +26,7 @@ def main():
     ds = Dataset(nc_path)
 
     timeVar = ds.variables["time"]
-    print timeVar.units
+    print(timeVar.units)
 
 
     t0 = num2date(timeVar[0], timeVar.units)
@@ -37,7 +37,7 @@ def main():
     dr = DatetimeIndex(start = t0, end = tf, freq = DateOffset(seconds = dt.seconds))
 
     #print len( dr.tolist() )
-    print t0, t1, tf
+    print(t0, t1, tf)
     #print help( h.root.TT )
 
 
@@ -51,5 +51,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print "Hello world"
+    print("Hello world")
   

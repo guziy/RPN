@@ -29,8 +29,8 @@ def plot_depth_to_bedrock(basemap,
     xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons2.flatten(), lats2.flatten())
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons1.flatten(), lats1.flatten())
 
-    ktree = cKDTree(zip(xs, ys, zs))
-    dists, inds = ktree.query(zip(xt, yt, zt))
+    ktree = cKDTree(list(zip(xs, ys, zs)))
+    dists, inds = ktree.query(list(zip(xt, yt, zt)))
 
     levels = np.arange(0, 5.5, 0.5)
 
@@ -75,12 +75,12 @@ def plot_difference(basemap,
     xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons2.flatten(), lats2.flatten())
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons1.flatten(), lats1.flatten())
 
-    ktree = cKDTree(zip(xs, ys, zs))
-    dists, inds = ktree.query(zip(xt, yt, zt))
+    ktree = cKDTree(list(zip(xs, ys, zs)))
+    dists, inds = ktree.query(list(zip(xt, yt, zt)))
 
     #Calculate differences
     diff_dict = {}
-    for key, the_field in data2.iteritems():
+    for key, the_field in data2.items():
         diff_dict[key] = the_field.flatten()[inds].reshape(data1[key].shape) - data1[key]
 
     x, y = basemap(lons1, lats1)
@@ -138,7 +138,7 @@ def plot_veg_fractions_diff(x, y, basemap, veg_data, out_image=""):
 
     cs = None
     index = 0
-    for title, data in veg_data.iteritems():
+    for title, data in veg_data.items():
         row = index // 2
         col = index % 2
         ax = fig.add_subplot(gs[row, col])
@@ -185,13 +185,13 @@ def plot_veg_fractions(x, y, basemap, veg_data, out_image=""):
     cmap = cm.get_cmap("jet", len(clevels) - 1)
 
     cs = None
-    for level, data in veg_data.iteritems():
+    for level, data in veg_data.items():
 
         level = int(level)
         if level > 4:
             continue
 
-        print data.min(), data.max()
+        print(data.min(), data.max())
         data[data > 1] = 1
         title = level_to_title[level]
         row = (level - 1) // 2
@@ -214,7 +214,7 @@ def main(base_folder="/skynet3_rech1/huziy/veg_fractions/",
     r = RPN(data_path)
 
     veg_fractions = r.get_2D_field_on_all_levels(name=canopy_name)
-    print veg_fractions.keys()
+    print(list(veg_fractions.keys()))
     sand = r.get_first_record_for_name("SAND")
     clay = r.get_first_record_for_name("CLAY")
 
@@ -223,7 +223,7 @@ def main(base_folder="/skynet3_rech1/huziy/veg_fractions/",
     proj_params = r.get_proj_parameters_for_the_last_read_rec()
 
     lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
-    print lons.shape
+    print(lons.shape)
 
     rll = RotatedLatLon(lon1=proj_params["lon1"], lat1=proj_params["lat1"],
                         lon2=proj_params["lon2"], lat2=proj_params["lat2"])
@@ -236,7 +236,7 @@ def main(base_folder="/skynet3_rech1/huziy/veg_fractions/",
                 o_lon_p=lon0, o_lat_p=lat0)
 
     lons[lons > 180] -= 360
-    for lev in veg_fractions.keys():
+    for lev in list(veg_fractions.keys()):
         veg_fractions[lev] = maskoceans(lons, lats, veg_fractions[lev], inlands=False)
 
     sand = maskoceans(lons, lats, sand)
@@ -254,7 +254,7 @@ def main(base_folder="/skynet3_rech1/huziy/veg_fractions/",
 
     #set relation between vegetation frsction fields and names
     veg_fract_dict = {}
-    for lev, the_field in veg_fractions.iteritems():
+    for lev, the_field in veg_fractions.items():
         lev = int(lev)
         if lev not in level_to_title:
             continue

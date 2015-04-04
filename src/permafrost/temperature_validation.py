@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import maskoceans, Basemap
 import application_properties
 import my_colormaps
-from active_layer_thickness import CRCMDataManager
+from .active_layer_thickness import CRCMDataManager
 from rpn import level_kinds
 from rpn.rpn import RPN
 from util import plot_utils
@@ -19,7 +19,7 @@ __author__ = 'huziy'
 import numpy as np
 from cru.temperature import CRUDataManager
 import matplotlib.pyplot as plt
-import draw_regions
+from . import draw_regions
 import matplotlib as mpl
 
 
@@ -393,5 +393,5 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
     #compare_all_seasons()
     validate_using_monthly_diagnostics()
-    print "Hello world"
+    print("Hello world")
   

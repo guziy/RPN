@@ -21,8 +21,8 @@ def test_nash_sutcliff():
 
 def test_corr_coef():
     x = random.randn(10)
-    print scores.corr_coef(x, x)
-    print scores.corr_coef(x, -x)
+    print(scores.corr_coef(x, x))
+    print(scores.corr_coef(x, -x))
 
     ok_(scores.corr_coef(x, x) == 1)
 

@@ -70,7 +70,7 @@ class NemoYearlyFilesManager(object):
         """
         if self.model_kdtree is None:
             xs, ys, zs = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
-            self.model_kdtree = cKDTree(zip(xs, ys, zs))
+            self.model_kdtree = cKDTree(list(zip(xs, ys, zs)))
 
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(lon, lat)
 
@@ -149,9 +149,9 @@ class NemoYearlyFilesManager(object):
             time_coord = cube.coord("time")
             current_dates = iunit.num2date(time_coord.points[:], time_coord.units.origin, time_coord.units.calendar)
 
-            print "Selected data for the time range: ", \
+            print("Selected data for the time range: ", \
                 current_dates[0], \
-                current_dates[-1]
+                current_dates[-1])
 
             dates.extend(current_dates)
 
@@ -172,7 +172,7 @@ class NemoYearlyFilesManager(object):
 
         zz, tt = np.meshgrid(ztarget, dates_num)
 
-        print "nemo tt-ranges: ", tt.min(), tt.max()
+        print("nemo tt-ranges: ", tt.min(), tt.max())
         profiles = np.ma.masked_where(zz > bottom, profiles)
 
         # plot for debug
@@ -225,7 +225,7 @@ class NemoYearlyFilesManager(object):
         """
 
         def group_key(c, val):
-            for k, months in season_to_months.iteritems():
+            for k, months in season_to_months.items():
                 if val in months:
                     return k
 
@@ -234,7 +234,7 @@ class NemoYearlyFilesManager(object):
             result[the_year] = {}
             data_path = self.year_to_path[the_year]
             cube = iris.load_cube(data_path, "Sea Surface temperature")
-            print cube
+            print(cube)
             coord_categorisation.add_month_number(cube, "time")
             coord_categorisation.add_categorised_coord(cube, "season", "month_number", group_key)
 
@@ -251,7 +251,7 @@ class NemoYearlyFilesManager(object):
             # xur, yur = rotpole.transform_point(self.lons[-1, -1], self.lats[-1, -1], ccrs.Geodetic())
 
 
-            for the_season in season_to_months.keys():
+            for the_season in list(season_to_months.keys()):
                 c = iris.Constraint(season=the_season)
                 the_mean = seas_mean.extract(c)
                 assert isinstance(the_mean, Cube)
@@ -283,11 +283,11 @@ class NemoYearlyFilesManager(object):
         """
         sst = iris.load_cube(path, constraint=iris.Constraint(cube_func=lambda f: f.var_name == "sst"))
         # result_sst = sst.regrid(self.model_cube, ianalysis.Linear())
-        print sst
+        print(sst)
 
 
         def group_key(c, val):
-            for k, months in season_to_months.iteritems():
+            for k, months in season_to_months.items():
                 if val in months:
                     return k
 
@@ -309,24 +309,24 @@ class NemoYearlyFilesManager(object):
 
         # source grid
         xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons_source, lats_source)
-        kdtree = cKDTree(data=zip(xs, ys, zs))
+        kdtree = cKDTree(data=list(zip(xs, ys, zs)))
 
         # target grid
         xt, yt, zt = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
 
-        dists, inds = kdtree.query(zip(xt, yt, zt))
+        dists, inds = kdtree.query(list(zip(xt, yt, zt)))
 
-        print len(inds)
+        print(len(inds))
 
         result = {}
         for the_year in range(start_year, end_year + 1):
             result[the_year] = {}
-            for the_season in season_to_months.keys():
+            for the_season in list(season_to_months.keys()):
                 c = iris.Constraint(season=the_season) & iris.Constraint(year=the_year)
                 the_mean = result_sst.extract(c)
                 assert isinstance(the_mean, Cube)
 
-                print the_mean.data.shape
+                print(the_mean.data.shape)
 
                 result[the_year][the_season] = the_mean.data.flatten()[inds].reshape(self.lons.shape) - 273.15
 
@@ -345,7 +345,7 @@ class NemoYearlyFilesManager(object):
         plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
         # calculate climatologic differences
         diff = {}
-        for season in season_to_months.keys():
+        for season in list(season_to_months.keys()):
             diff[season] = np.mean(
                 [model_data[y][season] - obs_data[y][season] for y in range(start_year, end_year + 1)], axis=0)
             diff[season] = np.ma.masked_where(~self.lake_mask, diff[season])
@@ -357,7 +357,7 @@ class NemoYearlyFilesManager(object):
 
         # calculate difference ranges
         diff_max = 0
-        for season, the_diff in diff.iteritems():
+        for season, the_diff in diff.items():
             diff_max = max(np.percentile(np.abs(the_diff[~the_diff.mask]), 90), diff_max)
         diff_max = 5
 
@@ -416,7 +416,7 @@ class NemoYearlyFilesManager(object):
 
             rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
             self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats)
-            print lon1, lat1, lon2, lat2
+            print(lon1, lat1, lon2, lat2)
 
 
         # self.basemap.drawcoastlines()
@@ -438,16 +438,16 @@ def main():
 
     season_to_months = OrderedDict([
         ("Winter", (12, 1, 2)),
-        ("Spring", range(3, 6)),
-        ("Summer", range(6, 9)),
-        ("Fall", range(9, 12))
+        ("Spring", list(range(3, 6))),
+        ("Summer", list(range(6, 9))),
+        ("Fall", list(range(9, 12)))
     ])
 
     # nemo_manager.plot_comparisons_of_seasonal_sst_with_homa_obs(
     #     start_year=start_year, end_year=end_year, season_to_months=season_to_months
     # )
 
-    import obs
+    from . import obs
 
     po = obs.get_profile_for_testing()
     nemo_manager.get_tz_crosssection_for_the_point(lon=po.longitude, lat=po.latitude, zlist=po.levels,

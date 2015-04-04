@@ -60,13 +60,13 @@ def rk4_l(s1, inflow, nsteps, dt, lk_area):
     si = s1
     s_eq = get_eq_store_lake(inflow, lk_area)
     #print(inflow, Q_lake(si, lk_area))
-    for i in xrange(nsteps):
+    for i in range(nsteps):
 
         k1 = dt * (inflow - Q_lake(si, lk_area))
         k2 = dt * (inflow - Q_lake(si+0.5*k1, lk_area))
         k3 = dt * (inflow - Q_lake(si+0.5*k2, lk_area))
         k4 = dt * (inflow - Q_lake(si+k3, lk_area))
-        print k1,k2,k3,k4
+        print(k1,k2,k3,k4)
         si += (1.0/6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
 
 
@@ -84,7 +84,7 @@ def rk4_r(s1, inflow, nsteps, dt, k_bf, k_ob, s_bf):
     s_eq = get_eq_store(inflow, s_bf, k_bf, k_ob)
     #print(inflow, Q(si, k_bf, k_ob, s_bf))
     k1 = k2 = k3 = k4 = -1
-    for i in xrange(nsteps):
+    for i in range(nsteps):
         k1 = k2 = k3 = k4 = -1
         s_next = -1
         k1 = dt * (inflow - Q(si, k_bf, k_ob, s_bf))
@@ -109,7 +109,7 @@ def rk4_r(s1, inflow, nsteps, dt, k_bf, k_ob, s_bf):
 
     if s_next < 0:
         if k1 * k2 * k3 * k4 <= 0:
-            print k1,k2,k3,k4,si
+            print(k1,k2,k3,k4,si)
         si = s_eq
 
 
@@ -151,7 +151,7 @@ def main():
     lake_area = info["LKAR"]
 
 
-    print is_gl_outlet, lake_fraction, lake_area
+    print(is_gl_outlet, lake_fraction, lake_area)
 
     start_date = datetime(1979,1,1)
     end_date = datetime(1979, 2, 28,23)
@@ -168,7 +168,7 @@ def main():
     the_gwdi = -1
     dates = [start_date]
     while d <= end_date:
-        if d in upin.keys():
+        if d in list(upin.keys()):
             the_upin = upin[d]
             the_traf = traf[d]
             the_gwdi = gwdi[d]
@@ -324,12 +324,12 @@ def step(inflow_loc =  8.995517, inflow_upstream = 0,
 if __name__ == "__main__":
     import application_properties
     application_properties.set_current_directory()
-    print step(
+    print(step(
         inflow_loc=0,
         inflow_upstream=72829.49,
         k_bf=4.3803720E-07,
         s0_r=5.8258285E+08,   acc= 0.05
-    )
+    ))
     #main()
 
   

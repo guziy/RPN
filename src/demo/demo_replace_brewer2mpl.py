@@ -24,7 +24,7 @@ def plot_data(data):
 def main():
     data = generate_series()
 
-    print mpl.rcParams["axes.color_cycle"]
+    print(mpl.rcParams["axes.color_cycle"])
 
     # brewer version
 
@@ -33,14 +33,14 @@ def main():
     # Change the default colors
     mpl.rcParams["axes.color_cycle"] = bmap.mpl_colors
     plot_data(data)
-    print bmap.mpl_colors
+    print(bmap.mpl_colors)
 
 
     # mpl version
 
     cmap = cm.get_cmap("Set1")
     assert isinstance(cmap, LinearSegmentedColormap)
-    print type(cmap)
+    print(type(cmap))
 
     #mpl.rcParams["axes.color_cycle"] =
     plot_data(data)

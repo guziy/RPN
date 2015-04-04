@@ -36,7 +36,7 @@ rpn_folder = "/home/huziy/skynet3_rech1/from_guillimin/new_outputs/quebec_0.1_{0
 import matplotlib.pyplot as plt
 
 def _get_values(sim_name, varname):
-    print sim_name, varname
+    print(sim_name, varname)
     nc_data_folder = os.path.join(nc_db_folder, sim_name)
     ds = Dataset(os.path.join(nc_data_folder, "{0}.nc".format(varname)))
     years = ds.variables["year"][:]
@@ -105,7 +105,7 @@ def main():
 
             k += 4
 
-    names = sorted( name_to_handle.keys(), key=lambda x: len(x) )
+    names = sorted( list(name_to_handle.keys()), key=lambda x: len(x) )
     fig.legend((name_to_handle[name] for name in names), names)
     plt.show()
 
@@ -119,5 +119,5 @@ if __name__ == "__main__":
     plot_utils.apply_plot_params(width_pt=None, width_cm=30, height_cm=30, font_size=14)
 
     main()
-    print "Hello world"
+    print("Hello world")
   

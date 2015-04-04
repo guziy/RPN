@@ -20,12 +20,12 @@ def main(in_folder = "/skynet1_rech3/huziy/EXP_0.1deg/DFS4.3_interpolated",
         inpaths = os.path.join(out_folder, "{0}_y*.nc".format(vname))
         cdo_obj.ensmean(input = inpaths, output = opath, options = "-f nc")
 
-        print "processed: {0}".format(vname)
+        print("processed: {0}".format(vname))
 
 
 
 def main_improved(in_folder=""):
-    print "Processing {}".format(in_folder)
+    print("Processing {}".format(in_folder))
     out_folder = in_folder + "_clim"
 
     if not os.path.isfile(out_folder):

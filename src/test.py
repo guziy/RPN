@@ -46,33 +46,33 @@ def get_first_record_for_name(varname, dll, file_unit):
     dll.fstluk_wrapper.restype = c_int
     dll.fstluk_wrapper.argtypes = [POINTER(c_float), c_int, POINTER(c_int), POINTER(c_int), POINTER(c_int)]
 
-    print dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk)
+    print(dll.fstluk_wrapper(data.ctypes.data_as(POINTER(c_float)), key, ni, nj, nk))
     return data
 
 def main():
     dll = CDLL('lib/rmnlib.so')
 
     dll.get_message.restype = c_char_p # c_char_p is a pointer to a string
-    print dll.get_message()
-    print dll.get_number()
+    print(dll.get_message())
+    print(dll.get_number())
 
-    print os.path.isfile('data/pm1957090100_00589248p')
+    print(os.path.isfile('data/pm1957090100_00589248p'))
     rpn_file_path = c_char_p('data/pm1957090100_00589248p')
     file_unit = c_int(1)
     options = c_char_p('RND+R/O')
     dummy = c_int(0)
-    print dll.fnom_wrapper(file_unit, rpn_file_path, options, dummy)
+    print(dll.fnom_wrapper(file_unit, rpn_file_path, options, dummy))
     options.value = 'RND'
     nrecords = dll.fstouv_wrapper(file_unit, options)
 
-    print "nrecords = {0}".format(nrecords)
+    print("nrecords = {0}".format(nrecords))
 
     data = get_first_record_for_name('FV', dll, file_unit)
-    print np.min(data), np.max(data)
+    print(np.min(data), np.max(data))
 
-    print data.shape
+    print(data.shape)
     #data = data.reshape((ni.value, nj.value, nk.value))
-    print np.transpose(data[0,:,:]).shape #like this data is in the order k, i, j
+    print(np.transpose(data[0,:,:]).shape) #like this data is in the order k, i, j
     plt.imshow(data[0,:,:], origin = 'lower') #for plotting in order to see i,j we supply j,i
     plt.colorbar()
     plt.show()

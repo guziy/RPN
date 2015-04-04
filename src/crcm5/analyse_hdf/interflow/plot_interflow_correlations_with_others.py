@@ -22,7 +22,7 @@ def main(start_year=1980, end_year=2010, months=None, ylabel="",
     # default_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     if months is None:
-        months = range(1, 13)
+        months = list(range(1, 13))
 
     img_folder = os.path.join("interflow_corr_images", os.path.basename(default_path))
     if not os.path.isdir(img_folder):
@@ -152,17 +152,17 @@ def plot_correlations_for_seasons_as_subplots():
          fig=fig, current_row=0, gs=gs)
 
     # Spring
-    months = range(3, 6)
+    months = list(range(3, 6))
     main(start_year=start_year, end_year=end_year, months=months, ylabel="Spring",
          fig=fig, current_row=1, gs=gs)
 
     # Summer
-    months = range(6, 9)
+    months = list(range(6, 9))
     main(start_year=start_year, end_year=end_year, months=months, ylabel="Summer",
          fig=fig, current_row=2, gs=gs)
 
     # Fall
-    months = range(9, 12)
+    months = list(range(9, 12))
     img, imfolder = main(start_year=start_year, end_year=end_year, months=months, ylabel="Fall",
                          fig=fig, current_row=3, gs=gs)
 

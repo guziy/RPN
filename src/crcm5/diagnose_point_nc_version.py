@@ -77,7 +77,7 @@ def plot_hydrographs(ax, station, sim_name_to_station_to_model_point,
             labels.append(label)
 
     ax.xaxis.set_major_formatter(DateFormatter("%d\n%b"))
-    ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 3), bymonthday=15))
+    ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 3)), bymonthday=15))
 
     if mp is None:
         return
@@ -125,7 +125,7 @@ def plot_swe_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_point
 
     ax.set_title("SWE (mm)")
     for sim_name in sim_names:
-        if not sim_name_to_station_to_model_point[sim_name].has_key(station):
+        if station not in sim_name_to_station_to_model_point[sim_name]:
             continue
 
         mps = sim_name_to_station_to_model_point[sim_name][station]
@@ -172,7 +172,7 @@ def plot_temp_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_poin
 
     ax.set_title("Temperature ")
     for sim_name in sim_names:
-        if not sim_name_to_station_to_model_point[sim_name].has_key(station):
+        if station not in sim_name_to_station_to_model_point[sim_name]:
             continue
 
         mps = sim_name_to_station_to_model_point[sim_name][station]
@@ -186,7 +186,7 @@ def plot_temp_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_poin
             labels.append(label)
 
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=range(1, 13, 3), bymonthday=15))
+        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 3)), bymonthday=15))
 
     return labels, handles
 
@@ -224,7 +224,7 @@ def plot_precip_1d_compare_with_obs(ax, station, sim_name_to_station_to_model_po
     ax.set_title("Precip mm/day ")
     multiplier = 1000 * 24 * 60 * 60  # to convert from m/s to mm/day
     for sim_name in sim_names:
-        if not sim_name_to_station_to_model_point[sim_name].has_key(station):
+        if station not in sim_name_to_station_to_model_point[sim_name]:
             continue
 
         mps = sim_name_to_station_to_model_point[sim_name][station]
@@ -259,7 +259,7 @@ def plot_surf_runoff(ax, station, sim_name_to_station_to_model_point, sim_names=
     ax.set_title("Surface runoff (${\\rm m^3/s}$)")
     coef = 1.0e-3 #to convert mm to meters
     for sim_name in sim_names:
-        if not sim_name_to_station_to_model_point[sim_name].has_key(station):
+        if station not in sim_name_to_station_to_model_point[sim_name]:
             continue
 
         mps = sim_name_to_station_to_model_point[sim_name][station]
@@ -296,7 +296,7 @@ def plot_subsurf_runoff(ax, station, sim_name_to_station_to_model_point, sim_nam
     ax.set_title("Subsurface runoff (${\\rm m^3/s}$)")
     coef = 1.0e-3 #to convert mm to meters
     for sim_name in sim_names:
-        if not sim_name_to_station_to_model_point[sim_name].has_key(station):
+        if station not in sim_name_to_station_to_model_point[sim_name]:
             continue
 
         mps = sim_name_to_station_to_model_point[sim_name][station]
@@ -333,7 +333,7 @@ def plot_total_runoff(ax, station, sim_name_to_station_to_model_point, sim_names
     ax.set_title("Total runoff (${\\rm m^3/s}$)")
     coef = 1.0e-3 #to convert mm to meters
     for sim_name in sim_names:
-        if not sim_name_to_station_to_model_point[sim_name].has_key(station):
+        if station not in sim_name_to_station_to_model_point[sim_name]:
             continue
 
         mps = sim_name_to_station_to_model_point[sim_name][station]
@@ -362,12 +362,12 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
     assert isinstance(s, Station)
     assert isinstance(sim_name_to_station_to_model_point, dict)
 
-    mp_list = sim_name_to_station_to_model_point.items()[0][1][s]
+    mp_list = list(sim_name_to_station_to_model_point.items())[0][1][s]
 
     #selecting only one (the first model point)
     mp = mp_list[0]
 
-    manager = sim_name_to_manager.items()[0][1]
+    manager = list(sim_name_to_manager.items())[0][1]
     assert isinstance(manager, Crcm5ModelDataManager)
 
     flow_in_mask = manager.get_mask_for_cells_upstream(mp.ix, mp.jy)
@@ -424,8 +424,8 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
     #axins = zoomed_inset_axes(ax, 3, loc=2)
     displayCoords = ax.transData.transform((x_big[imin, jmin], y_big[imin, jmin]))
     x_shift_fig, y_shift_fig = ax.figure.transFigure.inverted().transform(displayCoords)
-    print "After transData", displayCoords
-    print "xshift and yshift", x_shift_fig, y_shift_fig
+    print("After transData", displayCoords)
+    print("xshift and yshift", x_shift_fig, y_shift_fig)
 
 
     #ax.annotate("yuyu", xy = ( 0.733264985153, 0.477182994408), xycoords = "figure fraction" )
@@ -488,14 +488,14 @@ def plot_flow_directions_and_basin_boundaries(ax, s, sim_name_to_station_to_mode
             x1 = [tup[0] for tup in ring]
             y1 = [tup[1] for tup in ring]
             x2, y2 = basemap(x1, y1)
-            new_coords.append(zip(x2, y2))
+            new_coords.append(list(zip(x2, y2)))
         feature["geometry"]["coordinates"] = new_coords
         poly = shape(feature["geometry"])
         #print poly, type(poly)
         #print feature.keys()
         #print feature["properties"]
         prep_poly = prep.prep(poly)
-        hits = filter(prep_poly.contains, points)
+        hits = list(filter(prep_poly.contains, points))
         if len(hits) > 2:
             selected_polygons.append(feature["geometry"])
 
@@ -602,12 +602,12 @@ def validate_daily_climatology():
                                                            nc_sim_folder=nc_sim_folder,
                                                            set_data_to_model_points=True)
 
-        print "got model points for stations"
+        print("got model points for stations")
 
         sim_name_to_station_to_model_point[sim_name] = st_to_mp
 
         #save model points to a list of all points
-        for s, mps in st_to_mp.iteritems():
+        for s, mps in st_to_mp.items():
             assert isinstance(s, Station)
             for mp in mps:
                 assert isinstance(mp, ModelPoint)
@@ -621,17 +621,17 @@ def validate_daily_climatology():
                     s.mean_prec_upstream_monthly_clim = cruPreManager.get_mean_upstream_timeseries_monthly(mp,
                                                                                                            dmManager)
 
-                    print "Calculated observed upstream mean values..."
+                    print("Calculated observed upstream mean values...")
             all_model_points.extend(mps)
 
-    print "imported input data successfully, plotting ..."
+    print("imported input data successfully, plotting ...")
 
 
     #for tests
     #test(sim_name_to_station_to_model_point)
 
     #select only stations which have corresponding model points
-    stations = sim_name_to_station_to_model_point[sim_name_list[0]].keys()
+    stations = list(sim_name_to_station_to_model_point[sim_name_list[0]].keys())
 
     from matplotlib.backends.backend_pdf import PdfPages
 
@@ -712,5 +712,5 @@ if __name__ == "__main__":
     plot_utils.apply_plot_params(font_size=18, width_pt=None, height_cm=25, width_cm=39)
     application_properties.set_current_directory()
     main()
-    print "Execution time {0} seconds".format(time.time() - t0)
+    print("Execution time {0} seconds".format(time.time() - t0))
   
