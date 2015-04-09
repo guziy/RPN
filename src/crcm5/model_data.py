@@ -978,7 +978,7 @@ class Crcm5ModelDataManager:
 
                 # read projection parameters
                 if projection_params is None and data is not None:
-                    the_field = list(data.items())[0][1].items()[0][1]
+                    the_field = list(list(data.items())[0][1].items())[0][1]
                     rectype.append(("field", the_field.dtype, the_field.shape))
                     rectype = np.dtype(rectype)
                     print("HDF5 record type: ", rectype)
