@@ -5,6 +5,7 @@ from netCDF4 import Dataset, date2num, num2date
 import pickle
 import shelve
 import time
+import errno
 
 import tables as tb
 from matplotlib import gridspec, cm
@@ -151,11 +152,11 @@ class Crcm5ModelDataManager:
             for fName in os.listdir(self.samples_folder):
                 if not fName.startswith(self.file_name_prefix):
                     continue
-                fPath = os.path.join(self.samples_folder, fName)
-                rObj = RPN(fPath)
-                data = rObj.get_all_time_records_for_name(varname=var_name)
+                fpath = os.path.join(self.samples_folder, fName)
+                r_obj = RPN(fpath)
+                data = r_obj.get_all_time_records_for_name(varname=var_name)
 
-                rObj.close()
+                r_obj.close()
 
                 # return d
         else:
@@ -167,9 +168,10 @@ class Crcm5ModelDataManager:
         if self.all_files_in_one_folder:
             files = os.listdir(self.samples_folder)
             for fName in files:
-                if not fName.startswith(self.file_name_prefix): continue
-                fPath = os.path.join(self.samples_folder, fName)
-                paths.append(fPath)
+                if not fName.startswith(self.file_name_prefix):
+                    continue
+                fpath = os.path.join(self.samples_folder, fName)
+                paths.append(fpath)
         else:
             raise Exception("If you are using distributed storage, you need to implement option")
         return paths
@@ -274,7 +276,8 @@ class Crcm5ModelDataManager:
                     continue
 
                 # assert dates[0].month == dates[-1].month, "{0} != {1}".format( str( dates[0] ),  str( dates[-1] ) )
-                data[dates[0].year - start_year, dates[0].month - 1, :, :] = np.mean(list(date_to_field.values()), axis=0)
+                data[dates[0].year - start_year, dates[0].month - 1, :, :] = np.mean(list(date_to_field.values()),
+                                                                                     axis=0)
 
         ds.close()
         pass
@@ -532,7 +535,10 @@ class Crcm5ModelDataManager:
 
         print("Using cache from: {}".format(data_file))
 
-        return pickle.load(open(dates_file)), np.asarray(pickle.load(open(data_file)))
+        print(dates_file, data_file)
+        dates = pickle.load(open(dates_file, "rb"), encoding="utf-8")
+        data = pickle.load(open(data_file, "rb"), encoding="utf-8")
+        return dates, np.asarray(data)
 
 
     @classmethod
@@ -562,11 +568,11 @@ class Crcm5ModelDataManager:
         _create_folder_if_needed(cache_data_folder)
 
         print("Saving cache to a file: {}".format(data_file))
-        pickle.dump(daily_clim_fields, open(data_file, "w"))
+        pickle.dump(daily_clim_fields, open(data_file, "wb"))
 
         # save dates as well
         if not os.path.exists(dates_file):
-            pickle.dump(daily_dates, open(dates_file, "w"))
+            pickle.dump(daily_dates, open(dates_file, "wb"))
 
 
     @classmethod
@@ -711,12 +717,17 @@ class Crcm5ModelDataManager:
         )
         cache_folder = os.path.realpath(cache_folder)
 
+        # check if the cache folder exists and create it if it does not
         if not os.path.isdir(cache_folder):
-            os.makedirs(cache_folder)
+            try:
+                os.makedirs(cache_folder)
+            except OSError as oe:
+                if oe.errno != errno.EEXIST:
+                    raise oe
 
         cache_file = os.path.join(cache_folder, "data.bin")
         if os.path.isfile(cache_file):
-            return pickle.load(open(cache_file))
+            return pickle.load(open(cache_file, "rb"), encoding="utf-8")
 
         # Do the calculation and store results
         with tb.open_file(path_to_hdf) as h:
@@ -736,7 +747,7 @@ class Crcm5ModelDataManager:
             # var_table.cols.month.create_index()
             # print "created index on month column"
 
-            #     var_table.cols.day.create_index()
+            # var_table.cols.day.create_index()
             #     var_table.cols.hour.create_index()
             #     print "created indexes for all columns"
 
@@ -761,6 +772,7 @@ class Crcm5ModelDataManager:
 
             result = np.asarray([year_to_mean[y] for y in range(start_year, end_year + 1)])
 
+            print("Saving cache to: {}".format(cache_file))
             pickle.dump(result, open(cache_file, "wb"))  # save calculated means for reuse
             h.close()
             return result
@@ -1093,7 +1105,7 @@ class Crcm5ModelDataManager:
         while the_day <= end_date:
             times.append(the_day)
             sel_times = filter(lambda x: the_day.year == x.year and the_day.month == x.month and
-                                                    the_day.day == x.day, all_dates)
+                                         the_day.day == x.day, all_dates)
             sel_values = [data[key] for key in sel_times]
             values.append(np.mean(sel_values))
             the_day += day
@@ -1218,7 +1230,8 @@ class Crcm5ModelDataManager:
         v2 = lat_lon.lon_lat_to_cartesian(self.lons2D[1, 1], self.lats2D[1, 1])
         dv = np.array(v2) - np.array(v1)
         self.characteristic_distance = np.sqrt(np.dot(dv, dv))
-        print("Grid's approximate distance between the neighbour cells is: {0:.2f}".format(self.characteristic_distance))
+        print(
+            "Grid's approximate distance between the neighbour cells is: {0:.2f}".format(self.characteristic_distance))
 
         pass
 
@@ -1524,7 +1537,7 @@ class Crcm5ModelDataManager:
                        var_name="STFL", level=-1, level_kind=level_kinds.ARBITRARY):
         if self.all_files_in_one_folder:
             fNames = filter(lambda theName: theName.startswith(file_name_prefix),
-                                       os.listdir(self.samples_folder))
+                            os.listdir(self.samples_folder))
             fNames = list(fNames)
             fPaths = [os.path.join(self.samples_folder, x) for x in fNames]
 
@@ -1637,7 +1650,7 @@ class Crcm5ModelDataManager:
 
         for month in months:
             sel_dates = filter(lambda x: x.month == month and start_date <= x <= end_date,
-                                          list(time_series.keys()))
+                               list(time_series.keys()))
             sel_values = [time_series[x] for x in sel_dates]
             the_mean = np.array(sel_values).mean(axis=0)
             result.append(the_mean)
@@ -1781,7 +1794,7 @@ class Crcm5ModelDataManager:
 
             files = os.listdir(month_folders[0])
             files = filter(lambda x: x.startswith(self.file_name_prefix)
-                                                and not x.startswith("."), files
+                                     and not x.startswith("."), files
             )
             file = sorted(files)[0]
             file_path = os.path.join(month_folders[0], file)
@@ -2105,7 +2118,8 @@ class Crcm5ModelDataManager:
             ppool = self.reusable_pool
 
             frames = ppool.map(_get_var_data_to_pandas,
-                               list(zip(varnames, levels, mean_upstream, [nc_sim_folder, ] * nvars, [inobject, ] * nvars)))
+                               list(zip(varnames, levels, mean_upstream, [nc_sim_folder, ] * nvars,
+                                        [inobject, ] * nvars)))
 
             print("extracted data from netcdf in {0} s".format(time.time() - t0))
 
@@ -2280,7 +2294,7 @@ class Crcm5ModelDataManager:
 
 
         # save to cache file
-        pickle.dump(station_to_grid_point, open(cache_file, mode="w"))
+        pickle.dump(station_to_grid_point, open(cache_file, mode="wb"))
 
         return station_to_grid_point
 
@@ -2321,7 +2335,6 @@ class Crcm5ModelDataManager:
         if climatology is not None:
             hdf.close()
             return dates, climatology
-
 
         if maximum:
             operator = np.max
@@ -2366,7 +2379,7 @@ class Crcm5ModelDataManager:
         daily_fields = np.mean(daily_fields, axis=0)
 
         # if level is None:
-        #     sel_year_level = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
+        # sel_year_level = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
         # else:
         #     sel_year_level = "(year >= {0}) & (year <= {1}) & (level_index == {2})".format(start_year, end_year, level)
         #
@@ -2598,7 +2611,7 @@ def compare_lake_levels():
         ax.yaxis.set_major_locator(LinearLocator(numticks=5))
 
         selected_stations.append(s)
-        #ax.legend()
+        # ax.legend()
 
     ax = fig.add_subplot(gs[(r + 1):, :])
     # lons2d, lats2d = manager.lons2D, manager.lats2D
@@ -2643,7 +2656,7 @@ def compare_streamflow_normals():
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
@@ -2786,7 +2799,7 @@ def compare_streamflow():
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
