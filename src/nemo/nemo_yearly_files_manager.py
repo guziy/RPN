@@ -247,12 +247,17 @@ class NemoYearlyFilesManager(object):
                 seas_mean = panel.groupby(lambda d: month_to_season[d.month], axis="items").mean()
 
                 for the_season in seas_mean:
-                    season_to_field_list[the_season].append(seas_mean[the_season])
+                    season_to_field_list[the_season].append(seas_mean[the_season].values)
 
 
         result = {}
         for the_season, field_list in season_to_field_list.items():
-            result[the_season] = np.ma.masked_where(~self.lake_mask, np.mean(field_list, axis=0).transpose())
+
+            mean_field = np.mean(field_list, axis=0).transpose()
+            print(mean_field.shape)
+
+            result[the_season] = np.ma.masked_where(~self.lake_mask, mean_field)
+
 
         return result
 
