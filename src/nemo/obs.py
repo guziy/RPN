@@ -1,15 +1,10 @@
 from datetime import datetime, timedelta
 import os
-from iris.aux_factory import AuxCoordFactory
-from iris.coords import AuxCoord
-from iris.cube import Cube
-import iris
 from matplotlib.axes import Axes
 from matplotlib.dates import date2num, DateFormatter
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from iris.analysis import interpolate
 
 
 __author__ = 'san'
@@ -196,10 +191,6 @@ if __name__ == '__main__':
     # plt.show()
 
 
-
-    model_data_path = "/Users/san/NEMO/outputs/GLK_1d_19790101_19790131_grid_T.nc"
-    model_cube = iris.load_cube(model_data_path,
-                                constraint=iris.Constraint(cube_func=lambda c: c.var_name == "votemper"))
 
 
     # model_cube.add_aux_coord(AuxCoord(depth_cube.data, units="m"))

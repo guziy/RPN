@@ -1,37 +1,37 @@
-from netCDF4 import Dataset, OrderedDict, date2num
+from collections import defaultdict
+from netCDF4 import Dataset, OrderedDict, num2date
 import os
-import cartopy
-from iris.cube import Cube
-from iris.time import PartialDateTime
+import pandas as pd
 from matplotlib import cm
-from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm
-from matplotlib.dates import DateFormatter
 from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.basemap import Basemap
-# from rpn.domains.rotated_lat_lon import RotatedLatLon
-import matplotlib.pyplot as plt
 
-import iris.quickplot as qplt
+# from rpn.domains.rotated_lat_lon import RotatedLatLon
+
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-from iris import analysis as ianalysis
-from scipy.sparse.dia import dia_matrix
+from pathlib import Path
 from scipy.spatial.ckdtree import cKDTree
 from domains.rotated_lat_lon import RotatedLatLon
 from util import plot_utils
 from util.geo import lat_lon
 import numpy as np
-
 import matplotlib.dates as mdates
 
 __author__ = 'huziy'
 
-import iris
-from iris import coord_categorisation
-from iris import unit as iunit
+try:
+    import iris
+    from iris import coord_categorisation
+    from iris import unit as iunit
+    from iris.cube import Cube
+    from iris.time import PartialDateTime
+    import iris.quickplot as qplt
+    from iris import analysis as ianalysis
+except ImportError:
+    print("Iris is not installed.")
 
 
 class NemoYearlyFilesManager(object):
@@ -149,9 +149,7 @@ class NemoYearlyFilesManager(object):
             time_coord = cube.coord("time")
             current_dates = iunit.num2date(time_coord.points[:], time_coord.units.origin, time_coord.units.calendar)
 
-            print("Selected data for the time range: ", \
-                current_dates[0], \
-                current_dates[-1])
+            print("Selected data for the time range: ", current_dates[0], current_dates[-1])
 
             dates.extend(current_dates)
 
@@ -196,10 +194,81 @@ class NemoYearlyFilesManager(object):
         return tt, zz, profiles
 
 
+    def get_seasonal_clim_field(self, start_year=None, end_year=None, season_to_months=None, varname="sosstsst"):
+
+        """
+        Get seasonal mean climatology for a field
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+        :param varname:
+        """
+        if start_year is None:
+            start_year = min(self.year_to_path.keys())
+
+        if end_year is None:
+            end_year = max(self.year_to_path.keys())
+
+        # Set up month to season relation
+        month_to_season = {}
+        for m in range(1, 13):
+            for s, months in season_to_months.items():
+                if m in months:
+                    month_to_season[m] = s
+                    break
+
+        season_to_field_list = defaultdict(list)
+        for y in range(start_year, end_year + 1):
+            fpath = self.year_to_path[y]
+
+            with Dataset(fpath) as ds:
+                data = ds.variables[varname][:]
+
+                time_var = ds.variables["time_counter"]
+
+                dates = num2date(time_var[:], time_var.units)
+
+                nt, ny, nx = data.shape
+                panel = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
+
+                seas_mean = panel.groupby(lambda d: month_to_season[d.month], axis="items").mean()
+
+                for the_season in seas_mean:
+                    season_to_field_list[the_season].append(seas_mean[the_season])
+
+
+        result = {}
+        for the_season, field_list in season_to_field_list.items():
+            result[the_season] = np.ma.masked_where(~self.lake_mask, np.mean(field_list, axis=0).transpose())
+
+        return result
+
+    def get_max_yearly_ice_fraction(self, start_year, end_year):
+        """
+        Note the time interval [start_year, end_year] is inclusive
+        :param start_year:
+        :param end_year:
+        """
+        varname = "iiceconc"
+        data = []
+        lake_avg = []
+        for the_year in range(start_year, end_year + 1):
+            fpath = self.year_to_path[the_year]
+            with Dataset(fpath) as ds:
+                field = ds.variables[varname][:].max(axis=0)
+                lake_avg.append(field.transpose()[self.lake_mask].mean())
+                data.append(field)
+
+        return np.mean(data, axis=0).transpose(), lake_avg
+
+    def plot_comparisons_with_glerl_ice_cover(self, path_to_obs_file=""):
+        # TODO:  ....
+        pass
+
+
     def define_lake_mask(self):
-        c = iris.load_cube(os.path.join(self.data_folder, self.bathymetry_file),
-                           constraint=iris.Constraint(cube_func=lambda f: f.var_name == "Bathymetry"))
-        self.bathymetry = c.data.transpose()
+        c = Dataset(os.path.join(self.data_folder, self.bathymetry_file)).variables["Bathymetry"][:]
+        self.bathymetry = c.transpose()
         self.lake_mask = self.bathymetry > 0.5
 
 
@@ -214,7 +283,7 @@ class NemoYearlyFilesManager(object):
         }
 
 
-    def get_seasonal_means(self, start_year=None, end_year=None, season_to_months=None):
+    def get_seasonal_mean_sst(self, start_year=None, end_year=None, season_to_months=None):
 
         """
 
@@ -244,34 +313,55 @@ class NemoYearlyFilesManager(object):
             assert isinstance(seas_mean, Cube)
             assert isinstance(self.basemap, Basemap)
 
-            # rotpole = ccrs.RotatedPole(pole_longitude=self.basemap.projparams["lon_0"] + 180,
-            #                            pole_latitude=self.basemap.projparams["o_lat_p"])
-            #
-            # xll, yll = rotpole.transform_point(self.lons[0, 0], self.lats[0, 0], ccrs.Geodetic())
-            # xur, yur = rotpole.transform_point(self.lons[-1, -1], self.lats[-1, -1], ccrs.Geodetic())
-
-
             for the_season in list(season_to_months.keys()):
                 c = iris.Constraint(season=the_season)
                 the_mean = seas_mean.extract(c)
                 assert isinstance(the_mean, Cube)
                 result[the_year][the_season] = the_mean.data.transpose()
 
-                # im = self.basemap.pcolormesh(xx, yy, the_mean.data.transpose())
-                # self.basemap.colorbar(im)
-                # plt.show()
 
+        return result
 
-                # ax = plt.subplot(1, 1, 1, projection=rotpole)
-                # ax.set_extent([xll, xur, yll, yur], crs=rotpole)
-                #
-                #
-                # ax.contourf(self.lons, self.lats, the_mean.data.transpose(), 10, transform=rotpole)
-                # ax.coastlines(resolution="50m")
-                # # ax.add_feature(cartopy.feature.LAKES, resolution="50m")
-                # # ax.add_feature(rivers)
-                # ax.add_feature(lakes)
-                # plt.show()
+    def get_seasonal_mean_lst(self, start_year=None, end_year=None, season_to_months=None):
+
+        """
+
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+        :return: dict(year -> season -> field)
+        """
+
+        import pandas as pd
+
+        result = {}
+        for the_year in range(start_year, end_year + 1):
+            result[the_year] = {}
+            data_path = self.year_to_path[the_year]
+            ds = Dataset(data_path)
+
+            sst = ds.variables["isstempe"][:]
+            ist = ds.variables["isnotem2"][:]
+            ice_f = ds.variables["iiceconc"][:]
+
+            if hasattr(ice_f, "mask"):
+                ice_f[ice_f.mask] = 0
+
+            # Calculate lake surface temperature
+            lst = sst * (1.0 - ice_f) + ist * ice_f
+
+            time_var = ds.variables["time_counter"]
+            dates = num2date(time_var[:], time_var.units)
+
+            panel = pd.Panel(data=lst, items=dates, major_axis=range(lst.shape[1]), minor_axis=range(lst.shape[2]))
+
+            seasonal_panel = panel.groupby(
+                lambda d: [season for season, months in season_to_months.items() if d.month in months][0],
+                axis="items").mean()
+
+            for the_season in season_to_months:
+                # in the files the dimensions are ordered as (t, y, x) -> hence the transpose below
+                result[the_year][the_season] = seasonal_panel.loc[the_season, :, :].values.transpose()
 
         return result
 
@@ -281,34 +371,33 @@ class NemoYearlyFilesManager(object):
         :param path:
         :param target_cube:
         """
-        sst = iris.load_cube(path, constraint=iris.Constraint(cube_func=lambda f: f.var_name == "sst"))
-        # result_sst = sst.regrid(self.model_cube, ianalysis.Linear())
-        print(sst)
+        import pandas as pd
 
-
-        def group_key(c, val):
-            for k, months in season_to_months.items():
-                if val in months:
-                    return k
-
-        coord_categorisation.add_year(sst, "time")
-
-        result_sst = sst.extract(iris.Constraint(year=lambda y: start_year <= y <= end_year))
-        coord_categorisation.add_month_number(result_sst, "time")
-        coord_categorisation.add_categorised_coord(result_sst, "season", "month_number", group_key)
-
-        assert isinstance(result_sst, Cube)
-        result_sst = result_sst.aggregated_by(["season", "year"], ianalysis.MEAN)
+        ds = Dataset(path)
+        sst = ds.variables["sst"][:]
 
         # read longitudes and latitudes from a file
-        lons_source = iris.load_cube(path,
-                                     constraint=iris.Constraint(cube_func=lambda f: f.var_name == "lon")).data.flatten()
+        lons_source = ds.variables["lon"][:]
+        lats_source = ds.variables["lat"][:]
 
-        lats_source = iris.load_cube(path,
-                                     constraint=iris.Constraint(cube_func=lambda f: f.var_name == "lat")).data.flatten()
+
+        # time variable
+        time_var = ds.variables["time"]
+        dates = num2date(time_var[:], time_var.units)
+
+        if hasattr(sst, "mask"):
+            sst[sst.mask] = np.nan
+
+
+        panel = pd.Panel(data=sst, items=dates, major_axis=range(sst.shape[1]), minor_axis=range(sst.shape[2]))
+
+        seasonal_sst = panel.groupby(
+            lambda d: (d.year, [s for s, months in season_to_months.items() if d.month in months][0]),
+            axis="items").mean()
+
 
         # source grid
-        xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons_source, lats_source)
+        xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons_source.flatten(), lats_source.flatten())
         kdtree = cKDTree(data=list(zip(xs, ys, zs)))
 
         # target grid
@@ -318,24 +407,21 @@ class NemoYearlyFilesManager(object):
 
         print(len(inds))
 
+        assert isinstance(seasonal_sst, pd.Panel)
+
         result = {}
         for the_year in range(start_year, end_year + 1):
             result[the_year] = {}
             for the_season in list(season_to_months.keys()):
-                c = iris.Constraint(season=the_season) & iris.Constraint(year=the_year)
-                the_mean = result_sst.extract(c)
-                assert isinstance(the_mean, Cube)
-
-                print(the_mean.data.shape)
-
-                result[the_year][the_season] = the_mean.data.flatten()[inds].reshape(self.lons.shape) - 273.15
+                the_mean = seasonal_sst.select(lambda item: item == (the_year, the_season), axis="items")
+                result[the_year][the_season] = the_mean.values.flatten()[inds].reshape(self.lons.shape) - 273.15
 
         return result
 
 
     def plot_comparisons_of_seasonal_sst_with_homa_obs(self, start_year=None, end_year=None, season_to_months=None):
-        model_data = self.get_seasonal_means(season_to_months=season_to_months,
-                                             start_year=start_year, end_year=end_year)
+        model_data = self.get_seasonal_mean_lst(season_to_months=season_to_months,
+                                                start_year=start_year, end_year=end_year)
 
         obs_sst_path = os.path.expanduser("~/skynet3_rech1/nemo_obs_for_validation/GreatLakes_2003_5km-2/sst-glk.nc")
 
@@ -349,10 +435,13 @@ class NemoYearlyFilesManager(object):
             diff[season] = np.mean(
                 [model_data[y][season] - obs_data[y][season] for y in range(start_year, end_year + 1)], axis=0)
             diff[season] = np.ma.masked_where(~self.lake_mask, diff[season])
+            the_field = diff[season]
+            print("diff stats({}): min={}; max={}; avg={}".format(
+                season, the_field.min(), the_field.max(), the_field.mean()))
 
 
         # plot seasonal biases
-        xx, yy = self.basemap(self.lons, self.lats)
+        xx, yy = self.basemap(self.lons.copy(), self.lats.copy())
 
 
         # calculate difference ranges
@@ -369,7 +458,7 @@ class NemoYearlyFilesManager(object):
         im = None
         fig = plt.figure()
         ncols = 2
-        fig.suptitle(r"SST $\left({\rm ^\circ C}\right)$", font_properties=FontProperties(weight="bold"))
+        # fig.suptitle(r"LST $\left({\rm ^\circ C}\right)$", font_properties=FontProperties(weight="bold"))
         gs = GridSpec(len(season_to_months) // ncols, ncols + 1, width_ratios=[1.0, ] * ncols + [0.05, ])
         for i, season in enumerate(season_to_months.keys()):
             ax = fig.add_subplot(gs[i // ncols, i % ncols])
@@ -430,7 +519,8 @@ class NemoYearlyFilesManager(object):
 
 
 def main():
-    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
+    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012",
+                                          suffix="icemod.nc")
 
     # Study period
     start_year = 2003
@@ -443,21 +533,139 @@ def main():
         ("Fall", list(range(9, 12)))
     ])
 
-    # nemo_manager.plot_comparisons_of_seasonal_sst_with_homa_obs(
-    #     start_year=start_year, end_year=end_year, season_to_months=season_to_months
-    # )
+    nemo_manager.plot_comparisons_of_seasonal_sst_with_homa_obs(
+        start_year=start_year, end_year=end_year, season_to_months=season_to_months
+    )
 
-    from . import obs
 
-    po = obs.get_profile_for_testing()
-    nemo_manager.get_tz_crosssection_for_the_point(lon=po.longitude, lat=po.latitude, zlist=po.levels,
-                                                   var_name="votemper",
-                                                   start_date=po.get_start_date(),
-                                                   end_date=po.get_end_date())
+def validate_max_ice_cover_with_glerl():
+
+    """
+    For validations of maximum annual ice concentrations with GLERL obs
+
+    """
+    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012",
+                                          suffix="icemod.nc")
+
+    # Study period
+    start_year = 2003
+    end_year = 2012
+
+
+    lon2d, lat2d, bmp = nemo_manager.get_basemap_and_coords()
+    model_yearmax_ice_conc, model_lake_avg_ts = nemo_manager.get_max_yearly_ice_fraction(
+        start_year=start_year, end_year=end_year)
+    model_yearmax_ice_conc = np.ma.masked_where(~nemo_manager.lake_mask, model_yearmax_ice_conc)
+
+
+    # plt.figure()
+    xx, yy = bmp(lon2d.copy(), lat2d.copy())
+    # im = bmp.pcolormesh(xx, yy, model_yearmax_ice_conc)
+    # bmp.colorbar(im)
+
+    # Read and interpolate obs
+    path_to_obs = "/RESCUE/skynet3_rech1/huziy/nemo_obs_for_validation/glerl_icecov.nc"
+
+    obs_varname = "ice_cover"
+    obs_lake_avg_ts = []
+    with Dataset(path_to_obs) as ds:
+        time_var = ds.variables["time"]
+
+        lons_obs = ds.variables["lon"][:]
+        lats_obs = ds.variables["lat"][:]
+
+        dates = num2date(time_var[:], time_var.units)
+        nx, ny = lons_obs.shape
+
+        data = ds.variables[obs_varname][:]
+        data = np.ma.masked_where((data > 100) | (data < 0), data)
+        print(data.min(), data.max())
+        panel = pd.Panel(data=data, items=dates, major_axis=range(nx), minor_axis=range(ny))
+
+        panel = panel.select(lambda d: start_year <= d.year <= end_year)
+        the_max_list = []
+        for key, g in panel.groupby(lambda d: d.year, axis="items"):
+            the_max_field = np.ma.max(np.ma.masked_where((g.values > 100) | (g.values < 0), g.values), axis=0)
+            obs_lake_avg_ts.append(the_max_field.mean())
+            the_max_list.append(the_max_field)
+
+        obs_yearmax_ice_conc = np.ma.mean(the_max_list, axis=0) / 100.0
+
+        xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons_obs.flatten(), lats_obs.flatten())
+        ktree = cKDTree(list(zip(xs, ys, zs)))
+
+        xt, yt, zt = lat_lon.lon_lat_to_cartesian(lon2d.flatten(), lat2d.flatten())
+        dists, inds = ktree.query(list(zip(xt, yt, zt)))
+
+        obs_yearmax_ice_conc_interp = obs_yearmax_ice_conc.flatten()[inds].reshape(lon2d.shape)
+        obs_yearmax_ice_conc_interp = np.ma.masked_where(~nemo_manager.lake_mask, obs_yearmax_ice_conc_interp)
+
+
+    # plt.figure()
+    # b = Basemap()
+    # xx, yy = b(lons_obs, lats_obs)
+    # im = b.pcolormesh(xx, yy, obs_yearmax_ice_conc)
+    # b.colorbar(im)
+    # b.drawcoastlines()
+
+    # Plot as usual: model, obs, model - obs
+    img_folder = Path("nemo")
+    if not img_folder.is_dir():
+        img_folder.mkdir()
+    img_file = img_folder.joinpath("validate_yearmax_icecov_glerl_{}-{}.pdf".format(start_year, end_year))
+
+    fig = plt.figure()
+    gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05])
+    all_axes = []
+
+    cmap = cm.get_cmap("jet", 10)
+    diff_cmap = cm.get_cmap("RdBu_r", 10)
+
+    # Model
+    ax = fig.add_subplot(gs[0, 0])
+    ax.set_title("NEMO-offline")
+    bmp.pcolormesh(xx, yy, model_yearmax_ice_conc, cmap=cmap, vmin=0, vmax=1)
+    all_axes.append(ax)
+
+    # Obs
+    ax = fig.add_subplot(gs[0, 1])
+    ax.set_title("GLERL")
+    im = bmp.pcolormesh(xx, yy, obs_yearmax_ice_conc_interp, cmap=cmap, vmin=0, vmax=1)
+    all_axes.append(ax)
+
+    plt.colorbar(im, cax=fig.add_subplot(gs[0, -1]))
+
+
+
+    # Biases
+    ax = fig.add_subplot(gs[1, :])
+    ax.set_title("NEMO - GLERL")
+    im = bmp.pcolormesh(xx, yy, model_yearmax_ice_conc - obs_yearmax_ice_conc_interp, cmap=diff_cmap, vmin=-1, vmax=1)
+    bmp.colorbar(im, ax=ax)
+    all_axes.append(ax)
+
+
+    for the_ax in all_axes:
+        bmp.drawcoastlines(ax=the_ax)
+
+
+    fig.savefig(str(img_file), bbox_inches="tight")
+    plt.close(fig)
+
+
+    # Plot lake aversged ice concentrations
+    fig = plt.figure()
+    plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+    plt.plot(range(start_year, end_year + 1), model_lake_avg_ts, "b", lw=2, label="NEMO")
+    plt.plot(range(start_year, end_year + 1), np.asarray(obs_lake_avg_ts) / 100.0, "r", lw=2, label="GLERL")
+    plt.grid()
+    plt.legend()
+    fig.savefig(str(img_folder.joinpath("lake_avg_iceconc_nemo_offline_vs_GLERL.pdf")), bbox_inches="tight")
 
 
 if __name__ == '__main__':
     import application_properties
-
     application_properties.set_current_directory()
-    main()
+    # main()
+
+    validate_max_ice_cover_with_glerl()

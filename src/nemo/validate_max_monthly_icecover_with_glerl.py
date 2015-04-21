@@ -20,9 +20,9 @@ def main():
 
 
     nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
-    #nemo_manager = NemoYearlyFilesManager(folder="/Users/san/NEMO/outputs")
+    # nemo_manager = NemoYearlyFilesManager(folder="/Users/san/NEMO/outputs")
 
-    #glerl_manager = GLERLIceCoverManager(data_folder="/Users/san/NEMO/validation/glerl_ice_data")
+    # glerl_manager = GLERLIceCoverManager(data_folder="/Users/san/NEMO/validation/glerl_ice_data")
     glerl_manager = GLERLIceCoverManager()
     glerl_manager.get_data_for_day(the_date=datetime(2005, 1, 3))
     obs_ice_cover_interp = glerl_manager.get_icecover_interpolated_to(

@@ -36,10 +36,10 @@ def main_for_lake(bathy_path = "",
         fig = plt.figure()
 
 
-        #bounds = [0, 0.02, 0.05, 0.08, 0.09, 0.1]
+        # bounds = [0, 0.02, 0.05, 0.08, 0.09, 0.1]
         bounds = np.arange(-20, 21, 1)
         bn = BoundaryNorm(boundaries=bounds, ncolors=len(bounds) - 1)
-        #img = plt.pcolormesh(data, vmin = bounds[0], vmax = bounds[-1], cmap = cm.get_cmap("jet", len(bounds) - 1), norm = bn)
+        # img = plt.pcolormesh(data, vmin = bounds[0], vmax = bounds[-1], cmap = cm.get_cmap("jet", len(bounds) - 1), norm = bn)
 
         b_local, lons, lats = nemo_commons.get_basemap_and_coordinates_from_file(path=bathy_path, resolution="i")
         x, y = basemap(lons, lats)

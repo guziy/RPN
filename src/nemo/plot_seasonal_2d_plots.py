@@ -1,37 +1,42 @@
 from netCDF4 import Dataset
 from cartopy.feature import NaturalEarthFeature, GSHHSFeature
 import collections
-from iris.cube import Cube
 from matplotlib import gridspec
 from matplotlib.colors import LogNorm, BoundaryNorm
-from pyhdf.V import V
 from crcm5.analyse_hdf import common_plot_params as cpp
 import my_colormaps
 
 __author__ = 'huziy'
 
 import os
-import iris
-import iris.quickplot as qplt
-from iris import analysis, coord_categorisation
 import matplotlib.pyplot as plt
 import numpy as np
 import cartopy
 from matplotlib import cm
 
+
+try:
+    import iris
+    import iris.quickplot as qplt
+    from iris import analysis, coord_categorisation
+    from iris.cube import Cube
+except ImportError:
+    print("Iris is not installed")
+
+
 # EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP00/"
-#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP01/"
-#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/"
+# EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP01/"
+# EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_0.1deg/"
 
-#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis"
+# EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis"
 
-#EXP_DIR = "/skynet2_rech1/lduarte/NEMO/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_10KM/EXP00/"
+# EXP_DIR = "/skynet2_rech1/lduarte/NEMO/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_10KM/EXP00/"
 
-#EXP_DIR = "/home/huziy/nemo_glk/test_fwb_my"
-#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis_fwb2"
+# EXP_DIR = "/home/huziy/nemo_glk/test_fwb_my"
+# EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/EXP_Luis_fwb2"
 
-#EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP00"
-#EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
+# EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP00"
+# EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
 EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Huron"
 
 T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
