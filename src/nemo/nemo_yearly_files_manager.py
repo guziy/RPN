@@ -194,7 +194,8 @@ class NemoYearlyFilesManager(object):
         return tt, zz, profiles
 
 
-    def get_seasonal_clim_field(self, start_year=None, end_year=None, season_to_months=None, varname="sosstsst"):
+    def get_seasonal_clim_field(self, start_year=None, end_year=None, season_to_months=None,
+                                varname="sosstsst", level_index=0):
 
         """
         Get seasonal mean climatology for a field
@@ -222,13 +223,25 @@ class NemoYearlyFilesManager(object):
             fpath = self.year_to_path[y]
 
             with Dataset(fpath) as ds:
-                data = ds.variables[varname][:]
+
+                data_var = ds.variables[varname]
+
+                if len(data_var.shape) == 3:
+                    nt, ny, nx = data_var.shape
+                    data = data_var[:]
+                elif len(data_var.shape) == 4:
+                    nt, nz, ny, nx = data_var.shape
+                    data = data_var[:, level_index, :, :]
+                else:
+                    raise Exception("Do not know how to handle {}-dimensional fields".format(len(data_var.shape)))
 
                 time_var = ds.variables["time_counter"]
 
                 dates = num2date(time_var[:], time_var.units)
 
-                nt, ny, nx = data.shape
+
+
+
                 panel = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
 
                 seas_mean = panel.groupby(lambda d: month_to_season[d.month], axis="items").mean()
