@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+from pathlib import Path
 from matplotlib.axes import Axes
 from matplotlib.dates import date2num, DateFormatter
 import pandas as pd
@@ -10,20 +11,106 @@ import numpy as np
 __author__ = 'san'
 
 
+CENTIMETERS_PER_METER = 100.0
+
 class ObservationPoint(object):
     def __init__(self):
-        pass
+        self.longitude = None
+        self.latitude = None
+
+
+def _get_coord_from_token(token):
+    return sum([int(s.strip()) / 60.0 ** i for i, s in enumerate(token.split("-"))])
 
 
 class AdcpProfileObs(ObservationPoint):
+    id_col = 0
+    year_col = 1
+    julday_col = 2
+    hour_col = 3
+    # components and the magnitude are in cm/s
+    v_col = 4
+    u_col = 5
+    vmag_col = 7
+    vdir_col = 8
+    # vertical velocity
+    vert_vel_col = 9
+
     def __init__(self):
         """
         Advanced Doppler current profiler data interface
         """
         super(AdcpProfileObs, self).__init__()
 
-    # TODO: implement
+        self.current_folder = None
 
+    def _parse_header(self):
+        for fname in self.current_folder.iterdir():
+            if str(fname).endswith(".header"):
+                with self.current_folder.joinpath(fname).open() as h:
+                    for line in h:
+                        line = line.lower()
+
+                        if "longitude" in line or "latitude" in line:
+                            fields = line.split()
+                            mul = 1 if fields[-1].strip()[-1] in ["e", "n"] else -1
+
+                            if self.longitude is None and "longitude" in line:
+                                self.longitude = _get_coord_from_token(fields[-2]) * mul
+
+                            if self.latitude is None and "latitude" in line:
+                                self.latitude = _get_coord_from_token(fields[-2]) * mul
+
+                            if self.longitude is not None and self.latitude is not None:
+                                break
+
+                break
+
+
+    def _parse_dates(self, file_path):
+        mat = np.loadtxt(file_path, usecols=(self.year_col, self.julday_col, self.hour_col))
+        mat = mat.astype("i4")
+
+        d0 = datetime(mat[0, 0], 1, 1)
+        return [d0 + timedelta(days=int(row[1] - 1), hours=int(row[2] // 100), minutes=int(row[2] % 100)) for row in mat]
+
+
+    def get_acdp_profiles(self, folder="", data_column=vmag_col):
+        """
+        returns (dates, levels, data(dates, levels))
+        :param data_column:
+        """
+
+        self.current_folder = Path(folder)
+
+        self._parse_header()
+
+        levels = []
+        data = []
+
+        dates = None
+        for f in Path(folder).iterdir():
+
+            fname = f.name
+
+            if not fname.endswith(".data"):
+                continue
+
+            level = int(fname.split(".")[0][-5:]) / CENTIMETERS_PER_METER
+
+            levels.append(level)
+
+            with f.open() as h:
+                data.append(np.loadtxt(h, usecols=(data_column, )))
+
+                if dates is None:
+                    h.seek(0)
+                    dates = self._parse_dates(h)
+
+        data_sorted = np.asarray([ts for (lev, ts) in sorted(zip(levels, data), key=lambda x: x[0])])
+        levs_sorted = list(sorted(levels))
+
+        return dates, levs_sorted, data_sorted.transpose()
 
 
 
@@ -35,8 +122,6 @@ class TempProfileObs(ObservationPoint):
 
     def __init__(self):
         super(TempProfileObs, self).__init__()
-        self.longitude = None
-        self.latitude = None
         self.data_frame = None
         self.levels = None
 
@@ -67,7 +152,6 @@ class TempProfileObs(ObservationPoint):
 
     def get_end_date(self):
         return self.data_frame.index.to_pydatetime()[-1]
-
 
 
     def _read_meta_data(self, path=""):
@@ -138,7 +222,6 @@ class TempProfileObs(ObservationPoint):
         return tt, zz, data
 
 
-
 def get_profile_for_prefix(prefix="", folder=""):
     po = TempProfileObs()
     folder = os.path.expanduser(folder)
@@ -171,7 +254,8 @@ def get_profile_for_testing():
     # po.plot_vertical_section()
     return po
 
-if __name__ == '__main__':
+
+def test_temp_profile_interface():
     po = TempProfileObs()
     folder = os.path.expanduser("~/NEMO/validation/from_Ram_Yerubandi")
 
@@ -188,13 +272,16 @@ if __name__ == '__main__':
     po.read_metadata_and_data(header_path=header_path, data_path=data_path)
     po.plot_vertical_section()
 
-    # plt.show()
 
+def test_adcp_interface():
+    adcp = AdcpProfileObs()
+    folder = Path(os.path.expanduser("~/NEMO/validation/from_Ram_Yerubandi/08-00C-021AFlatFiles"))
+    dates, levs, data = adcp.get_acdp_profiles(folder=str(folder))
 
+    print(data.shape)
+    print(levs)
 
+    print(adcp.longitude, adcp.latitude)
 
-    # model_cube.add_aux_coord(AuxCoord(depth_cube.data, units="m"))
-
-    # print model_cube.coord("model_level_number").points[:]
-    #po.get_vertical_section_of_model_bias(model_cube)
-
+if __name__ == '__main__':
+    test_adcp_interface()
