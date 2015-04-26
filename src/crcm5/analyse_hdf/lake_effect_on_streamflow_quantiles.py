@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
+import brewer2mpl
 from matplotlib.axes import Axes
 from matplotlib.font_manager import FontProperties
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from crcm5 import infovar
 from data import cehq_station
 from data.cehq_station import Station
@@ -42,7 +43,6 @@ def main():
     selected_station_ids = ["092715", "074903", "080104", "081007", "061905",
                             "093806", "090613", "081002", "093801", "080718", "104001"]
 
-
     selected_station_ids = ids_with_lakes_upstream
 
     # Get the list of stations to do the comparison with
@@ -57,21 +57,23 @@ def main():
     # province = "QC"
     # min_drainage_area_km2 = 10000.0
     # stations_hd = cehq_station.load_from_hydat_db(start_date=start_date, end_date=end_date,
-    #                                               province=province, min_drainage_area_km2=min_drainage_area_km2)
+    # province=province, min_drainage_area_km2=min_drainage_area_km2)
     # if not len(stations_hd):
     #     print "No hydat stations satisying the conditions: period {0}-{1}, province {2}".format(
     #         str(start_date), str(end_date), province
     #     )
     # stations.extend(stations_hd)
 
+    # brewer2mpl.get_map args: set name  set type  number of colors
+    bmap = brewer2mpl.get_map("Set1", "qualitative", 9)
 
     path1 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
     label1 = "CRCM5-L1"
-    color1 = "b"
 
     path2 = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     label2 = "CRCM5-L2"
-    color2 = "r"
+
+    color2, color1 = bmap.mpl_colors[:2]
 
     fldirs = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(path1)
@@ -154,28 +156,41 @@ def main():
 
 
     # Add correlation coefficients to the axes
-    fp = FontProperties(size=10, weight="bold")
+    fp = FontProperties(size=14, weight="bold")
     axes[0].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q90_mod1_list, q90_obs_list)[0, 1] ** 2),
-                     (0.1, 0.85), color = color1, xycoords = "axes fraction", font_properties = fp)
+                     (0.1, 0.85), color=color1, xycoords="axes fraction", font_properties=fp)
     axes[0].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q90_mod2_list, q90_obs_list)[0, 1] ** 2),
-                     (0.1, 0.78), color = color2, xycoords = "axes fraction", font_properties = fp)
+                     (0.1, 0.70), color=color2, xycoords="axes fraction", font_properties=fp)
 
     axes[1].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q10_mod1_list, q10_obs_list)[0, 1] ** 2),
-                     (0.1, 0.85), color = color1, xycoords = "axes fraction", font_properties = fp)
+                     (0.1, 0.85), color=color1, xycoords="axes fraction", font_properties=fp)
     axes[1].annotate(r"$R^2 = {0:.2f}$".format(np.corrcoef(q10_mod2_list, q10_obs_list)[0, 1] ** 2),
-                     (0.1, 0.78), color = color2, xycoords = "axes fraction", font_properties = fp)
+                     (0.1, 0.70), color=color2, xycoords="axes fraction", font_properties=fp)
 
+
+    sf = ScalarFormatter(useMathText=True)
+    sf.set_powerlimits((-2, 3))
     for ind, the_ax in enumerate(axes):
         plot_one_to_one_line(the_ax)
         if ind == 0:
             the_ax.set_xlabel(r"Observed $\left({\rm m^3/s} \right)$")
             the_ax.set_ylabel(r"Modelled $\left({\rm m^3/s} \right)$")
 
-        the_ax.set_title(r"$Q_{90}$" if ind == 0 else r"$Q_{10}$",
-                         font_properties=FontProperties(size=16, weight="bold"))
+        the_ax.annotate(r"$Q_{90}$" if ind == 0 else r"$Q_{10}$",
+                        (0.95, 0.95), xycoords="axes fraction",
+                        bbox=dict(facecolor="white"),
+                        va="top", ha="right")
+
+        the_ax.xaxis.set_major_formatter(sf)
+        the_ax.yaxis.set_major_formatter(sf)
+
         locator = MaxNLocator(nbins=5)
         the_ax.xaxis.set_major_locator(locator)
         the_ax.yaxis.set_major_locator(locator)
+        x1, x2 = the_ax.get_xlim()
+        # Since streamflow percentiles can only be positive
+        the_ax.set_xlim(0, x2)
+        the_ax.set_ylim(0, x2)
 
     fig.legend([h1, h2], [label1, label2], loc="upper center", ncol=2)
     figpath = os.path.join(images_folder, "percentiles_comparison.png")

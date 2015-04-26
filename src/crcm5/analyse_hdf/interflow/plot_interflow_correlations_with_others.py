@@ -2,15 +2,16 @@ from matplotlib import cm
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import maskoceans
-from crcm5.analyse_hdf.interflow.calculate_interflow_correlations import calculate_correlation_field_for_climatology, \
-    calculate_correlation_of_infiltration_rate_with
-
+from crcm5.analyse_hdf.interflow.calculate_interflow_correlations import calculate_correlation_field_for_climatology
 import numpy as np
 import os
 import matplotlib.pyplot as plt
 import crcm5.analyse_hdf.common_plot_params as cpp
 import crcm5.analyse_hdf.do_analysis_using_pytables as analysis
 from util import plot_utils
+
+
+from crcm5 import infovar
 
 
 __author__ = 'huziy'
@@ -56,21 +57,27 @@ def main(start_year=1980, end_year=2010, months=None, ylabel="",
 
     corr1, intf_clim, i1_clim = calculate_correlation_field_for_climatology(**params)
     to_plot1 = maskoceans(lons, lats, corr1)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
     data_list.append(to_plot1)
 
     # correlate interflow and precip
     params.update(dict(varname2="PR", level2=0))
     corr2, _, pr_clim = calculate_correlation_field_for_climatology(**params)
     to_plot2 = np.ma.masked_where(to_plot1.mask, corr2)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
     data_list.append(to_plot2)
 
     # correlate precip and soil moisture
     params.update(dict(varname1="I1", level1=0))
     corr3, _, _ = calculate_correlation_field_for_climatology(**params)
     to_plot3 = np.ma.masked_where(to_plot2.mask, corr3)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
     data_list.append(to_plot3)
 
     # correlate interflow and infiltration
@@ -97,7 +104,10 @@ def main(start_year=1980, end_year=2010, months=None, ylabel="",
 
     corr4, _, _ = calculate_correlation_field_for_climatology(**params)
     to_plot4 = np.ma.masked_where(to_plot1.mask, corr4)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
+
     data_list.append(to_plot4)
 
     # Do plotting

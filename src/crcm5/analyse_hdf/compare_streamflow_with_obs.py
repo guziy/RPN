@@ -26,14 +26,15 @@ from swe import SweDataManager
 
 __author__ = 'huziy'
 
-from . import common_plot_params as cpp
+from crcm5.analyse_hdf import common_plot_params as cpp
 
-from . import do_analysis_using_pytables as analysis
-#TODO: this is to compare streamflow simulation results with station data
-#   input: station ids or list of station objects and
-#          the list of simulations, to compare with
+from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
-#Notes: All the model simulations are assumed to be on the same grid
+# TODO: this is to compare streamflow simulation results with station data
+# input: station ids or list of station objects and
+# the list of simulations, to compare with
+
+# Notes: All the model simulations are assumed to be on the same grid
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
 
@@ -77,8 +78,6 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
         x_station, y_station = basemap(the_station.longitude, the_station.latitude)
     else:
         x_station, y_station = basemap(the_model_point.longitude, the_model_point.latitude)
-
-
 
     basemap.scatter(x_station, y_station, c="b", s=100, ax=ax, linewidths=1, zorder=2)
 
@@ -133,7 +132,6 @@ def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=Non
     resample_period = "5D"  # 5 day running mean
 
     for label in simlabel_list:
-
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
         df = _apply_running_mean(daily_dates, data, averaging_period=resample_period)
         ax.plot(df.index, df["values"], label=label, lw=1)
@@ -290,7 +288,7 @@ def _plot_upstream_surface_runoff(ax, the_model_point, model_data_dict=None,
                                   cell_area_km2=None,
                                   upstream_mask=None,
                                   simlabel_list=None):
-    #plot arae averaged upstream surface runoff
+    # plot arae averaged upstream surface runoff
 
     assert isinstance(ax, Axes)
     assert isinstance(the_model_point, ModelPoint)
@@ -302,7 +300,7 @@ def _plot_upstream_surface_runoff(ax, the_model_point, model_data_dict=None,
 
     for label in simlabel_list:
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
-        #convert mm/s to mm/day
+        # convert mm/s to mm/day
         data = data * 24 * 60 * 60
         data[data < 0] = 0  # set negative surface runoff to 0
         df = _apply_running_mean(daily_dates, data)
@@ -314,13 +312,13 @@ def _plot_upstream_surface_runoff(ax, the_model_point, model_data_dict=None,
     ax.grid()
 
 
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _plot_upstream_subsurface_runoff(ax, the_model_point, model_data_dict=None,
                                      daily_dates=None,
                                      cell_area_km2=None,
                                      upstream_mask=None,
                                      simlabel_list=None):
-    #plot arae averaged upstream surface runoff
+    # plot arae averaged upstream surface runoff
 
     assert isinstance(ax, Axes)
     assert isinstance(the_model_point, ModelPoint)
@@ -333,7 +331,7 @@ def _plot_upstream_subsurface_runoff(ax, the_model_point, model_data_dict=None,
 
     for label in simlabel_list:
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
-        #convert mm/s to mm/day
+        # convert mm/s to mm/day
         data = data * 24 * 60 * 60
 
         df = _apply_running_mean(daily_dates, data)
@@ -345,7 +343,6 @@ def _plot_upstream_subsurface_runoff(ax, the_model_point, model_data_dict=None,
 
 
 def write_annual_flows_to_txt(sim_label_list, sim_to_values_model, values_obs, file_annual_discharge, **kwargs):
-
     """
     line_format has the following form
 
@@ -358,11 +355,9 @@ def write_annual_flows_to_txt(sim_label_list, sim_to_values_model, values_obs, f
     :param file_annual_discharge:
     """
 
-
     st_id = kwargs["station_id"]
     da_obs = kwargs["da_obs"]
     da_mod = kwargs["da_mod"]
-
 
     qmod_km3 = [sum(sim_to_values_model[label]) * 24 * 60 * 60 * 1.0e-9 for label in sim_label_list]
     qobs_km3 = sum(values_obs) * 24 * 60 * 60 * 1.0e-9
@@ -377,10 +372,9 @@ def write_annual_flows_to_txt(sim_label_list, sim_to_values_model, values_obs, f
     file_annual_discharge.write(line_format.format(*line_data))
 
 
-
 def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_name=None, hdf_folder=None,
                           start_year=None, end_year=None, cell_manager=None, stfl_name="STFA",
-                          drainage_area_reldiff_min=0.1):
+                          drainage_area_reldiff_min=0.1, plot_upstream_area_averaged=True):
     """
 
     :param model_points: list of model point objects
@@ -404,7 +398,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     else:
         cell_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME_KM2)
 
-
     print("cell area ranges from {} to {}".format(cell_area_km2.min(), cell_area_km2.max()))
 
     # print "plotting from {0}".format(path0)
@@ -427,11 +420,10 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     header_ns = ("ID", "DAo", "DAm",) + tuple(["NS({0})".format(key) for key in sim_name_to_file_name])
     file_scores.write(header_format.format(*header_ns) + "\n")
 
-    header_qyear = ("ID", "DAo", "DAm",) + tuple(["Qyear({0})".format(key) for key in label_list]) +\
+    header_qyear = ("ID", "DAo", "DAm",) + tuple(["Qyear({0})".format(key) for key in label_list]) + \
                    ("Qyear(obs)",)
     header_format_qyear = header_format + "\t{" + str(len(label_list) + 3) + ":10s}"
     file_annual_discharge.write(header_format_qyear.format(*header_qyear) + "\n")
-
 
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=path0)
 
@@ -467,21 +459,16 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     # Change the default colors
     mpl.rcParams["axes.color_cycle"] = bmap.mpl_colors
 
-
-
-
-
     # For the streamflow only plot
-    ncols = 3
+    ncols = 2
     nrows = max(len(mp_list) // ncols, 1)
     if ncols * nrows < len(mp_list):
         nrows += 1
 
     figure_stfl = plt.figure()
     gs_stfl = gridspec.GridSpec(nrows=nrows, ncols=ncols)
-    #  a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
+    # a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
     legend_added = False
-
 
     ax_stfl = None
     all_years = [y for y in range(start_year, end_year + 1)]
@@ -493,35 +480,33 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     processed_model_points = mp_list
     plot_point_positions_with_upstream_areas(processed_stations, processed_model_points, basemap, cell_manager)
 
+    if plot_upstream_area_averaged:
+        # create obs data managers
+        anusplin_tmin = AnuSplinManager(variable="stmn")
+        anusplin_tmax = AnuSplinManager(variable="stmx")
+        anusplin_pcp = AnuSplinManager(variable="pcp")
 
+        daily_dates, obs_tmin_fields = anusplin_tmin.get_daily_clim_fields_interpolated_to(
+            start_year=start_year, end_year=end_year,
+            lons_target=lons2d, lats_target=lats2d)
 
+        _, obs_tmax_fields = anusplin_tmax.get_daily_clim_fields_interpolated_to(
+            start_year=start_year, end_year=end_year,
+            lons_target=lons2d, lats_target=lats2d)
 
-    # create obs data managers
-    anusplin_tmin = AnuSplinManager(variable="stmn")
-    anusplin_tmax = AnuSplinManager(variable="stmx")
-    anusplin_pcp = AnuSplinManager(variable="pcp")
+        _, obs_pcp_fields = anusplin_pcp.get_daily_clim_fields_interpolated_to(
+            start_year=start_year, end_year=end_year,
+            lons_target=lons2d, lats_target=lats2d)
 
-    daily_dates, obs_tmin_fields = anusplin_tmin.get_daily_clim_fields_interpolated_to(
-        start_year=start_year, end_year=end_year,
-        lons_target=lons2d, lats_target=lats2d)
+        swe_path = "/skynet3_rech1/huziy/swe_ross_brown/swe.nc4"
+        if not os.path.isfile(os.path.realpath(swe_path)):
+            raise IOError("SWE-obs file {} does not exist".format(swe_path))
 
-    _, obs_tmax_fields = anusplin_tmax.get_daily_clim_fields_interpolated_to(
-        start_year=start_year, end_year=end_year,
-        lons_target=lons2d, lats_target=lats2d)
-
-    _, obs_pcp_fields = anusplin_pcp.get_daily_clim_fields_interpolated_to(
-        start_year=start_year, end_year=end_year,
-        lons_target=lons2d, lats_target=lats2d)
-
-    swe_path = "/skynet3_rech1/huziy/swe_ross_brown/swe.nc4"
-    if not os.path.isfile(os.path.realpath(swe_path)):
-        raise IOError("SWE-obs file {} does not exist".format(swe_path))
-
-    swe_manager = SweDataManager(path=swe_path, var_name="SWE")
-    obs_swe_daily_clim = swe_manager.get_daily_climatology(start_year, end_year)
-    interpolated_obs_swe_clim = swe_manager.interpolate_daily_climatology_to(obs_swe_daily_clim,
-                                                                             lons2d_target=lons2d,
-                                                                             lats2d_target=lats2d)
+        swe_manager = SweDataManager(path=swe_path, var_name="SWE")
+        obs_swe_daily_clim = swe_manager.get_daily_climatology(start_year, end_year)
+        interpolated_obs_swe_clim = swe_manager.interpolate_daily_climatology_to(obs_swe_daily_clim,
+                                                                                 lons2d_target=lons2d,
+                                                                                 lats2d_target=lats2d)
     values_obs = None
     for i, the_model_point in enumerate(mp_list):
 
@@ -568,25 +553,27 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         for label in label_list:
             fname = sim_name_to_file_name[label]
             fpath = os.path.join(hdf_folder, fname)
-            # read temperature data and calculate daily climatologic fileds
-            _, model_daily_temp_clim[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TT", level=0, start_year=start_year, end_year=end_year)
 
-            # read modelled precip and calculate daily climatologic fields
-            _, model_daily_precip_clim[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="PR", level=0, start_year=start_year, end_year=end_year)
+            if plot_upstream_area_averaged:
+                # read temperature data and calculate daily climatologic fileds
+                _, model_daily_temp_clim[label] = analysis.get_daily_climatology(
+                    path_to_hdf_file=fpath, var_name="TT", level=0, start_year=start_year, end_year=end_year)
 
-            # read modelled surface runoff and calculate daily climatologic fields
-            _, model_daily_clim_surf_runoff[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TRAF", level=0, start_year=start_year, end_year=end_year)
+                # read modelled precip and calculate daily climatologic fields
+                _, model_daily_precip_clim[label] = analysis.get_daily_climatology(
+                    path_to_hdf_file=fpath, var_name="PR", level=0, start_year=start_year, end_year=end_year)
 
-            # read modelled subsurface runoff and calculate daily climatologic fields
-            _, model_daily_clim_subsurf_runoff[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="TDRA", level=0, start_year=start_year, end_year=end_year)
+                # read modelled surface runoff and calculate daily climatologic fields
+                _, model_daily_clim_surf_runoff[label] = analysis.get_daily_climatology(
+                    path_to_hdf_file=fpath, var_name="TRAF", level=0, start_year=start_year, end_year=end_year)
 
-            # read modelled swe and calculate daily climatologic fields
-            _, model_daily_clim_swe[label] = analysis.get_daily_climatology(
-                path_to_hdf_file=fpath, var_name="I5", level=0, start_year=start_year, end_year=end_year)
+                # read modelled subsurface runoff and calculate daily climatologic fields
+                _, model_daily_clim_subsurf_runoff[label] = analysis.get_daily_climatology(
+                    path_to_hdf_file=fpath, var_name="TDRA", level=0, start_year=start_year, end_year=end_year)
+
+                # read modelled swe and calculate daily climatologic fields
+                _, model_daily_clim_swe[label] = analysis.get_daily_climatology(
+                    path_to_hdf_file=fpath, var_name="I5", level=0, start_year=start_year, end_year=end_year)
 
             dates, values_model = analysis.get_daily_climatology_for_a_point(path=fpath,
                                                                              var_name=stfl_name,
@@ -597,7 +584,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             ax.plot(dates, values_model, label=label, lw=2)
             ax_stfl.plot(dates, values_model, label=label, lw=2)
             simlabel_to_vals[label] = values_model
-
 
         if the_station is not None:
             assert isinstance(the_station, Station)
@@ -617,7 +603,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                            da_mod=the_model_point.accumulation_area,
                                            da_obs=the_station.drainage_km2)
 
-
         ax.set_ylabel(r"Streamflow: ${\rm m^3/s}$")
         assert isinstance(ax, Axes)
         assert isinstance(fig, Figure)
@@ -628,26 +613,26 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             lf_upstream = lake_fraction[upstream_mask == 1]
             point_info = "{0}\nlf-max={1:.2f}".format(the_station.id, lf_upstream.max())
             write_annual_flows_to_txt(label_list, simlabel_to_vals, values_obs, file_annual_discharge,
-                                      station_id = the_station.id,
-                                      da_obs = the_station.drainage_km2, da_mod = the_model_point.accumulation_area)
+                                      station_id=the_station.id,
+                                      da_obs=the_station.drainage_km2, da_mod=the_model_point.accumulation_area)
 
         else:
             point_info = "{0}".format(the_model_point.point_id)
 
-        ax.text(0.6, 0.9, point_info, transform=ax.transAxes, bbox=dict(facecolor="white"))
-        ax_stfl.text(0.6, 0.85, point_info, transform=ax_stfl.transAxes,
-                     bbox=dict(facecolor="white"),
-                     fontsize=8)
+        ax.annotate(point_info, (0.8, 0.8), xycoords="axes fraction",
+                    bbox=dict(facecolor="white", alpha=0.5),
+                    va="top", ha="right")
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
         ax.xaxis.set_minor_locator(MonthLocator())
         ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
         ax.grid()
+
         streamflow_axes = ax  # save streamflow axes for later use
 
         if not legend_added:
-            ax_stfl.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
+            ax_stfl.legend(loc=(0.0, 1.05), borderaxespad=3, ncol=3)
             ax_stfl.xaxis.set_major_formatter(DateFormatter("%b"))
             ax_stfl.xaxis.set_minor_locator(MonthLocator())
             ax_stfl.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 3))))
@@ -657,64 +642,67 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         ax_stfl.yaxis.set_major_locator(MaxNLocator(nbins=5))
         ax_stfl.grid()
 
+        # annotate streamflow-only panel plot
+        ax_stfl.annotate(point_info, (0.95, 0.95), xycoords="axes fraction",
+                         bbox=dict(facecolor="white"),
+                         va="top", ha="right")
+
+        if plot_upstream_area_averaged:
+            # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
+            ax = fig.add_subplot(gs[3, 2:], sharex=streamflow_axes)
+            _validate_temperature_with_anusplin(ax, the_model_point, cell_area_km2=cell_area_km2,
+                                                upstream_mask=upstream_mask,
+                                                daily_dates=daily_dates,
+                                                obs_tmin_clim_fields=obs_tmin_fields,
+                                                obs_tmax_clim_fields=obs_tmax_fields,
+                                                model_data_dict=model_daily_temp_clim,
+                                                simlabel_list=label_list)
+
+            # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
+            ax = fig.add_subplot(gs[2, 2:], sharex=streamflow_axes)
+            _validate_precip_with_anusplin(ax, the_model_point, cell_area_km2=cell_area_km2,
+                                           upstream_mask=upstream_mask,
+                                           daily_dates=daily_dates,
+                                           obs_precip_clim_fields=obs_pcp_fields,
+                                           model_data_dict=model_daily_precip_clim,
+                                           simlabel_list=label_list)
 
 
-
-        # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
-        ax = fig.add_subplot(gs[3, 2:], sharex=streamflow_axes)
-        _validate_temperature_with_anusplin(ax, the_model_point, cell_area_km2=cell_area_km2,
-                                            upstream_mask=upstream_mask,
-                                            daily_dates=daily_dates,
-                                            obs_tmin_clim_fields=obs_tmin_fields,
-                                            obs_tmax_clim_fields=obs_tmax_fields,
-                                            model_data_dict=model_daily_temp_clim,
-                                            simlabel_list=label_list)
-
-        # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
-        ax = fig.add_subplot(gs[2, 2:], sharex=streamflow_axes)
-        _validate_precip_with_anusplin(ax, the_model_point, cell_area_km2=cell_area_km2,
-                                       upstream_mask=upstream_mask,
-                                       daily_dates=daily_dates,
-                                       obs_precip_clim_fields=obs_pcp_fields,
-                                       model_data_dict=model_daily_precip_clim,
-                                       simlabel_list=label_list)
+            # plot mean upstream surface runoff
+            ax = fig.add_subplot(gs[0, 2:], sharex=streamflow_axes)
+            _plot_upstream_surface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
+                                          upstream_mask=upstream_mask,
+                                          daily_dates=daily_dates,
+                                          model_data_dict=model_daily_clim_surf_runoff,
+                                          simlabel_list=label_list)
 
 
-        # plot mean upstream surface runoff
-        ax = fig.add_subplot(gs[0, 2:], sharex=streamflow_axes)
-        _plot_upstream_surface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
-                                      upstream_mask=upstream_mask,
-                                      daily_dates=daily_dates,
-                                      model_data_dict=model_daily_clim_surf_runoff,
-                                      simlabel_list=label_list)
+            # plot mean upstream subsurface runoff
+            ax = fig.add_subplot(gs[1, 2:], sharex=streamflow_axes, sharey=ax)
+            _plot_upstream_subsurface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
+                                             upstream_mask=upstream_mask,
+                                             daily_dates=daily_dates,
+                                             model_data_dict=model_daily_clim_subsurf_runoff,
+                                             simlabel_list=label_list)
 
-
-        # plot mean upstream subsurface runoff
-        ax = fig.add_subplot(gs[1, 2:], sharex=streamflow_axes, sharey=ax)
-        _plot_upstream_subsurface_runoff(ax, the_model_point, cell_area_km2=cell_area_km2,
-                                         upstream_mask=upstream_mask,
-                                         daily_dates=daily_dates,
-                                         model_data_dict=model_daily_clim_subsurf_runoff,
-                                         simlabel_list=label_list)
-
-        # plot mean upstream swe comparison
-        ax = fig.add_subplot(gs[2, 0:2], sharex=streamflow_axes)
-        print("Validating SWE for ", the_station.id, "--" * 20)
-        _validate_swe_with_ross_brown(ax, the_model_point, cell_area_km2=cell_area_km2,
-                                      upstream_mask=upstream_mask,
-                                      daily_dates=daily_dates,
-                                      model_data_dict=model_daily_clim_swe,
-                                      obs_swe_clim_fields=interpolated_obs_swe_clim,
-                                      simlabel_list=label_list)
+            # plot mean upstream swe comparison
+            ax = fig.add_subplot(gs[2, 0:2], sharex=streamflow_axes)
+            print("Validating SWE for ", the_station.id, "--" * 20)
+            _validate_swe_with_ross_brown(ax, the_model_point, cell_area_km2=cell_area_km2,
+                                          upstream_mask=upstream_mask,
+                                          daily_dates=daily_dates,
+                                          model_data_dict=model_daily_clim_swe,
+                                          obs_swe_clim_fields=interpolated_obs_swe_clim,
+                                          simlabel_list=label_list)
 
         if the_station is not None:
             im_name = "comp_point_with_obs_{0}_{1}_{2}.png".format(the_station.id,
-                                                                    the_station.source,
-                                                                    "_".join(label_list))
+                                                                   the_station.source,
+                                                                   "_".join(label_list))
             im_folder_path = os.path.join(images_folder, the_station.source)
         else:
             im_name = "comp_point_with_obs_{0}_{1}.png".format(the_model_point.point_id,
-                                                                "_".join(label_list))
+                                                               "_".join(label_list))
             im_folder_path = os.path.join(images_folder, "outlets_point_comp")
 
 
@@ -724,7 +712,9 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
         im_path = os.path.join(im_folder_path, im_name)
 
-        fig.savefig(im_path, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+        if plot_upstream_area_averaged:
+            fig.savefig(im_path, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+
         plt.close(fig)
 
 
@@ -732,7 +722,8 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
     assert isinstance(figure_stfl, Figure)
     figure_stfl.tight_layout()
-    figure_stfl.savefig(os.path.join(images_folder, "comp_point_with_obs_{0}.png".format("_".join(label_list))),
+    figure_stfl.savefig(os.path.join(images_folder,
+                                     "comp_point_with_obs_{0}.png".format("_".join(label_list))),
                         dpi=cpp.FIG_SAVE_DPI,
                         bbox_inches="tight")
     plt.close(figure_stfl)
@@ -763,7 +754,7 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
         "CRCM5-HCD-RL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl_spinup.hdf",
         "CRCM5-HCD-RL-INTFL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf",
         # "SANI=10000, ignore THFC":
-        #    "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf",
+        # "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000_not_care_about_thfc.hdf",
 
         # "CRCM5-HCD-RL-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf",
         "SANI=10000": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_sani-10000.hdf"
@@ -783,7 +774,7 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
 
     assert len(mp_list) > 0
 
-    #Get the accumulation indices so that the most important outlets can be identified
+    # Get the accumulation indices so that the most important outlets can be identified
     acc_ind_list = [np.sum(cell_manager.get_mask_of_cells_connected_with_by_indices(mp.ix, mp.jy))
                     for mp in mp_list]
 
@@ -792,7 +783,7 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
 
     mp_list.sort(key=lambda x: x.acc_index)
 
-    #do not take global lake cells into consideration, and discard points with slopes 0 or less
+    # do not take global lake cells into consideration, and discard points with slopes 0 or less
     mp_list = [mp for mp in mp_list if lake_fraction[mp.ix, mp.jy] < 0.6 and slope[mp.ix, mp.jy] >= 0]
 
     mp_list = mp_list[-12:]  # get 12 most important outlets
@@ -811,7 +802,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
          min_station_accumulation_area_km2=1000.0):
     # Station ids to get from the CEHQ database
     # selected_ids = ["092715", "080101", "074903", "050304", "080104", "081007", "061905",
-    #                 "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
+    # "041903", "040830", "093806", "090613", "081002", "093801", "080718"]
 
     ids_with_lakes_upstream = [
         "104001", "093806", "093801", "081002", "081007", "080718"
@@ -836,16 +827,18 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
 
     sim_labels = [
         # "CRCM5-R",
+        # "CRCM5-L2",
         "CRCM5-L1",
-        "CRCM5-L2",
+        "CRCM5-NL"
         # "CRCM5-HCD-RL-INTF-a"
     ]
 
     sim_file_names = [
         # "quebec_0.1_crcm5-r.hdf5",
-        "quebec_0.1_crcm5-hcd-r.hdf5",
+        # "quebec_0.1_crcm5-hcd-rl.hdf5",
         # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
-        "quebec_0.1_crcm5-hcd-rl.hdf5",
+        "quebec_0.1_crcm5-hcd-r.hdf5",
+        "quebec_0.1_crcm5-r.hdf5",
         # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
         # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
@@ -906,7 +899,8 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
                           hdf_folder=hdf_folder,
                           start_year=start_date.year, end_year=end_date.year, stations=stations,
                           stfl_name="STFA",
-                          drainage_area_reldiff_min=0.1)
+                          drainage_area_reldiff_min=0.1,
+                          plot_upstream_area_averaged=False)
 
 
 if __name__ == "__main__":

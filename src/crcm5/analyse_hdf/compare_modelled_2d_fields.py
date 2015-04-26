@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import datetime
 import os
+from matplotlib.font_manager import FontProperties
 from matplotlib.ticker import ScalarFormatter
 
 from mpl_toolkits.basemap import maskoceans
@@ -269,7 +270,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     print("vmin = {0}; vmax = {1}".format(vmin, vmax))
 
     col = 0
-    axes[0].set_ylabel(sim_label)
+    axes[0].set_ylabel(sim_label, font_properties=FontProperties(style="italic"))
     im = None
     for season in season_list:
         field = data[season]
@@ -356,29 +357,29 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
     # lake effect (lake-atm interactions)
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
-    # control_label = "CRCM5-R"
+    # control_label = "CRCM5-NL"
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
-    # labels = ["CRCM5-HCD-R", ]
+    # labels = ["CRCM5-L1", ]
 
     # lake effect (lake-river interactions)
-    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    # control_label = "CRCM5-HCD-R"
-    #
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    # labels = ["CRCM5-HCD-RL", ]
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    control_label = "CRCM5-L1"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    labels = ["CRCM5-L2", ]
 
 
     # interflow effect ()
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    control_label = "CRCM5-HCD-RL"
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    # control_label = "CRCM5-L2"
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    # labels = ["CRCM5-HCD-RL-INTF", ]
+    # labels = ["CRCM5-L2I", ]
 
 
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
-    labels = ["CRCM5-HCD-RL-INTFb", ]
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
+    # labels = ["CRCM5-L2I-short", ]
 
 
 
@@ -391,7 +392,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     #
 
     row_labels = [
-        r"$\Delta$({0})".format(s) for s in labels
+        r"({}) - ({})".format(s, control_label) for s in labels
     ]
     print(labels)
 

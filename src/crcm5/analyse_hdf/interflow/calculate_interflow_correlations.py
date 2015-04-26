@@ -20,6 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import crcm5.analyse_hdf.common_plot_params as cpp
 from crcm5 import crcm_constants
+from crcm5 import infovar
 
 
 def calculate_correlation_nd(data1, data2, axis=0):
@@ -214,7 +215,7 @@ def main(start_year=1980, end_year=2010, months=None):
     if not os.path.isdir(img_folder):
         os.makedirs(img_folder)
 
-    img_filename = "interflow_correlations_months={}_{}-{}.jpg".format("-".join(str(m) for m in months),
+    img_filename = "interflow_correlations_months={}_{}-{}.pdf".format("-".join(str(m) for m in months),
                                                                        start_year, end_year)
 
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=default_path)
@@ -242,15 +243,19 @@ def main(start_year=1980, end_year=2010, months=None):
 
     corr1, intf_clim, i1_clim = calculate_correlation_field_for_climatology(**params)
     to_plot1 = maskoceans(lons, lats, corr1)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
     data_list.append(to_plot1)
 
     # correlate interflow and precip
-    # params.update(dict(varname2="PR", level2=0))
-    # corr2 = calculate_correlation_field_for_climatology(**params)
-    # to_plot2 = np.ma.masked_where(to_plot1.mask, corr2)
-    # title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
-    # data_list.append(to_plot2)
+    params.update(dict(varname2="PR", level2=0))
+    corr2, i1_clim, pr_clim = calculate_correlation_field_for_climatology(**params)
+    to_plot2 = np.ma.masked_where(to_plot1.mask, corr2)
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
+    data_list.append(to_plot2)
 
     # correlate precip and soil moisture
     # params.update(dict(varname1="I1", level1=0))
@@ -264,7 +269,9 @@ def main(start_year=1980, end_year=2010, months=None):
     params.update(dict(varname2="AV", level2=0, varname1="I1", level1=0))
     corr4, i1_clim, av_clim = calculate_correlation_field_for_climatology(**params)
     to_plot3 = np.ma.masked_where(to_plot1.mask, corr4)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
     data_list.append(to_plot3)
 
 
@@ -273,7 +280,9 @@ def main(start_year=1980, end_year=2010, months=None):
     params.update(dict(varname2="AV", level2=0, varname1="INTF", level1=0))
     corr4, intf_clim, av_clim = calculate_correlation_field_for_climatology(**params)
     to_plot4 = np.ma.masked_where(to_plot1.mask, corr4)
-    title_list.append("Corr({}, {})".format(params["varname1"], params["varname2"]))
+    title_list.append("Corr({}, {})".format(
+        infovar.get_display_label_for_var(params["varname1"]),
+        infovar.get_display_label_for_var(params["varname2"])))
     data_list.append(to_plot4)
 
 
@@ -379,24 +388,24 @@ def demo_equal_fields():
 
 if __name__ == '__main__':
     import application_properties
-
+    # Plot the last figure in paper 2.
     application_properties.set_current_directory()
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=5)
+    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=17, height_cm=5)
 
     seasons = (
-        list(range(3, 6)), list(range(6, 9)), list(range(9, 12))
+        list(range(3, 12)),
     )
 
     start_year = 1980
     end_year = 2010
 
     for months in seasons:
-        plot_tmin_tmax_correlations(
-            start_year=start_year, end_year=end_year, months=months
-        )
+        # plot_tmin_tmax_correlations(
+        # start_year=start_year, end_year=end_year, months=months
+        # )
 
-        # main(start_year=start_year,
-        #      end_year=end_year,
-        #      months=months)
+        main(start_year=start_year,
+             end_year=end_year,
+             months=months)
 
         # demo_equal_fields()

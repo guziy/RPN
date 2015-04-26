@@ -6,6 +6,10 @@ import numpy as np
 
 __author__ = 'huziy'
 
+
+MILLIMETERS_PER_METER = 1000.0
+GRAMS_PER_KILOGRAM = 1000.0
+
 _varname_to_units = {
     "STFL": r"${\rm m^3/s}$",
     "STFA": r"${\rm m^3/s}$",
@@ -17,15 +21,21 @@ _varname_to_units = {
     "AV": r"${\rm W/m^2}$",
     "AH": r"${\rm W/m^2}$",
     "I1": r"${\rm mm}$",
+    "HU": r"${\rm g/kg}$",
+    "TRAF": r"${\rm mm/day}$"
 
 }
 
 
 _varname_to_label = {
-    "I0": r"$T_{\rm soil}$",
-    "I1": r"$\theta_{\rm liq}$",
-    "I2": r"$\theta_{\rm ice}$",
-    "I1+I2": r"$\theta_{\rm liq} + \theta_{\rm ice}$"
+    "I0": r"ST",
+    "I1": r"SM",
+    "I2": r"SI",
+    "I1+I2": r"SM+SI",
+    "AV": "LHF",
+    "AH": "SHF",
+    "TRAF": "ROFS",
+    "TRAF+TDRA": "ROF"
 }
 
 
@@ -86,9 +96,7 @@ soil_layer_widths_26_to_60 = np.asarray([0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5,
 
 def get_to_plot(varname, data, lake_fraction=None,
                 mask_oceans=True, lons=None, lats=None, difference = False,
-                level_width_m=soil_layer_widths_26_to_60[0]):
-    if mask_oceans:
-        assert lons is not None and lats is not None
+                level_width_m=None):
 
     # This one is used if something is to be masked or changed before plotting
     if varname in ["STFL", "STFA"]:
@@ -99,27 +107,29 @@ def get_to_plot(varname, data, lake_fraction=None,
         else:
             data1 = np.ma.masked_where(lake_fraction >= GLOBAL_LAKE_FRACTION, data)
     elif varname == "PR":
-        data1 = data * 24 * 60 * 60 * 1000  # convert m/s to mm/day
+        data1 = data * 24 * 60 * 60 * MILLIMETERS_PER_METER  # convert m/s to mm/day
 
     elif varname == "I0":
         data1 = data - 273.15  # convert to deg C
-        data1 = np.ma.masked_where((data <= 0.1) | (lake_fraction >= GLOBAL_LAKE_FRACTION), data1)
-        data1 = maskoceans(lonsin=lons, latsin=lats, datain=data1)
-        return data1
     elif varname in ["TRAF", "TDRA"]:
         data1 = data * 24 * 60 * 60  # convert mm/s to mm/day
-        return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=True)
     elif varname in ["I1", "IMAV", "I5"]:
 
         if varname == "I1":
-            data = level_width_m * data * 1000.0
-
+            if level_width_m is not None:
+                data = level_width_m * data * MILLIMETERS_PER_METER
+            else:
+                pass
         return maskoceans(lonsin=lons, latsin=lats, datain=data, inlands=True)
+    elif varname in ["HU", ]:
+        data1 = data * GRAMS_PER_KILOGRAM  # convert to g/kg
     else:
         data1 = data
 
     if mask_oceans:
-        return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=False)
+        assert lons is not None and lats is not None
+        inlands = varname not in ["PR", "TT", "HU", "AV", "AH", "AS"]
+        return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=inlands)
     return data1
 
 

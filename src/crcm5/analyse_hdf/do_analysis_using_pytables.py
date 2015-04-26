@@ -34,7 +34,10 @@ def get_basemap_from_hdf(file_path=""):
 
     params = {}
     for row in rotpoletable:
-        params[row["name"]] = row["value"]
+        print(row["name"], row["value"])
+
+
+        params[row["name"].decode()] = row["value"].decode() if isinstance(row["value"], bytes) else row["value"]
     rotpoletable.close()
 
     basemap = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(
@@ -79,7 +82,7 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     """
     h = tb.open_file(path)
     traf_table = h.get_node("/", "TRAF")
-    sel_rows = traf_table.where("level == 6")
+    sel_rows = traf_table.where("level_index == 5")
     dates = []
     vals = []
     for the_row in sel_rows:
@@ -144,7 +147,7 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
     cache_file = os.path.join(cache_folder, cache_file)
 
     if os.path.isfile(cache_file):
-        return pickle.load(open(cache_file))
+        return pickle.load(open(cache_file, "rb"))
 
     h = tb.open_file(path)
 
@@ -208,7 +211,7 @@ def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, star
                                               start_year=start_year, end_year=end_year, var_name=v1name)
 
         _, v2data = get_daily_climatology(path_to_hdf_file=path_to_hdf_file, level=level,
-                                          start_year=start_year, end_year=end_year, var_name=v1name)
+                                          start_year=start_year, end_year=end_year, var_name=v2name)
 
         return dates, v1data - v2data if opsign == "-" else v1data + v2data if opsign == "+" else None
 

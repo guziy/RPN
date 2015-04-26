@@ -14,15 +14,15 @@ from scipy.stats import ttest_ind
 from tables import NoSuchNodeError
 
 from crcm5 import infovar
-from . import common_plot_params as cpp
+from crcm5.analyse_hdf import common_plot_params as cpp
 
 
 __author__ = 'huziy'
 
-from . import do_analysis_using_pytables as analysis
+from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 import matplotlib.pyplot as plt
 import numpy as np
-from . import common_plot_params
+from crcm5.analyse_hdf import common_plot_params
 from matplotlib import cm
 
 
@@ -358,6 +358,15 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
     # labels = ["ITFS"]
 
 
+    # total lake effect
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
+    control_label = "CRCM5-NL"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    labels = ["CRCM5-L2", ]
+
+
+
     # lake effect (lake-atm interactions)
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
     # control_label = "CRCM5-R"
@@ -367,18 +376,18 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
 
     # lake effect (lake-river interactions)
     # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    # control_label = "CRCM5-HCD-R"
+    # control_label = "CRCM5-L1"
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    # labels = ["CRCM5-HCD-RL", ]
+    # labels = ["CRCM5-HCD-L2", ]
 
 
     # interflow effect ()
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    control_label = "CRCM5-L2"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    labels = ["CRCM5-L2I", ]
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    # control_label = "CRCM5-L2"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    # labels = ["CRCM5-L2I", ]
 
 
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
@@ -395,7 +404,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
     #
 
     row_labels = [
-        r"$\Delta$({0})".format(s) for s in labels
+        r"{} vs {}".format(s, control_label) for s in labels
     ]
     print(labels)
 
@@ -431,6 +440,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
     # plot the control data
     ncols = len(season_list) + 1  # +1 is for the colorbar
     gs = gridspec.GridSpec(len(varnames), ncols, width_ratios=[1.0, ] * (ncols - 1) + [0.07], top=0.95)
+
 
 
     # plot the plots one file per variable
@@ -519,7 +529,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
             _plot_row(axes, data, the_label, var_name, increments=True, domain_props=domain_props,
                       season_list=season_list, significance=label_to_season_to_significance[the_label])
 
-            axes[0].set_ylabel(var_name)
+            axes[0].set_ylabel(infovar.get_display_label_for_var(var_name))
 
     fig.suptitle("({}) vs ({})".format(labels[0], control_label), font_properties=FontProperties(weight="bold"))
     folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(

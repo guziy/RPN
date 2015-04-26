@@ -186,24 +186,24 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
 
-        #set a scalar formatter
+        # set a scalar formatter
         sfmt = ScalarFormatter(useMathText=True)
         sfmt.set_powerlimits([-2, 2])
         ax.xaxis.set_major_formatter(sfmt)
         ax.set_title(r"$ \beta_{\rm max}\cdot K_{\rm v} \cdot \alpha \cdot DD \cdot H {\rm (m/s)}$ ")
         ax.grid()
 
-        #read flow directions
+        # read flow directions
         flow_directions = analysis.get_array_from_file(path=path, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
-        #read cell areas
-        #cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME)
+        # read cell areas
+        # cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME)
         cell_manager = CellManager(flow_directions)
         acc_index = cell_manager.get_accumulation_index()
         acc_index_flat = acc_index[acc_index > 1]
         print("acc_index: min={0}; max={1}; median={2}; 90-quantile={3}".format(
             acc_index_flat.min(), acc_index_flat.max(), np.median(acc_index_flat), np.percentile(acc_index_flat, 90)))
 
-        #plot the range of the accumulation index
+        # plot the range of the accumulation index
         ax = fig.add_subplot(gs[0, 2])
         assert isinstance(ax, Axes)
         the_hist, positions = np.histogram(acc_index_flat, bins=25, range=[0, np.percentile(acc_index_flat, 90)])
@@ -215,7 +215,7 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
         ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
 
-        #set a scalar formatter
+        # set a scalar formatter
         sfmt = ScalarFormatter(useMathText=True)
         sfmt.set_powerlimits([-2, 2])
         ax.xaxis.set_major_formatter(sfmt)
@@ -226,17 +226,17 @@ def plot_histograms(path="/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-h
 
 
 
-    #lake fraction
+    # lake fraction
 
 
-    #sand
+    # sand
 
-    #clay
+    # clay
 
 
-    figPath = os.path.join(images_folder, "static_fields_histograms.jpeg")
+    fig_path = os.path.join(images_folder, "static_fields_histograms.jpeg")
     fig.tight_layout()
-    fig.savefig(figPath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+    fig.savefig(fig_path, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 
 def main():
@@ -244,17 +244,17 @@ def main():
     assert isinstance(fig, Figure)
     gs = gridspec.GridSpec(3, 3, wspace=0.4)
 
-    #plot the control
+    # plot the control
 
     path1 = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_do_not_discard_small.hdf"
-    #path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
-    #path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
+    # path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf"
+    # path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
 
     path = "/home/huziy/skynet3_rech1/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS.hdf5"
 
     slope = analysis.get_array_from_file(path=path, var_name="slope")
     itf_slope = analysis.get_array_from_file(path=path, var_name="interflow_slope")
-    #slope = np.ma.masked_where(slope <= 0, slope)
+    # slope = np.ma.masked_where(slope <= 0, slope)
 
     cell_areas = analysis.get_array_from_file(path=path, var_name=infovar.HDF_CELL_AREA_NAME_M2)
     label = "crcm5-hcd-rl-intfl".upper()
@@ -266,7 +266,7 @@ def main():
     lons, lats, basemap = analysis.get_basemap_from_hdf(file_path=path)
     x, y = basemap(lons, lats)
 
-    #print basemap.proj4string
+    # print basemap.proj4string
 
     slope = maskoceans(lons, lats, slope)
     slope = np.ma.masked_less(slope, 0)
@@ -355,7 +355,7 @@ def main():
     _plot_accumulation_area(ax, basemap, x, y, field, title="c) Drainage area (${\\rm km^{2}}$)", cmap=cmap)
 
 
-    #vertical hydraulic conductivity
+    # vertical hydraulic conductivity
     ax = fig.add_subplot(gs[1, 2])
     all_axes.append(ax)
     field = analysis.get_array_from_file(path=path1, var_name=infovar.HDF_VERT_SOIL_HYDR_COND_NAME)

@@ -144,10 +144,68 @@ class Crcm5ModelDataManager:
         self._read_static_data()
 
 
+    def get_yearmax_fields(self, var_name="", start_year=None, end_year=None):
+        """
+        Get maximum value of a field for each year
+        :param var_name:
+        :param start_year:
+        :param end_year:
+        :return:
+        """
+
+        if start_year is None:
+            start_year = -1
+
+        if end_year is None:
+            end_year = np.inf
+
+        year_to_max_field = {}
+        if self.all_files_in_one_folder:
+            for fName in os.listdir(self.samples_folder):
+                if not fName.startswith(self.file_name_prefix):
+                    continue
+                fpath = os.path.join(self.samples_folder, fName)
+                r_obj = RPN(fpath)
+
+                # Go on if the variable is not found
+                varnames = r_obj.get_list_of_varnames()
+                if var_name not in varnames:
+                    print("{} is not found in the file ({}), following are in the file: {}".format(
+                        var_name, fpath, ",".join(varnames)))
+                    continue
+
+
+                data = r_obj.get_all_time_records_for_name(varname=var_name)
+
+                dates = list(sorted(data.keys()))
+
+                the_year = dates[0].year
+
+                if start_year > the_year or the_year > end_year:
+                    continue
+
+                current_month_max = np.max(list(data.values()), axis=0)
+
+                if the_year in year_to_max_field:
+                    year_to_max_field[the_year] = np.maximum(current_month_max, year_to_max_field[the_year])
+                else:
+                    year_to_max_field[the_year] = current_month_max
+
+        return year_to_max_field
+
+
+
+
+
     def get_daily_means(self, var_name=None):
+        if True:
+            raise NotImplementedError()
+
         if var_name is None:
             var_name = self.var_name
 
+        all_dates = []
+        all_fields = []
         if self.all_files_in_one_folder:
             for fName in os.listdir(self.samples_folder):
                 if not fName.startswith(self.file_name_prefix):
@@ -155,6 +213,8 @@ class Crcm5ModelDataManager:
                 fpath = os.path.join(self.samples_folder, fName)
                 r_obj = RPN(fpath)
                 data = r_obj.get_all_time_records_for_name(varname=var_name)
+
+
 
                 r_obj.close()
 
@@ -2328,6 +2388,14 @@ class Crcm5ModelDataManager:
         :param maximum: if True applies np.max to the fields corresponding to a given day
         :return:
         """
+
+        # First index the year table for faster search
+        with tb.open_file(hdf_db_path, mode="a") as hdf:
+            var_name_ori = var_name.split("_")[0]
+            var_table = hdf.get_node("/", var_name_ori)
+            if not var_table.cols.year.is_indexed:
+                var_table.cols.year.create_index()
+
         hdf = tb.open_file(hdf_db_path)
         dates, climatology = cls._get_saved_daily_climatology(hdf, var_name=var_name, level=level,
                                                               start_year=start_year,
@@ -2335,6 +2403,7 @@ class Crcm5ModelDataManager:
         if climatology is not None:
             hdf.close()
             return dates, climatology
+
 
         if maximum:
             operator = np.max
@@ -2350,7 +2419,7 @@ class Crcm5ModelDataManager:
         # # There is some weird behaviour when using indexed tables...
         # #index columns for speed
         # if not var_table.cols.year.is_indexed:
-        # var_table.cols.year.create_index()
+        #    var_table.cols.year.create_index()
         # var_table.cols.month.create_index()
         # var_table.cols.day.create_index()
         # var_table.cols.hour.create_index()
