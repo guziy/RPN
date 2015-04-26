@@ -6,11 +6,12 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator, LogLocator
 from mpl_toolkits.basemap import maskoceans
+from crcm5 import infovar
 from crcm5.analyse_hdf.run_config import RunConfig
 import matplotlib.pyplot as plt
-from . import plot_cc_2d_fields
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
-from .plot_cc_2d_fields import compute_seasonal_means_for_each_year
+from crcm5.analyse_hdf.climate_change.plot_cc_2d_fields import compute_seasonal_means_for_each_year, \
+    get_default_season_to_months_dict
 from util import plot_utils
 import numpy as np
 
@@ -30,10 +31,10 @@ A figure for a variable
 
 """
 
-
 multiplier_dict = {
     "PR": 24 * 3600 * 1000
 }
+
 
 def get_data(vname="", level=0, config_dict=None):
     modif_label = config_dict.label_modif
@@ -59,7 +60,6 @@ def get_data(vname="", level=0, config_dict=None):
                         (modif_config_c, current_modif), (modif_config_f, future_modif)])
 
 
-
 def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     modif_label = config_dict.label_modif
     base_label = config_dict.label_base
@@ -77,7 +77,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     i_to_label = {
         0: base_label,
         1: modif_label,
-        2: "{} - {}".format(modif_label, base_label)
+        2: "{} - {}".format(base_label, modif_label)
     }
 
     j_to_title = {
@@ -100,7 +100,9 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     for season in list(data_dict[base_config_c].keys()):
 
         fig = plt.figure()
-        fig.suptitle("{} ({})".format(vname, season), font_properties=FontProperties(weight="bold"))
+        fig.suptitle(
+            "{} ({})".format(infovar.get_display_label_for_var(vname), season),
+            font_properties=FontProperties(weight="bold"))
 
         gs = GridSpec(nrows=nrows, ncols=ncols)
 
@@ -109,7 +111,6 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
 
         mean_c_modif = data_dict[modif_config_c][season].mean(axis=0)
         mean_f_modif = data_dict[modif_config_f][season].mean(axis=0)
-
 
         ij_to_data = {
             (0, 0): mean_c_base, (1, 0): mean_c_modif,
@@ -126,29 +127,33 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         # get all means to calculate the ranges of mean fields
         all_means = list(ij_to_data.values())
 
-        # Add all differences in a list
-        all_diffs = []
-        for r in range(2):
-            for c in range(2):
-                if r > 0:
-                    all_diffs.append(ij_to_data[r, c] - ij_to_data[r - 1, c])
+        d1 = ij_to_data[0, 1] - ij_to_data[0, 0]
+        d2 = ij_to_data[1, 1] - ij_to_data[1, 0]
+        all_cc_diffs = np.ma.asarray([d1, d2])
+        mindiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 5)
+        maxdiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 95)
 
-                if c > 0:
-                    all_diffs.append(ij_to_data[r, c] - ij_to_data[r, c - 1])
+        maxdiff_cc = max(np.ma.abs(maxdiff_cc), np.ma.abs(mindiff_cc))
+        mindiff_cc = -maxdiff_cc
+
+
+        # Add all differences due to changed processes in a list
+        all_proc_diffs = []
 
         d1 = ij_to_data[1, 0] - ij_to_data[0, 0]
         d2 = ij_to_data[1, 1] - ij_to_data[0, 1]
-        all_diffs.append(d2 - d1)
+        all_proc_diffs.extend([d1, d2])
+        all_proc_diffs.append(d2 - d1)
+        all_proc_diffs = np.ma.asarray(all_proc_diffs)
 
         minval = np.min(all_means)
         maxval = np.max(all_means)
 
-        mindiff = np.percentile(all_diffs, 5)
-        maxdiff = np.percentile(all_diffs, 95)
+        mindiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 5)
+        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 95)
 
-        maxdiff = max(np.abs(maxdiff), np.abs(mindiff))
-        mindiff = -maxdiff
-
+        maxdiff_proc = max(np.abs(maxdiff_proc), np.abs(mindiff_proc))
+        mindiff_proc = -maxdiff_proc
 
         plot_data = []
         for row in range(nrows - 1):
@@ -175,20 +180,25 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
 
                 ax = fig.add_subplot(gs[i, j])
                 plotting_values = (i < 2) and (j < 2)
-                the_min, the_max = (minval, maxval) if plotting_values else (mindiff, maxdiff)
+
+                if plotting_values:
+                    the_min, the_max = minval, maxval
+                elif i == nrows - 1:
+                    the_min, the_max = mindiff_proc, maxdiff_proc
+                else:
+                    the_min, the_max = mindiff_cc, maxdiff_cc
+
                 the_cmap = field_cmap if plotting_values else diff_cmap
 
                 locator = MaxNLocator(nbins=the_cmap.N, symmetric=not plotting_values)
                 bounds = locator.tick_values(the_min, the_max)
 
-
-                if vname in ["STFA", ] and plotting_values:
+                if vname in ["STFA", "STFL"] and plotting_values:
                     the_min = 1.0e-5
                     the_max = 1.0e4
 
                     locator = LogLocator(numticks=11)
                     bounds = locator.tick_values(the_min, the_max)
-
 
                     print(bounds)
 
@@ -207,13 +217,13 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                 if plotting_values:
                     print(i, j, the_min, the_max)
 
-
                 im = bmp.pcolormesh(xx, yy, plot_data[i][j][:, :], cmap=the_cmap, norm=norm)
-                bmp.colorbar(im, ticks=locator, extend=extend)
+                bmp.colorbar(im, ticks=bounds, extend=extend)
                 bmp.drawcoastlines(ax=ax, linewidth=0.5)
 
                 ax.set_title(j_to_title.get(j, "") if i == 0 else "")
-                ax.set_ylabel(i_to_label.get(i, "") if j == 0 else "")
+                ax.set_ylabel(i_to_label.get(i, "") if j == 0 else "",
+                              font_properties=FontProperties(style="italic"))
 
         # Save the image to the file
         img_name = "{}_{}_{}-{}_{}-{}.png".format(
@@ -231,11 +241,13 @@ def main():
 
     """
 
-    season_to_months = plot_cc_2d_fields.get_default_season_to_months_dict()
+    season_to_months = get_default_season_to_months_dict()
 
-    var_names = ["TT", "HU", "PR", "AV", "STFA", "TRAF"]
+    # season_to_months = OrderedDict([("April", [4, ]), ("May", [5, ]), ("June", [6, ]), ("July", [7, ])])
 
-    # var_names = ["STFA", ]
+    var_names = ["TT", "HU", "PR", "AV", "STFL", "TRAF"]
+
+    # var_names = ["STFL", "I1"]
 
     levels = [0, 0, 0, 0, 0, 0]
     multipliers = {
@@ -249,23 +261,20 @@ def main():
 
     modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                          "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    modif_label = "CRCM5-L2"
+    modif_label = "CRCM5-L"
 
     # base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
-    #                     "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    # base_label = "CRCM5-L2"
+    # "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
+    # base_label = "CRCM5-L"
     #
     # modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
     #                      "quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
-    # modif_label = "CRCM5-L2I"
-
-
-
+    # modif_label = "CRCM5-LI"
 
     start_year_c = 1980
     end_year_c = 2010
 
-    future_shift_years = 60
+    future_shift_years = 75
 
     params = dict(
         data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label
