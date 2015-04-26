@@ -96,7 +96,7 @@ class AdcpProfileObs(ObservationPoint):
             if not fname.endswith(".data"):
                 continue
 
-            level = int(fname.split(".")[0][-5:]) / CENTIMETERS_PER_METER
+            level = int(fname.split(".")[0][-5:])
 
             levels.append(level)
 
@@ -108,9 +108,20 @@ class AdcpProfileObs(ObservationPoint):
                     dates = self._parse_dates(h)
 
         data_sorted = np.asarray([ts for (lev, ts) in sorted(zip(levels, data), key=lambda x: x[0])])
+
+
+        data_sorted[data_sorted < -900] = np.nan
+
         levs_sorted = list(sorted(levels))
 
-        return dates, levs_sorted, data_sorted.transpose()
+        df = pd.DataFrame(data=data_sorted.transpose(), index=dates, columns=levs_sorted)
+        df = df.groupby(by=lambda d: datetime(d.year, d.month, d.day)).mean()
+
+
+        res = np.ma.masked_where(np.isnan(df.values), df.values)
+        levs_sorted = np.asarray(levs_sorted) / 100.0  # Convert to meters
+
+        return df.index, levs_sorted, res
 
 
 
@@ -134,7 +145,7 @@ class TempProfileObs(ObservationPoint):
         self.data_frame = self.data_frame.iloc[:, 1:]
 
         self.data_frame["date"] = self.data_frame[self.year_column_index].map(lambda x: datetime(x, 1, 1)) + \
-                                  self.data_frame[self.year_day_column_index].map(lambda x: timedelta(days=x - 1))
+                                  self.data_frame[self.year_day_column_index].map(lambda x: timedelta(days=int(x - 1)))
 
         self.data_frame = self.data_frame.groupby(by="date").mean()
 

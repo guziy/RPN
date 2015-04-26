@@ -1,7 +1,6 @@
 from netCDF4 import num2date
 import os
 import datetime
-from iris.cube import Cube
 from matplotlib import cm
 from matplotlib.colors import LogNorm, BoundaryNorm
 from mpl_toolkits.basemap import maskoceans
@@ -11,11 +10,14 @@ from nemo import nemo_commons
 from util.geo import lat_lon
 
 __author__ = 'huziy'
-
-import iris
 import pandas as pd
 
-from iris.analysis import cartography
+try:
+    import iris
+    from iris.cube import Cube
+    from iris.analysis import cartography
+except ImportError:
+    print("Iris is not installed")
 
 
 class NemoOutputManager(object):

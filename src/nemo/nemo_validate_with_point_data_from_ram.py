@@ -9,7 +9,7 @@ from util import plot_utils
 __author__ = 'huziy'
 
 import os
-from . import obs
+from nemo import obs
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -147,7 +147,7 @@ def main_plot_all_temp_profiles_in_one_figure(
 
 
     # Plot station positions
-    lons, lats, bmp = nemo_manager.get_basemap_and_coords()
+    lons, lats, bmp = nemo_manager.get_coords_and_basemap()
     ax = fig.add_subplot(gs[len(temperature_profile_file_prefixes), :-2])
 
     for i, po, label in zip(list(range(len(obs_point_list))), obs_point_list, labels):

@@ -143,7 +143,7 @@ class LakeObsStation(object):
         data_model = data_model[:, inds[0]]
         fig = plt.figure()
         ax = plt.gca()
-        #self.df.plot(label="Obs", ax = ax)
+        # self.df.plot(label="Obs", ax = ax)
         dates_obs, vals_obs = self.get_dates_and_values_to_plot()
         ax.plot(dates_obs, vals_obs, label = "Obs")
         ax.plot(dates_model, data_model, label = "Mod")
@@ -196,7 +196,6 @@ def main():
         st.compare_with_modelled(data_cube, img_folder=NEMO_IMAGES_DIR, ktree=ktree)
 
 
-    #st.plot()
     import matplotlib.pyplot as plt
     plt.show()
 

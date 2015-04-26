@@ -1,5 +1,5 @@
 from collections import defaultdict
-from netCDF4 import Dataset, OrderedDict, num2date
+from netCDF4 import Dataset, OrderedDict, num2date, date2num
 import os
 import pandas as pd
 from matplotlib import cm
@@ -19,6 +19,7 @@ from util import plot_utils
 from util.geo import lat_lon
 import numpy as np
 import matplotlib.dates as mdates
+from datetime import timedelta
 
 __author__ = 'huziy'
 
@@ -48,11 +49,13 @@ class NemoYearlyFilesManager(object):
         self.lats = None
         self.basemap = None
         self.lake_mask = None
-        self.get_basemap_and_coords()
+        self.get_coords_and_basemap()
         self.define_lake_mask()
 
         self.year_to_path = None
         self._build_year_to_datapath_map()
+
+        self.ccrs = None
 
 
     def get_tz_crosssection_for_the_point(self, lon=None, lat=None, zlist=None, var_name="",
@@ -113,45 +116,61 @@ class NemoYearlyFilesManager(object):
 
 
             # cube dimensions (t, z, y, x)
-            cube = iris.load_cube(self.year_to_path[the_year],
-                                  constraint=iris.Constraint(cube_func=lambda c: c.var_name == var_name))
 
-            # select the dates within the interval between the start_date and end_date
-            with iris.FUTURE.context(cell_datetime_objects=True):
-                start = PartialDateTime(year=start_date.year, month=start_date.month, day=start_date.day)
-                end = PartialDateTime(year=end_date.year, month=end_date.month, day=end_date.day)
-                cube = cube.extract(iris.Constraint(time=lambda d: start <= d.point <= end))
+            with Dataset(self.year_to_path[the_year]) as ds:
+                data = ds.variables[var_name]
+
+                time_var = ds.variables["time_counter"]
+
+                if end_date.hour == 0:
+                    end_date += timedelta(days=1)
+
+                d1 = date2num(start_date, time_var.units)
+                d2 = date2num(end_date, time_var.units)
+
+                current_dates = num2date([t for t in time_var[:] if d1 <= t <= d2], units=time_var.units)
+                data = data[np.where((d1 <= time_var[:]) & (time_var[:] <= d2))[0], :, :, :]
+
+
+                # Use inverse squared distances to interpolate in horizontal
+                prof = data[:, :, j_list[0], i_list[0]] * weights[0]
+                for i, j, weight in zip(i_list[1:], j_list[1:], weights[1:]):
+                    prof += data[:, :, j, i] * weight
+
+                # Linear interpolation in vertical
+
+                if "deptht" in ds.variables:
+                    zsource = ds.variables["deptht"][:]
+                elif "depthu" in ds.variables:
+                    zsource = ds.variables["depthu"][:]
+                elif "depthv" in ds.variables:
+                    zsource = ds.variables["depthv"][:]
+                elif "depthw" in ds.variables:
+                    zsource = ds.variables["depthw"][:]
+                else:
+                    raise Exception("Could not find vertical coordinate")
+
+                if vert_kdtree is None:
+                    vert_kdtree = cKDTree([[z, ] for z in zsource])
+
+                # No interpolation if the vertical levels are not supplied
+                ztarget = zsource if ztarget is None else ztarget
+
+                zdists, zinds = vert_kdtree.query([[z, ] for z in ztarget], k=2)
+                zdists = zdists.squeeze()
+                zinds = zinds.squeeze()
+
+                zweights = zdists / zdists.sum(axis=1)[:, np.newaxis]  # weight1 = d2/(d1 + d2)
+
+                prof = prof[:, zinds[:, 0]] * zweights[np.newaxis, :, 1] + prof[:, zinds[:, 1]] * zweights[np.newaxis, :, 0]
+                profiles.extend(prof)
 
 
 
-            # Use inverse squared distances to interpolate in horizontal
-            prof = cube.data[:, :, j_list[0], i_list[0]] * weights[0]
-            for i, j, weight in zip(i_list[1:], j_list[1:], weights[1:]):
-                prof += cube.data[:, :, j, i] * weight
+                print("Selected data for the time range: ", current_dates[0], current_dates[-1])
+                print("The limits are ", start_date, end_date)
 
-            # Linear interpolation in vertical
-            zsource = cube.coord("model_level_number").points[:]
-            if vert_kdtree is None:
-                vert_kdtree = cKDTree([[z, ] for z in zsource])
-
-            # No interpolation if the vertical levels are not supplied
-            ztarget = zsource if ztarget is None else ztarget
-
-            zdists, zinds = vert_kdtree.query([[z, ] for z in ztarget], k=2)
-            zdists = zdists.squeeze()
-            zinds = zinds.squeeze()
-
-            zweights = zdists / zdists.sum(axis=1)[:, np.newaxis]  # weight1 = d2/(d1 + d2)
-
-            prof = prof[:, zinds[:, 0]] * zweights[np.newaxis, :, 1] + prof[:, zinds[:, 1]] * zweights[np.newaxis, :, 0]
-            profiles.extend(prof)
-
-            time_coord = cube.coord("time")
-            current_dates = iunit.num2date(time_coord.points[:], time_coord.units.origin, time_coord.units.calendar)
-
-            print("Selected data for the time range: ", current_dates[0], current_dates[-1])
-
-            dates.extend(current_dates)
+                dates.extend(current_dates)
 
         # Calculate model bottom
         bottom = 0
@@ -239,9 +258,6 @@ class NemoYearlyFilesManager(object):
 
                 dates = num2date(time_var[:], time_var.units)
 
-
-
-
                 panel = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
 
                 seas_mean = panel.groupby(lambda d: month_to_season[d.month], axis="items").mean()
@@ -249,15 +265,12 @@ class NemoYearlyFilesManager(object):
                 for the_season in seas_mean:
                     season_to_field_list[the_season].append(seas_mean[the_season].values)
 
-
         result = {}
         for the_season, field_list in season_to_field_list.items():
-
             mean_field = np.mean(field_list, axis=0).transpose()
             print(mean_field.shape)
 
             result[the_season] = np.ma.masked_where(~self.lake_mask, mean_field)
-
 
         return result
 
@@ -337,7 +350,6 @@ class NemoYearlyFilesManager(object):
                 assert isinstance(the_mean, Cube)
                 result[the_year][the_season] = the_mean.data.transpose()
 
-
         return result
 
     def get_seasonal_mean_lst(self, start_year=None, end_year=None, season_to_months=None):
@@ -406,7 +418,6 @@ class NemoYearlyFilesManager(object):
         if hasattr(sst, "mask"):
             sst[sst.mask] = np.nan
 
-
         panel = pd.Panel(data=sst, items=dates, major_axis=range(sst.shape[1]), minor_axis=range(sst.shape[2]))
 
         seasonal_sst = panel.groupby(
@@ -437,7 +448,9 @@ class NemoYearlyFilesManager(object):
         return result
 
 
-    def plot_comparisons_of_seasonal_sst_with_homa_obs(self, start_year=None, end_year=None, season_to_months=None):
+    def plot_comparisons_of_seasonal_sst_with_homa_obs(self, start_year=None, end_year=None, season_to_months=None,
+                                                       exp_label=""):
+
         model_data = self.get_seasonal_mean_lst(season_to_months=season_to_months,
                                                 start_year=start_year, end_year=end_year)
 
@@ -493,11 +506,49 @@ class NemoYearlyFilesManager(object):
             os.mkdir(nemo_img_dir)
 
         plt.tight_layout()
-        fig.savefig(os.path.join(nemo_img_dir, "sst_homa_validation.pdf"))
+        fig.savefig(os.path.join(nemo_img_dir, "sst_homa_validation_{}.pdf".format(exp_label)))
         plt.show()
 
+    def get_cartopy_proj_and_coords(self):
+        """
+        :return: lons2d, lats2d, basemap [based on the bathymetry file and gemclim_settings.nml]
+        """
+        from cartopy import crs
+        # Read longitudes and latitudes and create the basemap only if they are not initialized
+        if self.ccrs is None:
 
-    def get_basemap_and_coords(self):
+            with Dataset(os.path.join(self.data_folder, self.bathymetry_file)) as ds:
+                self.lons, self.lats = ds.variables["nav_lon"][:].transpose(), ds.variables["nav_lat"][:].transpose()
+
+            import re
+
+            lon1, lat1 = None, None
+            lon2, lat2 = None, None
+            with open(os.path.join(self.data_folder, self.proj_file)) as f:
+                for line in f:
+                    if "Grd_xlat1" in line and "Grd_xlon1" in line:
+                        groups = re.findall(r"-?\b\d+.?\d*\b", line)
+                        lat1, lon1 = [float(s) for s in groups]
+
+                    if "Grd_xlat2" in line and "Grd_xlon2" in line:
+                        groups = re.findall(r"-?\b\d+.?\d*\b", line)
+                        lat2, lon2 = [float(s) for s in groups]
+
+            rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
+            # self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats)
+
+
+            lon0, _ = rll.get_true_pole_coords_in_rotated_system()
+            o_lon_p, o_lat_p = rll.get_north_pole_coords()
+            print(lon0, o_lat_p)
+            self.ccrs = crs.RotatedPole(pole_longitude=lon0, pole_latitude=o_lat_p)
+
+        self.lons[self.lons > 180] -= 360
+
+        return self.lons, self.lats, self.ccrs
+
+
+    def get_coords_and_basemap(self):
         """
         :return: lons2d, lats2d, basemap [based on the bathymetry file and gemclim_settings.nml]
         """
@@ -537,8 +588,13 @@ class NemoYearlyFilesManager(object):
 
 
 def main():
-    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012",
+    # nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012",
+    # suffix="icemod.nc")
+    # exp_label = "default-offline"
+
+    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/output_NEMO_offline_1979-2012_nosnow",
                                           suffix="icemod.nc")
+    exp_label = "offline-nosnow"
 
     # Study period
     start_year = 2003
@@ -552,12 +608,12 @@ def main():
     ])
 
     nemo_manager.plot_comparisons_of_seasonal_sst_with_homa_obs(
-        start_year=start_year, end_year=end_year, season_to_months=season_to_months
+        start_year=start_year, end_year=end_year, season_to_months=season_to_months,
+        exp_label=exp_label
     )
 
 
 def validate_max_ice_cover_with_glerl():
-
     """
     For validations of maximum annual ice concentrations with GLERL obs
 
@@ -565,15 +621,25 @@ def validate_max_ice_cover_with_glerl():
     nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012",
                                           suffix="icemod.nc")
 
+    nemo_manager_nosnow = NemoYearlyFilesManager(
+        folder="/home/huziy/skynet3_rech1/output_NEMO_offline_1979-2012_nosnow",
+        suffix="icemod.nc")
+
     # Study period
     start_year = 2003
     end_year = 2012
 
-
-    lon2d, lat2d, bmp = nemo_manager.get_basemap_and_coords()
+    lon2d, lat2d, bmp = nemo_manager.get_coords_and_basemap()
     model_yearmax_ice_conc, model_lake_avg_ts = nemo_manager.get_max_yearly_ice_fraction(
         start_year=start_year, end_year=end_year)
     model_yearmax_ice_conc = np.ma.masked_where(~nemo_manager.lake_mask, model_yearmax_ice_conc)
+
+    model_yearmax_ice_conc_nosnow, model_lake_avg_ts_no_snow = nemo_manager_nosnow.get_max_yearly_ice_fraction(
+        start_year=start_year, end_year=end_year)
+    model_yearmax_ice_conc_nosnow = np.ma.masked_where(~nemo_manager.lake_mask, model_yearmax_ice_conc_nosnow)
+
+
+
 
 
     # plt.figure()
@@ -633,7 +699,7 @@ def validate_max_ice_cover_with_glerl():
     img_file = img_folder.joinpath("validate_yearmax_icecov_glerl_{}-{}.pdf".format(start_year, end_year))
 
     fig = plt.figure()
-    gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05])
+    gs = GridSpec(2, 4, width_ratios=[1, 1, 1, 0.05])
     all_axes = []
 
     cmap = cm.get_cmap("jet", 10)
@@ -645,8 +711,15 @@ def validate_max_ice_cover_with_glerl():
     bmp.pcolormesh(xx, yy, model_yearmax_ice_conc, cmap=cmap, vmin=0, vmax=1)
     all_axes.append(ax)
 
-    # Obs
+    # Model
     ax = fig.add_subplot(gs[0, 1])
+    ax.set_title("NEMO-offline-nosnow")
+    bmp.pcolormesh(xx, yy, model_yearmax_ice_conc_nosnow, cmap=cmap, vmin=0, vmax=1)
+    all_axes.append(ax)
+
+
+    # Obs
+    ax = fig.add_subplot(gs[0, 2])
     ax.set_title("GLERL")
     im = bmp.pcolormesh(xx, yy, obs_yearmax_ice_conc_interp, cmap=cmap, vmin=0, vmax=1)
     all_axes.append(ax)
@@ -662,10 +735,8 @@ def validate_max_ice_cover_with_glerl():
     bmp.colorbar(im, ax=ax)
     all_axes.append(ax)
 
-
     for the_ax in all_axes:
         bmp.drawcoastlines(ax=the_ax)
-
 
     fig.savefig(str(img_file), bbox_inches="tight")
     plt.close(fig)
@@ -675,15 +746,17 @@ def validate_max_ice_cover_with_glerl():
     fig = plt.figure()
     plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
     plt.plot(range(start_year, end_year + 1), model_lake_avg_ts, "b", lw=2, label="NEMO")
+    plt.plot(range(start_year, end_year + 1), model_lake_avg_ts_no_snow, "g", lw=2, label="NEMO-nosnow")
     plt.plot(range(start_year, end_year + 1), np.asarray(obs_lake_avg_ts) / 100.0, "r", lw=2, label="GLERL")
     plt.grid()
-    plt.legend()
+    plt.legend(ncol=2)
     fig.savefig(str(img_folder.joinpath("lake_avg_iceconc_nemo_offline_vs_GLERL.pdf")), bbox_inches="tight")
 
 
 if __name__ == '__main__':
     import application_properties
-    application_properties.set_current_directory()
-    # main()
 
-    validate_max_ice_cover_with_glerl()
+    application_properties.set_current_directory()
+    main()
+
+    # validate_max_ice_cover_with_glerl()
