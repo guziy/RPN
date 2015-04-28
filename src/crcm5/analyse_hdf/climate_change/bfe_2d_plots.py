@@ -12,26 +12,24 @@ import matplotlib.pyplot as plt
 FieldInfo = namedtuple("FieldInfo", "varname start_year end_year basemap lons lats")
 img_folder = "cc_paper/bfe"
 
-def plot_bfe_row_for_var(season_to_diff=None, field_info=None, ax_list=None):
+import numpy as np
 
-    assert hasattr(field_info, "varname")
-    assert hasattr(field_info, "start_year")
-    assert hasattr(field_info, "end_year")
-    assert hasattr(field_info, "end_year")
+
+def plot_bfe_row_for_var(finfo_to_season_to_diff=None, ax_list=None):
+    pass
 
 
 # Plot boundary forcing errors (compare with ERAI-driven simulation)
-def draw_bfe_in_seasonal_mean(varnames, level_index_list=None, season_to_months=None,
-                              path_to_era_driven="", path_to_gcm_driven="",
-                              start_year=None, end_year=None):
 
+def get_bfe_in_seasonal_mean(varnames, level_index_list=None, season_to_months=None,
+                             path_to_era_driven="", path_to_gcm_driven="",
+                             start_year=None, end_year=None):
     lons, lats, bmp = analysis.get_basemap_from_hdf(file_path=path_to_era_driven)
 
     if level_index_list is None:
         level_index_list = [0, ] * len(varnames)
 
-
-
+    finfo_to_season_to_diff = {}
     for vname, level_index in zip(varnames, level_index_list):
         season_to_diff = {}
 
@@ -47,17 +45,34 @@ def draw_bfe_in_seasonal_mean(varnames, level_index_list=None, season_to_months=
 
             season_to_diff[season] = gcm - era
 
-        # Plot the differences for each season ...
-        plot_bfe_row_for_var(season_to_diff=season_to_diff, field_info=finf)
+        finfo_to_season_to_diff[finf] = season_to_diff
+
+    return finfo_to_season_to_diff
 
 
+def get_bfe_in_annual_max(varnames, level_index_list=None,
+                          path_to_era_driven="", path_to_gcm_driven="",
+                          start_year=None, end_year=None):
 
+    lons, lats, bmp = analysis.get_basemap_from_hdf(file_path=path_to_era_driven)
 
+    if level_index_list is None:
+        level_index_list = [0, ] * len(varnames)
 
-def draw_bfe_in_seasonal_max(varnames, level_index=0, season_to_months=None,
-                             path_to_era_driven="", path_to_gcm_driven="",
-                             start_year=None, end_year=None):
-    pass
+    finfo_to_diff = {}
+    for vname, level_index in zip(varnames, level_index_list):
+        finf = FieldInfo(vname, start_year, end_year, bmp, lons, lats)
+        era = analysis.get_annual_maxima(path_to_hdf_file=path_to_era_driven,
+                                         start_year=start_year, end_year=end_year,
+                                         var_name=vname, level=level_index)
+
+        gcm = analysis.get_annual_maxima(path_to_hdf_file=path_to_gcm_driven,
+                                         start_year=start_year, end_year=end_year,
+                                         var_name=vname, level=level_index)
+
+        finfo_to_diff[finf] = np.mean(gcm.values(), axis=0) - np.mean(era.values(), axis=0)
+
+    return finfo_to_diff
 
 
 def main():
@@ -68,7 +83,6 @@ def main():
     # Year range ...
     start_year = 1980
     end_year = 2010
-
 
     seasons_for_mean = OrderedDict(
         ("Winter", (12, 1, 2)),
@@ -94,7 +108,11 @@ def main():
     ncols = max([len(seasons_for_mean), len(seasons_for_max)]) + 1
     gs = GridSpec(nrows, ncols, width_ratios=[1., ] * (ncols - 1) + [0.05, ])
 
+    row = 0
+    for vname in variables_mean_bfe:
+        row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols)]
 
+        row += 1
 
 
 
@@ -112,5 +130,6 @@ def main():
 
 if __name__ == '__main__':
     import application_properties
+
     application_properties.set_current_directory()
     main()

@@ -276,7 +276,9 @@ def main():
     season_to_months = get_default_season_to_months_dict()
 
     # var_names = ["TT", "HU", "PR", "AV", "STFL"]
-    var_names = ["TRAF", "STFL", "TRAF+TDRA"]
+    # var_names = ["TRAF", "STFL", "TRAF+TDRA"]
+    # var_names = ["TT", "PR", "STFL"]
+    var_names = ["STFL", ]
     levels = [0, 0, 0, 0, 0]
     multipliers = {
         "PR": 1.0, 
@@ -320,7 +322,7 @@ def main():
     ])
 
     # Changes global plot properties mainly figure size and font size
-    plot_utils.apply_plot_params(font_size=10, width_cm=20, height_cm=15)
+    plot_utils.apply_plot_params(font_size=14, width_cm=40, height_cm=12)
 
 
     # Plot the differences

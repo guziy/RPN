@@ -77,7 +77,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     i_to_label = {
         0: base_label,
         1: modif_label,
-        2: "{} - {}".format(base_label, modif_label)
+        2: "{} - {}".format(modif_label, base_label)
     }
 
     j_to_title = {
@@ -131,7 +131,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         d2 = ij_to_data[1, 1] - ij_to_data[1, 0]
         all_cc_diffs = np.ma.asarray([d1, d2])
         mindiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 5)
-        maxdiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 95)
+        maxdiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 70)
 
         maxdiff_cc = max(np.ma.abs(maxdiff_cc), np.ma.abs(mindiff_cc))
         mindiff_cc = -maxdiff_cc
@@ -150,7 +150,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         maxval = np.max(all_means)
 
         mindiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 5)
-        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 95)
+        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 90)
 
         maxdiff_proc = max(np.abs(maxdiff_proc), np.abs(mindiff_proc))
         mindiff_proc = -maxdiff_proc
@@ -247,7 +247,7 @@ def main():
 
     var_names = ["TT", "HU", "PR", "AV", "STFL", "TRAF"]
 
-    # var_names = ["STFL", "I1"]
+    var_names = ["TT", "PR"]
 
     levels = [0, 0, 0, 0, 0, 0]
     multipliers = {

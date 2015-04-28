@@ -53,15 +53,22 @@ def flowdir_values_to_shift(flowdir_values):
     i_shift = np.array(iShifts)
     j_shift = np.array(jShifts)
 
-    indices = np.ones(flowdir_values.shape, dtype=int)
-    for i, v in enumerate(values):
-        sel = v == flowdir_values
-        if np.any(sel):
-            indices[sel] = i
+    # indices = np.ones(flowdir_values.shape, dtype=int)
+    # for i, v in enumerate(values):
+    #     sel = v == flowdir_values
+    #     if np.any(sel):
+    #         indices[sel] = i
 
-    return i_shift[indices], j_shift[indices]
+    i_shift_field = np.ma.masked_all_like(flowdir_values)
+    j_shift_field = np.ma.masked_all_like(flowdir_values)
+
+    good = (flowdir_values > 0) & (flowdir_values <= 128)
+
+    i_shift_field[good] = i_shift[np.log2(flowdir_values[good]).astype("i4")]
+    j_shift_field[good] = j_shift[np.log2(flowdir_values[good]).astype("i4")]
+
+    return i_shift_field, j_shift_field
 
 
 if __name__ == "__main__":
     print("Hello World")
-  

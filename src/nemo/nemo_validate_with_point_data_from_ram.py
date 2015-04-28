@@ -50,7 +50,9 @@ def main_plot_all_temp_profiles_in_one_figure(
     folder_path = os.path.expanduser(folder_path)
 
     temperature_profile_file_prefixes = [
-        "08-01T-004A024.120.290", "08-01T-013A054.120.290", "08-00T-012A017.105.317", "08-00T-004A177.106.286"
+        "08-01T-004A024.120.290",
+        # "08-01T-013A054.120.290", "08-00T-012A017.105.317",
+        "08-00T-004A177.106.286"
     ]
 
     nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")

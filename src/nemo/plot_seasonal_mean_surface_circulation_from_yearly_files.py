@@ -9,17 +9,18 @@ from nemo.nemo_yearly_files_manager import NemoYearlyFilesManager
 import matplotlib.pyplot as plt
 
 import cartopy.feature as cfeature
+import numpy as np
 
 
 def main():
-    path_to_folder = "/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012"
+    # path_to_folder = "/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012"
 
-    # path_to_folder = "/home/huziy/skynet3_rech1/one_way_coupled_nemo_outputs_1979_1985"
+    path_to_folder = "/home/huziy/skynet3_rech1/one_way_coupled_nemo_outputs_1979_1985"
 
     season_to_months = OrderedDict([
-        ("Winter", (12, 1, 2)),
-        ("Spring", (3, 4, 5)),
-        ("Summer", (6, 7, 8)),
+    #    ("Winter", (12, 1, 2)),
+    #    ("Spring", (3, 4, 5)),
+    #    ("Summer", (6, 7, 8)),
         ("Fall", (9, 10, 11))
     ])
 
@@ -43,7 +44,7 @@ def main():
 
     fig = plt.figure()
 
-    gs = GridSpec(len(season_to_months), 2, width_ratios=[1, 0.05])
+    gs = GridSpec(len(season_to_months), 1, width_ratios=[1, 0.05])
 
     xx, yy = bmp(lons.copy(), lats.copy())
     lons_1d = lons.mean(axis=0)
@@ -76,9 +77,23 @@ def main():
 
         print(c.shape, u.shape, v.shape)
 
+        # Convert to cm
+        u *= 100
+        v *= 100
+
+        # u = np.ma.masked_where(u > 10, u)
+        # v = np.ma.masked_where(v > 10, v)
+
+
+        step = 2
+        q = ax.quiver(xx[::step, ::step], yy[::step, ::step], u[::step, ::step], v[::step, ::step], width=0.001,
+                      pivot="middle", headwidth=5, headlength=5, scale=100)
+
+        qk = ax.quiverkey(q, 0.1, 0.1, 10, r'$10 \frac{cm}{s}$', fontproperties={'weight': 'bold'}, linewidth=1)
+
         # ax.streamplot(xx, yy, u, v, linewidth=2, density=5, color="k")
-        im = ax.pcolormesh(xx, yy, c)
-        plt.colorbar(im, ax=ax)
+        # im = ax.pcolormesh(xx, yy, c)
+        # plt.colorbar(im, ax=ax)
         ax.set_extent([xx[0, 0], xx[-1, -1], yy[0, 0], yy[-1, -1]], crs=rpole)
         ax.coastlines("10m")
         ax.add_feature(cfeature.NaturalEarthFeature('physical', 'lakes', '50m',
@@ -90,8 +105,8 @@ def main():
         ax.grid()
         ax.set_title(season)
 
-
-    fig.savefig(str(img_folder.joinpath("NEMO-offline-seasonal_surf_circulation_{}.pdf".format("_".join(season_to_months.keys())))),
+    fig.savefig(str(img_folder.joinpath(
+        "NEMO-CRCM5-seasonal_surf_circulation_{}_arrows.pdf".format("_".join(season_to_months.keys())))),
                 bbox_inches="tight")
 
 

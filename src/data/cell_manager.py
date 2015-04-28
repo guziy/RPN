@@ -25,7 +25,7 @@ class CellManager:
         self.accumulation_area_km2 = accumulation_area_km2
 
         # calculate characteristic distance
-        if None not in [self.lats2d, self.lons2d]:
+        if not any([None is arr for arr in [self.lats2d, self.lons2d]]):
             v1 = lat_lon.lon_lat_to_cartesian(self.lons2d[0, 0], self.lats2d[0, 0])
             v2 = lat_lon.lon_lat_to_cartesian(self.lons2d[1, 1], self.lats2d[1, 1])
             dv = np.array(v2) - np.array(v1)

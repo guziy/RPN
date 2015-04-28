@@ -30,8 +30,8 @@ class Station:
 
         self.date_to_value = {}
 
-        #daily climatology of mean swe upstream (as seen by the model) to the station
-        #ideally pandas.Timeseries?
+        # daily climatology of mean swe upstream (as seen by the model) to the station
+        # ideally pandas.Timeseries?
         self.mean_swe_upstream_daily_clim = None
         self.mean_temp_upstream_monthly_clim = None
         self.mean_prec_upstream_monthly_clim = None
@@ -74,7 +74,7 @@ class Station:
         day = timedelta(days=1)
         year_dates = []
 
-        #creat objects for each day of year
+        # creat objects for each day of year
         while the_date.year == stamp_year:
             year_dates.append(the_date)
             the_date += day
@@ -88,8 +88,8 @@ class Station:
         daily_means = []
         for stamp_day in year_dates:
             bool_vector = [x.day == stamp_day.day and
-                                        x.month == stamp_day.month and
-                                        start_date <= x <= end_date for x in self.dates]
+                           x.month == stamp_day.month and
+                           start_date <= x <= end_date for x in self.dates]
 
             indices = np.where(bool_vector)[0]
             if not len(indices): return None, None
@@ -143,8 +143,8 @@ class Station:
             self.delete_data_for_year(the_year)
 
 
-    #returns a dict {date => value}
-    #if the data for the year is not continuous returns an empty dict
+    # returns a dict {date => value}
+    # if the data for the year is not continuous returns an empty dict
     def get_continuous_dataseries_for_year(self, year, data_step=timedelta(days=1)):
         result = {}
         previous_date = None
@@ -217,7 +217,7 @@ class Station:
         self.id = re.findall(r"\d+", os.path.basename(path))[0]
         for line in f:
             line = line.strip()
-            line_lower = line.lower().encode('iso-8859-1')
+            line_lower = line.lower()
 
             if line_lower.startswith('station:'):
                 [rest, self.name] = line.split(':')
@@ -270,7 +270,7 @@ class Station:
                                                                       self.drainage_km2)
 
 
-    #override hashing methods to use in dictionary
+    # override hashing methods to use in dictionary
     def __hash__(self):
         return self.id.__hash__()
 
@@ -387,7 +387,6 @@ class Station:
         assert stamp_dates is not None
         assert years is not None
 
-
         df = pandas.DataFrame(data=self.values, index=self.dates, columns=["values", ])
         df["year"] = df.index.map(lambda the_date: the_date.year)
 
@@ -395,17 +394,15 @@ class Station:
         stamp_year = stamp_dates[0].year
         daily_clim = df.groupby(by=lambda the_date: (the_date.month, the_date.day)).mean()
 
-
         vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
         return stamp_dates, vals
 
 
-
     def __str__(self):
         return "Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
-                                                                                         self.longitude,
-                                                                                         self.latitude,
-                                                                                         self.drainage_km2)
+                                                                                        self.longitude,
+                                                                                        self.latitude,
+                                                                                        self.drainage_km2)
 
 
     def parse_from_hydat(self, path):
@@ -466,7 +463,7 @@ class Station:
         """
         df_list = []
         for row in data:
-            #Extracts data from a row, one month of data per row
+            # Extracts data from a row, one month of data per row
             ndays = row["NO_DAYS"]
             year = row["YEAR"]
             month = row["MONTH"]
@@ -487,14 +484,17 @@ class Station:
 
         df = pandas.concat(df_list, verify_integrity=True)
         df.sort(inplace=True)
-        df = df.select(lambda d: start_date <= d <= end_date)
+        if start_date is not None:
+            df = df.select(lambda d: start_date <= d <= end_date)
+
+        if end_date is not None:
+            df = df.select(lambda d: d <= end_date)
 
         if not len(df):
             self.dates = []
             self.values = []
             self.date_to_value = {}
             return
-
 
         self.dates = df.index
         self.values = df.values.flatten()
@@ -522,7 +522,7 @@ def print_info_of(station_ids):
 
 
 def _get_station_for_id(the_id, st_list):
-    return next(itertools.ifilter(lambda x: x.id == the_id, st_list))
+    return next(filter(lambda x: x.id == the_id, st_list))
 
 
 def read_station_data(folder='data/cehq_measure_data',
@@ -557,11 +557,11 @@ def read_station_data(folder='data/cehq_measure_data',
             s.delete_data_after_date(end_date)
 
 
-        #If there is less than 3 years of continuous data, discard the station
+        # If there is less than 3 years of continuous data, discard the station
         if len(s.get_list_of_complete_years()) <= min_number_of_complete_years:
             continue
 
-        #only save stations with nonzero timeseries length
+        # only save stations with nonzero timeseries length
         if s.get_timeseries_length():
             if only_natural:
                 if s.natural:
@@ -592,7 +592,7 @@ def read_hydat_station_data(folder_path="", start_date=None, end_date=None):
         if end_date is not None:
             s.delete_data_after_date(end_date)
 
-        #only save stations with nonzero timeseries length
+        # only save stations with nonzero timeseries length
         if s.get_timeseries_length():
             stations.append(s)
 
@@ -652,8 +652,8 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
         s.river_name = fields[5].replace("_", " ").replace("\"", "")
         s.drainage_km2 = float(fields[20])
 
-        #print "found {0}".format(the_id) , s.river_name
-        #print "DA(GRDC) = {0}; DA(STNCatchment) = {1}".format(s.drainage_km2, fields[20])
+        # print "found {0}".format(the_id) , s.river_name
+        # print "DA(GRDC) = {0}; DA(STNCatchment) = {1}".format(s.drainage_km2, fields[20])
         #load data
         #load min, mean and max
         data_path = data_file_patt.format(the_id)
@@ -679,7 +679,7 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
 def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
                        natural=True,
                        province="QC", start_date=None, end_date=None, datavariable="streamflow",
-                       min_drainage_area_km2 = None, selected_ids = None):
+                       min_drainage_area_km2=None, selected_ids=None):
     """
     loads stations from sqlite db
 
@@ -691,18 +691,18 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     assert natural
 
-    #    cache_file = "hydat_stations_{0}_{1}.cache".format("natural" if natural else "regulated", province)
-    #    os.remove(cache_file)
+    # cache_file = "hydat_stations_{0}_{1}.cache".format("natural" if natural else "regulated", province)
+    # os.remove(cache_file)
     #    if os.path.isfile(cache_file):
     #        return pickle.load(open(cache_file))
 
     province = province.upper()
 
-    #shortcuts for table names
+    # shortcuts for table names
     stations_table = "STATIONS"
     station_regulation_table = "STN_REGULATION"
 
-    #shortcuts for field names
+    # shortcuts for field names
     station_number_field = "STATION_NUMBER"
     province_field = "PROV_TERR_STATE_LOC"
     lon_field = "LONGITUDE"
@@ -788,32 +788,31 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         s.name = the_row["STATION_NAME"]
         s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
 
-
         if selected_ids is not None:
             if s.id not in selected_ids:
                 continue
 
-        #Skip the stations without related infoormation
+        # Skip the stations without related infoormation
         if s.drainage_km2 is None:
             continue
 
         if (min_drainage_area_km2 is not None) and (min_drainage_area_km2 >= s.drainage_km2):
             continue
 
-        #read streamflows for the station
+        # read streamflows for the station
         query = "select * from {0} where STATION_NUMBER = ?".format(daily_var_table)
         cur.execute(query, (s.id, ))
 
         data_for_station = cur.fetchall()
         if len(data_for_station) < 365:  # there is no way it can have at least one complete year
-            #skip the stations with no data
+            # skip the stations with no data
             continue
 
         s.read_data_from_hydat_db_results(data_for_station, start_date=start_date,
                                           end_date=end_date, variable=datavariable)
 
         if len(s.get_list_of_complete_years()) < 10:
-            #also ignore the stations with less than 10 complete years of data
+            # also ignore the stations with less than 10 complete years of data
             continue
 
         stations.append(s)
@@ -830,11 +829,11 @@ if __name__ == "__main__":
     application_properties.set_current_directory()
 
     station_ids = [104001, 103715, 93801, 93806, 81006, 92715, 61502, 80718, 42607, 40830]
-    #print_info_of(station_ids)
+    # print_info_of(station_ids)
 
 
 
-    #s = Station()
+    # s = Station()
     #s.parse_from_cehq('data/cehq_measure_data/051004_Q.txt')
     #data = s.get_continuous_dataseries_for_year(1970)
     #    for date in sorted(data.keys()):

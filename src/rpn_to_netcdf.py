@@ -155,13 +155,13 @@ def runoff_to_netcdf_parallel(indir, outdir):
 
 
 def extract_sand_and_clay_from_rpn(rpn_path='data/geophys_africa', outpath=""):
-    rpnFile = RPN(rpn_path)
-    sandField = rpnFile.get_2D_field_on_all_levels('SAND')
-    clayField = rpnFile.get_2D_field_on_all_levels('CLAY')
-    dpthField = rpnFile.get_first_record_for_name("8L")
-    rpnFile.close()
+    rpn_file = RPN(rpn_path)
+    sandField = rpn_file.get_2D_field_on_all_levels('SAND')
+    clayField = rpn_file.get_2D_field_on_all_levels('CLAY')
+    dpthField = rpn_file.get_first_record_for_name("8L")
+    rpn_file.close()
 
-    ncFile = nc.Dataset(outpath, 'w', format='NETCDF3_CLASSIC')
+    nc_file = nc.Dataset(outpath, 'w', format='NETCDF3_CLASSIC')
 
     nx, ny = sandField[1].shape
     nz = len(sandField)
@@ -174,20 +174,22 @@ def extract_sand_and_clay_from_rpn(rpn_path='data/geophys_africa', outpath=""):
         sand[:, :, i] = sandField[i + 1][:, :]
         clay[:, :, i] = clayField[i + 1][:, :]
 
-    ncFile.createDimension('lon', nx)
-    ncFile.createDimension('lat', ny)
-    ncFile.createDimension('level', nz)
 
-    sandVar = ncFile.createVariable("SAND", "f4", ("lon", "lat", "level"))
-    clayVar = ncFile.createVariable("CLAY", "f4", ("lon", "lat", "level"))
-    dpthVar = ncFile.createVariable("DEPTH_TO_BEDROCK", "f4", ("lon", "lat"))
+    lon_dim_name = "longitude"
+    lat_dim_name = "latitude"
 
-    sandVar[:] = sand
-    clayVar[:] = clay
-    dpthVar[:] = dpthField
-    ncFile.close()
+    nc_file.createDimension(lon_dim_name, nx)
+    nc_file.createDimension(lat_dim_name, ny)
+    nc_file.createDimension('level', nz)
 
-    pass
+    sand_var = nc_file.createVariable("SAND", "f4", (lon_dim_name, lat_dim_name, "level"))
+    clay_var = nc_file.createVariable("CLAY", "f4", (lon_dim_name, lat_dim_name, "level"))
+    dpth_var = nc_file.createVariable("DEPTH_TO_BEDROCK", "f4", (lon_dim_name, lat_dim_name))
+
+    sand_var[:] = sand
+    clay_var[:] = clay
+    dpth_var[:] = dpthField
+    nc_file.close()
 
 
 def delete_files_with_nrecords(folder_path='data/CORDEX/Africa/Samples', n_records=4):
@@ -227,7 +229,12 @@ if __name__ == "__main__":
 
     #extract_sand_and_clay_from_rpn(rpn_path= "/b2_fs2/huziy/OMSC26_MPI_long_new_v01/geo_Arctic_198x186",
     #    outpath="/home/huziy/skynet3_rech1/runoff_arctic_nc/geo_Arctic_198x186.nc")
-    runoff_to_netcdf_parallel("/b2_fs2/huziy/Arctic_0.5deg_OMSC_26L_ERA40I/",
-                              "/skynet3_rech1/huziy/runoff_arctic_nc/ERA40")
+
+    # runoff_to_netcdf_parallel("/b2_fs2/huziy/Arctic_0.5deg_OMSC_26L_ERA40I/",
+    #                           "/skynet3_rech1/huziy/runoff_arctic_nc/ERA40")
+
+    extract_sand_and_clay_from_rpn(
+        rpn_path="/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_SAND_CLAY_DPTH",
+        outpath="/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_sand_clay_dpth.nc")
 
     print("Hello World")

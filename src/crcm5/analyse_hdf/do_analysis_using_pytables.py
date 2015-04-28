@@ -1,3 +1,4 @@
+from collections import defaultdict, OrderedDict
 from datetime import datetime, timedelta
 import os
 import pickle
@@ -196,6 +197,21 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
     # Save the cache
     result = (sorted_dates, [date_to_mean[d] for d in sorted_dates])
     pickle.dump(result, open(cache_file, "wb"))
+
+    return result
+
+
+def get_annual_maxima(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
+
+    result = OrderedDict()
+
+    with tb.open_file(path_to_hdf_file) as h:
+        var_table = h.get_node("/{}".format(var_name))
+
+        for y in range(start_year, end_year + 1):
+            print("current year: {}".format(y))
+
+            result[y] = np.max([row["field"] for row in var_table.where("(level_index == {}) & (year == {})".format(level, y))], axis=0)
 
     return result
 

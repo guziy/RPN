@@ -230,7 +230,7 @@ class NemoYearlyFilesManager(object):
             end_year = max(self.year_to_path.keys())
 
         # Set up month to season relation
-        month_to_season = {}
+        month_to_season = defaultdict(lambda: "no-season")
         for m in range(1, 13):
             for s, months in season_to_months.items():
                 if m in months:
@@ -364,6 +364,14 @@ class NemoYearlyFilesManager(object):
 
         import pandas as pd
 
+
+        month_to_season = defaultdict(lambda: "no-season")
+
+        for season, months in season_to_months.items():
+            for the_month in months:
+                month_to_season[the_month] = season
+
+
         result = {}
         for the_year in range(start_year, end_year + 1):
             result[the_year] = {}
@@ -381,13 +389,17 @@ class NemoYearlyFilesManager(object):
             lst = sst * (1.0 - ice_f) + ist * ice_f
 
             time_var = ds.variables["time_counter"]
-            dates = num2date(time_var[:], time_var.units)
+            dates = num2date(time_var[:], time_var.units).tolist()
+            print(dates[:10])
+            print(type(dates[0]))
+
 
             panel = pd.Panel(data=lst, items=dates, major_axis=range(lst.shape[1]), minor_axis=range(lst.shape[2]))
 
+            print(panel.items[0])
+
             seasonal_panel = panel.groupby(
-                lambda d: [season for season, months in season_to_months.items() if d.month in months][0],
-                axis="items").mean()
+                lambda d: month_to_season[d.month], axis="items").mean()
 
             for the_season in season_to_months:
                 # in the files the dimensions are ordered as (t, y, x) -> hence the transpose below
@@ -411,6 +423,14 @@ class NemoYearlyFilesManager(object):
         lats_source = ds.variables["lat"][:]
 
 
+
+        month_to_season = defaultdict(lambda: "no-season")
+
+        for seas, mths in season_to_months.items():
+            for m in mths:
+                month_to_season[m] = seas
+
+
         # time variable
         time_var = ds.variables["time"]
         dates = num2date(time_var[:], time_var.units)
@@ -420,9 +440,10 @@ class NemoYearlyFilesManager(object):
 
         panel = pd.Panel(data=sst, items=dates, major_axis=range(sst.shape[1]), minor_axis=range(sst.shape[2]))
 
+
+
         seasonal_sst = panel.groupby(
-            lambda d: (d.year, [s for s, months in season_to_months.items() if d.month in months][0]),
-            axis="items").mean()
+            lambda d: (d.year, month_to_season[d.month]), axis="items").mean()
 
 
         # source grid
@@ -434,7 +455,7 @@ class NemoYearlyFilesManager(object):
 
         dists, inds = kdtree.query(list(zip(xt, yt, zt)))
 
-        print(len(inds))
+
 
         assert isinstance(seasonal_sst, pd.Panel)
 
@@ -447,6 +468,24 @@ class NemoYearlyFilesManager(object):
 
         return result
 
+
+    def get_nemo_and_homa_seasonal_mean_sst(self, start_year=None, end_year=None, season_to_months=None):
+        """
+
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+        :return: {year: {season: field}}
+        """
+        model_data = self.get_seasonal_mean_lst(season_to_months=season_to_months,
+                                                start_year=start_year, end_year=end_year)
+
+        obs_sst_path = os.path.expanduser("~/skynet3_rech1/nemo_obs_for_validation/GreatLakes_2003_5km-2/sst-glk.nc")
+
+        obs_data = self.read_and_interpolate_homa_data(path=obs_sst_path, start_year=start_year, end_year=end_year,
+                                                       season_to_months=season_to_months)
+
+        return model_data, obs_data, self.basemap, self.lons, self.lats
 
     def plot_comparisons_of_seasonal_sst_with_homa_obs(self, start_year=None, end_year=None, season_to_months=None,
                                                        exp_label=""):
@@ -555,26 +594,26 @@ class NemoYearlyFilesManager(object):
 
         # Read longitudes and latitudes and create the basemap only if they are not initialized
         if self.lons is None:
-            ds = Dataset(os.path.join(self.data_folder, self.bathymetry_file))
-            self.lons, self.lats = ds.variables["nav_lon"][:].transpose(), ds.variables["nav_lat"][:].transpose()
+            with Dataset(os.path.join(self.data_folder, self.bathymetry_file)) as ds:
+                self.lons, self.lats = ds.variables["nav_lon"][:].transpose(), ds.variables["nav_lat"][:].transpose()
 
-            import re
+                import re
 
-            lon1, lat1 = None, None
-            lon2, lat2 = None, None
-            with open(os.path.join(self.data_folder, self.proj_file)) as f:
-                for line in f:
-                    if "Grd_xlat1" in line and "Grd_xlon1" in line:
-                        groups = re.findall(r"-?\b\d+.?\d*\b", line)
-                        lat1, lon1 = [float(s) for s in groups]
+                lon1, lat1 = None, None
+                lon2, lat2 = None, None
+                with open(os.path.join(self.data_folder, self.proj_file)) as f:
+                    for line in f:
+                        if "Grd_xlat1" in line and "Grd_xlon1" in line:
+                            groups = re.findall(r"-?\b\d+.?\d*\b", line)
+                            lat1, lon1 = [float(s) for s in groups]
 
-                    if "Grd_xlat2" in line and "Grd_xlon2" in line:
-                        groups = re.findall(r"-?\b\d+.?\d*\b", line)
-                        lat2, lon2 = [float(s) for s in groups]
+                        if "Grd_xlat2" in line and "Grd_xlon2" in line:
+                            groups = re.findall(r"-?\b\d+.?\d*\b", line)
+                            lat2, lon2 = [float(s) for s in groups]
 
-            rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
-            self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats)
-            print(lon1, lat1, lon2, lat2)
+                rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
+                self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats)
+                print(lon1, lat1, lon2, lat2)
 
 
         # self.basemap.drawcoastlines()
@@ -757,6 +796,6 @@ if __name__ == '__main__':
     import application_properties
 
     application_properties.set_current_directory()
-    main()
+    # main()
 
-    # validate_max_ice_cover_with_glerl()
+    validate_max_ice_cover_with_glerl()

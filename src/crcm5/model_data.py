@@ -174,7 +174,6 @@ class Crcm5ModelDataManager:
                         var_name, fpath, ",".join(varnames)))
                     continue
 
-
                 data = r_obj.get_all_time_records_for_name(varname=var_name)
 
                 dates = list(sorted(data.keys()))
@@ -194,9 +193,6 @@ class Crcm5ModelDataManager:
         return year_to_max_field
 
 
-
-
-
     def get_daily_means(self, var_name=None):
         if True:
             raise NotImplementedError()
@@ -213,8 +209,6 @@ class Crcm5ModelDataManager:
                 fpath = os.path.join(self.samples_folder, fName)
                 r_obj = RPN(fpath)
                 data = r_obj.get_all_time_records_for_name(varname=var_name)
-
-
 
                 r_obj.close()
 
@@ -808,8 +802,8 @@ class Crcm5ModelDataManager:
             # print "created index on month column"
 
             # var_table.cols.day.create_index()
-            #     var_table.cols.hour.create_index()
-            #     print "created indexes for all columns"
+            # var_table.cols.hour.create_index()
+            # print "created indexes for all columns"
 
             month_sel = "|".join(["(month == {0})".format(m) for m in months])
             year_sel = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
@@ -1586,7 +1580,7 @@ class Crcm5ModelDataManager:
                 month_to_means[month_index] = the_mean
             else:
                 cur_mean = month_to_means[month_index]
-                month_to_means[month_index] = ( cur_mean * counts[month_index] + the_mean) / (counts[month_index] + 1.0)
+                month_to_means[month_index] = (cur_mean * counts[month_index] + the_mean) / (counts[month_index] + 1.0)
 
             counts[month_index] += 1
 
@@ -1596,22 +1590,40 @@ class Crcm5ModelDataManager:
     def get_mean_field(self, start_year, end_year, months=None, file_name_prefix="pm",
                        var_name="STFL", level=-1, level_kind=level_kinds.ARBITRARY):
         if self.all_files_in_one_folder:
-            fNames = filter(lambda theName: theName.startswith(file_name_prefix),
-                            os.listdir(self.samples_folder))
-            fNames = list(fNames)
-            fPaths = [os.path.join(self.samples_folder, x) for x in fNames]
+            file_names = filter(lambda the_name: the_name.startswith(file_name_prefix),
+                                os.listdir(self.samples_folder))
+            file_names = list(file_names)
+            file_paths = [os.path.join(self.samples_folder, x) for x in file_names]
 
             fields_list = []
-            for fPath in fPaths:
-                rObj = RPN(fPath)
-                rObj.suppress_log_messages()
-                data = rObj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
-                                                                    level_kind=level_kind)
+            for fPath in file_paths:
+                try:
+                    r_obj = RPN(fPath)
+                    r_obj.suppress_log_messages()
+                    data = r_obj.get_all_time_records_for_name_and_level(varname=var_name, level=level,
+                                                                         level_kind=level_kind)
+                    r_obj.close()
+                except Exception as e:
+                    print(e)
+                    continue
+
+                # Check date ranges in the file
+                tmin = min(data.keys())
+                tmax = max(data.keys())
+
+                # Check if year is in the range
+                if tmin.year > end_year or tmax.year < start_year:
+                    continue
+
+                # Check if the month is in the range
+                if tmin.month not in months and tmax.month not in months:
+                    continue
+
                 for t, field in data.items():
                     if start_year <= t.year <= end_year:
                         if t.month in months:
                             fields_list.append(field)
-                rObj.close()
+
             return np.mean(fields_list, axis=0)
         else:
             raise NotImplementedError(
@@ -2404,7 +2416,6 @@ class Crcm5ModelDataManager:
             hdf.close()
             return dates, climatology
 
-
         if maximum:
             operator = np.max
         else:
@@ -2419,7 +2430,7 @@ class Crcm5ModelDataManager:
         # # There is some weird behaviour when using indexed tables...
         # #index columns for speed
         # if not var_table.cols.year.is_indexed:
-        #    var_table.cols.year.create_index()
+        # var_table.cols.year.create_index()
         # var_table.cols.month.create_index()
         # var_table.cols.day.create_index()
         # var_table.cols.hour.create_index()
@@ -2450,7 +2461,7 @@ class Crcm5ModelDataManager:
         # if level is None:
         # sel_year_level = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
         # else:
-        #     sel_year_level = "(year >= {0}) & (year <= {1}) & (level_index == {2})".format(start_year, end_year, level)
+        # sel_year_level = "(year >= {0}) & (year <= {1}) & (level_index == {2})".format(start_year, end_year, level)
         #
         # for d in daily_dates:
         #     sel_day = "(day == {0}) & (month == {1})".format(d.day, d.month)
@@ -2726,8 +2737,8 @@ def compare_streamflow_normals():
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
@@ -2869,8 +2880,8 @@ def compare_streamflow():
 
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_with_lakes"
     # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_88x88_0.5deg_with_lakes"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
-    #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes"
+    # data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_with_lakes_flake"
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_highres_spinup_12_month_without_lakes_v3"
 
     #data_path = "/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes_v3"
