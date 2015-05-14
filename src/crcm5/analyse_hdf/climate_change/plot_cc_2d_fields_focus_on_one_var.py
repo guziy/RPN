@@ -6,6 +6,7 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator, LogLocator
 from mpl_toolkits.basemap import maskoceans
+from scipy.stats import ttest_ind
 from crcm5 import infovar
 from crcm5.analyse_hdf.run_config import RunConfig
 import matplotlib.pyplot as plt
@@ -109,8 +110,26 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         mean_c_base = data_dict[base_config_c][season].mean(axis=0)
         mean_f_base = data_dict[base_config_f][season].mean(axis=0)
 
+
         mean_c_modif = data_dict[modif_config_c][season].mean(axis=0)
         mean_f_modif = data_dict[modif_config_f][season].mean(axis=0)
+
+
+
+        _, p_signif_base_cc = ttest_ind(data_dict[base_config_c][season], data_dict[base_config_f][season], axis=0, equal_var=False)
+        _, p_signif_current = ttest_ind(data_dict[base_config_c][season], data_dict[modif_config_c][season], axis=0, equal_var=False)
+
+        print("Base p-value ranges: {} to {}".format(p_signif_base_cc.min(), p_signif_base_cc.max()))
+        _, p_signif_modif_cc = ttest_ind(data_dict[modif_config_c][season], data_dict[modif_config_f][season], axis=0, equal_var=False)
+        _, p_signif_future = ttest_ind(data_dict[base_config_f][season], data_dict[modif_config_f][season], axis=0, equal_var=False)
+
+        ij_to_pvalue = {
+            (0, 2): p_signif_base_cc,
+            (1, 2): p_signif_modif_cc,
+            (2, 0): p_signif_current,
+            (2, 1): p_signif_future,
+            (2, 2): np.minimum(p_signif_current, p_signif_future)
+        }
 
         ij_to_data = {
             (0, 0): mean_c_base, (1, 0): mean_c_modif,
@@ -130,8 +149,8 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         d1 = ij_to_data[0, 1] - ij_to_data[0, 0]
         d2 = ij_to_data[1, 1] - ij_to_data[1, 0]
         all_cc_diffs = np.ma.asarray([d1, d2])
-        mindiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 5)
-        maxdiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 70)
+        mindiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 1)
+        maxdiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 99)
 
         maxdiff_cc = max(np.ma.abs(maxdiff_cc), np.ma.abs(mindiff_cc))
         mindiff_cc = -maxdiff_cc
@@ -149,8 +168,8 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         minval = np.min(all_means)
         maxval = np.max(all_means)
 
-        mindiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 5)
-        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 90)
+        mindiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 1)
+        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 99)
 
         maxdiff_proc = max(np.abs(maxdiff_proc), np.abs(mindiff_proc))
         mindiff_proc = -maxdiff_proc
@@ -218,6 +237,20 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                     print(i, j, the_min, the_max)
 
                 im = bmp.pcolormesh(xx, yy, plot_data[i][j][:, :], cmap=the_cmap, norm=norm)
+
+                if (i, j) in ij_to_pvalue:
+                    p = ij_to_pvalue[i, j]
+                    # not_signif = (p > 0.2)
+                    # not_signif = np.ma.masked_where(~not_signif, not_signif) * 0.75
+                    # not_signif = np.ma.masked_where(plot_data[i][j].mask, not_signif)
+                    # bmp.pcolormesh(xx, yy, not_signif, vmin=0, vmax=1, cmap=cm.get_cmap("gray", 20))
+                    p = np.ma.masked_where(plot_data[i][j].mask, p)
+                    cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
+                    # create a legend for the contour set
+                    # artists, labels = cs.legend_elements()
+                    # ax.legend(artists, labels, handleheight=2)
+
+
                 bmp.colorbar(im, ticks=bounds, extend=extend)
                 bmp.drawcoastlines(ax=ax, linewidth=0.5)
 
@@ -247,7 +280,7 @@ def main():
 
     var_names = ["TT", "HU", "PR", "AV", "STFL", "TRAF"]
 
-    var_names = ["TT", "PR"]
+    # var_names = ["TT", "PR"]
 
     levels = [0, 0, 0, 0, 0, 0]
     multipliers = {
@@ -268,7 +301,7 @@ def main():
     # base_label = "CRCM5-L"
     #
     # modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
-    #                      "quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
+    # "quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
     # modif_label = "CRCM5-LI"
 
     start_year_c = 1980

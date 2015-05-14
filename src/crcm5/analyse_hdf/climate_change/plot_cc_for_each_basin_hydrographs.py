@@ -13,6 +13,7 @@ from rpn.rpn import RPN
 from matplotlib import cm
 
 from data.cell_manager import CellManager
+from util.geo.basemap_info import BasemapInfo
 
 
 __author__ = 'huziy'
@@ -174,8 +175,8 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         diff_vmin = min(diff_vmin, delta[name].min())
 
 
-    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=35, height_cm=45)
-    ncols = 4
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=15)
+    ncols = 3
     nrows = len(items) // ncols + int(len(items) % ncols != 0)
     fig = plt.figure()
 
@@ -202,10 +203,10 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         line_base = ax.plot(daily_dates, cc_base[name].copy(), "b", label="{}".format(data_to_plot.base_label), lw=2)
         line_modif = ax.plot(daily_dates, cc_modif[name].copy(),
                              color="r", label="{}".format(data_to_plot.modif_label),
-                             zorder=5)
+                             zorder=5, lw=2)
 
         for tl in ax.get_yticklabels():
-            tl.set_color("r")
+            tl.set_color("b")
 
         ax_twin = ax.twinx()
         assert isinstance(ax_twin, Axes)
@@ -213,7 +214,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         for tl in ax_twin.get_yticklabels():
             tl.set_color('g')
 
-        line_diff = ax_twin.plot(daily_dates, delta[name].copy(), "g",
+        line_diff = ax_twin.plot(daily_dates, delta[name].copy(), "g--",
                                  label="({})-({})".format(data_to_plot.modif_label, data_to_plot.base_label),
                                  lw=3)
 
@@ -230,20 +231,16 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
         ax.set_ylim(bottom=vmin, top=vmax * 1.2)
 
-        if row == nrows - 1 or (row == nrows - 2 and col > 0):
-            ax.xaxis.set_major_formatter(FuncFormatter(format_day_tick_labels))
-        else:
-            for tl in ax.get_xticklabels():
-                tl.set_visible(False)
+        ax.xaxis.set_major_formatter(FuncFormatter(format_day_tick_labels))
 
         # ax.xaxis.set_minor_locator(DayLocator(interval=5))
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
-        ax.xaxis.set_minor_locator(MonthLocator())
+        ax.xaxis.set_major_locator(MonthLocator())
+        ax.grid()
 
     the_labels = (data_to_plot.base_label, data_to_plot.modif_label)
     ax_last.legend((line_base[0], line_modif[0], line_diff[0]),
-                   (the_labels[0], the_labels[1], "{} vs {}".format(*the_labels)),
-                   bbox_to_anchor=(1.2, 1), loc=2)
+                   (the_labels[0], the_labels[1], "{} vs {}".format(*the_labels[::-1])),
+                   bbox_to_anchor=(1.2, 1), loc=2, borderaxespad=0)
 
     plt.tight_layout()
     print("Saving the plot to {}".format(img_path))
@@ -253,17 +250,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
 
 def format_day_tick_labels(d, pos=None):
     d = num2date(d)
-
-    if d.day == 1 or pos == 0:
-        if pos == 0:
-            return "\n{:%b}".format(d)
-
-        return "{:%d}\n{:%b}".format(d, d)
-    else:
-        if (d.day - 1) % 31 != 0:
-            return ""
-
-        return "{:%d}".format(d)
+    return d.strftime("%b")[0]
 
 
 def is_part_of_points_in(basin, x_list, y_list, the_part=0.5):
@@ -278,8 +265,11 @@ def is_part_of_points_in(basin, x_list, y_list, the_part=0.5):
     return float(n_inside) / float(n_total) > the_part
 
 
-def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None, lats=None, bmp=None,
+def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
                                     directions=None, accumulation_areas=None):
+
+    assert isinstance(bmp_info, BasemapInfo)
+
     driver = ogr.GetDriverByName("ESRI Shapefile")
     print(driver)
     ds = driver.Open(shape_file, 0)
@@ -298,13 +288,14 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
     # create Coordinate Transformation
     coord_transform = osr.CoordinateTransformation(latlong_proj, utm_proj)
 
-    utm_coords = coord_transform.TransformPoints(list(zip(lons.flatten(), lats.flatten())))
+    utm_coords = coord_transform.TransformPoints(list(zip(bmp_info.lons.flatten(), bmp_info.lats.flatten())))
     utm_coords = np.asarray(utm_coords)
-    x_utm = utm_coords[:, 0].reshape(lons.shape)
-    y_utm = utm_coords[:, 1].reshape(lons.shape)
+    x_utm = utm_coords[:, 0].reshape(bmp_info.lons.shape)
+    y_utm = utm_coords[:, 1].reshape(bmp_info.lons.shape)
 
-    basin_mask = np.zeros_like(lons)
-    cell_manager = CellManager(directions, accumulation_area_km2=accumulation_areas, lons2d=lons, lats2d=lats)
+    basin_mask = np.zeros_like(bmp_info.lons)
+    cell_manager = CellManager(directions, accumulation_area_km2=accumulation_areas,
+                               lons2d=bmp_info.lons, lats2d=bmp_info.lats)
 
     index = 1
     basins = []
@@ -352,8 +343,8 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
                 name_selected = name
                 # basin_names_out.append(name)
 
-                lons_out.append(lons[i, j])
-                lats_out.append(lats[i, j])
+                lons_out.append(bmp_info.lons[i, j])
+                lats_out.append(bmp_info.lats[i, j])
                 name_to_ij_out[name] = (i, j)
 
                 basin_mask[the_mask == 1] = index
@@ -376,21 +367,21 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
         accumulation_areas_temp[i, j] = -1
 
     fig = plt.figure()
-    xx, yy = bmp(lons, lats)
+    xx, yy = bmp_info.get_proj_xy()
     # im = bmp.pcolormesh(xx, yy, basin_mask.reshape(xx.shape))
-    bmp.drawcoastlines(linewidth=0.5)
-    bmp.drawrivers(zorder=5, color="0.5")
+    bmp_info.basemap.drawcoastlines(linewidth=0.5)
+    bmp_info.basemap.drawrivers(zorder=5, color="0.5")
     # bmp.colorbar(im)
 
 
-    xs, ys = bmp(lons_out, lats_out)
+    xs, ys = bmp_info.basemap(lons_out, lats_out)
     # bmp.scatter(xs, ys, c="r", s=40, zorder=2)
 
     cmap = cm.get_cmap("rainbow", index - 1)
     bn = BoundaryNorm(list(range(index)), index - 1)
 
     basin_mask = np.ma.masked_where(basin_mask < 0.5, basin_mask)
-    bmp.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap)
+    bmp_info.basemap.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap)
 
     for name, xa, ya, lona, lata in zip(basin_names_out, xs, ys, lons_out, lats_out):
 
@@ -412,7 +403,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
                      bbox=dict(boxstyle='round,pad=0.5', fc='yellow'),
                      arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
 
-    bmp.readshapefile(BASIN_BOUNDARIES_FILE.split(".")[0].replace("utm18", "latlon"), "basin", linewidth=1.2)
+    bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"), "basin", linewidth=1.2)
 
     fig.savefig("qc_basin_outlets_points.png", bbox_inches="tight")
     # plt.show()
@@ -433,7 +424,7 @@ def get_image_path(base_c, base_f, modif_c, modif_f, varname):
     """
     from pathlib import Path
 
-    the_labels = (base_c.label, modif_c.label)
+    the_labels = (modif_c.label, base_c.label)
 
     img_folder = Path("cc_paper").joinpath("{}_vs_{}".format(*the_labels))
 
@@ -487,10 +478,9 @@ def main_interflow():
     facc = r_obj.get_first_record_for_name("FAA")
     fldr = r_obj.get_first_record_for_name("FLDR")
 
-    lons, lats, bmp = analysis.get_basemap_from_hdf(file_path=base_current_path)
+    bmp_info = analysis.get_basemap_from_hdf(file_path=base_current_path)
 
-    basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(lons=lons, lats=lats,
-                                                                                              bmp=bmp,
+    basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,
                                                                                               directions=fldr)
 
@@ -546,10 +536,9 @@ def main():
     facc = r_obj.get_first_record_for_name("FAA")
     fldr = r_obj.get_first_record_for_name("FLDR")
 
-    lons, lats, bmp = analysis.get_basemap_from_hdf(file_path=base_current_path)
+    bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path)
 
-    basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(lons=lons, lats=lats,
-                                                                                              bmp=bmp,
+    basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,
                                                                                               directions=fldr)
 
@@ -559,6 +548,12 @@ def main():
     basin_name_to_basin_mask = basin_name_to_basin_mask if varname not in ["STFA", "STFL"] else None
 
     img_path = get_image_path(base_config_c, base_config_f, modif_config_c, modif_config_f, varname)
+
+
+    # select lake rich basins
+    sel_basins = ["ARN", "PYR", "LGR", "RDO", "SAG", "WAS"]
+    basin_name_to_out_indices_map = {k: v for k, v in basin_name_to_out_indices_map.items() if k in sel_basins}
+
 
     calculate_and_plot_climate_change_hydrographs(data_to_plot,
                                                   name_to_out_indices=basin_name_to_out_indices_map,
@@ -572,4 +567,4 @@ if __name__ == '__main__':
     application_properties.set_current_directory()
 
     main()
-    main_interflow()
+    # main_interflow()

@@ -6,6 +6,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.basemap import maskoceans
 from pathlib import Path
+from scipy.stats import ttest_ind
 from crcm5 import infovar
 from crcm5.analyse_hdf.run_config import RunConfig
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
@@ -131,10 +132,19 @@ def _plot_row(vname="", level=0, config_dict=None):
 
     diff_max = 0
     print(list(current_base.keys()))
-    # Get the ranges for colorbar
+    # Get the ranges for colorbar and calculate p-values
+    season_to_pvalue = OrderedDict()
     for season in list(current_base.keys()):
         season_to_diff[season] = (future_modif[season] - current_modif[season]) - \
                                  (future_base[season] - current_base[season])
+
+
+        _, pvalue_current = ttest_ind(current_modif[season], current_base[season], axis=0, equal_var=False)
+        _, pvalue_future = ttest_ind(future_modif[season], current_base[season], axis=0, equal_var=False)
+
+
+        season_to_pvalue[season] = np.minimum(pvalue_current, pvalue_future)
+
         # Convert units if required
         if vname in config_dict.multipliers:
             season_to_diff[season] *= config_dict.multipliers[vname]
@@ -166,6 +176,17 @@ def _plot_row(vname="", level=0, config_dict=None):
         img = bmp.pcolormesh(xx, yy, season_to_plot_diff[season].copy(), vmin=-diff_max, vmax=diff_max,
                              cmap=cmap, norm=bn)
 
+        p = season_to_pvalue[season]
+        if hasattr(season_to_plot_diff[season], "mask"):
+            p = np.ma.masked_where(season_to_plot_diff[season].mask, p)
+
+
+        cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
+        # create a legend for the contour set
+        # artists, labels = cs.legend_elements()
+        # ax.legend(artists, labels, handleheight=2)
+
+
         bmp.drawcoastlines(ax=ax, linewidth=0.4)
 
     cb = plt.colorbar(img, cax=fig.add_subplot(gs[the_row, len(current_base)]))
@@ -182,7 +203,7 @@ def main_interflow():
     plot_utils.apply_plot_params(font_size=12, width_cm=20)
 
     # season_to_months = get_default_season_to_months_dict()
-    season_to_months = OrderedDict([("April", [4, ]), ("May", [5, ]), ("June", [6, ]), ("July", [7, ])])
+    season_to_months = OrderedDict([("January", [1, ]), ("February", [2, ]), ("March", [3, ]), ])
 
     var_names = ["TT", "HU", "PR", "AV", "TRAF", "I1", "STFL"]
 
@@ -278,7 +299,7 @@ def main():
     # var_names = ["TT", "HU", "PR", "AV", "STFL"]
     # var_names = ["TRAF", "STFL", "TRAF+TDRA"]
     # var_names = ["TT", "PR", "STFL"]
-    var_names = ["STFL", ]
+    var_names = ["TT", "PR", "STFL", ]
     levels = [0, 0, 0, 0, 0]
     multipliers = {
         "PR": 1.0, 
@@ -322,7 +343,7 @@ def main():
     ])
 
     # Changes global plot properties mainly figure size and font size
-    plot_utils.apply_plot_params(font_size=14, width_cm=40, height_cm=12)
+    plot_utils.apply_plot_params(font_size=12, width_cm=25, height_cm=15)
 
 
     # Plot the differences
