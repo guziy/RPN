@@ -139,7 +139,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     result = ExtremeProperties()
     for extr_type, months in ExtremeProperties.extreme_type_to_month_of_interest.items():
 
-        result.ret_lev_dict[extr_type] = {}
+        result.return_lev_dict[extr_type] = {}
         result.std_dict[extr_type] = {}
 
         return_periods = ExtremeProperties.extreme_type_to_return_periods[extr_type]
@@ -178,7 +178,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         nyears = ext_values.shape[0]
         nx, ny = ext_values.shape[1:]
 
-        result.ret_lev_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
+        result.return_lev_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
         result.std_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
 
         # Probably needs to be optimized ...
@@ -187,7 +187,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
                 ret_period_to_level, ret_period_to_std = do_gevfit_for_a_point(ext_values[:, i, j], extreme_type=extr_type)
 
                 for ret_period in return_periods:
-                    result.ret_lev_dict[extr_type][ret_period][i, j] = ret_period_to_level[ret_period]
+                    result.return_lev_dict[extr_type][ret_period][i, j] = ret_period_to_level[ret_period]
                     result.std_dict[extr_type][ret_period][i, j] = ret_period_to_std[ret_period]
 
         # Save the computed return levels and standard deviations to the cache file
@@ -199,7 +199,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
             p = Path(cache_file)
 
             to_save = [
-                result.ret_lev_dict[extr_type][ret_period],
+                result.return_lev_dict[extr_type][ret_period],
                 result.std_dict[extr_type][ret_period]
             ]
 
