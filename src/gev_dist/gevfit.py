@@ -145,7 +145,7 @@ def qfunc(x, sigma, mu, ksi):
     message = 'in qfunc: result = {0}, x = {1}, sigma = {2}, mu = {3}, ksi = {4}, the_base = {5}'
     assert result > 0.0, message.format(result, x, sigma, mu, ksi, the_base)
 
-    if np.isinf(result) or isnan(result):
+    if np.isinf(result) or np.isnan(result):
         print('Too big numbers: ', the_base, result)
         assert False, 'qfunc = {0}'.format(result)
         return None
@@ -168,7 +168,7 @@ def objective_function_stationary_high(pars, data):
             return BIG_NUM
         assert qi > 0, 'qi = {0}'.format(qi)
 
-        minus_ln_pdfi = log(sigma) - (ksi + 1.0) * log(qi) + qi - log(ksi_probability)
+        minus_ln_pdfi = np.log(sigma) - (ksi + 1.0) * np.log(qi) + qi - np.log(ksi_probability)
         if minus_ln_pdfi < 0:
             return BIG_NUM
         result += minus_ln_pdfi
@@ -195,7 +195,7 @@ def objective_function_stationary_low(pars, data):
         if qi is None:
             return BIG_NUM
         assert qi > 0, 'qi = {0}'.format(qi)
-        minus_ln_pdfi = np.log(sigma) - (ksi + 1.0) * log(qi) + qi - log(ksi_probability)
+        minus_ln_pdfi = np.log(sigma) - (ksi + 1.0) * np.log(qi) + qi - np.log(ksi_probability)
         if minus_ln_pdfi < 0:
             return BIG_NUM
 
@@ -215,7 +215,7 @@ def get_initial_params(vals):
     else:
         bias = 0
 
-    sigma0 = np.sqrt(6.0 * np.cov(vals, bias=bias)) / pi
+    sigma0 = np.sqrt(6.0 * np.cov(vals, bias=bias)) / np.pi
 
     if not sigma0:
         sigma0 = 0.2 * np.mean(vals)
