@@ -38,8 +38,8 @@ class ExtremeProperties(object):
     ])
 
     def __init__(self, ret_lev_dict=None, std_dict=None):
-        self.return_lev_dict = ret_lev_dict
-        self.std_dict = std_dict
+        self.return_lev_dict = ret_lev_dict if ret_lev_dict is not None else {}
+        self.std_dict = std_dict if std_dict is not None else {}
 
     def get_low_rl_for_period(self, return_period=2):
         return self.return_lev_dict[self.low][return_period]
@@ -106,7 +106,6 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
         params = gevfit.optimize_stationary_for_period(
             data[indices], high_flow=is_high_flow
         )
-
 
         for ret_period in return_periods:
             print(extreme_type, ret_period)
@@ -203,9 +202,6 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
 
             pickle.dump(to_save, p.open("wb"))
 
-
-
-
     return result
 
 
@@ -230,7 +226,6 @@ def main():
 
     future_shift_years = 75
 
-
     params = dict(
         data_path=rea_driven_path, start_year=start_year_c, end_year=end_year_c, label=rea_driven_label)
 
@@ -249,9 +244,8 @@ def main():
     # get basemap information
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=rea_driven_path)
 
-
-
-    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c, varname=varname)
+    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c,
+        varname=varname)
 
     print(rs_gcm_c)
 
