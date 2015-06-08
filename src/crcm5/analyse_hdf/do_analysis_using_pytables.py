@@ -146,7 +146,7 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
 
 
             # Calculate daily mean
-            daily = pnl.groupby(lambda d: (d.month, d.day)).mean().values
+            daily = pnl.groupby(lambda d: (d.month, d.day), axis="items").mean().values
 
             nt = len(daily)
             result_fields.append(operator([daily[t:t + n_avg_days].mean(axis=0) for t in range(0, nt, n_avg_days)]))
@@ -570,4 +570,3 @@ if __name__ == "__main__":
     print("Elapsed time {0} seconds".format(time.clock() - t0))
 
     print("Hello world")
-
