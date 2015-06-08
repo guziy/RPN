@@ -148,7 +148,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         for return_period in list(return_periods):
             # Construct the name of the cache file
             cache_file = get_cache_file_name(rconfig, months=months,
-                ret_period=return_period, extreme_type=extr_type)
+                                             ret_period=return_period,
+                                             extreme_type=extr_type)
 
             p = Path(cache_file)
 
@@ -182,7 +183,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         for i in range(nx):
             for j in range(ny):
                 ret_period_to_level, ret_period_to_std = do_gevfit_for_a_point(ext_values[:, i, j],
-                    extreme_type=extr_type, return_periods=return_periods)
+                                                                               extreme_type=extr_type,
+                                                                               return_periods=return_periods)
 
                 for return_period in return_periods:
                     result.return_lev_dict[extr_type][return_period][i, j] = ret_period_to_level[return_period]
@@ -192,7 +194,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         for return_period in return_periods:
             # Construct the name of the cache file
             cache_file = get_cache_file_name(rconfig, months=months,
-                ret_period=return_period, extreme_type=extr_type)
+                                             ret_period=return_period, extreme_type=extr_type)
 
             p = Path(cache_file)
 
