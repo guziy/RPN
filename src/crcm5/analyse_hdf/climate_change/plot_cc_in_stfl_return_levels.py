@@ -108,8 +108,6 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
         )
 
         for ret_period in return_periods:
-            print(extreme_type, ret_period)
-
             ret_period_to_level_list[ret_period].append(
                 gevfit.get_return_level_for_type_and_period(
                     params, ret_period, extreme_type=extreme_type
@@ -249,7 +247,7 @@ def main():
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=rea_driven_path)
 
     rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c,
-        varname=varname)
+                                                         varname=varname)
 
     print(rs_gcm_c)
 

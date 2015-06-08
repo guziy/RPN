@@ -3,7 +3,7 @@ __date__ = "$22 oct. 2010 12:00:55$"
 
 import os
 import pickle
-from math import *
+# from math import *
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ from datetime import timedelta
 import lmoments3
 
 inches_per_pt = 1.0 / 72.27  # Convert pt to inch
-golden_mean = (sqrt(5.0) - 1.0) / 2.0  # Aesthetic ratio
+golden_mean = (np.sqrt(5.0) - 1.0) / 2.0  # Aesthetic ratio
 fig_width = 2000 * inches_per_pt  # width in inches
 fig_height = fig_width * golden_mean  # height in inches
 fig_size = [fig_width, fig_height]
@@ -38,6 +38,7 @@ def zoom_to_qc():
 
 
 BIG_NUM = 1.0e6
+
 
 def get_return_level_for_type_and_period(pars, return_period, extreme_type="high"):
     # sigma, mu, ksi, zero_fraction = pars
@@ -76,7 +77,6 @@ def get_low_ret_level_stationary(pars, return_period):
 def get_low_ret_level(params, return_period=2, zero_fraction=0.0):
     if 1.0 / return_period <= zero_fraction:
         return 0
-
 
     if params[0] is None:
         return -1
@@ -119,13 +119,13 @@ def qfunc(x, sigma, mu, ksi):
     """
     Helper function (1 + ksi*(x - mu) / sigma)^(-1/ksi)
     """
-    if sigma <= 1.0e-10:  #sigma > 0
+    if sigma <= 1.0e-10:  # sigma > 0
         return None
 
     if 1.0 + ksi * (x - mu) / sigma <= 0:
         return None
 
-    if abs(ksi) <= 1.0e-5:  #ksi != 0
+    if abs(ksi) <= 1.0e-5:  # ksi != 0
         the_power = -(x - mu) / sigma
         result = np.exp(the_power)
         assert result > 0, 'the_power = {0}, mu = {1}, sigma = {2}'.format(the_power, mu, sigma)
@@ -134,7 +134,7 @@ def qfunc(x, sigma, mu, ksi):
     the_base = 1.0 + ksi * (x - mu) / sigma
     result = the_base ** (-1.0 / ksi)
 
-    if isinf(result) or result == 0:
+    if np.isinf(result) or result == 0:
         return None
 
     if not result:
@@ -145,7 +145,7 @@ def qfunc(x, sigma, mu, ksi):
     message = 'in qfunc: result = {0}, x = {1}, sigma = {2}, mu = {3}, ksi = {4}, the_base = {5}'
     assert result > 0.0, message.format(result, x, sigma, mu, ksi, the_base)
 
-    if isinf(result) or isnan(result):
+    if np.isinf(result) or isnan(result):
         print('Too big numbers: ', the_base, result)
         assert False, 'qfunc = {0}'.format(result)
         return None
@@ -249,14 +249,12 @@ def optimize_stationary_for_period(extremes, high_flow=True, use_lmoments=False)
     if zero_fraction >= 0.5:
         return [None, None, None, 1.0]
 
-
-
     # L-moments
     if use_lmoments:
         pars = get_initial_params_using_lm(extremes[indices])
         pars.append(zero_fraction)
         lev = get_high_ret_level_stationary(pars, 10.0)
-        if isnan(lev):
+        if np.isnan(lev):
             print(pars)
             print(extremes[indices].tolist())
             assert False, 'lev = {0}'.format(lev)
@@ -278,9 +276,7 @@ def optimize_stationary_for_period(extremes, high_flow=True, use_lmoments=False)
 
     pars0 = get_initial_params(extremes[indices])
 
-
-
-    #    pars0 = get_initial_params_using_lm(extremes[indices])
+    # pars0 = get_initial_params_using_lm(extremes[indices])
     #    if objective_function(pars0, extremes[indices]) == BIG_NUM:
     #        pars0 = get_initial_params(extremes[indices])
 
@@ -304,13 +300,11 @@ def optimize_stationary_for_period(extremes, high_flow=True, use_lmoments=False)
     #                                                        retall = True
     #                                                        )
 
-
     if warnflag:
         print(list(extremes))
         print(warnflag)
         print(pars)
         assert False, 'warnflag != 0'
-
 
     # assert warnflag == 0, 'warnflag = {0}, z = {1}, \n extremes = {2}'.format(warnflag, z, str(extremes))
     assert z > 0, 'z <= 0'
@@ -365,6 +359,7 @@ def optimize_stationary_for_period_and_all_cells(
         start_date=datetime(1970, 1, 1, 0, 0),
         end_date=datetime(1999, 12, 31, 0, 0),
         event_duration=timedelta(days=1)):
+
     print(paramfile)
 
     # check whether optimization is required
