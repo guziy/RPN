@@ -99,7 +99,7 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
 
     ret_period_to_level_list = {k: [] for k in return_periods}
 
-    for b_index in range(ExtremeProperties.nbootstrap):
+    for _ in range(ExtremeProperties.nbootstrap):
 
         indices = np.random.random_integers(0, high=nyears - 1, size=nyears)
 
@@ -157,6 +157,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
                 return_periods.remove(return_period)
 
                 cache_levs, cache_stds = pickle.load(p.open("rb"))
+                print("Using cache from {}".format(str(p)))
 
                 result.return_lev_dict[extr_type][return_period] = cache_levs
                 result.std_dict[extr_type][return_period] = cache_stds
