@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from docutils.nodes import thead
 
@@ -14,6 +15,7 @@ from matplotlib import cm
 
 from data.cell_manager import CellManager
 from util.geo.basemap_info import BasemapInfo
+from matplotlib.text import Text
 
 
 __author__ = 'huziy'
@@ -175,12 +177,12 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         diff_vmin = min(diff_vmin, delta[name].min())
 
 
-    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=15)
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=12)
     ncols = 3
     nrows = len(items) // ncols + int(len(items) % ncols != 0)
     fig = plt.figure()
 
-    sfmt = ScalarFormatter(useMathText=True)
+    sfmt = ScalarFormatter(useMathText=True, useOffset=False)
     sfmt.set_powerlimits((-2, 2))
 
     gs = GridSpec(nrows, ncols)
@@ -200,26 +202,54 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         ax.annotate(name, (0.9, 0.1), xycoords="axes fraction", bbox=bbox_props, zorder=10,
                     alpha=0.5, horizontalalignment="right", verticalalignment="bottom")
 
-        line_base = ax.plot(daily_dates, cc_base[name].copy(), "b", label="{}".format(data_to_plot.base_label), lw=2)
-        line_modif = ax.plot(daily_dates, cc_modif[name].copy(),
-                             color="r", label="{}".format(data_to_plot.modif_label),
+        # line_base = ax.plot(daily_dates, cc_base[name].copy(), "b", label="{}".format(data_to_plot.base_label), lw=2)
+        #
+        #
+        # line_modif = ax.plot(daily_dates, cc_modif[name].copy(),
+        #                      color="r", label="{}".format(data_to_plot.modif_label),
+        #                      zorder=5, lw=2)
+
+        # Plot monthly
+        monthly_dates = [datetime(2001, m, 1) for m in range(1, 13)]
+        monthly_base = [np.mean([v for d, v in zip(daily_dates, cc_base[name]) if d.month == m]) for m in range(1, 13)]
+        monthly_modif = [np.mean([v for d, v in zip(daily_dates, cc_modif[name]) if d.month == m]) for m in range(1, 13)]
+
+        line_base = ax.plot(monthly_dates, monthly_base, "b", label="{}".format(data_to_plot.base_label), lw=2)
+        line_modif = ax.plot(monthly_dates, monthly_modif, color="r", label="{}".format(data_to_plot.modif_label),
                              zorder=5, lw=2)
+
+
+
 
         for tl in ax.get_yticklabels():
             tl.set_color("b")
 
+        assert isinstance(ax, Axes)
+        coef_text = ax.yaxis.get_offset_text()
+        assert isinstance(coef_text, Text)
+        coef_text.set_color("b")
+
         ax_twin = ax.twinx()
         assert isinstance(ax_twin, Axes)
+        ax_twin.yaxis.get_offset_text().set_color("g")
 
         for tl in ax_twin.get_yticklabels():
             tl.set_color('g')
 
-        line_diff = ax_twin.plot(daily_dates, delta[name].copy(), "g--",
+        # line_diff = ax_twin.plot(daily_dates, delta[name].copy(), "g--",
+        #                          label="({})-({})".format(data_to_plot.modif_label, data_to_plot.base_label),
+        #                          lw=3)
+
+
+        # Plot monthly
+        monthly_dates = [datetime(2001, m, 1) for m in range(1, 13)]
+        monthly_delta = [np.mean([v for d, v in zip(daily_dates, delta[name]) if d.month == m]) for m in range(1, 13)]
+        line_diff = ax_twin.plot(monthly_dates, monthly_delta, "g--",
                                  label="({})-({})".format(data_to_plot.modif_label, data_to_plot.base_label),
                                  lw=3)
 
-        ax_twin.yaxis.set_major_locator(MaxNLocator(nbins=5))
-        ax_twin.set_ylim(bottom=diff_vmin, top=diff_vmax)
+        ax_twin.yaxis.set_major_locator(MaxNLocator(nbins=5, symmetric=True))
+        # ax_twin.set_ylim(bottom=diff_vmin, top=diff_vmax)
         # ax_twin.invert_yaxis()
         ax_twin.yaxis.set_major_formatter(sfmt)
 
@@ -228,8 +258,8 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         subplot_count += 1
         ax.yaxis.set_major_formatter(sfmt)
 
-        ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
-        ax.set_ylim(bottom=vmin, top=vmax * 1.2)
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=5, symmetric=True))
+        # ax.set_ylim(bottom=vmin, top=vmax * 1.2)
 
         ax.xaxis.set_major_formatter(FuncFormatter(format_day_tick_labels))
 
@@ -240,7 +270,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
     the_labels = (data_to_plot.base_label, data_to_plot.modif_label)
     ax_last.legend((line_base[0], line_modif[0], line_diff[0]),
                    (the_labels[0], the_labels[1], "{} vs {}".format(*the_labels[::-1])),
-                   bbox_to_anchor=(1.2, 1), loc=2, borderaxespad=0)
+                   bbox_to_anchor=(1, -0.2), loc="upper right", borderaxespad=0, ncol=len(the_labels) + 1)
 
     plt.tight_layout()
     print("Saving the plot to {}".format(img_path))
@@ -366,6 +396,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
 
         accumulation_areas_temp[i, j] = -1
 
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=25)
     fig = plt.figure()
     xx, yy = bmp_info.get_proj_xy()
     # im = bmp.pcolormesh(xx, yy, basin_mask.reshape(xx.shape))
@@ -385,21 +416,45 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
 
     for name, xa, ya, lona, lata in zip(basin_names_out, xs, ys, lons_out, lats_out):
 
-        text_offset = (-20, 20) if name not in ["GEO", "BAL", "MEL", ] else (20, 20)
+        text_offset = (-20, 20) if name not in ["GEO", ] else (20, 20)
+
+        if name in ["ARN"]:
+            text_offset = (-20, 50)
+
+        if name in ["FEU"]:
+            text_offset = (0, 70)
+
+        if name in ["CAN"]:
+            text_offset = (-115, 70)
+
+        if name in ["MEL"]:
+            text_offset = (20, 40)
+
+
+        if name in ["PYR"]:
+            text_offset = (60, 70)
+
+        if name in ["BAL", ]:
+            text_offset = (50, 30)
+
+
         if name in ["NAT", "BEL"]:
             text_offset = (-20, -20)
 
-        if name in ["RDO", "STM", "SAG", "BOM", "MOI", "ROM", "MAN"]:
-            text_offset = (20, -20)
+        if name in ["RDO", "STM", "SAG", "BOM", "MOI", "ROM", ]:
+            text_offset = (50, -50)
 
-        if name in ["CHU", "NAT", "ARN", "FEU"]:
-            text_offset = (20, 20)
+        if name in ["CHU", "NAT"]:
+            text_offset = (40, 40)
+
+        if name in ["MAN", ]:
+            text_offset = (55, -45)
 
 
 
 
         plt.annotate(name, xy=(xa, ya), xytext=text_offset,
-                     textcoords='offset points', ha='right', va='bottom', font_properties=FontProperties(size=10),
+                     textcoords='offset points', ha='right', va='bottom',
                      bbox=dict(boxstyle='round,pad=0.5', fc='yellow'),
                      arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
 
@@ -478,7 +533,7 @@ def main_interflow():
     facc = r_obj.get_first_record_for_name("FAA")
     fldr = r_obj.get_first_record_for_name("FLDR")
 
-    bmp_info = analysis.get_basemap_from_hdf(file_path=base_current_path)
+    bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path)
 
     basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,
@@ -492,6 +547,11 @@ def main_interflow():
                                        name_to_indices=basin_name_to_out_indices_map, varname=varname)
 
     img_path = get_image_path(base_config_c, base_config_f, modif_config_c, modif_config_f, varname)
+
+    # select lake rich basins
+    sel_basins = ["ARN", "PYR", "LGR", "RDO", "SAG", "WAS"]
+    basin_name_to_out_indices_map = {k: v for k, v in basin_name_to_out_indices_map.items() if k in sel_basins}
+
 
     calculate_and_plot_climate_change_hydrographs(data_to_plot,
                                                   name_to_out_indices=basin_name_to_out_indices_map,
@@ -567,4 +627,4 @@ if __name__ == '__main__':
     application_properties.set_current_directory()
 
     main()
-    # main_interflow()
+    main_interflow()

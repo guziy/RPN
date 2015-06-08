@@ -52,11 +52,9 @@ def compute_seasonal_means_for_each_year(sim_config, season_to_months=None, var_
 
 
 def _plot_row(vname="", level=0, config_dict=None):
-
     bmp, lons, lats = config_dict.basemap, config_dict.lons, config_dict.lats
     xx, yy = bmp(lons, lats)
     lons[lons > 180] -= 360
-
 
     fig = config_dict.fig
     gs = config_dict.gs
@@ -66,63 +64,70 @@ def _plot_row(vname="", level=0, config_dict=None):
     the_row = config_dict.the_row
     season_to_months = config_dict.season_to_months
 
-
     if "+" in vname or "-" in vname:
         op = "+" if "+" in vname else "-"
         vname1, vname2 = vname.split(op)
-        
+
         vname1 = vname1.strip()
         vname2 = vname2.strip()
-               
+
         current_base = {}
         future_base = {}
-        
+
         current_modif = {}
         future_modif = {}
 
         # vname1 
-        current_base1 = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname1, level=level,
+        current_base1 = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname1,
+                                                             level=level,
+                                                             season_to_months=season_to_months)
+        future_base1 = compute_seasonal_means_for_each_year(config_dict["Future"][label_base], var_name=vname1,
+                                                            level=level,
                                                             season_to_months=season_to_months)
-        future_base1 = compute_seasonal_means_for_each_year(config_dict["Future"][label_base], var_name=vname1, level=level,
-                                                           season_to_months=season_to_months)
 
         current_modif1 = compute_seasonal_means_for_each_year(config_dict["Current"][label_modif], var_name=vname1,
+                                                              level=level,
+                                                              season_to_months=season_to_months)
+        future_modif1 = compute_seasonal_means_for_each_year(config_dict["Future"][label_modif], var_name=vname1,
                                                              level=level,
                                                              season_to_months=season_to_months)
-        future_modif1 = compute_seasonal_means_for_each_year(config_dict["Future"][label_modif], var_name=vname1, level=level,
-                                                            season_to_months=season_to_months)
 
-       
+
         # vname2
-        current_base2 = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname2, level=level,
+        current_base2 = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname2,
+                                                             level=level,
+                                                             season_to_months=season_to_months)
+        future_base2 = compute_seasonal_means_for_each_year(config_dict["Future"][label_base], var_name=vname2,
+                                                            level=level,
                                                             season_to_months=season_to_months)
-        future_base2 = compute_seasonal_means_for_each_year(config_dict["Future"][label_base], var_name=vname2, level=level,
-                                                           season_to_months=season_to_months)
 
         current_modif2 = compute_seasonal_means_for_each_year(config_dict["Current"][label_modif], var_name=vname2,
+                                                              level=level,
+                                                              season_to_months=season_to_months)
+        future_modif2 = compute_seasonal_means_for_each_year(config_dict["Future"][label_modif], var_name=vname2,
                                                              level=level,
                                                              season_to_months=season_to_months)
-        future_modif2 = compute_seasonal_means_for_each_year(config_dict["Future"][label_modif], var_name=vname2, level=level,
-                                                            season_to_months=season_to_months)
 
-        
         for season in current_base1:
             current_base[season] = eval("current_base2[season]{}current_base1[season]".format(op))
             future_base[season] = eval("future_base2[season]{}future_base1[season]".format(op))
             current_modif[season] = eval("current_modif2[season]{}current_modif1[season]".format(op))
             future_modif[season] = eval("future_modif2[season]{}future_modif1[season]".format(op))
- 
+
 
     else:
-        current_base = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname, level=level,
+        current_base = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname,
+                                                            level=level,
                                                             season_to_months=season_to_months)
-        future_base = compute_seasonal_means_for_each_year(config_dict["Future"][label_base], var_name=vname, level=level,
+        future_base = compute_seasonal_means_for_each_year(config_dict["Future"][label_base], var_name=vname,
+                                                           level=level,
                                                            season_to_months=season_to_months)
 
         current_modif = compute_seasonal_means_for_each_year(config_dict["Current"][label_modif], var_name=vname,
                                                              level=level,
                                                              season_to_months=season_to_months)
-        future_modif = compute_seasonal_means_for_each_year(config_dict["Future"][label_modif], var_name=vname, level=level,
+        future_modif = compute_seasonal_means_for_each_year(config_dict["Future"][label_modif], var_name=vname,
+                                                            level=level,
                                                             season_to_months=season_to_months)
 
     # Calculate the differences in cc signal
@@ -138,10 +143,8 @@ def _plot_row(vname="", level=0, config_dict=None):
         season_to_diff[season] = (future_modif[season] - current_modif[season]) - \
                                  (future_base[season] - current_base[season])
 
-
         _, pvalue_current = ttest_ind(current_modif[season], current_base[season], axis=0, equal_var=False)
-        _, pvalue_future = ttest_ind(future_modif[season], current_base[season], axis=0, equal_var=False)
-
+        _, pvalue_future = ttest_ind(future_modif[season], future_base[season], axis=0, equal_var=False)
 
         season_to_pvalue[season] = np.minimum(pvalue_current, pvalue_future)
 
@@ -156,7 +159,6 @@ def _plot_row(vname="", level=0, config_dict=None):
             diff_max = max(np.percentile(np.abs(field_to_plot[~field_to_plot.mask]), 95), diff_max)
         else:
             diff_max = max(np.percentile(np.abs(field_to_plot), 95), diff_max)
-
 
     img = None
     locator = MaxNLocator(nbins=10, symmetric=True)
@@ -180,7 +182,6 @@ def _plot_row(vname="", level=0, config_dict=None):
         if hasattr(season_to_plot_diff[season], "mask"):
             p = np.ma.masked_where(season_to_plot_diff[season].mask, p)
 
-
         cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
         # create a legend for the contour set
         # artists, labels = cs.legend_elements()
@@ -188,6 +189,8 @@ def _plot_row(vname="", level=0, config_dict=None):
 
 
         bmp.drawcoastlines(ax=ax, linewidth=0.4)
+        if vname in ["I5"] and season.lower() in ["summer"]:
+            ax.set_visible(False)
 
     cb = plt.colorbar(img, cax=fig.add_subplot(gs[the_row, len(current_base)]))
 
@@ -198,7 +201,6 @@ def _plot_row(vname="", level=0, config_dict=None):
 
 
 def main_interflow():
-
     # Changes global plot properties mainly figure size and font size
     plot_utils.apply_plot_params(font_size=12, width_cm=20)
 
@@ -215,7 +217,7 @@ def main_interflow():
         "PR": 1.,
         "TRAF": 1.,
         "I1": infovar.soil_layer_widths_26_to_60[0] * 1000.0,
-        "TRAF+TDRA": 24 * 60 * 60 
+        "TRAF+TDRA": 24 * 60 * 60
     }
 
     name_to_units = {
@@ -299,16 +301,16 @@ def main():
     # var_names = ["TT", "HU", "PR", "AV", "STFL"]
     # var_names = ["TRAF", "STFL", "TRAF+TDRA"]
     # var_names = ["TT", "PR", "STFL"]
-    var_names = ["TT", "PR", "STFL", ]
-    levels = [0, 0, 0, 0, 0]
+    var_names = ["TT", "PR", "I5", "STFL", ]
+    levels = [0, ] * len(var_names)
     multipliers = {
-        "PR": 1.0, 
-        "TRAF+TDRA": 24 * 60 * 60 
+        "PR": 1.0,
+        "TRAF+TDRA": 24 * 60 * 60
     }
     name_to_units = {
-        "TRAF": "mm/day", "I1": "mm", "PR": "mm/day", "TRAF+TDRA": "mm/day"
+        "TRAF": "mm/day", "I1": "mm", "PR": "mm/day", "TRAF+TDRA": "mm/day",
+        "I5": "mm", "AV": r"${\rm W/m^2}$"
     }
-
 
     base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                         "quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
@@ -343,7 +345,7 @@ def main():
     ])
 
     # Changes global plot properties mainly figure size and font size
-    plot_utils.apply_plot_params(font_size=12, width_cm=25, height_cm=15)
+    plot_utils.apply_plot_params(font_size=12, width_cm=25, height_cm=25)
 
 
     # Plot the differences

@@ -80,6 +80,7 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
         x_station, y_station = basemap(the_model_point.longitude, the_model_point.latitude)
 
     basemap.scatter(x_station, y_station, c="b", s=100, ax=ax, linewidths=1, zorder=2)
+    ax.annotate("{}".format(the_station.id), (x_station, y_station), va="top", ha="right")
 
     from util import direction_and_value
 
@@ -736,11 +737,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 def plot_point_positions_with_upstream_areas(processed_stations, processed_model_points,
                                              basemap, cell_manager):
     # plot point positions with upstream areas
+
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
     impath = os.path.join(images_folder, "station_positions.png")
-    fig.savefig(impath, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+    fig.savefig(impath, bbox_inches="tight")
     plt.close(fig)
 
 

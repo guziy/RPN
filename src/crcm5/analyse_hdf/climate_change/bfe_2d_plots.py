@@ -92,6 +92,9 @@ def plot_bfe_row_for_var(finfo_to_season_to_diff=None, ax_list=None, season_titl
             if i == 0:
                 ax.set_ylabel(infovar.get_display_label_for_var(finfo.varname))
 
+            if finfo.varname in ["I5", ] and season.lower() in ["summer"]:
+                ax.set_visible(False)
+
     ax = ax_list[-1]
     # ax.set_aspect(30)
     ax.set_title(infovar.get_units(varname))

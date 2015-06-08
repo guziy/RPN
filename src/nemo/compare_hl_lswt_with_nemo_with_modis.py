@@ -20,13 +20,13 @@ import pandas as pd
 
 def validate_seas_mean_lswt_from_hostetler_and_nemo_with_homa(
         hl_data_path="/home/huziy/skynet3_rech1/CRCM_GL_simulation/all_files",
-        start_year=2003, end_year=2009):
+        start_year=2003, end_year=2006):
     crcm5_model_manager = Crcm5ModelDataManager(samples_folder_path=hl_data_path, all_files_in_samples_folder=True)
 
     varname = "L1"
-    season = "Summer"
+    season = "Fall"
 
-    season_to_months = {season: range(6, 9)}
+    season_to_months = {season: range(9, 11)}
     season_months = list(season_to_months[season])
 
     print(season_months, season_to_months)
@@ -94,6 +94,8 @@ def validate_seas_mean_lswt_from_hostetler_and_nemo_with_homa(
     vmin = min(obs_sst_clim.min(), nemo_sst_clim.min(), hl_lake_temp_clim.min())
     vmax = max(obs_sst_clim.max(), nemo_sst_clim.max(), hl_lake_temp_clim.max())
 
+    print("vmin={}; vmax={}".format(vmin, vmax))
+
     # plt.figure()
     # b = Basemap()
     # xx, yy = b(lons_obs, lats_obs)
@@ -105,7 +107,8 @@ def validate_seas_mean_lswt_from_hostetler_and_nemo_with_homa(
     img_folder = Path("nemo/hostetler")
     if not img_folder.is_dir():
         img_folder.mkdir()
-    img_file = img_folder.joinpath("validate_summer_lswt_hostetler_nemo_vs_homa_{}-{}.png".format(start_year, end_year))
+    img_file = img_folder.joinpath("validate_{}_lswt_hostetler_nemo_vs_homa_{}-{}.png".format(
+        season, start_year, end_year))
 
     fig = plt.figure()
     gs = GridSpec(1, 4, width_ratios=[1, 1, 1, 0.05])

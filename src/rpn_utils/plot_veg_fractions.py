@@ -252,7 +252,7 @@ def main(base_folder="/skynet3_rech1/huziy/veg_fractions/",
 
 
 
-    #set relation between vegetation frsction fields and names
+    # set relation between vegetation frsction fields and names
     veg_fract_dict = {}
     for lev, the_field in veg_fractions.items():
         lev = int(lev)
@@ -269,4 +269,8 @@ def main(base_folder="/skynet3_rech1/huziy/veg_fractions/",
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    import application_properties
+    application_properties.set_current_directory()
+    main(base_folder="/home/huziy/skynet3_rech1/hdf_store", fname="pm1979010100_00000000p", label="veg_qc_10km",
+         canopy_name="VF")

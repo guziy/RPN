@@ -15,6 +15,7 @@ from tables import NoSuchNodeError
 
 from crcm5 import infovar
 from crcm5.analyse_hdf import common_plot_params as cpp
+from util.number_formatting import ordinal
 
 
 __author__ = 'huziy'
@@ -359,11 +360,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
 
 
     # total lake effect
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
-    control_label = "CRCM5-NL"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    labels = ["CRCM5-L2", ]
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5"
+    # control_label = "CRCM5-NL"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    # labels = ["CRCM5-L2", ]
 
 
 
@@ -383,11 +384,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
 
 
     # interflow effect ()
-    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    # control_label = "CRCM5-L2"
-    #
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
-    # labels = ["CRCM5-L2I", ]
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
+    control_label = "CRCM5-L2"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
+    labels = ["CRCM5-L2I", ]
 
 
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
@@ -423,7 +424,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
     domain_props.x = x
     domain_props.y = y
 
-    lake_fraction = analysis.get_array_from_file(path=control_path, var_name="lake_fraction")
+    lake_fraction = analysis.get_array_from_file(path=control_path, var_name=infovar.HDF_LAKE_FRACTION_NAME)
+    dpth_to_bedrock = analysis.get_array_from_file(path=control_path, var_name=infovar.HDF_DEPTH_TO_BEDROCK_NAME)
+
+    assert dpth_to_bedrock is not None
+
 
     if lake_fraction is None:
         lake_fraction = np.zeros(lons2d.shape)
@@ -441,6 +446,16 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
     ncols = len(season_list) + 1  # +1 is for the colorbar
     gs = gridspec.GridSpec(len(varnames), ncols, width_ratios=[1.0, ] * (ncols - 1) + [0.07], top=0.95)
 
+
+    lev_width_3d = np.ones(dpth_to_bedrock.shape + infovar.soil_layer_widths_26_to_60.shape)
+    lev_width_3d *= infovar.soil_layer_widths_26_to_60[np.newaxis, np.newaxis, :]
+    lev_bot_3d = lev_width_3d.cumsum(axis=2)
+
+    correction = -lev_bot_3d + dpth_to_bedrock[:, :, np.newaxis]
+    # Apply the correction only at points where the layer bottom is lower than
+    # the bedrock
+    lev_width_3d[correction < 0] += correction[correction < 0]
+    lev_width_3d[lev_width_3d < 0] = 0
 
 
     # plot the plots one file per variable
@@ -465,7 +480,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
 
                 control_mean = infovar.get_to_plot(var_name, control_mean,
                                                    lake_fraction=domain_props.lake_fraction,
-                                                   lons=lons2d, lats=lats2d)
+                                                   lons=lons2d, lats=lats2d, level_width_m=lev_width_3d[:, :, level])
 
                 # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
                 if var_name in ["PR", "TRAF", "TDRA"]:
@@ -494,7 +509,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
 
                     modified_mean = infovar.get_to_plot(var_name, modified_mean,
                                                         lake_fraction=domain_props.lake_fraction, lons=lons2d,
-                                                        lats=lats2d)
+                                                        lats=lats2d, level_width_m=lev_width_3d[:, :, level])
 
                     # multiply by the number of days in a season for PR and TRAF to convert them into mm from mm/day
                     if var_name in ["PR", "TRAF", "TDRA"]:
@@ -529,7 +544,11 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
             _plot_row(axes, data, the_label, var_name, increments=True, domain_props=domain_props,
                       season_list=season_list, significance=label_to_season_to_significance[the_label])
 
-            axes[0].set_ylabel(infovar.get_display_label_for_var(var_name))
+            var_label = infovar.get_long_display_label_for_var(var_name)
+            if var_name in ["I1"]:
+                var_label = "{}\n{} layer".format(var_label, ordinal(level + 1))
+
+            axes[0].set_ylabel(var_label)
 
     fig.suptitle("({}) vs ({})".format(labels[0], control_label), font_properties=FontProperties(weight="bold"))
     folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(
@@ -540,7 +559,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons_for_all_vars(
 
     imname = "{0}_{1}.png".format("-".join(varnames), "_".join(labels + [control_label]))
     impath = os.path.join(folderpath, imname)
-    fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
+    fig.savefig(impath, bbox_inches="tight")
 
 
 def main():

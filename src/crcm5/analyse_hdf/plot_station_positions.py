@@ -1,19 +1,21 @@
 from matplotlib import cm
 import matplotlib
 from matplotlib.axes import Axes
-from matplotlib.collections import QuadMesh
+from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle
 from crcm5.model_point import ModelPoint
 from data import cehq_station
 from data.cehq_station import Station
 from data.cell_manager import CellManager
-from . import common_plot_params as cpp
+import crcm5.analyse_hdf.common_plot_params as cpp
 
 __author__ = 'huziy'
 import numpy as np
 
 
 def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_manager):
+    assert isinstance(ax, Axes)
+
     from util import direction_and_value
 
     delta = 1.0 / float(len(model_points))
@@ -44,7 +46,7 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
         x, y = basemap(cell_manager.lons2d, cell_manager.lats2d)
 
 
-        #plot the arrows for upstream cells
+        # plot the arrows for upstream cells
         ups_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
 
         x1d_start = x[ups_mask == 1]
@@ -61,9 +63,11 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
 
         labels.append(point_info)
 
-        basemap.scatter(x_station, y_station, c="r", s=10, ax=ax, linewidths=0.5, zorder=2)
+        basemap.scatter(x_station, y_station, c="r", s=80, ax=ax, linewidths=0.5, zorder=2)
 
         ishift, jshift = direction_and_value.flowdir_values_to_shift(fld1d)
+
+        print(type(i_upstream[0]), type(ishift[0]))
 
         sub_i_upstream_next = i_upstream + ishift
         sub_j_upstream_next = j_upstream + jshift
@@ -77,7 +81,7 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
         u2d[i_upstream, j_upstream] = u
         v2d[i_upstream, j_upstream] = v
 
-        #basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax=ax)
+        # basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax=ax)
 
         img = basemap.pcolormesh(x, y, np.ma.masked_where(ups_mask < 0.5, ups_mask) * darkness,
                                  cmap= cmap,
@@ -87,13 +91,19 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
         p = Rectangle((0, 0), 1, 1, fc=cmap(darkness))
         artists.append(p)
 
-
-        #ax.text(x_station, y_station, point_info, bbox=dict(facecolor="white"))
+        va = "top"
+        ha = "left" if the_station.id in ["093806", "081007"] else "right"
+        yshift = -5 if the_station.id in ["093806", "081007"] else -5
+        ax.annotate("{}".format(the_station.id), (x_station, y_station),
+                    ha=ha, va=va, textcoords="offset points", xytext=(0, yshift),
+                    font_properties=FontProperties(size=20))
+        # ax.text(x_station, y_station, point_info, bbox=dict(facecolor="white"))
         darkness += delta
 
-    ax.legend(artists, labels, handleheight = 1, ncol = 3, loc=2)
+    # ax.legend(artists, labels, handleheight = 1, ncol = 3, loc=2)
     basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
     basemap.drawrivers(cpp.COASTLINE_WIDTH)
+
 
 
 def main():

@@ -5,10 +5,10 @@ import shutil
 from matplotlib import cm
 import brewer2mpl
 from matplotlib.axes import Axes
-from matplotlib.dates import DateFormatter, MonthLocator
+from matplotlib.dates import DateFormatter, MonthLocator, num2date
 from matplotlib.figure import Figure
 import os
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, FuncFormatter
 from mpl_toolkits.basemap import Basemap
 import pandas
 from pandas.tseries.converter import _daily_finder
@@ -34,7 +34,7 @@ from . import do_analysis_using_pytables as analysis
 # input: station ids or list of station objects and
 #          the list of simulations, to compare with
 
-#Notes: All the model simulations are assumed to be on the same grid
+# Notes: All the model simulations are assumed to be on the same grid
 
 images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_for_lake-river_paper"
 
@@ -95,19 +95,19 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
     u2d[i_upstream, j_upstream] = u
     v2d[i_upstream, j_upstream] = v
 
-    #basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax=ax)
+    # basemap.quiver(x, y, u2d, v2d, angles="xy", scale_units="xy", scale=1, ax=ax)
     basemap.pcolormesh(x, y, np.ma.masked_where(ups_mask < 0.5, ups_mask) * 0.5, cmap=cm.get_cmap(name="gray"),
                        ax=ax, vmax=1, vmin=0)
 
     basemap.drawcoastlines(linewidth=cpp.COASTLINE_WIDTH)
 
-    #put back the initial corners of the basemap
+    # put back the initial corners of the basemap
     basemap.llcrnrx, basemap.llcrnry, basemap.urcrnrx, basemap.urcrnry = basemap_initial_corners
 
     return ups_mask
 
 
-#noinspection PyNoneFunctionAssignment
+# noinspection PyNoneFunctionAssignment
 def _validate_temperature_with_anusplin(ax, the_model_point, model_data_dict=None,
                                         obs_tmin_clim_fields=None,
                                         obs_tmax_clim_fields=None, daily_dates=None,
@@ -195,7 +195,7 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
     for label in simlabel_list:
         data = np.tensordot(model_data_dict[label], area_matrix) / basin_area_km2
 
-        #convert m/s to mm/day
+        # convert m/s to mm/day
         data = data * 1000.0 * 24 * 60 * 60
 
         df = _apply_running_mean(daily_dates, data, averaging_period=resample_period)
@@ -203,14 +203,14 @@ def _validate_precip_with_anusplin(ax, the_model_point, model_data_dict=None,
         ax.plot(df.index, df["values"], label=label, lw=1)
 
 
-    #obs_precip_clim_fields[np.isnan(obs_precip_clim_fields)] = -9999
-    #Do not draw region averaged observed precip for the regions, where there is missing data
+    # obs_precip_clim_fields[np.isnan(obs_precip_clim_fields)] = -9999
+    # Do not draw region averaged observed precip for the regions, where there is missing data
     if not np.any(np.isnan(obs_precip_clim_fields[0][upstream_mask == 1])):
         basin_precip = np.sum(
             obs_precip_clim_fields[:, i_select, j_select] * area_matrix[np.newaxis, i_select, j_select],
             axis=1) / basin_area_km2
 
-        #running mean
+        # running mean
         df = _apply_running_mean(daily_dates, basin_precip, averaging_period=resample_period)
         ax.plot(df.index, df["values"], label="precip-obs", lw=2, color="k")
 
@@ -588,10 +588,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                 # convert to m/s
                 values_model_evp /= 1000.0
                 values_model_evp = values_model_evp - np.mean(values_model_evp)
-                ax.plot(dates, values_model_evp, label=label + "-PE", lw=2)
-                ax_panel.plot(dates, values_model_evp, label=label + "-PE", lw=2)
+                ax.plot(dates, values_model_evp, label=label + "-NR", lw=2)
+                ax_panel.plot(dates, values_model_evp, label=label + "-NR", lw=2)
 
         if the_station is not None:
+            print(type(dates[0]))
             dates, values_obs = the_station.get_daily_climatology_for_complete_years_with_pandas(stamp_dates=dates,
                                                                                                  years=year_list)
 
@@ -619,17 +620,18 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                           va="top", ha="right")
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
-        ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        ax.xaxis.set_minor_locator(MonthLocator())
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda val, pos: num2date(val).strftime("%b")[0]))
+        # ax.xaxis.set_minor_locator(MonthLocator())
+        ax.xaxis.set_major_locator(MonthLocator())
         ax.grid()
         streamflow_axes = ax  # save streamflow axes for later use
 
         if not legend_added:
             ax_panel.legend(loc=(0.0, 1.1), borderaxespad=0.5, ncol=3)
-            ax_panel.xaxis.set_major_formatter(DateFormatter("%b"))
-            ax_panel.xaxis.set_minor_locator(MonthLocator())
-            ax_panel.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 3))))
+            ax_panel.xaxis.set_minor_formatter(FuncFormatter(lambda val, pos: num2date(val).strftime("%b")[0]))
+            ax_panel.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
+            ax_panel.xaxis.set_major_locator(MonthLocator())
+            ax_panel.xaxis.set_major_formatter(FuncFormatter(lambda val, pos: ""))
             ax_panel.set_ylabel(r"Level variation (${\rm m}$)")
             legend_added = True
 
@@ -713,8 +715,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     assert isinstance(figure_panel, Figure)
     figure_panel.tight_layout()
     figure_panel.savefig(
-        os.path.join(images_folder, "comp_lake-levels_at_point_with_obs_{0}.pdf".format("_".join(label_list))),
-        dpi=cpp.FIG_SAVE_DPI,
+        os.path.join(images_folder, "comp_lake-levels_at_point_with_obs_{0}.png".format("_".join(label_list))),
         bbox_inches="tight")
     plt.close(figure_panel)
     file_scores.close()

@@ -1,12 +1,16 @@
+from datetime import datetime
 import brewer2mpl
 from matplotlib import gridspec
 from matplotlib.colors import BoundaryNorm
 from matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
 from matplotlib.ticker import MaxNLocator
 import os
 from mpl_toolkits.basemap import maskoceans
 from crcm5 import infovar
+from data import cehq_station
 from data.anusplin import AnuSplinManager
+from data.cehq_station import Station
 from swe import SweDataManager
 from matplotlib import cm
 
@@ -26,7 +30,7 @@ images_folder = "/home/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/images_f
 
 
 def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_months=None,
-                    start_year=None, end_year=None, season_to_plot_indices=None):
+                    start_year=None, end_year=None, season_to_plot_indices=None, station_ids_list=None):
     """
     :param model_file:
     :param obs_manager: should implement the method
@@ -36,6 +40,21 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     """
 
     model_var_name = "PR"
+
+    if obs_manager is None:
+        print("Skipping validation of {}, since the obs manager is None.".format(model_var_name))
+        return
+
+    if station_ids_list is not None:
+        # Get the list of stations to indicate on the bias map
+        stations = cehq_station.read_station_data(
+            start_date=None, end_date=None, selected_ids=station_ids_list
+        )
+    else:
+        stations = []
+
+
+
     model_level = 0
     reasonable_error_mm_per_day = 1
 
@@ -103,10 +122,19 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
         im = basemap.pcolormesh(x, y, season_to_field[season], vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
+        for the_station in stations:
+            assert isinstance(the_station, Station)
+            xst, yst = basemap(the_station.longitude, the_station.latitude)
+            # ax.annotate(the_station.id, (xst, yst), font_properties=FontProperties(size=6),
+            #             bbox=dict(facecolor="w"), va="top", ha="right")
+            basemap.scatter(xst, yst, c="g", ax=ax)
+
+
         # small_error = (np.abs(season_to_field[season]) < reasonable_error_mm_per_day).astype(int)
         # nlevs = 1
         # ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
         # cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
+
 
 
     # artists, labels = cs.legend_elements()
@@ -120,8 +148,8 @@ def validate_precip(model_file="", simlabel="", obs_manager=None, season_to_mont
     if not os.path.isdir(atm_val_folder):
         os.mkdir(atm_val_folder)
 
-    out_filename = "{3}/validate_2d_{0}_{1}_{2}.jpeg".format(model_var_name, simlabel, seasons_str, atm_val_folder)
-    fig.savefig(os.path.join(images_folder, out_filename), dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+    out_filename = "{3}/validate_2d_{0}_{1}_{2}.png".format(model_var_name, simlabel, seasons_str, atm_val_folder)
+    fig.savefig(os.path.join(images_folder, out_filename), bbox_inches="tight")
 
 
 def validate_temperature(
@@ -134,6 +162,11 @@ def validate_temperature(
         anusplin data is in degrees Celsium
         model data is in deg C
     """
+
+    if obs_manager is None:
+        print("Skipping validation of {}, since the obs manager is None.".format(model_var_name))
+        return
+
 
     model_level = 0
     reasonable_error_deg = 2
@@ -212,24 +245,35 @@ def validate_temperature(
     units_str = r"${\rm ^\circ}$"
     var_str = r"$T_{\max}$" if model_var_name.endswith("_max") else r"$T_{\min}$"
     cax.set_title("{0}, {1}".format(var_str, units_str))
-    plt.colorbar(im, cax=cax, extend = "both")
+    plt.colorbar(im, cax=cax, extend="both")
     seasons_str = "_".join(sorted([str(s) for s in list(season_to_field.keys())]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
         os.mkdir(atm_val_folder)
 
-    out_filename = "{3}/validate_2d_{0}_{1}_{2}.jpeg".format(model_var_name, simlabel, seasons_str, atm_val_folder)
+    out_filename = "{3}/validate_2d_{0}_{1}_{2}.png".format(model_var_name, simlabel, seasons_str, atm_val_folder)
     fig.savefig(os.path.join(images_folder, out_filename), dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
 
 
 def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_plot_indices, start_year, end_year,
-                 lake_fraction = None):
+                 lake_fraction=None, station_ids_list=None):
     model_var_name = "I5"
     model_level = None
     reasonable_error_mm = 100.0
     assert isinstance(obs_manager, SweDataManager)
 
-    print("lake fraction ranges: {0}, {1}".format(lake_fraction.min(), lake_fraction.max()))
+
+    if station_ids_list is not None:
+        # Get the list of stations to indicate on the bias map
+        stations = cehq_station.read_station_data(
+            start_date=None, end_date=None, selected_ids=station_ids_list
+        )
+    else:
+        stations = []
+
+
+    if lake_fraction is not None:
+        print("lake fraction ranges: {0}, {1}".format(lake_fraction.min(), lake_fraction.max()))
 
     fig = plt.figure()
     obs_manager.name = "Obs."
@@ -273,7 +317,6 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
         season_to_field[season] = the_diff
 
-
     ncolors = 11
     gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 0.05])
 
@@ -289,7 +332,7 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
     # bn, bounds, _, _ = infovar.get_boundary_norm(vmin, vmax, ncolors, exclude_zero=True)
 
     bounds = [-100, -80, -50, -20, -10, -5]
-    bounds += [-b for b in reversed(bounds)]
+    bounds += [0, ] + [-b for b in reversed(bounds)]
     bn = BoundaryNorm(bounds, ncolors=len(bounds) - 1)
     cmap = cm.get_cmap("RdBu_r", len(bounds) - 1)
 
@@ -306,18 +349,31 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
 
-        negligible_snow = season_to_obs_field[season] < 1
 
         basemap.drawmapboundary(fill_color="gray")
-        to_plot = np.ma.masked_where((lake_fraction > 0.9), season_to_field[season])
+        if lake_fraction is not None:
+            to_plot = np.ma.masked_where((lake_fraction > 0.9), season_to_field[season])
+        else:
+            to_plot = season_to_field[season]
+
+
         to_plot = maskoceans(lon, lat, to_plot)
         im = basemap.pcolormesh(x, y, to_plot, vmin=vmin, vmax=vmax, cmap=cmap, norm=bn)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
-        small_error = ((np.abs(season_to_field[season]) < reasonable_error_mm) | to_plot.mask).astype(int)
-        nlevs = 1
+        # small_error = ((np.abs(season_to_field[season]) < reasonable_error_mm) | to_plot.mask).astype(int)
+        # nlevs = 1
         # ax.contour(x, y, small_error, nlevs, colors = "black", linestyle = "-")
-        cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
+        # cs = ax.contourf(x, y, small_error, nlevs, colors="none", hatches=["/", None], extend="lower", linewidth=2)
+
+
+        for the_station in stations:
+            assert isinstance(the_station, Station)
+            xst, yst = basemap(the_station.longitude, the_station.latitude)
+            # ax.annotate(the_station.id, (xst, yst), font_properties=FontProperties(size=6),
+            #             bbox=dict(facecolor="w"), va="top", ha="right")
+            basemap.scatter(xst, yst, c="g")
+
 
 
     # artists, labels = cs.legend_elements()
@@ -327,17 +383,16 @@ def validate_swe(model_file, obs_manager, season_to_months, simlabel, season_to_
 
     units_str = r"${\rm mm}$"
     var_str = r"SWE"
-    cax.set_title("{0}, {1}\n".format(var_str, units_str))
-    plt.colorbar(im, cax=cax, ticks = bounds, extend = "both")
-
+    cax.set_title("{0}\n".format(units_str))
+    plt.colorbar(im, cax=cax, ticks=bounds, extend="both")
 
     seasons_str = "_".join(sorted([str(s) for s in list(season_to_months.keys())]))
     atm_val_folder = os.path.join(images_folder, "validate_atm")
     if not os.path.isdir(atm_val_folder):
         os.mkdir(atm_val_folder)
 
-    out_filename = "{3}/validate_2d_{0}_{1}_{2}.jpeg".format(model_var_name, simlabel, seasons_str, atm_val_folder)
-    fig.savefig(os.path.join(images_folder, out_filename), dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+    out_filename = "{3}/validate_2d_{0}_{1}_{2}.png".format(model_var_name, simlabel, seasons_str, atm_val_folder)
+    fig.savefig(os.path.join(images_folder, out_filename), bbox_inches="tight")
 
 
 def do_4_seasons(start_year=1980, end_year=2010):
@@ -357,11 +412,14 @@ def do_4_seasons(start_year=1980, end_year=2010):
     }
 
     simlabel_to_path = {
-#        "CRCM5-R-CanESM2-current": "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5",
-#        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
-        "CRCM5-HCD-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5",
-#        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
-#        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
+        # "CRCM5-R-CanESM2-current": "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5",
+        #        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
+        "CRCM5-L1": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5",
+        #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
+        #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
+
+
+        # "CRCM5-L-CanESM2": "/RESCUE/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
     }
 
     print("Period of interest: {0}-{1}".format(start_year, end_year))
@@ -373,14 +431,22 @@ def do_4_seasons(start_year=1980, end_year=2010):
     tmax_obs_manager = AnuSplinManager(variable="stmx")
     tmin_obs_manager = AnuSplinManager(variable="stmn")
 
+    tmax_obs_manager = None
+    tmin_obs_manager = None
+
+
     swe_obs_manager = SweDataManager(var_name="SWE")
+    station_ids = [
+        "104001", "093806", "093801", "081002", "081007", "080718"
+    ]
 
     for simlabel, path in simlabel_to_path.items():
         # Validate precipitations
         validate_precip(model_file=path, obs_manager=pcp_obs_manager,
                         season_to_months=season_to_months, simlabel=simlabel,
                         season_to_plot_indices=season_to_plot_indices,
-                        start_year=start_year, end_year=end_year)
+                        start_year=start_year, end_year=end_year,
+                        station_ids_list=station_ids)
         #
         # # Validate daily maximum temperature
         validate_temperature(model_file=path, obs_manager=tmax_obs_manager,
@@ -398,13 +464,14 @@ def do_4_seasons(start_year=1980, end_year=2010):
         validate_swe(model_file=path, obs_manager=swe_obs_manager,
                      season_to_months=season_to_months, simlabel=simlabel,
                      season_to_plot_indices=season_to_plot_indices,
-                     start_year=start_year, end_year=end_year, lake_fraction = lake_fraction)
+                     start_year=start_year, end_year=end_year, lake_fraction=lake_fraction,
+                     station_ids_list=station_ids)
 
 
 def main():
     obs_varname = "pcp"
-    #anusplin = AnuSplinManager(variable=obs_varname)
-    #validate_precip(obs_manager=anusplin)
+    # anusplin = AnuSplinManager(variable=obs_varname)
+    # validate_precip(obs_manager=anusplin)
 
 
 if __name__ == "__main__":

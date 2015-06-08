@@ -1,8 +1,8 @@
 from pathlib import Path
 from matplotlib import cm
-from matplotlib.dates import date2num, DateFormatter, MonthLocator
+from matplotlib.dates import date2num, DateFormatter, MonthLocator, num2date
 from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, ScalarFormatter, FuncFormatter
 from crcm5.analyse_hdf.run_config import RunConfig
 
 __author__ = 'huziy'
@@ -99,37 +99,53 @@ def main():
     cs = ax.contourf(num_dates_2d, lats_agg_2d, intf_f[:], levels=cs.levels)
     all_axes.append(ax)
 
+
+
+
+
     # Colorbar for value plots
     cax = fig.add_subplot(gs[0, 2])
-    plt.colorbar(cs, cax=cax)
-    cax.set_title("mm/day\n")
+
+    sfmt = ScalarFormatter(useMathText=True)
+    sfmt.set_powerlimits((-2, 2))
+
+    plt.colorbar(cs, cax=cax, format=sfmt)
+    cax.set_xlabel("mm/day")
+    cax.yaxis.get_offset_text().set_position((-2, 10))
+
 
 
     # CC
-    diff_cmap = cm.get_cmap("RdBu_r", 10)
-    diff = intf_f - intf_c
-    delta = np.percentile(np.abs(diff), 99)
+    diff_cmap = cm.get_cmap("RdBu_r", 20)
+    diff = (intf_f - intf_c) / (0.5 * (intf_c + intf_f)) * 100
+    diff[(intf_f == 0) & (intf_c == 0)] = 0
+    print(np.min(diff), np.max(diff))
+    print(np.any(diff.mask))
+    print(np.any(intf_c.mask))
+    print(np.any(intf_f.mask))
+    delta = 200
     vmin = -delta
     vmax = delta
-    locator = MaxNLocator(nbins=10, symmetric=True)
+    locator = MaxNLocator(nbins=20, symmetric=True)
     clevs = locator.tick_values(vmin=vmin, vmax=vmax)
 
-    ax = fig.add_subplot(gs[1, :])
+    ax = fig.add_subplot(gs[1, :2])
+
     cs = ax.contourf(num_dates_2d, lats_agg_2d, diff, cmap=diff_cmap,
                      levels=clevs, extend="both")
-    all_axes.append(ax)
-    cb = plt.colorbar(cs, ax=ax)
     ax.set_title("Future - Current")
-    cb.ax.set_title("mm/day")
+    # ax.set_aspect("auto")
+    all_axes.append(ax)
+    cb = plt.colorbar(cs, cax=fig.add_subplot(gs[1, -1]))
+    cb.ax.set_xlabel(r"%")
+
 
     for i, the_ax in enumerate(all_axes):
-        the_ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        if i < len(all_axes) - 1:
-            the_ax.xaxis.set_major_locator(MonthLocator(interval=2))
-        else:
-            the_ax.xaxis.set_major_locator(MonthLocator())
+        the_ax.xaxis.set_major_formatter(FuncFormatter(lambda d, pos: num2date(d).strftime("%b")[0]))
+        the_ax.xaxis.set_major_locator(MonthLocator())
         the_ax.grid()
-        the_ax.set_ylabel("Latitude")
+        if i != 1:
+            the_ax.set_ylabel("Latitude")
 
     img_file = Path(img_folder).joinpath("INTF_rate_longit_avg.png")
     fig.tight_layout()

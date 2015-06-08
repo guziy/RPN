@@ -40,16 +40,16 @@ class SweDataManager(CRUDataManager):
         self.times_var = nc_vars["time"]
         self.times_num = nc_vars["time"][:]
         self.times = num2date(times, time_units_s)
-        self.var_data = nc_vars[self.var_name][:]
+        if not self.lazy:
+            self.var_data = nc_vars[self.var_name][:]
 
         x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
         self.kdtree = KDTree(list(zip(x_in, y_in, z_in)))
-
         print("SWE obs time limits: ", self.times[0], self.times[-1])
-        pass
 
     def get_mean_for_year_and_months(self, year, months=None):
         bool_vector = np.array([(x.year == year) and (x.month in months) for x in self.times])
+        assert self.var_data is not None
         return np.mean(self.var_data[bool_vector, :, :], axis=0)
 
 
@@ -116,14 +116,13 @@ class SweDataManager(CRUDataManager):
         :return:
         """
         import pandas as pd
-        #Use cache file for performance
+        # Use cache file for performance
         cache_file = "swe_obs_{0}-{1}_".format(start_year, end_year) + "-".join([str(x) for x in months]) + ".cache"
         if os.path.isfile(cache_file):
             print("Using cached SWE data from {0}".format(cache_file))
-            return pickle.load(open(cache_file))
-
+            return pickle.load(open(cache_file, "rb"))
         if self.lazy:
-            #TODO: implement
+            # TODO: implement
             raise NotImplementedError()
         else:
             nx, ny = self.lons2d.shape
@@ -133,7 +132,7 @@ class SweDataManager(CRUDataManager):
                 lambda d: (d.month in months) and (d.year >= start_year) and d.year <= end_year)
             df = data_panel.mean(axis="items")
         mean_field = df.values
-        pickle.dump(mean_field, open(cache_file, "w"))
+        pickle.dump(mean_field, open(cache_file, "wb"))
         return mean_field
 
     def getMeanFieldForMonthsInterpolatedTo(self, months=None,
@@ -148,6 +147,8 @@ class SweDataManager(CRUDataManager):
         :param end_year:
         :return:
         """
+
+        print(self.var_name)
 
         mean_field = self.get_mean(start_year, end_year, months = months)
         assert mean_field.shape == self.lons2d.shape, "data shape: ({0}, {1})".format(*mean_field.shape) + \

@@ -91,6 +91,10 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
         # basemap_info.basemap.colorbar(cs)
         basemap_info.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
 
+        # Hide snow plots for summer
+        if varname in ["I5"] and season.lower() in ["summer"]:
+            ax.set_visible(False)
+
     cax = fig.add_subplot(gs[:, -1]) if axes_list is None else axes_list[-1]
     cax.set_title(infovar.get_units(var_name=varname))
     plt.colorbar(cs, cax=cax)

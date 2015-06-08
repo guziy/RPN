@@ -388,13 +388,28 @@ class Station:
         assert years is not None
 
         df = pandas.DataFrame(data=self.values, index=self.dates, columns=["values", ])
+
         df["year"] = df.index.map(lambda the_date: the_date.year)
 
-        df = df[df["year"].isin(years)]
-        stamp_year = stamp_dates[0].year
-        daily_clim = df.groupby(by=lambda the_date: (the_date.month, the_date.day)).mean()
+        df = df.select(lambda d: d.year in years and not (d.month == 2 and d.day == 29))
 
-        vals = [daily_clim.ix[(d.month, d.day), "values"] for d in stamp_dates]
+        if len(df) == 0:
+            return None, None
+
+        stamp_year = stamp_dates[0].year
+
+
+        daily_clim = df.groupby(by=lambda the_date: datetime(stamp_year, the_date.month, the_date.day)).mean()
+
+        print(daily_clim.head())
+        pickle.dump(daily_clim, open("/home/huziy/daily_clim.bin", "wb"))
+        pickle.dump(stamp_dates, open("/home/huziy/stamp_dates.bin", "wb"))
+
+        print("The type of the first element in stamp_dates is {}".format(type(stamp_dates[0])))
+
+        vals = [daily_clim.ix[d, "values"] for d in stamp_dates]
+
+
         return stamp_dates, vals
 
 
@@ -654,8 +669,8 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
 
         # print "found {0}".format(the_id) , s.river_name
         # print "DA(GRDC) = {0}; DA(STNCatchment) = {1}".format(s.drainage_km2, fields[20])
-        #load data
-        #load min, mean and max
+        # load data
+        # load min, mean and max
         data_path = data_file_patt.format(the_id)
 
         s.grdc_monthly_clim_min = []
@@ -739,17 +754,17 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     print(table_names)
 
     for table_data in table_names:
-        #print "Table: {0}".format(table_data["name"])
+        # print "Table: {0}".format(table_data["name"])
 
         assert isinstance(table_data, sqlite3.Row)
-        #print table_data.keys()
-        #print table_data["name"]
+        # print table_data.keys()
+        # print table_data["name"]
 
         if table_data["name"] not in tables_of_interest:
             continue  # skip tables which are not interesting
 
 
-        #determine table layout
+        # determine table layout
         cur.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;", (table_data["name"],))
 
         scheme = cur.fetchone()
@@ -757,10 +772,10 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         print("++++" * 20)
 
 
-    #create station objects using data from sqlite db
+    # create station objects using data from sqlite db
 
 
-    #select stations in quebec region which are not regulated
+    # select stations in quebec region which are not regulated
     query = "select * from {0} join {1} on {0}.STATION_NUMBER = {1}.STATION_NUMBER" \
             " where ({0}.{2}=? or {0}.{2}=?) and {1}.REGULATED={3};".format(stations_table,
                                                                             station_regulation_table,
@@ -776,7 +791,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     print("Fetched the following station: ")
     print("There are {0} non-regulated stations in {1}.".format(len(data), province))
 
-    #the_row = cur.fetchone()
+    # the_row = cur.fetchone()
 
     stations = []
     for the_row in data:
@@ -817,12 +832,12 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
         stations.append(s)
 
-    #print the_row[province_field]
+    # print the_row[province_field]
     connect.close()
     if len(stations) == 0:
         print("Warning: could not find acceptable stations for hydat in {0} region".format(province))
     return stations
-    #pickle.dump(stations, open(cache_file, mode="w"))
+    # pickle.dump(stations, open(cache_file, mode="w"))
 
 
 if __name__ == "__main__":

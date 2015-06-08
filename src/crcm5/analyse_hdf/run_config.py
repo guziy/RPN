@@ -41,3 +41,11 @@ class RunConfig(object):
             return b
         else:
             return False
+
+    def get_sim_id(self):
+        """
+
+        Get short, but still hopefully unique, simulation identificator
+        :return:
+        """
+        return "{}_{}-{}".format(self.label, self.start_year, self.end_year)

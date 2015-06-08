@@ -67,7 +67,7 @@ def flowdir_values_to_shift(flowdir_values):
     i_shift_field[good] = i_shift[np.log2(flowdir_values[good]).astype("i4")]
     j_shift_field[good] = j_shift[np.log2(flowdir_values[good]).astype("i4")]
 
-    return i_shift_field, j_shift_field
+    return i_shift_field.astype("i4"), j_shift_field.astype("i4")
 
 
 if __name__ == "__main__":

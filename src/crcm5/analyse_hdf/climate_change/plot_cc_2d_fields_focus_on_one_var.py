@@ -115,7 +115,8 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         mean_f_modif = data_dict[modif_config_f][season].mean(axis=0)
 
 
-
+        print("------------ {}, {} --------------".format(vname, season))
+        print("data_dict[base_config_c][season].shape = {}".format(data_dict[base_config_c][season].shape))
         _, p_signif_base_cc = ttest_ind(data_dict[base_config_c][season], data_dict[base_config_f][season], axis=0, equal_var=False)
         _, p_signif_current = ttest_ind(data_dict[base_config_c][season], data_dict[modif_config_c][season], axis=0, equal_var=False)
 
@@ -141,10 +142,24 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
             ij_to_data[k] *= multiplier_dict.get(vname, 1)
 
             # mask oceans
-            ij_to_data[k] = maskoceans(lonsin=lons, latsin=lats, datain=ij_to_data[k])
+            mask_inland = vname in ["STFL", "STFA"] or vname.startswith("I")
+            ij_to_data[k] = maskoceans(lonsin=lons, latsin=lats, datain=ij_to_data[k], inlands=mask_inland)
 
         # get all means to calculate the ranges of mean fields
-        all_means = list(ij_to_data.values())
+        all_means = []
+        for vals in ij_to_data.values():
+            all_means.extend(vals[~vals.mask])
+
+        if vname == "PR":
+            # mm/day
+            minval = 0
+            maxval = 5
+            extend_val = "max"
+        else:
+            minval = np.percentile(all_means, 1)
+            maxval = np.percentile(all_means, 95)
+            extend_val = "neither"
+
 
         d1 = ij_to_data[0, 1] - ij_to_data[0, 0]
         d2 = ij_to_data[1, 1] - ij_to_data[1, 0]
@@ -165,8 +180,6 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         all_proc_diffs.append(d2 - d1)
         all_proc_diffs = np.ma.asarray(all_proc_diffs)
 
-        minval = np.min(all_means)
-        maxval = np.max(all_means)
 
         mindiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 1)
         maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 99)
@@ -231,7 +244,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                 else:
                     norm = BoundaryNorm(bounds, the_cmap.N)
 
-                extend = "both" if not plotting_values else "neither"
+                extend = "both" if not plotting_values else extend_val
 
                 if plotting_values:
                     print(i, j, the_min, the_max)
@@ -255,8 +268,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                 bmp.drawcoastlines(ax=ax, linewidth=0.5)
 
                 ax.set_title(j_to_title.get(j, "") if i == 0 else "")
-                ax.set_ylabel(i_to_label.get(i, "") if j == 0 else "",
-                              font_properties=FontProperties(style="italic"))
+                ax.set_ylabel(i_to_label.get(i, "") if j == 0 else "")
 
         # Save the image to the file
         img_name = "{}_{}_{}-{}_{}-{}.png".format(
@@ -278,11 +290,11 @@ def main():
 
     # season_to_months = OrderedDict([("April", [4, ]), ("May", [5, ]), ("June", [6, ]), ("July", [7, ])])
 
-    var_names = ["TT", "HU", "PR", "AV", "STFL", "TRAF"]
+    var_names = ["TT", "HU", "PR", "AV", "AH", "STFL", "TRAF", "I5"]
 
     # var_names = ["TT", "PR"]
 
-    levels = [0, 0, 0, 0, 0, 0]
+    levels = [0, ] * len(var_names)
     multipliers = {
         "PR": 1.0e3 * 24.0 * 3600.,
         "TRAF": 24 * 3600.0

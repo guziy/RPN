@@ -50,7 +50,7 @@ def plot_swe_bfes(runconfig_rea, runconfig_gcm, vname_model="I5", season_to_mont
 
 
 def main():
-    season_to_months = DEFAULT_SEASON_TO_MONTHS
+    season_to_months = OrderedDict([(s, months) for s, months in DEFAULT_SEASON_TO_MONTHS.items() if s.lower() not in "summer"])
 
     r_config = RunConfig(
         data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",

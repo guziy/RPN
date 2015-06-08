@@ -110,10 +110,10 @@ def main():
     end_year = 2010
 
     base_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    base_label = "CRCM5-HCD-RL"
+    base_label = "CRCM5-L"
 
     label_to_path = {
-        "CRCM5-HCD-RL-INTFL-a": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
+        "CRCM5-LI": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
     }
 
     season_to_months = OrderedDict([

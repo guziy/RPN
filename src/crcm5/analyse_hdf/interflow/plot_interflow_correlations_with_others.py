@@ -57,10 +57,10 @@ def main(start_year=1980, end_year=2010, months=None, ylabel="",
 
     corr1, intf_clim, i1_clim = calculate_correlation_field_for_climatology(**params)
     to_plot1 = maskoceans(lons, lats, corr1)
-    title_list.append("Corr({}, {})".format(
-        infovar.get_display_label_for_var(params["varname1"]),
-        infovar.get_display_label_for_var(params["varname2"])))
-    data_list.append(to_plot1)
+    # title_list.append("Corr({}, {})".format(
+    #     infovar.get_display_label_for_var(params["varname1"]),
+    #     infovar.get_display_label_for_var(params["varname2"])))
+    # data_list.append(to_plot1)
 
     # correlate interflow and precip
     params.update(dict(varname2="PR", level2=0))
@@ -89,26 +89,26 @@ def main(start_year=1980, end_year=2010, months=None, ylabel="",
     #                                                         level2=0, months=months)
 
     # Correlate interflow rate with latent heat flux
-    params = dict(
-        path1=default_path,
-        varname1="INTF",
-        level1=0,
-
-        path2=default_path,
-        level2=0,
-        varname2="AV",
-        months=months,
-
-        start_year=start_year, end_year=end_year,
-    )
-
-    corr4, _, _ = calculate_correlation_field_for_climatology(**params)
-    to_plot4 = np.ma.masked_where(to_plot1.mask, corr4)
-    title_list.append("Corr({}, {})".format(
-        infovar.get_display_label_for_var(params["varname1"]),
-        infovar.get_display_label_for_var(params["varname2"])))
-
-    data_list.append(to_plot4)
+    # params = dict(
+    #     path1=default_path,
+    #     varname1="INTF",
+    #     level1=0,
+    #
+    #     path2=default_path,
+    #     level2=0,
+    #     varname2="AV",
+    #     months=months,
+    #
+    #     start_year=start_year, end_year=end_year,
+    # )
+    #
+    # corr4, _, _ = calculate_correlation_field_for_climatology(**params)
+    # to_plot4 = np.ma.masked_where(to_plot1.mask, corr4)
+    # title_list.append("Corr({}, {})".format(
+    #     infovar.get_display_label_for_var(params["varname1"]),
+    #     infovar.get_display_label_for_var(params["varname2"])))
+    #
+    # data_list.append(to_plot4)
 
     # Do plotting
     clevels = np.arange(-1, 1.2, 0.2)
@@ -147,7 +147,7 @@ def main(start_year=1980, end_year=2010, months=None, ylabel="",
 
 
 def plot_correlations_for_seasons_as_subplots():
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=20)
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=15, height_cm=20)
 
     start_year = 1980
     end_year = 2010
@@ -155,7 +155,8 @@ def plot_correlations_for_seasons_as_subplots():
 
     fig = plt.figure()
 
-    gs = GridSpec(4, 5, width_ratios=[1.0, 1.0, 1.0, 1.0, 0.05])
+    ncols = 2
+    gs = GridSpec(4, ncols + 1, width_ratios=[1.0, ] * ncols + [0.05, ])
     # Winter
     months = [12, 1, 2]
     main(start_year=start_year, end_year=end_year, months=months, ylabel="Winter",
@@ -177,7 +178,7 @@ def plot_correlations_for_seasons_as_subplots():
                          fig=fig, current_row=3, gs=gs)
 
 
-    plt.colorbar(cax=fig.add_subplot(gs[:, 4]))
+    plt.colorbar(cax=fig.add_subplot(gs[:, -1]))
     plt.tight_layout()
 
     fig.savefig(os.path.join(imfolder, "corr_all_seasons_separately.png"))

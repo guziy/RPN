@@ -50,10 +50,12 @@ def compare_simulations_differences():
 
     # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
 
-    varnames = ["TT", "TRAF", "I1", "PR", "TDRA", "AV"]
+    # varnames = ["TT", "TRAF", "I1", "PR", "TDRA", "AV"]
 
     # varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
     # varnames = ["TT", "TRAF"]
+
+    varnames = ["STFA", "TRAF", "I1", "PR", "TDRA", "AV"]
     levels = len(varnames) * [0, ]
 
     # varnames = ["AS", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
@@ -167,7 +169,7 @@ def compare_2d_seasonal_means_from_simulations():
 
 
 def validate_seasonal_mean_atm_fields():
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=17, height_cm=15)
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=20)
     from crcm5.analyse_hdf import validate_model_fields
 
     p = Process(target=validate_model_fields.do_4_seasons, kwargs=dict(
@@ -193,7 +195,7 @@ def compare_quantiles():
 def compare_obs_and_model_lake_levels_at_points():
     from crcm5.analyse_hdf import compare_lake_levels_with_obs
 
-    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=20, height_cm=7)
+    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=25, height_cm=7)
 
     start_date = datetime(1980, 1, 1)
     end_date = datetime(2010, 12, 31)
@@ -235,6 +237,9 @@ if __name__ == "__main__":
 
     t0 = time.clock()
 
+    import matplotlib 
+    matplotlib.use("Agg")   
+ 
     configure()
     #
     # do_plot_static_fields()
@@ -260,7 +265,7 @@ if __name__ == "__main__":
 
 
     # Compare modelled and observed lake level anomalies at points
-    # compare_obs_and_model_lake_levels_at_points()
+    compare_obs_and_model_lake_levels_at_points()
 
     # plot_veg_fractions_for_a_random_run()
 
@@ -271,5 +276,6 @@ if __name__ == "__main__":
     # plot_diff_in_soil_profiles()
 
     # Seasonal mean differences for all variablesbetween 2 simulations
-    compare_simulations_differences()
+    # compare_simulations_differences()
+
     print("Execution time: {0} seconds".format(time.clock() - t0))

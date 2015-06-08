@@ -22,7 +22,8 @@ _varname_to_units = {
     "AH": r"${\rm W/m^2}$",
     "I1": r"${\rm mm}$",
     "HU": r"${\rm g/kg}$",
-    "TRAF": r"${\rm mm/day}$"
+    "TRAF": r"${\rm mm/day}$",
+    "I5": r"${\rm mm}$"
 
 }
 
@@ -35,7 +36,8 @@ _varname_to_label = {
     "AV": "LHF",
     "AH": "SHF",
     "TRAF": "ROFS",
-    "TRAF+TDRA": "ROF"
+    "TRAF+TDRA": "ROF",
+    "I5": "SWE"
 }
 
 
@@ -43,17 +45,26 @@ def get_display_label_for_var(varname):
     return _varname_to_label.get(varname, varname)
 
 
+def get_long_display_label_for_var(varname):
+    if varname in _varname_to_long_name:
+        return _varname_to_long_name[varname]
+    else:
+        return get_display_label_for_var(varname)
 
 _varname_to_long_name = {
     "STFL": "Streamflow",
+    "STFA": "Streamflow",
     "TT": "Temperature",
     "PR": "Total precipitation",
     "DEPTH_TO_BEDROCK": "Depth to bedrock",
     "lake_fraction": "Lake fraction",
     "SAND": "Soil fraction of sand",
     "CLAY": "Soil fraction of clay",
-    "AV": "Latent heat flux at the surface",
-    "AH": "Sensible heat flux at the surface"
+    "AV": "Latent heat flux",
+    "AH": "Sensible heat flux at the surface",
+    "I1": "Soil moisture (liquid)",
+    "TDRA": "Drainage",
+    "TRAF": "Surface runoff"
 }
 
 # Names of the variables in the hdf file

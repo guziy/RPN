@@ -24,9 +24,9 @@ def validate_seas_mean_lswt_from_hostetler_and_nemo_with_homa(
     crcm5_model_manager = Crcm5ModelDataManager(samples_folder_path=hl_data_path, all_files_in_samples_folder=True)
 
     varname = "sohefldo"
-    season = "Winter"
+    season = "Summer"
 
-    season_to_months = {season: (12, 1, 2)}
+    season_to_months = {season: range(6, 9)}
     season_months = list(season_to_months[season])
 
 
@@ -78,7 +78,8 @@ def validate_seas_mean_lswt_from_hostetler_and_nemo_with_homa(
     img_folder = Path("nemo")
     if not img_folder.is_dir():
         img_folder.mkdir()
-    img_file = img_folder.joinpath("{}__nemo-offline_vs_nemo-crcm5_{}-{}.png".format(season.lower(), start_year, end_year))
+    img_file = img_folder.joinpath("{}_{}_nemo-offline_vs_nemo-crcm5_{}-{}.png".format(season.lower(),
+                                                                                       varname, start_year, end_year))
 
     fig = plt.figure()
     gs = GridSpec(1, 3, width_ratios=[1, 1, 0.05])

@@ -8,6 +8,8 @@ from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import 
 from crcm5.analyse_hdf.run_config import RunConfig
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 import matplotlib.pyplot as plt
+from util import plot_utils
+
 __author__ = 'huziy'
 
 img_folder = Path("cc_paper/bfe/1D")
@@ -27,13 +29,14 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
     assert hasattr(gcm_config, "data_daily")
 
     bname_to_indices = OrderedDict([item for item in sorted(basin_name_to_out_indices_map.items(),
-                                                            key=lambda item: item[0], reverse=True)])
+                                                            key=lambda item: item[1][1], reverse=True)])
 
     print(bname_to_indices)
 
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=12)
     fig = plt.figure()
     ncols = 3
-    nrows = len(bname_to_indices) // 3 + len(bname_to_indices) % 3
+    nrows = len(bname_to_indices) // ncols + int(len(bname_to_indices) % ncols != 0)
     gs = GridSpec(nrows, ncols)
 
     ax_last = None
@@ -42,8 +45,10 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
         col = pl_index % ncols
         ax = fig.add_subplot(gs[row, col])
 
-        ax.plot(rea_config.data_daily[0], rea_config.data_daily[1][:, i, j], color="b", lw=2, label=rea_config.label)
-        ax.plot(gcm_config.data_daily[0], gcm_config.data_daily[1][:, i, j], color="r", lw=2, label=gcm_config.label)
+        ax.plot(rea_config.data_daily[0], rea_config.data_daily[1][:, i, j], color="b", lw=2,
+                label=rea_config.label)
+        ax.plot(gcm_config.data_daily[0], gcm_config.data_daily[1][:, i, j], color="r", lw=2,
+                label=gcm_config.label)
 
 
         ax.xaxis.set_major_locator(MonthLocator())
@@ -53,9 +58,13 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
         sfmt.set_powerlimits([-2, 2])
         ax.yaxis.set_major_formatter(sfmt)
 
+        bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=1, alpha=0.5)
+        ax.annotate(bname, (0.9, 0.1), xycoords="axes fraction", bbox=bbox_props, zorder=10,
+                    alpha=0.5, horizontalalignment="right", verticalalignment="bottom")
+
         ax_last = ax
 
-    ax_last.legend(loc="upper left", bbox_to_anchor=(1.05, 1), borderaxespad=0)
+    ax_last.legend(loc="upper right", bbox_to_anchor=(1, -0.2), borderaxespad=0)
 
     img_file = img_folder.joinpath("bfe_hydrographs.png")
     with img_file.open("wb") as f:
@@ -66,6 +75,7 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
 def main():
     import application_properties
     application_properties.set_current_directory()
+
 
     # Create folder for output images
     if not img_folder.is_dir():

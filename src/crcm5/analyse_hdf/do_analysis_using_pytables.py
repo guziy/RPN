@@ -2,6 +2,9 @@ from collections import defaultdict, OrderedDict
 from datetime import datetime, timedelta
 import os
 import pickle
+from pathlib import Path
+from crcm5.analyse_hdf.run_config import RunConfig
+from util.geo.basemap_info import BasemapInfo
 
 __author__ = 'huziy'
 
@@ -18,6 +21,15 @@ import pandas as pd
 import tables as tb
 
 
+def get_basemap_info_from_hdf(file_path=""):
+    """
+    :param file_path:
+    :return: BasemapInfo object containing basmeap object and 2d arrays of lons and lats
+    """
+    lons, lats, bmp = get_basemap_from_hdf(file_path=file_path)
+    return BasemapInfo(lons=lons, lats=lats, bmp=bmp)
+
+
 def get_basemap_from_hdf(file_path=""):
     """
     :param file_path:
@@ -28,6 +40,7 @@ def get_basemap_from_hdf(file_path=""):
     # Extract 2d longitudes and latitudes
     lons = h.getNode("/", "longitude")[:]
     lats = h.getNode("/", "latitude")[:]
+
 
     rotpoletable = h.getNode("/", "rotpole")
 
@@ -99,6 +112,51 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     return ts_cldp
 
 
+
+def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1, high_flow=True):
+    """
+    Returns a 3D array (year, lon, lat) with the annual min or max for each year
+    :param rconfig:
+    :param months_of_interest:
+    :param n_avg_days: number of days for averaging before getting min or max for a year
+     (i.e. usually daily means for the maxima and 15-day means for the minima)
+    :param high_flow: if True then maxima are calculated for each year, otherwize the minima are returned
+    """
+    assert isinstance(rconfig, RunConfig)
+
+    operator = lambda arr: np.min(arr, axis=0) if not high_flow else np.max(arr, axis=0)
+
+    month_cond = "|".join(["(month == {})".format(m) for m in months_of_interest])
+    result_fields = []
+    with tb.open_file(rconfig.data_path) as h:
+        var_table = h.get_node("/{}".format(varname))
+
+        # take the n_avg_days mean and take a max or min of the result
+        for the_year in range(rconfig.start_year, rconfig.end_year + 1):
+            dates = []
+            data = []
+
+            for row in var_table.where("(year == {}) & ({})".format(the_year, month_cond)):
+                dates.append(datetime(row["year"], row["month"], row["day"], row["hour"], row["minute"]))
+                data.append(row["field"])
+
+            major = range(data[0].shape[0])
+            minor = range(data[0].shape[1])
+            pnl = pd.Panel(data=data, items=dates, major_axis=major, minor_axis=minor)
+
+
+            # Calculate daily mean
+            daily = pnl.groupby(lambda d: (d.month, d.day)).mean().values
+
+            nt = len(daily)
+            result_fields.append(operator([daily[t:t + n_avg_days].mean(axis=0) for t in range(0, nt, n_avg_days)]))
+
+    assert len(result_fields) == rconfig.end_year - rconfig.start_year + 1
+    return np.array(result_fields)
+
+
+
+
 def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=None, j_index=None,
                                                               year_list=None):
     """
@@ -114,18 +172,16 @@ def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=N
     ts = ts.select(lambda d: d.year in year_list)
 
     ts_clim = ts.groupby(
-        lambda d: datetime(2001, d.month, d.day, 1) if not (d.month == 2 and d.day == 29) else
-        datetime(2001, d.month, d.day - 1, 1)).mean()
+        lambda d: datetime(2001, d.month, d.day) if not (d.month == 2 and d.day == 29) else
+        datetime(2001, d.month, d.day - 1)).mean()
 
-    print(type(ts_clim))
-    print(dir(ts_clim))
 
     assert isinstance(ts_clim, pd.Series)
     ts_clim = ts_clim.sort_index()
 
     # assert isinstance(ts_clim, pd.TimeSeries)
-    print(ts_clim.index)
-    return ts_clim.index, ts_clim.values
+
+    return ts_clim.index.to_pydatetime(), ts_clim.values
 
 
 def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
@@ -205,15 +261,46 @@ def get_annual_maxima(path_to_hdf_file="", var_name="STFL", level=None, start_ye
 
     result = OrderedDict()
 
+    cache_file_path = Path(path_to_hdf_file + ".cache").joinpath(
+        "annual_max_{}-{}".format(start_year, end_year)).joinpath("{}.bin".format(var_name))
+
+
+    # Load the maxima from cache
+    if cache_file_path.is_file():
+        print("Using cached data from {}".format(cache_file_path))
+        return pickle.load(cache_file_path.open("rb"))
+
+
+    cache_file_folder = cache_file_path.parent
+
+    if not cache_file_folder.is_dir():
+        cache_file_folder.mkdir(parents=True)
+
     with tb.open_file(path_to_hdf_file) as h:
         var_table = h.get_node("/{}".format(var_name))
 
         for y in range(start_year, end_year + 1):
             print("current year: {}".format(y))
 
-            result[y] = np.max([row["field"] for row in var_table.where("(level_index == {}) & (year == {})".format(level, y))], axis=0)
-
+            result[y] = np.max(
+                [row["field"] for row in var_table.where("(level_index == {}) & (year == {})".format(level, y))],
+                axis=0)
+    # Save calculated maxima to the cache
+    pickle.dump(result, cache_file_path.open("wb"))
     return result
+
+
+def get_daily_climatology_for_rconf(rconf, var_name="STFL", level=None):
+    """
+    Convenience stub for  get_daily_climatology
+    :param rconf:
+    :param var_name:
+    :param level:
+    :return:
+    """
+    assert isinstance(rconf, RunConfig)
+    return get_daily_climatology(path_to_hdf_file=rconf.data_path, var_name=var_name, level=level,
+                                 start_year=rconf.start_year, end_year=rconf.end_year)
 
 
 def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
@@ -413,6 +500,17 @@ def calculate_daily_mean_fields():
     plt.savefig("intfl_diff.png")
 
 
+def get_seasonal_climatology_for_runconfig(run_config=None, varname="", level=0, season_to_months=None):
+    assert isinstance(run_config, RunConfig)
+    result = OrderedDict()
+    for season, months in season_to_months.items():
+        result[season] = get_seasonal_climatology(hdf_path=run_config.data_path,
+                                                  start_year=run_config.start_year,
+                                                  end_year=run_config.end_year,
+                                                  var_name=varname, level=level, months=months)
+    return result
+
+
 def get_seasonal_climatology(hdf_path="", start_year=None, end_year=None, var_name="", level=None, months=None):
     # get seasonal climatology, uses daily climatology function which is cached for performance
     # returns the result in m/s
@@ -420,8 +518,9 @@ def get_seasonal_climatology(hdf_path="", start_year=None, end_year=None, var_na
                                                       start_year=start_year, end_year=end_year)
 
     daily_fields = np.asarray(daily_fields)
-    selection_vec = np.where(np.array([d.month in months for d in daily_dates], dtype=np.bool))
+    selection_vec = np.where(np.array([d.month in months for d in daily_dates], dtype=np.bool))[0]
     selected_data = daily_fields[selection_vec, :, :]
+    print(selected_data.shape)
     return np.mean(selected_data, axis=0)
 
 
