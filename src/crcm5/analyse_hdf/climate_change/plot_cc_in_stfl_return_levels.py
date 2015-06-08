@@ -9,7 +9,7 @@ import numpy as np
 
 import pickle
 
-from joblib import Parallel, delayed
+from multiprocessing import Pool
 
 __author__ = 'huziy'
 
@@ -125,13 +125,20 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
 def get_cache_file_name(rconfig, months=None, ret_period=2,
                         extreme_type="high", varname="STFL"):
 
-
     months_str = "-".join([str(m) for m in months])
 
     return "RL_STD_{}_{}_{}-{}_{}_{}_{}.bin".format(varname,
                                                     extreme_type, rconfig.start_year,
                                                     rconfig.end_year, rconfig.label,
                                                     months_str, ret_period)
+
+
+def do_gevfit_for_a_column(arg):
+    extremes, extr_type, ret_periods = arg
+    # The delayed function to be called in parallel
+    return do_gevfit_for_a_point(extremes,
+                                 extreme_type=extr_type,
+                                 return_periods=ret_periods)
 
 
 def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
@@ -141,6 +148,9 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     :param varname:
     """
     result = ExtremeProperties()
+
+    proc_pool = Pool(15)
+
     for extr_type, months in ExtremeProperties.extreme_type_to_month_of_interest.items():
 
         result.return_lev_dict[extr_type] = {}
@@ -187,13 +197,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
 
         # Probably needs to be optimized ...
         for i in range(nx):
-            def the_fit_func(j, ix=i):
-                # The delayed function to be called in parallel
-                return do_gevfit_for_a_point(ext_values[:, ix, j],
-                                             extreme_type=extr_type,
-                                             return_periods=return_periods)
-
-            ret_level_and_std_pairs = Parallel(n_jobs=15)(delayed(the_fit_func)(j) for j in range(ny))
+            input_data = [(ext_values[:, i, j], extr_type, return_periods) for j in range(ny)]
+            ret_level_and_std_pairs = proc_pool.map(do_gevfit_for_a_column, input_data)
 
             for j in range(ny):
                 ret_period_to_level, ret_period_to_std = ret_level_and_std_pairs[j]
