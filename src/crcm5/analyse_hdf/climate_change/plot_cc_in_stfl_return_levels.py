@@ -65,7 +65,8 @@ class ExtremeProperties(object):
         return s
 
 
-def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high, return_periods=None):
+def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
+                          return_periods=None):
     """
     returns 2 dicts (ret_period_to_levels, ret_period_to_std)
     with the layout {return_period: value}
@@ -108,7 +109,7 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high, return_peri
 
 
         for ret_period in return_periods:
-            print(extr_type, months, ret_period)
+            print(extreme_type, ret_period)
 
             ret_period_to_level_list[ret_period].append(
                 gevfit.get_return_level_for_type_and_period(
@@ -122,12 +123,12 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high, return_peri
     return ret_period_to_level, ret_period_to_std
 
 
-
 def get_cache_file_name(rconfig, months=None, ret_period=2, extreme_type="high"):
     months_str = "-".join([str(m) for m in months])
 
     return "{}_{}-{}_{}_{}.bin".format(
         extreme_type, rconfig.start_year, rconfig.end_year, rconfig.label, months_str)
+
 
 def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     """
@@ -158,7 +159,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
 
                 cache_levs, cache_stds = pickle.load(p.open("rb"))
 
-                result.ret_lev_dict[extr_type][ret_period] = cache_levs
+                result.return_lev_dict[extr_type][return_period] = cache_levs
                 result.std_dict[extr_type][return_period] = cache_stds
 
         # Do not do anything if the return levels for all periods are cached
@@ -166,13 +167,11 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         if len(return_periods) == 0:
             continue
 
-
         # 3D array of annual extremes for each grid point
         ext_values = analysis.get_annual_extrema(rconfig=rconfig, varname=varname,
                                                  months_of_interest=months,
                                                  n_avg_days=ExtremeProperties.extreme_type_to_n_agv_days[extr_type],
                                                  high_flow=ExtremeProperties.high == extr_type)
-
 
         nyears = ext_values.shape[0]
         nx, ny = ext_values.shape[1:]
@@ -199,8 +198,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
             p = Path(cache_file)
 
             to_save = [
-                result.return_lev_dict[extr_type][ret_period],
-                result.std_dict[extr_type][ret_period]
+                result.return_lev_dict[extr_type][return_period],
+                result.std_dict[extr_type][return_period]
             ]
 
             pickle.dump(to_save, p.open("wb"))
