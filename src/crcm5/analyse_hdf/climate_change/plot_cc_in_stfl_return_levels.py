@@ -188,6 +188,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         # Probably needs to be optimized ...
         for i in range(nx):
             def the_fit_func(j, ix=i):
+                # The delayed function to be called in parallel
                 return do_gevfit_for_a_point(ext_values[:, ix, j],
                                              extreme_type=extr_type,
                                              return_periods=return_periods)
