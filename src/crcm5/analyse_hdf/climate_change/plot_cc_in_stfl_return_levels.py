@@ -122,12 +122,16 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
     return ret_period_to_level, ret_period_to_std
 
 
-def get_cache_file_name(rconfig, months=None, ret_period=2, extreme_type="high"):
+def get_cache_file_name(rconfig, months=None, ret_period=2,
+                        extreme_type="high", varname="STFL"):
+
+
     months_str = "-".join([str(m) for m in months])
 
-    return "{}_{}-{}_{}_{}_{}.bin".format(
-        extreme_type, rconfig.start_year, rconfig.end_year, rconfig.label,
-        months_str, ret_period)
+    return "RL_STD_{}_{}_{}-{}_{}_{}_{}.bin".format(varname,
+                                                    extreme_type, rconfig.start_year,
+                                                    rconfig.end_year, rconfig.label,
+                                                    months_str, ret_period)
 
 
 def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
@@ -150,7 +154,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
             # Construct the name of the cache file
             cache_file = get_cache_file_name(rconfig, months=months,
                                              ret_period=return_period,
-                                             extreme_type=extr_type)
+                                             extreme_type=extr_type,
+                                             varname=varname)
 
             p = Path(cache_file)
 
@@ -182,9 +187,10 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
 
         # Probably needs to be optimized ...
         for i in range(nx):
-            the_fit_func = lambda j, ix=i: do_gevfit_for_a_point(ext_values[:, ix, j],
-                                                           extreme_type=extr_type,
-                                                           return_periods=return_periods)
+            def the_fit_func(j, ix=i):
+                return do_gevfit_for_a_point(ext_values[:, ix, j],
+                                             extreme_type=extr_type,
+                                             return_periods=return_periods)
 
             ret_level_and_std_pairs = Parallel(n_jobs=15)(delayed(the_fit_func)(j) for j in range(ny))
 
@@ -198,7 +204,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         for return_period in return_periods:
             # Construct the name of the cache file
             cache_file = get_cache_file_name(rconfig, months=months,
-                                             ret_period=return_period, extreme_type=extr_type)
+                                             ret_period=return_period,
+                                             extreme_type=extr_type)
 
             p = Path(cache_file)
 
