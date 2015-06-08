@@ -173,7 +173,6 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
                                                  n_avg_days=ExtremeProperties.extreme_type_to_n_agv_days[extr_type],
                                                  high_flow=ExtremeProperties.high == extr_type)
 
-        nyears = ext_values.shape[0]
         nx, ny = ext_values.shape[1:]
 
         result.return_lev_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
@@ -185,9 +184,9 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
                 ret_period_to_level, ret_period_to_std = do_gevfit_for_a_point(ext_values[:, i, j],
                     extreme_type=extr_type, return_periods=return_periods)
 
-                for ret_period in return_periods:
-                    result.return_lev_dict[extr_type][ret_period][i, j] = ret_period_to_level[ret_period]
-                    result.std_dict[extr_type][ret_period][i, j] = ret_period_to_std[ret_period]
+                for return_period in return_periods:
+                    result.return_lev_dict[extr_type][return_period][i, j] = ret_period_to_level[return_period]
+                    result.std_dict[extr_type][return_period][i, j] = ret_period_to_std[return_period]
 
         # Save the computed return levels and standard deviations to the cache file
         for return_period in return_periods:
@@ -214,11 +213,9 @@ def main():
     import application_properties
     application_properties.set_current_directory()
 
-
     # Create folder for output images
     if not img_folder.is_dir():
         img_folder.mkdir(parents=True)
-
 
     rea_driven_path = "/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     rea_driven_label = "CRCM5-L-ERAI"
@@ -254,7 +251,7 @@ def main():
 
 
 
-    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c)
+    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c, varname=varname)
 
     print(rs_gcm_c)
 
