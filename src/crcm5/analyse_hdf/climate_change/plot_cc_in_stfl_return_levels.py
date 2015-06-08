@@ -125,8 +125,9 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
 def get_cache_file_name(rconfig, months=None, ret_period=2, extreme_type="high"):
     months_str = "-".join([str(m) for m in months])
 
-    return "{}_{}-{}_{}_{}.bin".format(
-        extreme_type, rconfig.start_year, rconfig.end_year, rconfig.label, months_str)
+    return "{}_{}-{}_{}_{}_{}.bin".format(
+        extreme_type, rconfig.start_year, rconfig.end_year, rconfig.label,
+        months_str, ret_period)
 
 
 def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
