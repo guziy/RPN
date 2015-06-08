@@ -4,12 +4,17 @@ from rpn.rpn import RPN
 from crcm5.analyse_hdf.run_config import RunConfig
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
+from gev_dist import gevfit
+
 __author__ = 'huziy'
 
 img_folder = Path("cc_paper")
 
 
 class ExtremeProperties(object):
+    seed = 10
+    nbootstrap = 100
+
     low = "low"
     high = "high"
     extreme_types = [high, low]
@@ -29,7 +34,7 @@ class ExtremeProperties(object):
         ("low", 15),
     ])
 
-    def __init__(self, ret_lev_dict=None, std_dict=None):
+    def __init__(self, ret_lev_dict={}, std_dict={}):
         self.return_lev_dict = ret_lev_dict
         self.std_dict = std_dict
 
@@ -49,6 +54,66 @@ class ExtremeProperties(object):
         return [z[ex_type][return_period] for z in (self.return_lev_dict, self.std_dict)]
 
 
+def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high):
+    """
+    returns 2 dicts (ret_period_to_levels, ret_period_to_std)
+    with the layout {return_period: value}
+    """
+    # to have the same result for different launches and extreme types
+    np.random.seed(seed=ExtremeProperties.seed)
+
+
+    is_high_flow = extreme_type == ExtremeProperties.high
+
+    ret_periods = ExtremeProperties.extreme_type_to_return_periods[extreme_type]
+
+    nyears = len(data)
+
+    ret_period_to_level = {k: -1 for k in ret_periods}
+    ret_period_to_std = {k: -1 for k in ret_periods}
+
+    # return -1 if all the data is 0
+    if all(data <= 0):
+        return ret_period_to_level, ret_period_to_std
+
+
+    params = gevfit.optimize_stationary_for_period(
+        data, high_flow=is_high_flow
+    )
+
+    # Calculate return levels for all return periods
+    for t in ret_periods:
+        ret_period_to_level[t] = gevfit.get_return_level_for_type_and_period(
+            params, t, extreme_type=extreme_type)
+
+
+    ret_period_to_level_list = {k: [] for k in ret_periods}
+
+    for b_index in range(ExtremeProperties.nbootstrap):
+
+        indices = np.random.random_integers(0, high=nyears - 1, size=nyears)
+
+        params = gevfit.optimize_stationary_for_period(
+            data[indices], high_flow=is_high_flow
+        )
+
+
+        for ret_period in ret_periods:
+            print(extr_type, months, ret_period)
+
+            ret_period_to_level_list[ret_period].append(
+                gevfit.get_return_level_for_type_and_period(
+                    params, ret_period, extreme_type=extreme_type
+                )
+            )
+
+    # Calculate standard deviation of the bootstrapped return levels
+    ret_period_to_std = {t: np.std(v) for t, v in ret_period_to_level_list.items()}
+
+    return ret_period_to_level, ret_period_to_std
+
+
+
 def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     """
     return the extreme properties object
@@ -66,12 +131,24 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
 
 
         nyears = ext_values.shape[0]
+        nx, ny = ext_values.shape[1:]
+
+        return_periods = ExtremeProperties.extreme_type_to_return_periods[extreme_type]
 
 
-        for ret_period in ExtremeProperties.extreme_type_to_return_periods[extr_type]:
-            print(extr_type, months, ret_period)
+        result.ret_lev_dict[extr_type] = {k: -np.ones((nx, ny)) for k in return_periods}
+        result.std_dict[extr_type] = {k: -np.ones((nx, ny)) for k in return_periods}
 
+        # Probably needs to be optimized ...
+        for i in range(nx):
+            for j in range(ny):
+                ret_period_to_level, ret_period_to_std = do_gevfit_for_a_point(ext_values[:, i, j], extreme_type=extr_type)
 
+                for ret_period in return_periods:
+                    result.ret_lev_dict[extr_type][ret_period][i, j] = ret_period_to_level[ret_period]
+                    result.std_dict[extr_type][ret_period][i, j] = ret_period_to_std[ret_period]
+
+    return result
 
 
 def main():

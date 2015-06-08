@@ -40,6 +40,19 @@ def zoom_to_qc():
 BIG_NUM = 1.0e6
 
 
+
+def get_return_level_for_type_and_period(pars, return_period, extreme_type="high"):
+    # sigma, mu, ksi, zero_fraction = pars
+    # (i.e. as should be returned by the optimize_stationary_for_period function)
+
+    assert len(pars) == 4
+
+    if extreme_type.lower() == "high":
+        get_high_ret_level_stationary(pars, return_period)
+    else:
+        get_low_ret_level_stationary(pars, return_period)
+
+
 def get_high_ret_level_stationary(pars, return_period):
     # sigma, mu, ksi, zero_fraction = pars
 
@@ -57,7 +70,8 @@ def get_high_ret_level_stationary(pars, return_period):
 
 # sigma, mu, ksi, zero_fraction = pars
 def get_low_ret_level_stationary(pars, return_period):
-    return get_low_ret_level(params=pars[0:3], return_period=return_period, zero_fraction=pars[3])
+    return get_low_ret_level(params=pars[0:3], return_period=return_period,
+                             zero_fraction=pars[3])
 
 
 # rlevel = sigma/ksi * (ln(T/(1-Tz))^(-ksi) - 1) + mu
