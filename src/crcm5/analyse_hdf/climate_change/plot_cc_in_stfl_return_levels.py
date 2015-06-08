@@ -5,6 +5,7 @@ from crcm5.analyse_hdf.run_config import RunConfig
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
 from gev_dist import gevfit
+import numpy as np
 
 import pickle
 
@@ -36,7 +37,7 @@ class ExtremeProperties(object):
         ("low", 15),
     ])
 
-    def __init__(self, ret_lev_dict={}, std_dict={}):
+    def __init__(self, ret_lev_dict=None, std_dict=None):
         self.return_lev_dict = ret_lev_dict
         self.std_dict = std_dict
 
@@ -48,13 +49,13 @@ class ExtremeProperties(object):
 
     def get_rl_and_std(self, ex_type=high, return_period=10):
         """
-        Return level along with the standard deviation calculated using bootstrap
+        Return level along with the standard deviation calculated
+        using bootstrap
         :param ex_type:
         :param return_period:
         :return:
         """
         return [z[ex_type][return_period] for z in (self.return_lev_dict, self.std_dict)]
-
 
     def __str__(self):
         s = ""
@@ -72,7 +73,6 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high, return_peri
     # to have the same result for different launches and extreme types
     np.random.seed(seed=ExtremeProperties.seed)
 
-
     is_high_flow = extreme_type == ExtremeProperties.high
 
     if return_periods is None:
@@ -87,7 +87,6 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high, return_peri
     if all(data <= 0):
         return ret_period_to_level, ret_period_to_std
 
-
     params = gevfit.optimize_stationary_for_period(
         data, high_flow=is_high_flow
     )
@@ -97,8 +96,7 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high, return_peri
         ret_period_to_level[t] = gevfit.get_return_level_for_type_and_period(
             params, t, extreme_type=extreme_type)
 
-
-    ret_period_to_level_list = {k: [] for k in ret_periods}
+    ret_period_to_level_list = {k: [] for k in return_periods}
 
     for b_index in range(ExtremeProperties.nbootstrap):
 
