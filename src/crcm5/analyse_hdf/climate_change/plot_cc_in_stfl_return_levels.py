@@ -6,6 +6,8 @@ from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
 from gev_dist import gevfit
 
+import pickle
+
 __author__ = 'huziy'
 
 img_folder = Path("cc_paper")
@@ -52,6 +54,14 @@ class ExtremeProperties(object):
         :return:
         """
         return [z[ex_type][return_period] for z in (self.return_lev_dict, self.std_dict)]
+
+
+    def __str__(self):
+        s = ""
+        for et in self.extreme_types:
+            s += et + ", periods:\n\t{}\n".format(",".join([str(t) for t in self.return_lev_dict.keys()]))
+
+        return s
 
 
 def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high):
@@ -114,6 +124,12 @@ def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high):
 
 
 
+def get_cache_file_name(rconfig, months=None, ret_period=2, extreme_type="high"):
+    months_str = "-".join([str(m) for m in months])
+
+    return "{}_{}-{}_{}_{}.bin".format(
+        extreme_type, rconfig.start_year, rconfig.end_year, rconfig.label, months_str)
+
 def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     """
     return the extreme properties object
@@ -122,6 +138,35 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     """
     result = ExtremeProperties()
     for extr_type, months in ExtremeProperties.extreme_type_to_month_of_interest.items():
+
+        result.ret_lev_dict[extr_type] = {}
+        result.std_dict[extr_type] = {}
+
+        return_periods = ExtremeProperties.extreme_type_to_return_periods[extr_type]
+
+        # Do not do the calculations for the cached return periods
+        cached_periods = []
+        for return_period in list(return_periods):
+            # Construct the name of the cache file
+            cache_file = get_cache_file_name(rconfig, months=months,
+                ret_period=return_period, extreme_type=extr_type)
+
+            p = Path(cache_file)
+
+            if p.is_file():
+                cached_periods.append(return_period)
+                return_periods.remove(return_period)
+
+                cache_levs, cache_stds = pickle.load(p.open("rb"))
+
+                result.ret_lev_dict[extr_type][ret_period] = cache_levs
+                result.std_dict[extr_type][return_period] = cache_stds
+
+        # Do not do anything if the return levels for all periods are cached
+        # for this type of extreme events
+        if len(return_periods) == 0:
+            continue
+
 
         # 3D array of annual extremes for each grid point
         ext_values = analysis.get_annual_extrema(rconfig=rconfig, varname=varname,
@@ -133,11 +178,8 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         nyears = ext_values.shape[0]
         nx, ny = ext_values.shape[1:]
 
-        return_periods = ExtremeProperties.extreme_type_to_return_periods[extreme_type]
-
-
-        result.ret_lev_dict[extr_type] = {k: -np.ones((nx, ny)) for k in return_periods}
-        result.std_dict[extr_type] = {k: -np.ones((nx, ny)) for k in return_periods}
+        result.ret_lev_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
+        result.std_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
 
         # Probably needs to be optimized ...
         for i in range(nx):
@@ -147,6 +189,24 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
                 for ret_period in return_periods:
                     result.ret_lev_dict[extr_type][ret_period][i, j] = ret_period_to_level[ret_period]
                     result.std_dict[extr_type][ret_period][i, j] = ret_period_to_std[ret_period]
+
+        # Save the computed return levels and standard deviations to the cache file
+        for return_period in return_periods:
+            # Construct the name of the cache file
+            cache_file = get_cache_file_name(rconfig, months=months,
+                ret_period=return_period, extreme_type=extr_type)
+
+            p = Path(cache_file)
+
+            to_save = [
+                result.ret_lev_dict[extr_type][ret_period],
+                result.std_dict[extr_type][ret_period]
+            ]
+
+            pickle.dump(to_save, p.open("wb"))
+
+
+
 
     return result
 
@@ -195,10 +255,12 @@ def main():
 
 
 
-    get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c)
+    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c)
 
-
+    print(rs_gcm_c)
 
 if __name__ == '__main__':
-
+    import time
+    t0 = time.clock()
     main()
+    print("Execution time: {}s".format(time.clock() - t0))
