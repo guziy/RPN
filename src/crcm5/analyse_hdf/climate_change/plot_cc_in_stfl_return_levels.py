@@ -9,6 +9,8 @@ import numpy as np
 
 import pickle
 
+from joblib import Parallel, delayed
+
 __author__ = 'huziy'
 
 img_folder = Path("cc_paper")
@@ -180,11 +182,14 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
 
         # Probably needs to be optimized ...
         for i in range(nx):
-            for j in range(ny):
-                ret_period_to_level, ret_period_to_std = do_gevfit_for_a_point(ext_values[:, i, j],
-                                                                               extreme_type=extr_type,
-                                                                               return_periods=return_periods)
+            the_fit_func = lambda j, ix=i: do_gevfit_for_a_point(ext_values[:, ix, j],
+                                                           extreme_type=extr_type,
+                                                           return_periods=return_periods)
 
+            ret_level_and_std_pairs = Parallel(n_jobs=15)(delayed(the_fit_func)(j) for j in range(ny))
+
+            for j in range(ny):
+                ret_period_to_level, ret_period_to_std = ret_level_and_std_pairs[j]
                 for return_period in return_periods:
                     result.return_lev_dict[extr_type][return_period][i, j] = ret_period_to_level[return_period]
                     result.std_dict[extr_type][return_period][i, j] = ret_period_to_std[return_period]
