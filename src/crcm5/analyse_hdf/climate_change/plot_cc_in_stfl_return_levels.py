@@ -11,6 +11,10 @@ import pickle
 
 from multiprocessing import Pool
 
+import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
+
+
 __author__ = 'huziy'
 
 img_folder = Path("cc_paper")
@@ -273,7 +277,31 @@ def main():
     rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c,
                                                          varname=varname)
 
+    # Plot return levels
+    fig = plt.figure()
+    nplots = 0
+    for the_type, rp_to_rl in rs_gcm_c.return_lev_dict.items():
+        nplots += len(rp_to_rl)
+
+    gs = GridSpec(nplots, 1)
+
+    row = 0
+    for the_type, rp_to_rl in rs_gcm_c.return_lev_dict.items():
+        for rp, rl in rp_to_rl.items():
+            ax = fig.add_subplot(gs[row, 0])
+
+            rl = np.ma.masked_where(rl < 0, rl)
+            im = ax.pcolormesh(rl.transppose())
+            ax.set_title("{}: {} years return period".format(the_type, rp))
+            plt.colorbar(im, ax=ax)
+
+            row += 1
+
     print(rs_gcm_c)
+    fig.savefig("rl_test.png")
+
+    plt.show()
+
 
 if __name__ == '__main__':
     import time
