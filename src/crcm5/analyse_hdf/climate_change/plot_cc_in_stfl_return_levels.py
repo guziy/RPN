@@ -296,7 +296,7 @@ def main():
             ax = fig.add_subplot(gs[row, 0])
 
             rl = np.ma.masked_where(rl < 0, rl)
-            im = ax.pcolormesh(rl.transppose())
+            im = ax.pcolormesh(rl.transpose())
             ax.set_title("{}: {} years return period".format(the_type, rp))
             plt.colorbar(im, ax=ax)
 
