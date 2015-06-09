@@ -1,3 +1,7 @@
+import matplotlib
+matplotlib.use("Agg")
+
+
 from collections import OrderedDict
 from pathlib import Path
 from rpn.rpn import RPN
@@ -11,8 +15,6 @@ import pickle
 
 from multiprocessing import Pool
 
-import matplotlib
-matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
