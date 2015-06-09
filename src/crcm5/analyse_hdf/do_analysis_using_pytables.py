@@ -41,7 +41,6 @@ def get_basemap_from_hdf(file_path=""):
     lons = h.getNode("/", "longitude")[:]
     lats = h.getNode("/", "latitude")[:]
 
-
     rotpoletable = h.getNode("/", "rotpole")
 
     assert isinstance(rotpoletable, tb.Table)
@@ -49,7 +48,6 @@ def get_basemap_from_hdf(file_path=""):
     params = {}
     for row in rotpoletable:
         print(row["name"], row["value"])
-
 
         params[row["name"].decode()] = row["value"].decode() if isinstance(row["value"], bytes) else row["value"]
     rotpoletable.close()
@@ -112,7 +110,6 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     return ts_cldp
 
 
-
 def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1, high_flow=True):
     """
     Returns a 3D array (year, lon, lat) with the annual min or max for each year
@@ -144,7 +141,6 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
             minor = range(data[0].shape[1])
             pnl = pd.Panel(data=data, items=dates, major_axis=major, minor_axis=minor)
 
-
             # Calculate daily mean
             daily = pnl.groupby(lambda d: (d.month, d.day), axis="items").mean().values
 
@@ -153,8 +149,6 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
 
     assert len(result_fields) == rconfig.end_year - rconfig.start_year + 1
     return np.array(result_fields)
-
-
 
 
 def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=None, j_index=None,
@@ -174,7 +168,6 @@ def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=N
     ts_clim = ts.groupby(
         lambda d: datetime(2001, d.month, d.day) if not (d.month == 2 and d.day == 29) else
         datetime(2001, d.month, d.day - 1)).mean()
-
 
     assert isinstance(ts_clim, pd.Series)
     ts_clim = ts_clim.sort_index()
@@ -264,12 +257,10 @@ def get_annual_maxima(path_to_hdf_file="", var_name="STFL", level=None, start_ye
     cache_file_path = Path(path_to_hdf_file + ".cache").joinpath(
         "annual_max_{}-{}".format(start_year, end_year)).joinpath("{}.bin".format(var_name))
 
-
     # Load the maxima from cache
     if cache_file_path.is_file():
         print("Using cached data from {}".format(cache_file_path))
         return pickle.load(cache_file_path.open("rb"))
-
 
     cache_file_folder = cache_file_path.parent
 
@@ -317,7 +308,6 @@ def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, star
                                           start_year=start_year, end_year=end_year, var_name=v2name)
 
         return dates, v1data - v2data if opsign == "-" else v1data + v2data if opsign == "+" else None
-
 
     if var_name.endswith("_min"):
         return get_daily_min_climatology(path_to_hdf_file=path_to_hdf_file, var_name=var_name, level=level,
@@ -433,7 +423,7 @@ def get_daily_climatology_of_3d_field(path_to_hdf_file="", var_name="STFL", star
     sorted_levels = list(sorted(list(date_to_level_to_mean.items())[0][1].keys()))
 
     data = np.asarray(
-        [[date_to_level_to_mean[d][lev] for lev in sorted_levels] for d in sorted_dates]
+        [[date_to_level_to_mean[d1][lev] for lev in sorted_levels] for d1 in sorted_dates]
     )
 
     # save cache
@@ -557,7 +547,6 @@ def get_pandas_panel_sorted_for_year(year, the_table, level_index=0):
 
 def get_np_arr_sorted_for_year(year, the_table, level_index=0):
     return get_pandas_panel_sorted_for_year(year, the_table, level_index=level_index).values
-
 
 
 if __name__ == "__main__":
