@@ -102,7 +102,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
 
         fig = plt.figure()
         fig.suptitle(
-            "{} ({})".format(infovar.get_display_label_for_var(vname), season),
+            "{} ({})".format(infovar.get_long_display_label_for_var(vname), season),
             font_properties=FontProperties(weight="bold"))
 
         gs = GridSpec(nrows=nrows, ncols=ncols)
@@ -290,7 +290,7 @@ def main():
 
     # season_to_months = OrderedDict([("April", [4, ]), ("May", [5, ]), ("June", [6, ]), ("July", [7, ])])
 
-    var_names = ["TT", "HU", "PR", "AV", "AH", "STFL", "TRAF", "I5"]
+    var_names = ["TT", "HU", "PR", "AV", "AH", "STFL", "TRAF", "I5", "I0"]
 
     # var_names = ["TT", "PR"]
 
