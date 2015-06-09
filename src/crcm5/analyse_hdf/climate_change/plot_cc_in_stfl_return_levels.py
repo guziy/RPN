@@ -18,7 +18,9 @@ img_folder = Path("cc_paper")
 
 class ExtremeProperties(object):
     seed = 10
-    nbootstrap = 100
+
+    # Make it small for testing
+    nbootstrap = 2
 
     low = "low"
     high = "high"
@@ -133,7 +135,7 @@ def get_cache_file_name(rconfig, months=None, ret_period=2,
                                                     months_str, ret_period)
 
 
-def do_gevfit_for_a_column(arg):
+def do_gevfit_for_a_point_single_arg(arg):
     extremes, extr_type, ret_periods = arg
     # The delayed function to be called in parallel
     return do_gevfit_for_a_point(extremes,
@@ -198,13 +200,17 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         # Probably needs to be optimized ...
         for i in range(nx):
             input_data = [(ext_values[:, i, j], extr_type, return_periods) for j in range(ny)]
-            ret_level_and_std_pairs = proc_pool.map(do_gevfit_for_a_column, input_data)
+            ret_level_and_std_pairs = proc_pool.map(do_gevfit_for_a_point_single_arg, input_data)
 
             for j in range(ny):
                 ret_period_to_level, ret_period_to_std = ret_level_and_std_pairs[j]
                 for return_period in return_periods:
                     result.return_lev_dict[extr_type][return_period][i, j] = ret_period_to_level[return_period]
                     result.std_dict[extr_type][return_period][i, j] = ret_period_to_std[return_period]
+
+            # Show the progress
+            if i % 10 == 0:
+                print("progress {}/{}".format(i, nx))
 
         # Save the computed return levels and standard deviations to the cache file
         for return_period in return_periods:
