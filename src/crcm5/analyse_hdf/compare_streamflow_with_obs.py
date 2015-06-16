@@ -23,6 +23,7 @@ import matplotlib as mpl
 from matplotlib import gridspec
 import numpy as np
 from swe import SweDataManager
+from util import plot_utils
 
 __author__ = 'huziy'
 
@@ -386,9 +387,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     """
     assert model_points is None or stations is None or len(stations) == len(model_points)
     label_list = list(sim_name_to_file_name.keys())  # Needed to keep the order the same for all subplots
-    path0 = os.path.join(hdf_folder, list(sim_name_to_file_name.items())[1][1])
+    path0 = os.path.join(hdf_folder, list(sim_name_to_file_name.items())[0][1])
     flow_directions = analysis.get_array_from_file(path=path0, var_name="flow_direction")
     lake_fraction = analysis.get_array_from_file(path=path0, var_name="lake_fraction")
+
+    # mask lake fraction in the ocean
+    lake_fraction = np.ma.masked_where((flow_directions <= 0) | (flow_directions > 128), lake_fraction)
 
     accumulation_area_km2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_ACCUMULATION_AREA_NAME)
     area_m2 = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_CELL_AREA_NAME_M2)
@@ -479,7 +483,12 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     else:
         processed_stations = [None] * len(mp_list)
     processed_model_points = mp_list
-    plot_point_positions_with_upstream_areas(processed_stations, processed_model_points, basemap, cell_manager)
+    plot_point_positions_with_upstream_areas(processed_stations, processed_model_points, basemap,
+                                             cell_manager, lake_fraction_field=lake_fraction)
+
+    # TODO: Remove this, only added for testing
+    if True:
+        raise Exception()
 
     if plot_upstream_area_averaged:
         # create obs data managers
@@ -735,15 +744,38 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
 
 
 def plot_point_positions_with_upstream_areas(processed_stations, processed_model_points,
-                                             basemap, cell_manager):
+                                             basemap, cell_manager, lake_fraction_field=None):
     # plot point positions with upstream areas
 
+
+    # TODO: plot zonal average lake fractions and plot it at the side of the map
+    rc_params_backup = plt.rcParams.copy()
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=18, height_cm=8)
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
+
+    gs = gridspec.GridSpec(1, 2, width_ratios=[1, 1], wspace=0.01)
+
+    ax = fig.add_subplot(gs[0, 0])
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
+    ax.set_aspect("auto")
+
+
+    ax = fig.add_subplot(gs[0, 1])
+    ydata = range(lake_fraction_field.shape[1])
+    ax.plot(lake_fraction_field.mean(axis=0) * 100, ydata, lw=2)
+    ax.set_xlabel("%")
+    ax.set_ylim(min(ydata), max(ydata))
+
+    for tl in ax.yaxis.get_ticklabels():
+        tl.set_visible(False)
+
+
+
+
     impath = os.path.join(images_folder, "station_positions.png")
     fig.savefig(impath, bbox_inches="tight")
     plt.close(fig)
+    plt.rcParams.update(rc_params_backup)
 
 
 def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store"):

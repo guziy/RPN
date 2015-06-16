@@ -246,7 +246,7 @@ if __name__ == "__main__":
     # compare_2d_seasonal_means_from_simulations()
 
     # Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    # compare_obs_and_model_at_points()
+    compare_obs_and_model_at_points()
 
     # compare_simulations()
     # validate_seasonal_mean_atm_fields()
@@ -265,7 +265,7 @@ if __name__ == "__main__":
 
 
     # Compare modelled and observed lake level anomalies at points
-    compare_obs_and_model_lake_levels_at_points()
+    # compare_obs_and_model_lake_levels_at_points()
 
     # plot_veg_fractions_for_a_random_run()
 

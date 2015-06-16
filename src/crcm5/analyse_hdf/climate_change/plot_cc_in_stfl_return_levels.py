@@ -1,247 +1,34 @@
 import matplotlib
+from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import BASIN_BOUNDARIES_FILE
+from util import plot_utils
+
 matplotlib.use("Agg")
 
+from matplotlib import cm
 
-from collections import OrderedDict
+from mpl_toolkits.basemap import maskoceans
+
+from crcm5.analyse_hdf.return_levels.calc_return_levels_and_unc_using_bootstrap import \
+    get_return_levels_and_unc_using_bootstrap
+
 from pathlib import Path
 from rpn.rpn import RPN
 from crcm5.analyse_hdf.run_config import RunConfig
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
-from gev_dist import gevfit
 import numpy as np
-
-import pickle
-
-from multiprocessing import Pool
-
 
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-
 __author__ = 'huziy'
 
-img_folder = Path("cc_paper")
-
-
-class ExtremeProperties(object):
-    seed = 10
-
-    # Make it small for testing
-    nbootstrap = 2
-
-    low = "low"
-    high = "high"
-    extreme_types = [high, low]
-
-    extreme_type_to_return_periods = OrderedDict([
-        ("high", [10, 50]),
-        ("low", [2, 5]),
-    ])
-
-    extreme_type_to_month_of_interest = OrderedDict([
-        ("high", range(3, 7)),
-        ("low", range(1, 6)),
-    ])
-
-    extreme_type_to_n_agv_days = OrderedDict([
-        ("high", 1),
-        ("low", 15),
-    ])
-
-    def __init__(self, ret_lev_dict=None, std_dict=None):
-        self.return_lev_dict = ret_lev_dict if ret_lev_dict is not None else {}
-        self.std_dict = std_dict if std_dict is not None else {}
-
-    def get_low_rl_for_period(self, return_period=2):
-        return self.return_lev_dict[self.low][return_period]
-
-    def get_high_rl_for_period(self, return_period=10):
-        return self.return_lev_dict[self.high][return_period]
-
-    def get_rl_and_std(self, ex_type=high, return_period=10):
-        """
-        Return level along with the standard deviation calculated
-        using bootstrap
-        :param ex_type:
-        :param return_period:
-        :return:
-        """
-        return [z[ex_type][return_period] for z in (self.return_lev_dict, self.std_dict)]
-
-    def __str__(self):
-        s = ""
-        for et in self.extreme_types:
-            s += et + ", periods:\n\t{}\n".format(",".join([str(t) for t in self.return_lev_dict.keys()]))
-
-        return s
-
-
-def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
-                          return_periods=None):
-    """
-    returns 2 dicts (ret_period_to_levels, ret_period_to_std)
-    with the layout {return_period: value}
-    """
-    # to have the same result for different launches and extreme types
-    np.random.seed(seed=ExtremeProperties.seed)
-
-    is_high_flow = extreme_type == ExtremeProperties.high
-
-    if return_periods is None:
-        return_periods = ExtremeProperties.extreme_type_to_return_periods[extreme_type]
-
-    nyears = len(data)
-
-    ret_period_to_level = {k: -1 for k in return_periods}
-    ret_period_to_std = {k: -1 for k in return_periods}
-
-    # return -1 if all the data is 0
-    if all(data <= 0):
-        return ret_period_to_level, ret_period_to_std
-
-    params = gevfit.optimize_stationary_for_period(
-        data, high_flow=is_high_flow
-    )
-
-    # Calculate return levels for all return periods
-    for t in return_periods:
-        ret_period_to_level[t] = gevfit.get_return_level_for_type_and_period(
-            params, t, extreme_type=extreme_type)
-
-    ret_period_to_level_list = {k: [] for k in return_periods}
-
-    for _ in range(ExtremeProperties.nbootstrap):
-
-        indices = np.random.random_integers(0, high=nyears - 1, size=nyears)
-
-        params = gevfit.optimize_stationary_for_period(
-            data[indices], high_flow=is_high_flow
-        )
-
-        for ret_period in return_periods:
-            ret_period_to_level_list[ret_period].append(
-                gevfit.get_return_level_for_type_and_period(
-                    params, ret_period, extreme_type=extreme_type
-                )
-            )
-
-    # Calculate standard deviation of the bootstrapped return levels
-    ret_period_to_std = {t: np.std(v) for t, v in ret_period_to_level_list.items()}
-
-    return ret_period_to_level, ret_period_to_std
-
-
-def get_cache_file_name(rconfig, months=None, ret_period=2,
-                        extreme_type="high", varname="STFL"):
-
-    months_str = "-".join([str(m) for m in months])
-
-    return "RL_STD_{}_{}_{}-{}_{}_{}_{}.bin".format(varname,
-                                                    extreme_type, rconfig.start_year,
-                                                    rconfig.end_year, rconfig.label,
-                                                    months_str, ret_period)
-
-
-def do_gevfit_for_a_point_single_arg(arg):
-    extremes, extr_type, ret_periods = arg
-    # The delayed function to be called in parallel
-    return do_gevfit_for_a_point(extremes,
-                                 extreme_type=extr_type,
-                                 return_periods=ret_periods)
-
-
-def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
-    """
-    return the extreme properties object
-    :param rconfig:
-    :param varname:
-    """
-    result = ExtremeProperties()
-
-    proc_pool = Pool(15)
-
-    for extr_type, months in ExtremeProperties.extreme_type_to_month_of_interest.items():
-
-        result.return_lev_dict[extr_type] = {}
-        result.std_dict[extr_type] = {}
-
-        return_periods = ExtremeProperties.extreme_type_to_return_periods[extr_type]
-
-        # Do not do the calculations for the cached return periods
-        cached_periods = []
-        for return_period in list(return_periods):
-            # Construct the name of the cache file
-            cache_file = get_cache_file_name(rconfig, months=months,
-                                             ret_period=return_period,
-                                             extreme_type=extr_type,
-                                             varname=varname)
-
-            p = Path(cache_file)
-
-            if p.is_file():
-                cached_periods.append(return_period)
-                return_periods.remove(return_period)
-
-                cache_levs, cache_stds = pickle.load(p.open("rb"))
-                print("Using cache from {}".format(str(p)))
-
-                result.return_lev_dict[extr_type][return_period] = cache_levs
-                result.std_dict[extr_type][return_period] = cache_stds
-
-        # Do not do anything if the return levels for all periods are cached
-        # for this type of extreme events
-        if len(return_periods) == 0:
-            continue
-
-        # 3D array of annual extremes for each grid point
-        ext_values = analysis.get_annual_extrema(rconfig=rconfig, varname=varname,
-                                                 months_of_interest=months,
-                                                 n_avg_days=ExtremeProperties.extreme_type_to_n_agv_days[extr_type],
-                                                 high_flow=ExtremeProperties.high == extr_type)
-
-        nx, ny = ext_values.shape[1:]
-
-        result.return_lev_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
-        result.std_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
-
-        # Probably needs to be optimized ...
-        for i in range(nx):
-            input_data = [(ext_values[:, i, j], extr_type, return_periods) for j in range(ny)]
-            ret_level_and_std_pairs = proc_pool.map(do_gevfit_for_a_point_single_arg, input_data)
-
-            for j in range(ny):
-                ret_period_to_level, ret_period_to_std = ret_level_and_std_pairs[j]
-                for return_period in return_periods:
-                    result.return_lev_dict[extr_type][return_period][i, j] = ret_period_to_level[return_period]
-                    result.std_dict[extr_type][return_period][i, j] = ret_period_to_std[return_period]
-
-            # Show the progress
-            if i % 10 == 0:
-                print("progress {}/{}".format(i, nx))
-
-        # Save the computed return levels and standard deviations to the cache file
-        for return_period in return_periods:
-            # Construct the name of the cache file
-            cache_file = get_cache_file_name(rconfig, months=months,
-                                             ret_period=return_period,
-                                             extreme_type=extr_type)
-
-            p = Path(cache_file)
-
-            to_save = [
-                result.return_lev_dict[extr_type][return_period],
-                result.std_dict[extr_type][return_period]
-            ]
-
-            pickle.dump(to_save, p.open("wb"))
-
-    return result
+img_folder = Path("cc_paper/return_levels")
 
 
 def main():
     import application_properties
+
     application_properties.set_current_directory()
 
     # Create folder for output images
@@ -251,15 +38,16 @@ def main():
     rea_driven_path = "/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     rea_driven_label = "CRCM5-L-ERAI"
 
-    gcm_driven_path_c = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_label_c = "CRCM5-L"
+    gcm_driven_path_c = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
+    # gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
+    gcm_driven_label_c = "CRCM5-NL"
 
     start_year_c = 1980
     end_year_c = 2010
 
     varname = "STFL"
 
-    future_shift_years = 75
+    future_shift_years = 90
 
     params = dict(
         data_path=rea_driven_path, start_year=start_year_c, end_year=end_year_c, label=rea_driven_label)
@@ -279,37 +67,90 @@ def main():
     # get basemap information
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=rea_driven_path)
 
-    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c,
-                                                         varname=varname)
+    rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c, varname=varname)
 
-    # Plot return levels
+    rs_gcm_f = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_f, varname=varname)
+
+    plot_utils.apply_plot_params(font_size=10, width_cm=20, height_cm=18)
+
+    # Plot return level changes
     fig = plt.figure()
     nplots = 0
     for the_type, rp_to_rl in rs_gcm_c.return_lev_dict.items():
         nplots += len(rp_to_rl)
+    ncols = 2
+    nrows = nplots // ncols + int(nplots % ncols != 0)
+    gs = GridSpec(nrows, ncols + 1, width_ratios=[1.0, ] * ncols + [0.05, ])
 
-    gs = GridSpec(nplots, 1)
+    xx, yy = bmp_info.get_proj_xy()
 
-    row = 0
-    for the_type, rp_to_rl in rs_gcm_c.return_lev_dict.items():
-        for rp, rl in rp_to_rl.items():
-            ax = fig.add_subplot(gs[row, 0])
+    cmap = cm.get_cmap("bwr", 20)
 
-            rl = np.ma.masked_where(rl < 0, rl)
-            im = ax.pcolormesh(rl.transpose())
-            ax.set_title("{}: {} years return period".format(the_type, rp))
-            plt.colorbar(im, ax=ax)
+    limits = {
+        "high": (-50, 50),
+        "low": (-150, 150)
+    }
 
-            row += 1
+    for row, (the_type, rp_to_rl) in enumerate(sorted(rs_gcm_c.return_lev_dict.items(), key=lambda itm: itm[0])):
 
-    print(rs_gcm_c)
-    fig.savefig("rl_test.png")
+        for col, rp in enumerate(sorted(rp_to_rl)):
 
-    plt.show()
+            ax = fig.add_subplot(gs[row, col])
+            rl = rp_to_rl[rp]
+
+            # Ignore 0 return levels in the current climate for percentage calculations
+            rl = np.ma.masked_where(rl <= 0, rl)
+
+            rl_future = rs_gcm_f.return_lev_dict[the_type][rp]
+
+            # Calculate climate change signal
+            diff = (rl_future - rl) / rl * 100
+
+            diff = maskoceans(bmp_info.lons, bmp_info.lats, diff)
+
+            std_c = rs_gcm_c.std_dict[the_type][rp]
+            std_f = rs_gcm_f.std_dict[the_type][rp]
+
+            significance = (np.ma.abs(diff) >= 1.96 * (std_c + std_f)) & (~diff.mask)
+            significance = significance.astype(int)
+
+            vmin, vmax = limits[the_type]
+            im = bmp_info.basemap.pcolormesh(xx, yy, diff, vmin=vmin, vmax=vmax, cmap=cmap)
+
+            cs = bmp_info.basemap.contourf(xx, yy, significance, levels=[0, 0.5, 1], hatches=["////", None, None],
+                                           colors="none")
+
+            if row == nrows - 1 and col == ncols - 1:
+                # create a legend for the contour set
+                artists, labels = cs.legend_elements()
+                ax.legend([artists[0], ], ["not sign.", ], handleheight=0.5,
+                          bbox_to_anchor=(1, -0.1), loc="upper right", borderaxespad=0.)
+
+            ax.set_title("T = {}-year".format(rp))
+
+            if col == 0:
+                ax.set_ylabel("{} flow".format(the_type))
+
+            bmp_info.basemap.drawcoastlines(ax=ax)
+            bmp_info.basemap.drawmapboundary(fill_color="0.75")
+            bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"),
+                                           "basin",
+                                           linewidth=1.2, ax=ax)
+
+            if col == ncols - 1:
+                cax = fig.add_subplot(gs[row, -1])
+                plt.colorbar(im, cax=cax, extend="both")
+                cax.set_title("%")
+
+    img_file = img_folder.joinpath("rl_cc_{}.png".format(gcm_driven_config_c.label))
+
+    with img_file.open("wb") as f:
+        fig.savefig(f, bbox_inches="tight")
 
 
 if __name__ == '__main__':
     import time
+
     t0 = time.clock()
     main()
     print("Execution time: {}s".format(time.clock() - t0))

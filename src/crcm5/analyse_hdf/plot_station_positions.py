@@ -63,7 +63,7 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
 
         labels.append(point_info)
 
-        basemap.scatter(x_station, y_station, c="r", s=80, ax=ax, linewidths=0.5, zorder=2)
+        basemap.scatter(x_station, y_station, c="r", s=20, ax=ax, linewidths=0.5, zorder=2)
 
         ishift, jshift = direction_and_value.flowdir_values_to_shift(fld1d)
 
@@ -93,10 +93,11 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
 
         va = "top"
         ha = "left" if the_station.id in ["093806", "081007"] else "right"
-        yshift = -5 if the_station.id in ["093806", "081007"] else -5
+        yshift = -2 if the_station.id in ["093806", "081007"] else -2
+        xshift = -2
         ax.annotate("{}".format(the_station.id), (x_station, y_station),
-                    ha=ha, va=va, textcoords="offset points", xytext=(0, yshift),
-                    font_properties=FontProperties(size=20))
+                    ha=ha, va=va, textcoords="offset points", xytext=(xshift, yshift),
+                    font_properties=FontProperties(size=10))
         # ax.text(x_station, y_station, point_info, bbox=dict(facecolor="white"))
         darkness += delta
 

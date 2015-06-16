@@ -21,16 +21,16 @@ import pandas as pd
 import tables as tb
 
 
-def get_basemap_info_from_hdf(file_path=""):
+def get_basemap_info_from_hdf(file_path="", resolution="l"):
     """
     :param file_path:
     :return: BasemapInfo object containing basmeap object and 2d arrays of lons and lats
     """
-    lons, lats, bmp = get_basemap_from_hdf(file_path=file_path)
+    lons, lats, bmp = get_basemap_from_hdf(file_path=file_path, resolution=resolution)
     return BasemapInfo(lons=lons, lats=lats, bmp=bmp)
 
 
-def get_basemap_from_hdf(file_path=""):
+def get_basemap_from_hdf(file_path="", resolution="l"):
     """
     :param file_path:
     :return: lons(2d), lats(2), basemap - corresponding to the data in the file
@@ -55,7 +55,7 @@ def get_basemap_from_hdf(file_path=""):
     basemap = Crcm5ModelDataManager.get_rotpole_basemap_using_lons_lats(
         lons2d=lons, lats2d=lats,
         lon_1=params["lon1"], lon_2=params["lon2"],
-        lat_1=params["lat1"], lat_2=params["lat2"]
+        lat_1=params["lat1"], lat_2=params["lat2"], resolution=resolution
     )
     h.close()
     return lons, lats, basemap
@@ -110,6 +110,16 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     return ts_cldp
 
 
+def get_cache_file_for_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1, high_flow=True):
+    months_str = "-".join([str(m) for m in months_of_interest])
+    year_range = "{}-{}".format(rconfig.start_year, rconfig.end_year)
+    hl = "high" if high_flow else "low"
+    fn = "get_annual_extrema_cache_{}_{}_{}_avg{}d_{}.bin".format(months_str, varname, year_range, n_avg_days, hl)
+    return Path(fn)
+
+
+
+
 def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1, high_flow=True):
     """
     Returns a 3D array (year, lon, lat) with the annual min or max for each year
@@ -119,7 +129,17 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
      (i.e. usually daily means for the maxima and 15-day means for the minima)
     :param high_flow: if True then maxima are calculated for each year, otherwize the minima are returned
     """
+
+    # Should not declare any variables above this line:
+    cache_file = get_cache_file_for_annual_extrema(**locals())
+    # Use the cache file if exists
+    if cache_file.is_file():
+        with cache_file.open("rb") as f:
+            return pickle.load(f)
+
+
     assert isinstance(rconfig, RunConfig)
+
 
     operator = lambda arr: np.min(arr, axis=0) if not high_flow else np.max(arr, axis=0)
 
@@ -148,7 +168,14 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
             result_fields.append(operator([daily[t:t + n_avg_days].mean(axis=0) for t in range(0, nt, n_avg_days)]))
 
     assert len(result_fields) == rconfig.end_year - rconfig.start_year + 1
-    return np.array(result_fields)
+
+    result_fields = np.array(result_fields)
+
+    # Save the cache
+    with cache_file.open("wb") as f:
+        pickle.dump(result_fields, f)
+
+    return result_fields
 
 
 def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=None, j_index=None,
