@@ -12,7 +12,8 @@ except ImportError as ie:
 class BasemapInfo(object):
     # Object containing info for plotting on a map
     def __init__(self, lons=None, lats=None, bmp=None):
-        self.lons = lons
+        self.lons = lons.copy()
+        self.lons[self.lons > 180] -= 360
         self.lats = lats
         self.basemap = bmp
 

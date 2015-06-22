@@ -1,8 +1,9 @@
 import matplotlib
+matplotlib.use("Agg")
+
 from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import BASIN_BOUNDARIES_FILE
 from util import plot_utils
 
-matplotlib.use("Agg")
 
 from matplotlib import cm
 
@@ -38,9 +39,9 @@ def main():
     rea_driven_path = "/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
     rea_driven_label = "CRCM5-L-ERAI"
 
-    gcm_driven_path_c = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    # gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_label_c = "CRCM5-NL"
+    # gcm_driven_path_c = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
+    gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
+    gcm_driven_label_c = "CRCM5-L"
 
     start_year_c = 1980
     end_year_c = 2010

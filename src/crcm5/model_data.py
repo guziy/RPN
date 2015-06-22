@@ -783,6 +783,9 @@ class Crcm5ModelDataManager:
         if os.path.isfile(cache_file):
             return pickle.load(open(cache_file, "rb"), encoding="utf-8")
 
+
+        print("Reading data from: {}".format(path_to_hdf))
+
         # Do the calculation and store results
         with tb.open_file(path_to_hdf) as h:
             var_table = h.get_node("/" + var_name)
@@ -814,6 +817,7 @@ class Crcm5ModelDataManager:
             year_to_mean = {}
             year_to_counter = {}
 
+            print(query)
             for the_year, rows_grouped_by_year in itertools.groupby(var_table.where(query), year_selector):
                 data = np.asarray([the_row["field"] for the_row in rows_grouped_by_year])
 

@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/nbproject" />
+      <excludeFolder url="file://$MODULE_DIR$/src.bak" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.4.3 virtualenv at /RESCUE/skynet3_rech1/huziy/python_virtualenvs/py3.4" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

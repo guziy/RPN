@@ -6,6 +6,7 @@ from crcm5 import infovar
 from data.cehq_station import Station
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 from data.cell_manager import CellManager
+from crcm5.analyse_hdf.return_levels import extreme_commons
 
 __author__ = 'huziy'
 
@@ -36,7 +37,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
     )
 
     # Get geophysical fields from one of the model simulations
-    path0 = sim_name_to_file_path.values()[0]
+    path0 = list(sim_name_to_file_path.values())[0]
     lons2d, lats2d, basemap = analysis.get_basemap_from_hdf(file_path=path0)
     flow_directions = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_FLOW_DIRECTIONS_NAME)
     lake_fraction = analysis.get_array_from_file(path=path0, var_name=infovar.HDF_LAKE_FRACTION_NAME)
@@ -68,6 +69,9 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
 
         print(len([y for y in s.get_list_of_complete_years() if start_year <= y <= end_year]))
         print(s.get_list_of_complete_years())
+
+        extreme_commons.get_annual_extrema(ts_times=s.dates, ts_vals=s.values)
+
 
 
 

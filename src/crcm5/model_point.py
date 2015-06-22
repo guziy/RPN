@@ -124,11 +124,3 @@ class ModelPoint:
         return stamp_dates, vals
 
 
-    def get_annual_extrema(self, start_year, end_year):
-        """
-        return a DataFrame with two columns ("low" and "high")
-        """
-
-        # TODO:
-
-        pass

@@ -20,6 +20,8 @@ from datetime import timedelta
 # maximum likelihood)
 import lmoments3
 
+from numba import jit
+
 inches_per_pt = 1.0 / 72.27  # Convert pt to inch
 golden_mean = (np.sqrt(5.0) - 1.0) / 2.0  # Aesthetic ratio
 fig_width = 2000 * inches_per_pt  # width in inches
@@ -38,20 +40,22 @@ def zoom_to_qc():
 
 
 BIG_NUM = 1.0e6
+NOVALUE = -9999
 
-
-def get_return_level_for_type_and_period(pars, return_period, extreme_type="high"):
+@jit("f8(f8[:], f8, b1)")
+def get_return_level_for_type_and_period(pars, return_period, high_flow=True):
     # sigma, mu, ksi, zero_fraction = pars
     # (i.e. as should be returned by the optimize_stationary_for_period function)
 
     assert len(pars) == 4
 
-    if extreme_type.lower() == "high":
+    if high_flow:
         return get_high_ret_level_stationary(pars, return_period)
     else:
         return get_low_ret_level_stationary(pars, return_period)
 
 
+@jit("f8(f8[:], i8)")
 def get_high_ret_level_stationary(pars, return_period):
     # sigma, mu, ksi, zero_fraction = pars
 
@@ -68,12 +72,14 @@ def get_high_ret_level_stationary(pars, return_period):
 
 
 # sigma, mu, ksi, zero_fraction = pars
+@jit("f8(f8[:], i8)")
 def get_low_ret_level_stationary(pars, return_period):
     return get_low_ret_level(params=pars[0:3], return_period=return_period,
                              zero_fraction=pars[3])
 
 
 # rlevel = sigma/ksi * (ln(T/(1-Tz))^(-ksi) - 1) + mu
+@jit("f8(f8[:], i8, f8)")
 def get_low_ret_level(params, return_period=2, zero_fraction=0.0):
     if 1.0 / return_period <= zero_fraction:
         return 0
@@ -92,6 +98,7 @@ def get_low_ret_level(params, return_period=2, zero_fraction=0.0):
 
 
 # Martins E.S. (2000)
+@jit("f8(f8)", nopython=True)
 def ksi_pdf(ksi):
     if abs(ksi) >= 0.5:
         return 0
@@ -105,6 +112,7 @@ def ksi_pdf(ksi):
 
 
 # Coles 1999
+@jit("f8(f8)", nopython=True)
 def ksi_pdf_coles(ksi):
     if ksi <= 0:
         return 1.0
@@ -115,44 +123,45 @@ def ksi_pdf_coles(ksi):
     return np.exp(-lam * (1.0 / (1.0 - ksi) - 1) ** alpha)
 
 
+@jit("f8(f8, f8, f8, f8)", nopython=True)
 def qfunc(x, sigma, mu, ksi):
     """
     Helper function (1 + ksi*(x - mu) / sigma)^(-1/ksi)
+
+    :return float or NOVALUE
     """
     if sigma <= 1.0e-10:  # sigma > 0
-        return None
+        return NOVALUE
 
     if 1.0 + ksi * (x - mu) / sigma <= 0:
-        return None
+        return NOVALUE
 
     if abs(ksi) <= 1.0e-5:  # ksi != 0
-        the_power = -(x - mu) / sigma
-        result = np.exp(the_power)
-        assert result > 0, 'the_power = {0}, mu = {1}, sigma = {2}'.format(the_power, mu, sigma)
-        return result
+        # the_power = -(x - mu) / sigma
+        # result = np.exp(the_power)
+        # assert result > 0, 'the_power = {0}, mu = {1}, sigma = {2}'.format(the_power, mu, sigma)
+        return NOVALUE
 
     the_base = 1.0 + ksi * (x - mu) / sigma
     result = the_base ** (-1.0 / ksi)
 
     if np.isinf(result) or result == 0:
-        return None
+        return NOVALUE
 
-    if not result:
-        print(x, mu, sigma)
-        print(the_base)
-        print(-1.0 / ksi)
+    # if not result:
+    #     print(x, mu, sigma)
+    #     print(the_base)
+    #     print(-1.0 / ksi)
 
-    message = 'in qfunc: result = {0}, x = {1}, sigma = {2}, mu = {3}, ksi = {4}, the_base = {5}'
-    assert result > 0.0, message.format(result, x, sigma, mu, ksi, the_base)
+    # message = 'in qfunc: result = {0}, x = {1}, sigma = {2}, mu = {3}, ksi = {4}, the_base = {5}'
+    # assert result > 0.0, message.format(result, x, sigma, mu, ksi, the_base)
 
-    if np.isinf(result) or np.isnan(result):
-        print('Too big numbers: ', the_base, result)
-        assert False, 'qfunc = {0}'.format(result)
-        return None
+
     return result
 
 
 # -ln(gevpdf * ksi_pdf)
+@jit(nopython=True)
 def objective_function_stationary_high(pars, data):
     result = 0.0
     sigma, mu, ksi = pars
@@ -164,20 +173,21 @@ def objective_function_stationary_high(pars, data):
 
     for the_data in data:
         qi = qfunc(the_data, sigma, mu, ksi)
-        if qi is None:
+        if qi == NOVALUE:
             return BIG_NUM
-        assert qi > 0, 'qi = {0}'.format(qi)
+        # assert qi > 0, 'qi = {0}'.format(qi)
 
         minus_ln_pdfi = np.log(sigma) - (ksi + 1.0) * np.log(qi) + qi - np.log(ksi_probability)
         if minus_ln_pdfi < 0:
             return BIG_NUM
         result += minus_ln_pdfi
 
-    assert np.isfinite(result), 'result is nan, result = {0}'.format(result)
+    # assert np.isfinite(result), 'result is nan, result = {0}'.format(result)
     return result
 
 
 # -ln(gevpdf* ksi_pdf)
+@jit(nopython=True)
 def objective_function_stationary_low(pars, data):
     """
     objective function to minimize for stationary case
@@ -192,43 +202,40 @@ def objective_function_stationary_low(pars, data):
 
     for the_data in data:
         qi = qfunc(the_data, sigma, mu, ksi)
-        if qi is None:
+        if qi == NOVALUE:
             return BIG_NUM
-        assert qi > 0, 'qi = {0}'.format(qi)
+        # assert qi > 0, 'qi = {0}'.format(qi)
         minus_ln_pdfi = np.log(sigma) - (ksi + 1.0) * np.log(qi) + qi - np.log(ksi_probability)
         if minus_ln_pdfi < 0:
             return BIG_NUM
 
         result += minus_ln_pdfi
 
-    assert np.isfinite(result), 'result is nan, result = {0}'.format(result)
+    # assert np.isfinite(result), 'result is nan, result = {0}'.format(result)
     return result
 
 
 # vals timeseries for a point
+@jit
 def get_initial_params(vals):
-    assert len(vals) > 0, 'len(vals) = {0}'.format(len(vals))
+    # assert len(vals) > 0, 'len(vals) = {0}'.format(len(vals))
     ksi0 = 0.1
 
-    if len(vals) == 1:
-        bias = 1
-    else:
-        bias = 0
-
-    sigma0 = np.sqrt(6.0 * np.cov(vals, bias=bias)) / np.pi
+    sigma0 = np.sqrt(6.0 * np.cov(vals)) / np.pi
 
     if not sigma0:
         sigma0 = 0.2 * np.mean(vals)
 
     mu0 = np.mean(vals) - 0.57722 * sigma0
 
-    assert np.isfinite(mu0), 'mu0 = {0}'.format(mu0)
+    # assert np.isfinite(mu0), 'mu0 = {0}'.format(mu0)
     return [sigma0, mu0, ksi0]
 
 
 # returns initial parameters using L-moments
 def get_initial_params_using_lm(vals):
     from lmoments3 import distr
+
     sorted_vals = list(sorted(vals))
 
     the_moments = lmoments3.lmom_ratios(sorted_vals, nmom=3)
@@ -281,13 +288,22 @@ def optimize_stationary_for_period(extremes, high_flow=True, use_lmoments=False)
     #        pars0 = get_initial_params(extremes[indices])
 
     # default simplex
-    pars, z, niter, funcalls, warnflag, all_vecs = opt.fmin(objective_function, pars0,
-                                                            args=(extremes[indices],),
-                                                            maxfun=10000,
-                                                            full_output=True,
-                                                            disp=False,
-                                                            maxiter=10000,
-                                                            retall=True)
+    max_numof_iter_and_funcalls = 10000
+    # pars, z, niter, funcalls, warnflag = opt.fmin(objective_function, pars0,
+    #                                               args=(extremes[indices],),
+    #                                               maxfun=max_numof_iter_and_funcalls,
+    #                                               full_output=True,
+    #                                               disp=False,
+    #                                               maxiter=max_numof_iter_and_funcalls,
+    #                                               retall=False)
+
+    options = dict(maxiter=max_numof_iter_and_funcalls, maxfev=max_numof_iter_and_funcalls)
+    method = "Nelder-Mead"
+    opt_res = opt.minimize(objective_function, pars0, args=(extremes[indices],),
+                           method=method,
+                           options=options)
+
+
 
     # powell method
     #    pars, z, direc, niter, funcalls, warnflag, all_vecs = opt.fmin_powell(objective_function,
@@ -300,15 +316,16 @@ def optimize_stationary_for_period(extremes, high_flow=True, use_lmoments=False)
     #                                                        retall = True
     #                                                        )
 
-    if warnflag:
+    pars = opt_res.x
+    if not opt_res.success:
         print(list(extremes))
-        print(warnflag)
-        print(pars)
-        assert False, 'warnflag != 0'
+        print(opt_res.x)
+        print(opt_res.message)
+        assert False, 'the optimization was not successful'
 
     # assert warnflag == 0, 'warnflag = {0}, z = {1}, \n extremes = {2}'.format(warnflag, z, str(extremes))
-    assert z > 0, 'z <= 0'
-
+    # assert z > 0, 'z <= 0'
+    z = opt_res.fun
     if z < 0:
         print('converged to negative objective function')
         return [None, None, None, zero_fraction]
@@ -318,15 +335,14 @@ def optimize_stationary_for_period(extremes, high_flow=True, use_lmoments=False)
         print(extremes)
         print(extremes[indices].tolist())
         print(pars)
-        print(all_vecs)
+        # print(all_vecs)
         #       assert False
         return [None, None, None, zero_fraction]
 
-    assert z != BIG_NUM, 'z == BIG_NUM'
-    assert z >= 0, 'z < 0'
+    # assert z != BIG_NUM, 'z == BIG_NUM'
+    # assert z >= 0, 'z < 0'
 
-    pars[0] /= factor
-    pars[1] /= factor
+    pars[0:2] /= factor
     pars = np.append(pars, zero_fraction)
     extremes /= factor  # change back the extremes
     return pars
@@ -359,7 +375,6 @@ def optimize_stationary_for_period_and_all_cells(
         start_date=datetime(1970, 1, 1, 0, 0),
         end_date=datetime(1999, 12, 31, 0, 0),
         event_duration=timedelta(days=1)):
-
     print(paramfile)
 
     # check whether optimization is required
@@ -486,8 +501,8 @@ def test_lm():
     print("Fitted using custom method (Huziy et al 2013), using l-moments: ",
           optimize_stationary_for_period(np.array(sorted(data)), use_lmoments=True))
 
-
     from scipy.stats import genextreme
+
     print("Fitted using scipy.stats.genextreme: ", genextreme.fit(np.array(sorted(data))))
     print("10 year high flow return level: ", get_high_ret_level_stationary([sigma, mu, -xi, 0], 10))
     print("10 year high flow return level: ", get_high_ret_level_stationary([sigma, mu, -0.5, 0], 10))

@@ -209,10 +209,11 @@ def main_interflow():
 
     var_names = ["TT", "HU", "PR", "AV", "TRAF", "I1", "STFL"]
 
+    levels = [0, ] * len(var_names)
+
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20 * len(season_to_months) / 4.0,
                                  height_cm=20 * len(var_names) / 5.0)
 
-    levels = [0, 0, 0, 0, 0, 0, 0]
     multipliers = {
         "PR": 1.,
         "TRAF": 1.,
@@ -235,7 +236,7 @@ def main_interflow():
     start_year_c = 1980
     end_year_c = 2010
 
-    future_shift_years = 75
+    future_shift_years = 90
 
     params = dict(
         data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label
@@ -323,7 +324,7 @@ def main():
     start_year_c = 1980
     end_year_c = 2010
 
-    future_shift_years = 75
+    future_shift_years = 90
 
     params = dict(
         data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label
@@ -383,5 +384,5 @@ if __name__ == '__main__':
 
     application_properties.set_current_directory()
 
-    main()
-    # main_interflow()
+    # main()
+    main_interflow()

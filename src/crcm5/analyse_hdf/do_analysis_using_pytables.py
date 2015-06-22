@@ -21,6 +21,22 @@ import pandas as pd
 import tables as tb
 
 
+def get_basemap_info(**kwargs):
+    """
+    :param kwargs:
+    :return: BasemapInfo object either using RunConfig or path to the file with simulation results
+    """
+    bmp_res = "l"
+
+    if "resolution" in kwargs:
+        bmp_res = kwargs["resolution"]
+
+    if "r_config" in kwargs:
+        return get_basemap_info_from_hdf(file_path=kwargs["r_config"].data_path, resolution=bmp_res)
+    else:
+        return get_basemap_info_from_hdf(**kwargs)
+
+
 def get_basemap_info_from_hdf(file_path="", resolution="l"):
     """
     :param file_path:

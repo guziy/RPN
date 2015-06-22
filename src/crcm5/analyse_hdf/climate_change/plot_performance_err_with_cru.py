@@ -38,12 +38,59 @@ def aggregate_array(in_arr, nagg_x=2, nagg_y=2):
     return view_as_blocks(in_arr, (nagg_x, nagg_y)).mean(axis=2).mean(axis=2)
 
 
+def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None, obs_path=None):
+    # Number of points for aggregation
+    """
+    return aggregated BasemapInfo object corresponding to the CRU resolution
+
+    :param rconfig:
+    :param vname:
+    :param bmp_info: BasemapInfo object for the model field (will be upscaled to the CRU resolution)
+    :param season_to_months:
+    """
+    nx_agg = 5
+    ny_agg = 5
+
+    if bmp_info is None:
+        bmp_info = analysis.get_basemap_info_from_hdf(file_path=rconfig.data_path)
+
+    bmp_info_agg = bmp_info.get_aggregated(nagg_x=nx_agg, nagg_y=ny_agg)
+
+
+    # Validate temperature and precip
+    model_vars = ["TT", "PR"]
+    obs_vars = ["tmp", "pre"]
+
+    obs_paths = [
+        "/HOME/data/Validation/CRU_TS_3.1/Original_files_gzipped/cru_ts_3_10.1901.2009.tmp.dat.nc",
+        "/HOME/data/Validation/CRU_TS_3.1/Original_files_gzipped/cru_ts_3_10.1901.2009.pre.dat.nc"
+    ]
+
+    model_var_to_obs_var = dict(zip(model_vars, obs_vars))
+    model_var_to_obs_path = dict(zip(model_vars, obs_paths))
+
+    if obs_path is None:
+        obs_path = model_var_to_obs_path[vname]
+
+    cru = CRUDataManager(var_name=model_var_to_obs_var[vname], path=obs_path)
+
+    seasonal_clim_fields_obs = cru.get_seasonal_means(season_name_to_months=season_to_months,
+                                                      start_year=rconfig.start_year,
+                                                      end_year=rconfig.end_year)
+
+    seasonal_clim_fields_obs_interp = OrderedDict()
+    for season, cru_field in seasonal_clim_fields_obs.items():
+        seasonal_clim_fields_obs_interp[season] = cru.interpolate_data_to(cru_field,
+                                                                          lons2d=bmp_info_agg.lons,
+                                                                          lats2d=bmp_info_agg.lats, nneighbours=1)
+
+        # assert hasattr(seasonal_clim_fields_obs_interp[season], "mask")
+
+    return bmp_info_agg, seasonal_clim_fields_obs_interp
+
 
 def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_info=None, axes_list=None):
     assert isinstance(basemap_info, BasemapInfo)
-
-    cmap = cm.get_cmap("RdBu_r", 20)
-
 
     # Set to False if you want the limits to be recalculated from data
     manual_limits = True
@@ -51,14 +98,18 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
     d = max([np.percentile(np.abs(field[~field.mask]), 95) for s, field in season_to_error_field.items()])
 
     if manual_limits and varname in ["PR", "TT", "I5"]:
-        if varname == "PR":
-            d = 3
-        if varname == "TT":
-            d = 7
-        if varname == "I5":
-            d = 100
+        clevs = np.arange(-d, 1.1 * d, 0.1 * d)
 
-    clevs = MaxNLocator(nbins=cmap.N, symmetric=True).tick_values(-d, d)
+        if varname == "PR":
+            clevs = np.arange(-3, 3.5, 0.5)
+        if varname == "TT":
+            clevs = np.arange(-7, 8, 1)
+        if varname == "I5":
+            clevs = np.arange(-100, 110, 10)
+
+    else:
+        clevs = MaxNLocator(nbins=10, symmetric=True).tick_values(-d, d)
+    cmap = cm.get_cmap("RdBu_r", len(clevs) - 1)
 
     fig = None
     fig_path = None
@@ -96,14 +147,19 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
             ax.set_visible(False)
 
     cax = fig.add_subplot(gs[:, -1]) if axes_list is None else axes_list[-1]
-    cax.set_title(infovar.get_units(var_name=varname))
-    plt.colorbar(cs, cax=cax)
+
+    # Add the colorbar if there are additional axes supplied for it
+    if len(axes_list) > len(season_to_error_field):
+        cax.set_title(infovar.get_units(var_name=varname))
+        plt.colorbar(cs, cax=cax)
 
     if axes_list is None:
         with fig_path.open("wb") as figfile:
             fig.savefig(figfile, format="png", bbox_inches="tight")
 
         plt.close(fig)
+
+    return cs
 
 
 def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
@@ -121,6 +177,11 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
     :param bmp_info_agg:
     :param axes_list: if it is None the plots for each variable is done in separate figures
     """
+
+    if vname_obs is None:
+        vname_model_to_vname_obs = {"TT": "tmp", "PR": "pre"}
+        vname_obs = vname_model_to_vname_obs[vname_model]
+
     seasonal_clim_fields_model = analysis.get_seasonal_climatology_for_runconfig(run_config=r_config,
                                                                                  varname=vname_model, level=0,
                                                                                  season_to_months=season_to_months)
@@ -160,12 +221,12 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
             lons[lons > 180] -= 360
             season_to_err[season] = maskoceans(lons, bmp_info_agg.lats, season_to_err[season])
 
-    plot_seasonal_mean_biases(season_to_error_field=season_to_err, varname=vname_model, basemap_info=bmp_info_agg,
-                              axes_list=axes_list)
+    cs = plot_seasonal_mean_biases(season_to_error_field=season_to_err, varname=vname_model, basemap_info=bmp_info_agg,
+                                   axes_list=axes_list)
+    return cs
 
 
 def main():
-
     season_to_months = DEFAULT_SEASON_TO_MONTHS
 
     r_config = RunConfig(
@@ -204,7 +265,6 @@ def main():
     else:
         plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=25)
 
-
     row = 0
     for mname, oname, opath in zip(model_vars, obs_vars, obs_paths):
 
@@ -238,7 +298,6 @@ def main_wrapper():
 
     #
     main()
-
 
 
 if __name__ == '__main__':

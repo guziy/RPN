@@ -22,34 +22,6 @@ import numpy as np
 img_folder = Path("cc_paper/perf_err_with_anusplin")
 
 
-def plot_swe_bfes(runconfig_rea, runconfig_gcm, vname_model="I5", season_to_months=None,
-                  bmp_info=None, axes_list=None):
-    seasonal_clim_fields_rea = analysis.get_seasonal_climatology_for_runconfig(run_config=runconfig_rea,
-                                                                               varname=vname_model, level=0,
-                                                                               season_to_months=season_to_months)
-
-    seasonal_clim_fields_gcm = analysis.get_seasonal_climatology_for_runconfig(run_config=runconfig_gcm,
-                                                                               varname=vname_model, level=0,
-                                                                               season_to_months=season_to_months)
-
-    lons = bmp_info.lons.copy()
-    lons[lons > 180] -= 360
-
-    assert len(seasonal_clim_fields_rea) > 0
-    season_to_err = OrderedDict()
-    for season, field in seasonal_clim_fields_rea.items():
-        rea = field
-        gcm = seasonal_clim_fields_gcm[season]
-
-        # Mask oceans and lakes
-
-        season_to_err[season] = maskoceans(lons, bmp_info.lats, gcm - rea)
-        assert hasattr(season_to_err[season], "mask")
-
-    plot_performance_err_with_cru.plot_seasonal_mean_biases(season_to_error_field=season_to_err,
-                                                            varname=vname_model, basemap_info=bmp_info,
-                                                            axes_list=axes_list)
-
 
 def compare_vars(vname_model, vname_to_obs, r_config, season_to_months, bmp_info_agg, axes_list):
     season_to_clim_fields_model = analysis.get_seasonal_climatology_for_runconfig(run_config=r_config,
@@ -71,8 +43,60 @@ def compare_vars(vname_model, vname_to_obs, r_config, season_to_months, bmp_info
         season_to_err[season] = season_to_clim_fields_model[season] - seasonal_clim_fields_obs[season]
         season_to_err[season] = maskoceans(lons, bmp_info_agg.lats, season_to_err[season], inlands=False)
 
-    plot_seasonal_mean_biases(season_to_error_field=season_to_err, varname=vname_model, basemap_info=bmp_info_agg,
-                              axes_list=axes_list)
+    cs = plot_seasonal_mean_biases(season_to_error_field=season_to_err, varname=vname_model, basemap_info=bmp_info_agg,
+                                   axes_list=axes_list)
+
+    return cs
+
+
+def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None):
+    """
+
+    :param rconfig:
+    :param vname: Corresponding model variable name i.e either TT or PR
+    """
+    assert isinstance(rconfig, RunConfig)
+
+
+    if season_to_months is None:
+        season_to_months = DEFAULT_SEASON_TO_MONTHS
+
+    if bmp_info is None:
+        bmp_info = analysis.get_basemap_info_from_hdf(file_path=rconfig.data_path)
+
+
+    # Get Anusplin data managers
+    obs_path = "/home/huziy/skynet3_rech1/anusplin_links"
+    pcp_obs_manager = AnuSplinManager(variable="pcp", folder_path=obs_path)
+    tmax_obs_manager = AnuSplinManager(variable="stmx", folder_path=obs_path)
+    tmin_obs_manager = AnuSplinManager(variable="stmn", folder_path=obs_path)
+
+    if vname == "TT":
+        dates, vals_max = tmax_obs_manager.get_daily_clim_fields_interpolated_to(start_year=rconfig.start_year,
+                                                                                 end_year=rconfig.end_year,
+                                                                                 lons_target=bmp_info.lons,
+                                                                                 lats_target=bmp_info.lats)
+
+        _, vals_min = tmin_obs_manager.get_daily_clim_fields_interpolated_to(start_year=rconfig.start_year,
+                                                                             end_year=rconfig.end_year,
+                                                                             lons_target=bmp_info.lons,
+                                                                             lats_target=bmp_info.lats)
+
+        daily_obs = (dates, (vals_min + vals_max) * 0.5)
+    elif vname == "PR":
+        daily_obs = pcp_obs_manager.get_daily_clim_fields_interpolated_to(start_year=rconfig.start_year,
+                                                                          end_year=rconfig.end_year,
+                                                                          lons_target=bmp_info.lons,
+                                                                          lats_target=bmp_info.lats)
+    else:
+        raise Exception("Unknown variable: {}".format(vname))
+
+    season_to_obs_data = OrderedDict()
+    for season, months in season_to_months.items():
+        season_to_obs_data[season] = np.mean([f for d, f in zip(*daily_obs) if d.month in months], axis=0)
+
+
+    return season_to_obs_data
 
 
 def main():

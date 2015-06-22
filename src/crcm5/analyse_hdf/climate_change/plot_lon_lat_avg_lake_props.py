@@ -120,7 +120,7 @@ def main():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=30)
     fig = plt.figure()
 
-    gs = GridSpec(3, 2, width_ratios=[1, 0.05])
+    gs = GridSpec(4, 2, width_ratios=[1, 0.05])
 
     all_axes = []
     # ----------------------------------Lake temperature----------------------------------
@@ -171,18 +171,18 @@ def main():
     # ----------------------------------Lake ice fraction----------------------------------
     level = 0
     varname = "LC"
-    _, lake_ice_fraction_c = analysis.get_daily_climatology_for_rconf(current_config,
-                                                                      var_name=varname, level=level)
+    _, lake_depth_c = analysis.get_daily_climatology_for_rconf(current_config,
+                                                               var_name=varname, level=level)
 
-    _, lake_ice_fraction_f = analysis.get_daily_climatology_for_rconf(future_config,
-                                                                      var_name=varname, level=level)
+    _, lake_depth_f = analysis.get_daily_climatology_for_rconf(future_config,
+                                                               var_name=varname, level=level)
 
-    lake_ice_fraction = _avg_along(lake_ice_fraction_f - lake_ice_fraction_c, axis=avg_axis,
+    lake_ice_fraction = _avg_along(lake_depth_f - lake_depth_c, axis=avg_axis,
                                    lake_fraction=lake_fraction)
 
     row += 1
     ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap="jet", levels=np.arange(0, 1.1, 0.1))
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap="jet")
     ax.set_title("Lake ice fraction")
     all_axes.append(ax)
 
@@ -195,6 +195,33 @@ def main():
     plt.colorbar(cs, cax=cax, format=sfmt)
     cax.set_xlabel("")
     cax.yaxis.get_offset_text().set_position((-2, 10))
+    # ----------------------------------Lake ice fraction----------------------------------
+    level = 0
+    varname = "CLDP"
+    _, lake_depth_c = analysis.get_daily_climatology_for_rconf(current_config,
+                                                               var_name=varname, level=level)
+
+    _, lake_depth_f = analysis.get_daily_climatology_for_rconf(future_config,
+                                                               var_name=varname, level=level)
+
+    lake_ice_fraction = _avg_along(lake_depth_f - lake_depth_c, axis=avg_axis,
+                                   lake_fraction=lake_fraction)
+
+    row += 1
+    ax = fig.add_subplot(gs[row, 0])
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap="jet")
+    ax.set_title("Water level")
+    all_axes.append(ax)
+
+    # Colorbar for value plots
+    cax = fig.add_subplot(gs[row, -1])
+
+    sfmt = ScalarFormatter(useMathText=True)
+    sfmt.set_powerlimits((-2, 2))
+
+    plt.colorbar(cs, cax=cax, format=sfmt)
+    cax.set_xlabel("m")
+    cax.yaxis.get_offset_text().set_position((-2, 10))
 
     for i, the_ax in enumerate(all_axes):
         the_ax.xaxis.set_major_formatter(FuncFormatter(lambda d, pos: num2date(d).strftime("%b")[0]))
@@ -203,8 +230,9 @@ def main():
         the_ax.grid(which="minor")
         the_ax.set_ylabel(ztitle)
 
-    img_file = Path(img_folder).joinpath("cc_{}_Lake_props_current_{}_avg_{}-{}.png".format(
-        base_config.label, avg_axis, start_year_c, end_year_c))
+    img_file = Path(img_folder).joinpath("cc_{}_Lake_props_current_{}_avg_{}-{}_vs_{fsy}-{fey}.png".format(
+        base_config.label, avg_axis, start_year_c, end_year_c,
+        fsy=future_config.start_year, fey=future_config.end_year))
 
     fig.tight_layout()
     fig.savefig(str(img_file), bbox_inches="tight")

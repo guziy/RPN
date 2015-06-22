@@ -407,7 +407,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
 
 
     xs, ys = bmp_info.basemap(lons_out, lats_out)
-    # bmp.scatter(xs, ys, c="r", s=40, zorder=2)
+    bmp_info.basemap.scatter(xs, ys, c="0.75", s=30, zorder=10)
 
     cmap = cm.get_cmap("rainbow", index - 1)
     bn = BoundaryNorm(list(range(index + 1)), index - 1)
@@ -468,7 +468,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
                     font_properties=FontProperties(size=8), zorder=20)
 
     bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"), "basin",
-                                   linewidth=1.2, ax=ax)
+                                   linewidth=1.2, ax=ax, zorder=9)
 
 
 
@@ -636,7 +636,7 @@ def main():
     lake_fraction = np.ma.masked_where((fldr <= 0) | (fldr > 128), lake_fraction)
 
 
-    bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path, resolution="f")
+    bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path)
 
     basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,

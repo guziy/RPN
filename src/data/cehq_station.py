@@ -36,7 +36,7 @@ class Station:
         self.mean_temp_upstream_monthly_clim = None
         self.mean_prec_upstream_monthly_clim = None
 
-        ##specifically for the GRDC stations
+        # specifically for the GRDC stations
         self.grdc_monthly_clim_min = None
         self.grdc_monthly_clim_mean = None
         self.grdc_monthly_clim_max = None
@@ -168,7 +168,7 @@ class Station:
         return result
         pass
 
-    #here can be a problem
+    # here can be a problem
     def get_longest_continuous_series(self, data_step=timedelta(days=1)):
         series_list = []
         current_series = []
@@ -244,7 +244,7 @@ class Station:
                 start_reading_data = True
                 continue
 
-            #read date - value pairs from file
+            # read date - value pairs from file
 
             if start_reading_data:
                 fields = line.split()
