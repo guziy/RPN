@@ -1,25 +1,24 @@
 from datetime import datetime
-from descartes.patch import PolygonPatch
+import os
+import time
+
 from matplotlib import gridspec
-import matplotlib
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator
 from matplotlib.font_manager import FontProperties
 from matplotlib.spines import Spine
-from matplotlib.transforms import Affine2D, Bbox
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
-import os
-import time
-import shapely
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from shapely.geometry.geo import shape
 from shapely.geometry.point import Point
+from data import cehq_station
+
+from descartes.patch import PolygonPatch
 from crcm5.model_data import Crcm5ModelDataManager
 from crcm5.model_point import ModelPoint
 from cru.temperature import CRUDataManager
-from data import cehq_station
 from data.cehq_station import Station
-from data.cell_manager import CellManager
-from swe import SweDataManager
+from data.swe import SweDataManager
+
 
 __author__ = 'huziy'
 

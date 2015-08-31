@@ -735,10 +735,12 @@ def validate_max_ice_cover_with_glerl():
     img_folder = Path("nemo")
     if not img_folder.is_dir():
         img_folder.mkdir()
-    img_file = img_folder.joinpath("validate_yearmax_icecov_glerl_{}-{}.pdf".format(start_year, end_year))
+    img_file = img_folder.joinpath("validate_yearmax_icecov_glerl_{}-{}.png".format(start_year, end_year))
+
+    plot_utils.apply_plot_params(height_cm=9, width_cm=45, font_size=12)
 
     fig = plt.figure()
-    gs = GridSpec(2, 4, width_ratios=[1, 1, 1, 0.05])
+    gs = GridSpec(1, 5, width_ratios=[1, 1, 0.05, 1, 0.05])
     all_axes = []
 
     cmap = cm.get_cmap("jet", 10)
@@ -751,31 +753,32 @@ def validate_max_ice_cover_with_glerl():
     all_axes.append(ax)
 
     # Model
-    ax = fig.add_subplot(gs[0, 1])
-    ax.set_title("NEMO-offline-nosnow")
-    bmp.pcolormesh(xx, yy, model_yearmax_ice_conc_nosnow, cmap=cmap, vmin=0, vmax=1)
-    all_axes.append(ax)
+    # ax = fig.add_subplot(gs[0, 1])
+    # ax.set_title("NEMO-offline-nosnow")
+    # bmp.pcolormesh(xx, yy, model_yearmax_ice_conc_nosnow, cmap=cmap, vmin=0, vmax=1)
+    # all_axes.append(ax)
 
 
     # Obs
-    ax = fig.add_subplot(gs[0, 2])
-    ax.set_title("GLERL")
+    ax = fig.add_subplot(gs[0, 1])
+    ax.set_title("NIC")
     im = bmp.pcolormesh(xx, yy, obs_yearmax_ice_conc_interp, cmap=cmap, vmin=0, vmax=1)
     all_axes.append(ax)
 
-    plt.colorbar(im, cax=fig.add_subplot(gs[0, -1]))
+    plt.colorbar(im, cax=fig.add_subplot(gs[0, 2]))
 
 
 
     # Biases
-    ax = fig.add_subplot(gs[1, :])
-    ax.set_title("NEMO - GLERL")
+    ax = fig.add_subplot(gs[0, 3])
+    ax.set_title("NEMO - NIC")
     im = bmp.pcolormesh(xx, yy, model_yearmax_ice_conc - obs_yearmax_ice_conc_interp, cmap=diff_cmap, vmin=-1, vmax=1)
-    bmp.colorbar(im, ax=ax)
+    plt.colorbar(im, cax=fig.add_subplot(gs[0, -1]))
     all_axes.append(ax)
 
     for the_ax in all_axes:
         bmp.drawcoastlines(ax=the_ax)
+        the_ax.set_aspect("auto")
 
     fig.savefig(str(img_file), bbox_inches="tight")
     plt.close(fig)
@@ -786,10 +789,10 @@ def validate_max_ice_cover_with_glerl():
     plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
     plt.plot(range(start_year, end_year + 1), model_lake_avg_ts, "b", lw=2, label="NEMO")
     plt.plot(range(start_year, end_year + 1), model_lake_avg_ts_no_snow, "g", lw=2, label="NEMO-nosnow")
-    plt.plot(range(start_year, end_year + 1), np.asarray(obs_lake_avg_ts) / 100.0, "r", lw=2, label="GLERL")
+    plt.plot(range(start_year, end_year + 1), np.asarray(obs_lake_avg_ts) / 100.0, "r", lw=2, label="NIC")
     plt.grid()
     plt.legend(ncol=2)
-    fig.savefig(str(img_folder.joinpath("lake_avg_iceconc_nemo_offline_vs_GLERL.pdf")), bbox_inches="tight")
+    fig.savefig(str(img_folder.joinpath("lake_avg_iceconc_nemo_offline_vs_NIC.pdf")), bbox_inches="tight")
 
 
 if __name__ == '__main__':

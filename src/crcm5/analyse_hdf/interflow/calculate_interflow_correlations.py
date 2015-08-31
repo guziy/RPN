@@ -46,8 +46,11 @@ def calculate_correlation(data1, data2):
 
     nt = data1.shape[0]
 
-    data1_norm = (data1 - data1.mean(axis=0)) / (data1.std(axis=0) + 1e-10 * data1.std(axis=0).max())
-    data2_norm = (data2 - data2.mean(axis=0)) / (data2.std(axis=0) + 1e-10 * data2.std(axis=0).max())
+    eps1 = 1e-20 * data1.std(axis=0).max()
+    eps2 = 1e-20 * data2.std(axis=0).max()
+
+    data1_norm = (data1 - data1.mean(axis=0)) / (data1.std(axis=0) + eps1)
+    data2_norm = (data2 - data2.mean(axis=0)) / (data2.std(axis=0) + eps2)
 
     return np.sum(data1_norm * data2_norm / float(nt), axis=0)
 

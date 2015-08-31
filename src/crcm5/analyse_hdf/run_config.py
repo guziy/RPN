@@ -9,11 +9,14 @@ class RunConfig(object):
         self.label = label
 
 
-    def get_shifted_config(self, shift_years):
+    def get_shifted_config(self, shift_years, data_path=None):
 
         sy = self.start_year + shift_years
         ey = self.end_year + shift_years
-        path = self.data_path.replace(str(self.start_year), str(sy)).replace(str(self.end_year), str(ey))
+        if data_path is None:
+            path = self.data_path.replace(str(self.start_year), str(sy)).replace(str(self.end_year), str(ey))
+        else:
+            path = data_path
         return RunConfig(data_path=path, start_year=sy, end_year=ey, label=self.label)
 
 

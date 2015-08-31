@@ -1,20 +1,23 @@
 from collections import OrderedDict
 from pathlib import Path
+
 from matplotlib import cm
+from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.basemap import maskoceans
+import numpy as np
+
 from crcm5 import infovar
 from crcm5.analyse_hdf.run_config import RunConfig
 from cru.temperature import CRUDataManager
-from swe import SweDataManager
+from data.swe import SweDataManager
 from util import plot_utils
-
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 from util.geo import quebec_info
 from util.geo.basemap_info import BasemapInfo
 from util.seasons_info import DEFAULT_SEASON_TO_MONTHS
-import numpy as np
+
 
 __author__ = 'huziy'
 
@@ -89,7 +92,8 @@ def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_t
     return bmp_info_agg, seasonal_clim_fields_obs_interp
 
 
-def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_info=None, axes_list=None):
+def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_info=None,
+                              axes_list=None):
     assert isinstance(basemap_info, BasemapInfo)
 
     # Set to False if you want the limits to be recalculated from data
@@ -133,14 +137,19 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
         else:
             ax = axes_list[i]
 
+        basemap_info.draw_map_background(ax)
+
         cs = basemap_info.basemap.contourf(xx, yy, season_to_error_field[season][:], ax=ax, cmap=cmap, levels=clevs,
                                            extend="both")
-        basemap_info.basemap.drawcoastlines(ax=ax)
+        basemap_info.basemap.drawcoastlines(ax=ax, linewidth=0.3)
         ax.set_title(season)
         if i == 0:
-            ax.set_ylabel(infovar.get_display_label_for_var(varname=varname))
+            ax.set_ylabel(infovar.get_long_display_label_for_var(varname=varname))
         # basemap_info.basemap.colorbar(cs)
-        basemap_info.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
+
+        if basemap_info.should_draw_basin_boundaries:
+            basemap_info.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
+
 
         # Hide snow plots for summer
         if varname in ["I5"] and season.lower() in ["summer"]:
@@ -164,7 +173,7 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
 
 def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
                  season_to_months=None,
-                 obs_path=None, nx_agg=5, ny_agg=5, bmp_info_agg=None, axes_list=None):
+                 obs_path=None, nx_agg=5, ny_agg=5, bmp_info_agg=None, axes_list=None, obs_axes_list=None):
     """
 
     :param vname_model:
@@ -194,25 +203,27 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
             season_to_clim_fields_model_agg[season] *= 1.0e3 * 24 * 3600
 
     if vname_obs in ["SWE", ]:
-        cru = SweDataManager(path=obs_path, var_name=vname_obs)
+        obs_manager = SweDataManager(path=obs_path, var_name=vname_obs)
     elif obs_path is None:
-        cru = CRUDataManager(var_name=vname_obs)
+        obs_manager = CRUDataManager(var_name=vname_obs)
     else:
-        cru = CRUDataManager(var_name=vname_obs, path=obs_path)
+        obs_manager = CRUDataManager(var_name=vname_obs, path=obs_path)
 
-    seasonal_clim_fields_obs = cru.get_seasonal_means(season_name_to_months=season_to_months,
-                                                      start_year=r_config.start_year,
-                                                      end_year=r_config.end_year)
+    seasonal_clim_fields_obs = obs_manager.get_seasonal_means(season_name_to_months=season_to_months,
+                                                              start_year=r_config.start_year,
+                                                              end_year=r_config.end_year)
 
     seasonal_clim_fields_obs_interp = OrderedDict()
-    for season, cru_field in seasonal_clim_fields_obs.items():
-        seasonal_clim_fields_obs_interp[season] = cru.interpolate_data_to(cru_field,
-                                                                          lons2d=bmp_info_agg.lons,
-                                                                          lats2d=bmp_info_agg.lats, nneighbours=1)
+    for season, obs_field in seasonal_clim_fields_obs.items():
+        seasonal_clim_fields_obs_interp[season] = obs_manager.interpolate_data_to(obs_field,
+                                                                                  lons2d=bmp_info_agg.lons,
+                                                                                  lats2d=bmp_info_agg.lats,
+                                                                                  nneighbours=1)
 
         # assert hasattr(seasonal_clim_fields_obs_interp[season], "mask")
 
     season_to_err = OrderedDict()
+    print("-------------var: {} (PE with CRU)---------------------".format(vname_model))
     for season in seasonal_clim_fields_obs_interp:
         season_to_err[season] = season_to_clim_fields_model_agg[season] - seasonal_clim_fields_obs_interp[season]
 
@@ -221,8 +232,44 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
             lons[lons > 180] -= 360
             season_to_err[season] = maskoceans(lons, bmp_info_agg.lats, season_to_err[season])
 
-    cs = plot_seasonal_mean_biases(season_to_error_field=season_to_err, varname=vname_model, basemap_info=bmp_info_agg,
+
+        good_vals = season_to_err[season]
+        good_vals = good_vals[~good_vals.mask]
+        good_vals = good_vals[good_vals >= 0]
+        print("{}: min={}; max={}; avg={}".format(season,
+                                                  good_vals.min(),
+                                                  good_vals.max(),
+                                                  np.abs(good_vals).mean()))
+
+
+    cs = plot_seasonal_mean_biases(season_to_error_field=season_to_err,
+                                   varname=vname_model,
+                                   basemap_info=bmp_info_agg,
                                    axes_list=axes_list)
+
+    if obs_axes_list is not None and vname_model in ["I5"]:
+
+        clevs = [0, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 350, 400, 500]
+        cs_obs = None
+        xx, yy = bmp_info_agg.get_proj_xy()
+        lons = bmp_info_agg.lons.copy()
+        lons[lons > 180] -= 360
+        norm = BoundaryNorm(clevs, 256)
+        for col, (season, obs_field) in enumerate(seasonal_clim_fields_obs_interp.items()):
+            ax = obs_axes_list[col]
+
+            if bmp_info_agg.should_draw_basin_boundaries:
+                bmp_info_agg.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
+
+            to_plot = maskoceans(lons, bmp_info_agg.lats, obs_field)
+            cs_obs = bmp_info_agg.basemap.contourf(xx, yy, to_plot, levels=clevs, ax=ax, norm=norm)
+
+            bmp_info_agg.basemap.drawcoastlines(ax=ax)
+
+            ax.set_title(season)
+
+        plt.colorbar(cs_obs, cax=obs_axes_list[-1])
+
     return cs
 
 

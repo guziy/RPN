@@ -39,9 +39,22 @@ def compare_vars(vname_model, vname_to_obs, r_config, season_to_months, bmp_info
     lons[lons > 180] -= 360
 
     season_to_err = OrderedDict()
+    print("-------------var: {} (PE with anusplin)---------------------".format(vname_model))
     for season in seasonal_clim_fields_obs:
         season_to_err[season] = season_to_clim_fields_model[season] - seasonal_clim_fields_obs[season]
         season_to_err[season] = maskoceans(lons, bmp_info_agg.lats, season_to_err[season], inlands=False)
+
+        season_to_err[season] = np.ma.masked_where(np.isnan(season_to_err[season]), season_to_err[season])
+
+
+        good_vals = season_to_err[season]
+        good_vals = good_vals[~good_vals.mask]
+        good_vals = good_vals[good_vals >= 0]
+
+        print("{}: min={}; max={}; avg={}".format(season,
+                                                  good_vals.min(),
+                                                  good_vals.max(),
+                                                  np.abs(good_vals).mean()))
 
     cs = plot_seasonal_mean_biases(season_to_error_field=season_to_err, varname=vname_model, basemap_info=bmp_info_agg,
                                    axes_list=axes_list)

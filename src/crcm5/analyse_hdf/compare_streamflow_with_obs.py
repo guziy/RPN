@@ -1,29 +1,26 @@
 from collections import OrderedDict
-from datetime import datetime
-import itertools
-from matplotlib import cm
-import brewer2mpl
-from matplotlib.axes import Axes
-from matplotlib.dates import DateFormatter, MonthLocator
-from matplotlib.figure import Figure
 import os
-from matplotlib.ticker import MaxNLocator
-from mpl_toolkits.basemap import Basemap
+
+from matplotlib import cm
+from matplotlib.axes import Axes
+from matplotlib.dates import MonthLocator, num2date
+from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator, FuncFormatter, ScalarFormatter
 import pandas
-from pandas.tseries.converter import _daily_finder
+from data import cehq_station
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
+import numpy as np
+
 from crcm5 import infovar, model_point
 from crcm5.analyse_hdf.plot_station_positions import plot_positions_of_station_list
 from crcm5.model_point import ModelPoint
-from data import cehq_station
 from data.anusplin import AnuSplinManager
 from data.cehq_station import Station
 from data.cell_manager import CellManager
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib import gridspec
-import numpy as np
-from swe import SweDataManager
+from data.swe import SweDataManager
 from util import plot_utils
+
 
 __author__ = 'huziy'
 
@@ -51,7 +48,7 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
 
 
     # plot the arrows for upstream cells
-    ups_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
+    ups_mask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
 
     x1d_start = x[ups_mask == 1]
     y1d_start = y[ups_mask == 1]
@@ -376,7 +373,8 @@ def write_annual_flows_to_txt(sim_label_list, sim_to_values_model, values_obs, f
 
 def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_name=None, hdf_folder=None,
                           start_year=None, end_year=None, cell_manager=None, stfl_name="STFA",
-                          drainage_area_reldiff_min=0.1, plot_upstream_area_averaged=True):
+                          drainage_area_reldiff_min=0.1, plot_upstream_area_averaged=True,
+                          sim_name_to_color=None):
     """
 
     :param model_points: list of model point objects
@@ -458,14 +456,14 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     model_point.set_model_point_ids(mp_list)
 
 
-
+    # ###Uncomment the lines below for the validation plot in paper 2
     # brewer2mpl.get_map args: set name  set type  number of colors
-    bmap = brewer2mpl.get_map("Set1", "qualitative", 9)
+    # bmap = brewer2mpl.get_map("Set1", "qualitative", 9)
     # Change the default colors
-    mpl.rcParams["axes.color_cycle"] = bmap.mpl_colors
+    # mpl.rcParams["axes.color_cycle"] = bmap.mpl_colors
 
     # For the streamflow only plot
-    ncols = 2
+    ncols = 3
     nrows = max(len(mp_list) // ncols, 1)
     if ncols * nrows < len(mp_list):
         nrows += 1
@@ -485,10 +483,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     processed_model_points = mp_list
     plot_point_positions_with_upstream_areas(processed_stations, processed_model_points, basemap,
                                              cell_manager, lake_fraction_field=lake_fraction)
-
-    # TODO: Remove this, only added for testing
-    if True:
-        raise Exception()
 
     if plot_upstream_area_averaged:
         # create obs data managers
@@ -518,10 +512,10 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                                                                  lons2d_target=lons2d,
                                                                                  lats2d_target=lats2d)
     values_obs = None
+
     for i, the_model_point in enumerate(mp_list):
 
-        ax_stfl = figure_stfl.add_subplot(gs_stfl[i // ncols, i % ncols],
-                                          sharex=ax_stfl)
+        ax_stfl = figure_stfl.add_subplot(gs_stfl[i // ncols, i % ncols], sharex=ax_stfl)
 
         assert isinstance(the_model_point, ModelPoint)
 
@@ -562,7 +556,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         simlabel_to_vals = {}
         for label in label_list:
             fname = sim_name_to_file_name[label]
-            fpath = os.path.join(hdf_folder, fname)
+
+            if hdf_folder is None:
+                fpath = fname
+            else:
+                fpath = os.path.join(hdf_folder, fname)
 
             if plot_upstream_area_averaged:
                 # read temperature data and calculate daily climatologic fileds
@@ -592,7 +590,16 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                                                              j_index=the_model_point.jy)
 
             ax.plot(dates, values_model, label=label, lw=2)
-            ax_stfl.plot(dates, values_model, label=label, lw=2)
+
+            if sim_name_to_color is None:
+                ax_stfl.plot(dates, values_model, label=label, lw=2)
+            else:
+                ax_stfl.plot(dates, values_model, label=label, lw=2, c=sim_name_to_color[label])
+
+                print(20 * "!!!")
+                print("{} -> {}".format(label, sim_name_to_color[label]))
+                print(20 * "!!!")
+
             simlabel_to_vals[label] = values_model
 
         if the_station is not None:
@@ -604,7 +611,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             ax.plot(dates, values_obs, label="Obs.", lw=2)
             # no ticklabels for streamflow plot
             plt.setp(ax.get_xticklabels(), visible=False)
-            ax_stfl.plot(dates, values_obs, label="Obs.", lw=2)
+
+            if sim_name_to_color is None:
+                ax_stfl.plot(dates, values_obs, label="Obs.", lw=2)
+            else:
+                ax_stfl.plot(dates, values_obs, label="Obs.", lw=2, color=sim_name_to_color["Obs."])
 
             # Print excesss from streamflow validation
             for label, values_model in simlabel_to_vals.items():
@@ -621,7 +632,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         # Put some information about the point
         if the_station is not None:
             lf_upstream = lake_fraction[upstream_mask == 1]
-            point_info = "{0}\nlf-max={1:.2f}".format(the_station.id, lf_upstream.max())
+            point_info = "{0}".format(the_station.id)
             write_annual_flows_to_txt(label_list, simlabel_to_vals, values_obs, file_annual_discharge,
                                       station_id=the_station.id,
                                       da_obs=the_station.drainage_km2, da_mod=the_model_point.accumulation_area)
@@ -634,28 +645,35 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                     va="top", ha="right")
 
         ax.legend(loc=(0.0, 1.05), borderaxespad=0, ncol=3)
-        ax.xaxis.set_major_formatter(DateFormatter("%b"))
-        ax.xaxis.set_minor_locator(MonthLocator())
-        ax.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 2))))
+        ax.xaxis.set_minor_formatter(FuncFormatter(lambda x, pos: num2date(x).strftime("%b")[0]))
+        ax.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
+        ax.xaxis.set_major_locator(MonthLocator())
+
         ax.grid()
 
         streamflow_axes = ax  # save streamflow axes for later use
 
         if not legend_added:
-            ax_stfl.legend(loc=(0.0, 1.05), borderaxespad=3, ncol=3)
-            ax_stfl.xaxis.set_major_formatter(DateFormatter("%b"))
-            ax_stfl.xaxis.set_minor_locator(MonthLocator())
-            ax_stfl.xaxis.set_major_locator(MonthLocator(bymonth=list(range(1, 13, 3))))
+            ax_stfl.legend(loc="lower left", bbox_to_anchor=(0, 1.1), borderaxespad=0, ncol=3)
+            ax_stfl.xaxis.set_minor_formatter(FuncFormatter(lambda x, pos: num2date(x).strftime("%b")[0]))
+            ax_stfl.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
+            ax_stfl.xaxis.set_major_locator(MonthLocator())
+
             ax_stfl.set_ylabel(r"Streamflow ${\rm m^3/s}$")
             legend_added = True
 
+        plt.setp(ax_stfl.get_xmajorticklabels(), visible=False)
         ax_stfl.yaxis.set_major_locator(MaxNLocator(nbins=5))
+        sfmt = ScalarFormatter(useMathText=True)
+        sfmt.set_powerlimits((-2, 2))
+        ax_stfl.yaxis.set_major_formatter(sfmt)
         ax_stfl.grid()
 
         # annotate streamflow-only panel plot
-        ax_stfl.annotate(point_info, (0.95, 0.95), xycoords="axes fraction",
+        ax_stfl.annotate(point_info, (0.05, 0.95), xycoords="axes fraction",
                          bbox=dict(facecolor="white"),
-                         va="top", ha="right")
+                         va="top", ha="left")
+
 
         if plot_upstream_area_averaged:
             # plot temperature comparisons (tmod - daily with anusplin tmin and tmax)
@@ -733,8 +751,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     assert isinstance(figure_stfl, Figure)
     figure_stfl.tight_layout()
     figure_stfl.savefig(os.path.join(images_folder,
-                                     "comp_point_with_obs_{0}.png".format("_".join(label_list))),
-                        dpi=cpp.FIG_SAVE_DPI,
+                                     "comp_point_with_obs_{0}.eps".format("_".join(label_list))),
                         bbox_inches="tight")
     plt.close(figure_stfl)
 
@@ -753,24 +770,20 @@ def plot_point_positions_with_upstream_areas(processed_stations, processed_model
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=18, height_cm=8)
     fig = plt.figure()
 
-    gs = gridspec.GridSpec(1, 2, width_ratios=[1, 1], wspace=0.01)
+    gs = gridspec.GridSpec(1, 1, width_ratios=[1, 1], wspace=0.01)
 
     ax = fig.add_subplot(gs[0, 0])
     plot_positions_of_station_list(ax, processed_stations, processed_model_points, basemap, cell_manager)
-    ax.set_aspect("auto")
+    # ax.set_aspect("auto")
 
-
-    ax = fig.add_subplot(gs[0, 1])
-    ydata = range(lake_fraction_field.shape[1])
-    ax.plot(lake_fraction_field.mean(axis=0) * 100, ydata, lw=2)
-    ax.set_xlabel("%")
-    ax.set_ylim(min(ydata), max(ydata))
+    # ax = fig.add_subplot(gs[0, 1])
+    # ydata = range(lake_fraction_field.shape[1])
+    # ax.plot(lake_fraction_field.mean(axis=0) * 100, ydata, lw=2)
+    # ax.set_xlabel("%")
+    # ax.set_ylim(min(ydata), max(ydata))
 
     for tl in ax.yaxis.get_ticklabels():
         tl.set_visible(False)
-
-
-
 
     impath = os.path.join(images_folder, "station_positions.png")
     fig.savefig(impath, bbox_inches="tight")
@@ -809,7 +822,7 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
     assert len(mp_list) > 0
 
     # Get the accumulation indices so that the most important outlets can be identified
-    acc_ind_list = [np.sum(cell_manager.get_mask_of_cells_connected_with_by_indices(mp.ix, mp.jy))
+    acc_ind_list = [np.sum(cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(mp.ix, mp.jy))
                     for mp in mp_list]
 
     for mp, acc_ind in zip(mp_list, acc_ind_list):
@@ -850,7 +863,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     # selected_ids = []  # Do not use CEHQ stations temporarily
 
     # selected_ids = [
-    #     "074903", "061905", "090613", "092715", "093801", "093806", "081002"
+    # "074903", "061905", "090613", "092715", "093801", "093806", "081002"
     # ]
 
     # selected_ids = ["081002", "093801"]
@@ -935,6 +948,57 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
                           stfl_name="STFA",
                           drainage_area_reldiff_min=0.1,
                           plot_upstream_area_averaged=False)
+
+
+def main_for_cc_paper(start_date=None, end_date=None):
+
+    # Station ids to get from the CEHQ database
+    ids_with_lakes_upstream = [
+        "104001", "093806", "093801", "081002", "081007", "080718"
+    ]
+
+    selected_ids = ids_with_lakes_upstream
+
+    sim_labels = [
+        # "CRCM5-R",
+        # "CRCM5-L2",
+        "ERAI-CRCM5-L",
+        "CanESM2-CRCM5-L"
+        # "CRCM5-HCD-RL-INTF-a"
+    ]
+
+    sim_file_names = [
+        "/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
+        "/RESCUE/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
+    ]
+
+    color_list = ["b", "r", "g"]
+    sim_name_to_color = OrderedDict([
+        ("Obs.", "k")
+    ])
+
+    for sim_name, the_color in zip(sim_labels, color_list):
+        sim_name_to_color[sim_name] = the_color
+
+    sim_name_to_file_name = OrderedDict(zip(sim_labels, sim_file_names))
+
+    # Get the list of stations to do the comparison with
+    stations = cehq_station.read_station_data(
+        start_date=start_date, end_date=end_date, selected_ids=selected_ids
+    )
+
+    print("Initial list of stations:")
+    for s in stations:
+        print("{0}".format(s))
+
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=12)
+    draw_model_comparison(model_points=None, sim_name_to_file_name=sim_name_to_file_name,
+                          hdf_folder=None,
+                          start_year=start_date.year, end_year=end_date.year, stations=stations,
+                          stfl_name="STFL",
+                          drainage_area_reldiff_min=0.1,
+                          plot_upstream_area_averaged=False,
+                          sim_name_to_color=sim_name_to_color)
 
 
 if __name__ == "__main__":

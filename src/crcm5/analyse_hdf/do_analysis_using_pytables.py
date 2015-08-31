@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import os
 import pickle
 from pathlib import Path
+import re
 from crcm5.analyse_hdf.run_config import RunConfig
 from util.geo.basemap_info import BasemapInfo
 
@@ -96,8 +97,19 @@ def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,
     :param var_name:
     :param level:
     """
-    return Crcm5ModelDataManager.hdf_get_seasonal_means(path_to_hdf=path, months=months, var_name=var_name, level=level,
-                                                        start_year=start_year, end_year=end_year)
+
+    params = dict(path_to_hdf=path, months=months, level=level,
+                  start_year=start_year, end_year=end_year)
+
+    if ("-" in var_name) or ("+" in var_name):
+        var_name1, var_name2 = re.split(r"[+\-]", var_name)
+        v1 = Crcm5ModelDataManager.hdf_get_seasonal_means(var_name=var_name1, **params)
+        v2 = Crcm5ModelDataManager.hdf_get_seasonal_means(var_name=var_name2, **params)
+        return v1 - v2 if "-" in var_name else v1 + v2
+
+    else:
+        return Crcm5ModelDataManager.hdf_get_seasonal_means(var_name=var_name, **params)
+
 
 
 def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=None):
@@ -110,7 +122,9 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     """
     h = tb.open_file(path)
     traf_table = h.get_node("/", "TRAF")
-    sel_rows = traf_table.where("level_index == 5")
+
+    query = "level_index == 5"
+    sel_rows = traf_table.where(query)
     dates = []
     vals = []
     for the_row in sel_rows:
@@ -123,17 +137,23 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
     dt = ts.index[1] - ts.index[0]
     print("dt = ", dt)
     ts_cldp = ts.cumsum() * dt.total_seconds()
+
+
     return ts_cldp
 
 
-def get_cache_file_for_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1, high_flow=True):
+def get_cache_file_for_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1,
+                                      high_flow=True):
+    import hashlib
+
     months_str = "-".join([str(m) for m in months_of_interest])
     year_range = "{}-{}".format(rconfig.start_year, rconfig.end_year)
     hl = "high" if high_flow else "low"
-    fn = "get_annual_extrema_cache_{}_{}_{}_avg{}d_{}.bin".format(months_str, varname, year_range, n_avg_days, hl)
+    path_hash = hashlib.sha1(rconfig.data_path.encode()).hexdigest()
+    # Since I am inserting sha1 of the path to the simulation results => no need to use the simulation label
+    fn = "get_annual_extrema_cache_{}_{}_{}_{}_avg{}d_{}_{}.bin".format(
+        months_str, varname, year_range, "", n_avg_days, hl, path_hash)
     return Path(fn)
-
-
 
 
 def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_avg_days=1, high_flow=True):
@@ -153,9 +173,7 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
         with cache_file.open("rb") as f:
             return pickle.load(f)
 
-
     assert isinstance(rconfig, RunConfig)
-
 
     operator = lambda arr: np.min(arr, axis=0) if not high_flow else np.max(arr, axis=0)
 
@@ -294,7 +312,6 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
 
 
 def get_annual_maxima(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
-
     result = OrderedDict()
 
     cache_file_path = Path(path_to_hdf_file + ".cache").joinpath(
@@ -338,7 +355,6 @@ def get_daily_climatology_for_rconf(rconf, var_name="STFL", level=None):
 
 
 def get_daily_climatology(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
-
     # if the difference of 2 variables is requested
     opsign = "-" if "-" in var_name else "+" if "+" in var_name else None
     if "-" in var_name or "+" in var_name:
@@ -590,6 +606,11 @@ def get_pandas_panel_sorted_for_year(year, the_table, level_index=0):
 
 def get_np_arr_sorted_for_year(year, the_table, level_index=0):
     return get_pandas_panel_sorted_for_year(year, the_table, level_index=level_index).values
+
+
+def get_area_mean_timeseries(hdf_path, var_name="PR", level_index=0, selection=None):
+    assert hasattr(selection, "ll")  # Indices of the lower left corner of the selection
+    assert hasattr(selection, "ur")  # --//-- upper right corner of the selection
 
 
 if __name__ == "__main__":

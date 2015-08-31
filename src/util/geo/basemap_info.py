@@ -1,3 +1,5 @@
+from mpl_toolkits.basemap import Basemap
+
 __author__ = 'huziy'
 
 import numpy as np
@@ -6,16 +8,26 @@ USE_SKIMAGE = True
 try:
     from skimage.util import view_as_blocks
 except ImportError as ie:
+    view_as_blocks = None
     USE_SKIMAGE = False
+
+DEFAULT_BG_COLOR = "0.6"
 
 
 class BasemapInfo(object):
+    """
+    :type basemap: Basemap
+    """
     # Object containing info for plotting on a map
     def __init__(self, lons=None, lats=None, bmp=None):
         self.lons = lons.copy()
         self.lons[self.lons > 180] -= 360
         self.lats = lats
         self.basemap = bmp
+
+        self.map_bg_color = DEFAULT_BG_COLOR
+        self.should_draw_grey_map_background = False
+        self.should_draw_basin_boundaries = True
 
     def get_proj_xy(self):
         return self.basemap(self.lons, self.lats)
@@ -38,3 +50,12 @@ class BasemapInfo(object):
                     new_lats[i1, j1] = np.mean(self.lons[i:i + nagg_x, j:j + nagg_y])
 
         return BasemapInfo(lons=new_lons, lats=new_lats, bmp=self.basemap)
+
+    def draw_map_background(self, ax):
+        """
+
+        :param ax: Axis
+        """
+        if self.should_draw_grey_map_background:
+            self.basemap.drawmapboundary(ax=ax, fill_color=self.map_bg_color)
+

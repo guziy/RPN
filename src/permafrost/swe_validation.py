@@ -1,23 +1,25 @@
 import os
+
 from matplotlib import gridspec
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
-from matplotlib.transforms import Affine2D, Bbox
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-from mpl_toolkits.basemap import maskoceans, Basemap, cm
-from .active_layer_thickness import CRCMDataManager
+from mpl_toolkits.basemap import maskoceans, Basemap
 import matplotlib.pyplot as plt
+
+from .active_layer_thickness import CRCMDataManager
 import application_properties
 import my_colormaps
 from util import plot_utils
+
 
 __author__ = 'huziy'
 
 import numpy as np
 import matplotlib as mpl
 from matplotlib import colors
-from swe import SweDataManager
+from data.swe import SweDataManager
 from . import draw_regions
 
 def draw_colorbar(fig, img, ax = None, boundaries = None, ticks = None):

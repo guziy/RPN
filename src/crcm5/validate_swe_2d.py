@@ -1,15 +1,18 @@
 import os
+
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm
 from matplotlib.figure import Figure
 from mpl_toolkits.basemap import Basemap
 from scipy.spatial.kdtree import KDTree
+from matplotlib import cm
+import matplotlib.pyplot as plt
+
 from crcm5.model_data import Crcm5ModelDataManager
 from domains.rotated_lat_lon import RotatedLatLon
-from swe import SweDataManager
-from matplotlib import cm
+from data.swe import SweDataManager
 from util.geo import lat_lon
-import matplotlib.pyplot as plt
+
 __author__ = 'huziy'
 
 import numpy as np

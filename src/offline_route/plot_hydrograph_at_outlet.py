@@ -274,7 +274,7 @@ def plot_streamflow():
 
     cell_manager = CellManager(flow_dirs=fldr, lons2d=lons, lats2d=lats, accumulation_area_km2=acc_area)
 
-    model_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(i, j)
+    model_mask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(i, j)
 
 
     cell_index = np.where((x_index == i) & (y_index == j))[0][0]

@@ -1,14 +1,17 @@
+import hashlib
 from multiprocessing.pool import Pool
 from pathlib import Path
 import pickle
 import time
-from numba import jit
-from datetime import datetime
+import itertools as itt
+from mpldatacursor import datacursor
+
 import numpy as np
+
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 from crcm5.analyse_hdf.return_levels.extreme_commons import ExtremeProperties
-from gev_dist import gevfit
-import itertools as itt
+from gev_dist.gevfit import do_gevfit_for_a_point
+
 
 __author__ = 'huziy'
 
@@ -73,14 +76,30 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
         result.return_lev_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
         result.std_dict[extr_type].update({k: -np.ones((nx, ny)) for k in return_periods})
 
+
+        import matplotlib.pyplot as plt
+        plt.figure()
+
+        # to_plot = ext_values[0].transpose().copy()
+        # to_plot = np.ma.masked_where(to_plot >= 0, to_plot)
+        # qm = plt.pcolormesh(to_plot)
+        # datacursor(qm)
+        # plt.colorbar()
+        # plt.show()
+
+        ext_values = np.where(ext_values >= 0, ext_values, 0)
+
+
         if all_bootstrap_indices is None:
             np.random.seed(seed=ExtremeProperties.seed)
             all_bootstrap_indices = np.array([np.random.random_integers(0, ext_values.shape[0] - 1, ext_values.shape[0])
                                               for _ in range(ExtremeProperties.nbootstrap)])
 
 
-        # Probably needs to be optimized ...
 
+
+
+        # Probably needs to be optimized ...
         for i in range(nx):
             input_data = zip(ext_values[:, i, :].transpose(), itt.repeat(extr_type, ny),
                              itt.repeat(return_periods, ny), itt.repeat(all_bootstrap_indices, ny))
@@ -90,8 +109,7 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
             ret_levels, std_deviations = zip(*ret_level_and_std_pairs)
 
             for return_period in return_periods:
-                result.return_lev_dict[extr_type][return_period][i, :] = [ret_levels[j][return_period] for j in
-                                                                          range(ny)]
+                result.return_lev_dict[extr_type][return_period][i, :] = [ret_levels[j][return_period] for j in range(ny)]
                 result.std_dict[extr_type][return_period][i, :] = [std_deviations[j][return_period] for j in range(ny)]
 
 
@@ -119,70 +137,16 @@ def get_return_levels_and_unc_using_bootstrap(rconfig, varname="STFL"):
     return result
 
 
-def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
-                          return_periods=None, all_indices=None):
-    """
-    returns 2 dicts (ret_period_to_levels, ret_period_to_std)
-    with the layout {return_period: value}
-    all_indices - indices prepared beforehand with the shape: (nbootstrap, nyears)
-    """
-    if all_indices is None:
-        # to have the same result for different launches and extreme types
-        np.random.seed(seed=ExtremeProperties.seed)
 
-    is_high_flow = extreme_type == ExtremeProperties.high
-
-    if return_periods is None:
-        return_periods = ExtremeProperties.extreme_type_to_return_periods[extreme_type]
-
-    nyears = len(data)
-
-    ret_period_to_level = {k: -1 for k in return_periods}
-    ret_period_to_std = {k: -1 for k in return_periods}
-
-    # return -1 if all the data is 0
-    if np.max(data) <= 0:
-        return ret_period_to_level, ret_period_to_std
-
-    params = gevfit.optimize_stationary_for_period(data, high_flow=is_high_flow)
-
-    # Calculate return levels for all return periods
-    ret_period_to_level = {
-        t: gevfit.get_return_level_for_type_and_period(params, t, high_flow=is_high_flow) if None not in list(params) else -1
-        for t in return_periods
-    }
-
-    ret_period_to_level_list = {k: [] for k in return_periods}
-    for ibs in range(ExtremeProperties.nbootstrap):
-        if all_indices is None:
-            indices = np.random.random_integers(0, high=nyears - 1, size=nyears)
-        else:
-            indices = all_indices[ibs]
-
-        params = gevfit.optimize_stationary_for_period(
-            data[indices], high_flow=is_high_flow
-        )
-
-        for ret_period in return_periods:
-            ret_period_to_level_list[ret_period].append(
-                gevfit.get_return_level_for_type_and_period(
-                    params, ret_period, high_flow=is_high_flow
-                )
-            )
-
-    # Calculate standard deviation of the bootstrapped return levels
-    ret_period_to_std = {t: np.std(v) for t, v in ret_period_to_level_list.items()}
-
-    return ret_period_to_level, ret_period_to_std
 
 
 def get_cache_file_name(rconfig, months=None, ret_period=2,
                         extreme_type="high", varname="STFL"):
     months_str = "-".join([str(m) for m in months])
-
+    path_hash = hashlib.sha1(rconfig.data_path.encode()).hexdigest()
     return "RL_STD_{}_{}_{}-{}_{}_{}_{}.bin".format(varname,
                                                     extreme_type, rconfig.start_year,
-                                                    rconfig.end_year, rconfig.label,
+                                                    rconfig.end_year, path_hash,
                                                     months_str, ret_period)
 
 

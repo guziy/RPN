@@ -1,5 +1,6 @@
 from pathlib import Path
 from matplotlib import cm
+from matplotlib.colors import SymLogNorm, LogNorm, BoundaryNorm
 from matplotlib.dates import date2num, DateFormatter, MonthLocator, num2date
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator, ScalarFormatter, FuncFormatter
@@ -39,7 +40,7 @@ def main():
     lons, lats = r_obj.get_longitudes_and_latitudes_for_the_last_read_rec()
     r_obj.close()
 
-    future_shift_years = 75
+    future_shift_years = 90
 
     params = dict(
         data_path=current_path,
@@ -83,11 +84,12 @@ def main():
     fig = plt.figure()
 
     gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05])
+    norm = SymLogNorm(5e-5)
 
     all_axes = []
     # Current
     ax = fig.add_subplot(gs[0, 0])
-    cs = ax.contourf(num_dates_2d, lats_agg_2d, intf_c[:])
+    cs = ax.contourf(num_dates_2d, lats_agg_2d, intf_c[:], 60, norm=norm)
     ax.set_title("Current ({}-{})".format(
         base_config_c.start_year, base_config_c.end_year))
     all_axes.append(ax)
@@ -96,7 +98,7 @@ def main():
     ax = fig.add_subplot(gs[0, 1])
     ax.set_title("Future ({}-{})".format(
         base_config_f.start_year, base_config_f.end_year))
-    cs = ax.contourf(num_dates_2d, lats_agg_2d, intf_f[:], levels=cs.levels)
+    cs = ax.contourf(num_dates_2d, lats_agg_2d, intf_f[:], levels=cs.levels, norm=norm)
     all_axes.append(ax)
 
 
@@ -107,7 +109,7 @@ def main():
     cax = fig.add_subplot(gs[0, 2])
 
     sfmt = ScalarFormatter(useMathText=True)
-    sfmt.set_powerlimits((-2, 2))
+    sfmt.set_powerlimits((-1, 2))
 
     plt.colorbar(cs, cax=cax, format=sfmt)
     cax.set_xlabel("mm/day")
@@ -141,11 +143,15 @@ def main():
 
 
     for i, the_ax in enumerate(all_axes):
-        the_ax.xaxis.set_major_formatter(FuncFormatter(lambda d, pos: num2date(d).strftime("%b")[0]))
+        the_ax.xaxis.set_minor_formatter(FuncFormatter(lambda d, pos: num2date(d).strftime("%b")[0]))
+        the_ax.xaxis.set_major_formatter(FuncFormatter(lambda d, pos: ""))
+        the_ax.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
         the_ax.xaxis.set_major_locator(MonthLocator())
         the_ax.grid()
         if i != 1:
             the_ax.set_ylabel("Latitude")
+
+
 
     img_file = Path(img_folder).joinpath("INTF_rate_longit_avg.png")
     fig.tight_layout()

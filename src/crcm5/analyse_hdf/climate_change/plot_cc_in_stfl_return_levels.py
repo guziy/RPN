@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 
 from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import BASIN_BOUNDARIES_FILE
 from util import plot_utils
@@ -43,6 +43,9 @@ def main():
     gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
     gcm_driven_label_c = "CRCM5-L"
 
+    gcm_driven_path_f = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-2070-2100.hdf5"
+
+
     start_year_c = 1980
     end_year_c = 2010
 
@@ -59,7 +62,7 @@ def main():
     params.update(dict(data_path=gcm_driven_path_c, label=gcm_driven_label_c))
 
     gcm_driven_config_c = RunConfig(**params)
-    gcm_driven_config_f = gcm_driven_config_c.get_shifted_config(shift_years=future_shift_years)
+    gcm_driven_config_f = gcm_driven_config_c.get_shifted_config(shift_years=future_shift_years, data_path=gcm_driven_path_f)
 
     r_obj = RPN(geo_data_file)
     facc = r_obj.get_first_record_for_name("FAA")
@@ -100,14 +103,22 @@ def main():
             rl = rp_to_rl[rp]
 
             # Ignore 0 return levels in the current climate for percentage calculations
-            rl = np.ma.masked_where(rl <= 0, rl)
+            # rl = np.ma.masked_where(rl <= 0, rl)
+
 
             rl_future = rs_gcm_f.return_lev_dict[the_type][rp]
 
             # Calculate climate change signal
-            diff = (rl_future - rl) / rl * 100
+            diff = (rl_future - rl) / (np.abs(rl + rl_future) * 0.5) * 100
+
+
+            diff[(rl_future <= 0) & (rl <= 0)] = 0
+
+            # diff = rl
+
 
             diff = maskoceans(bmp_info.lons, bmp_info.lats, diff)
+            print(diff.min(), diff.max())
 
             std_c = rs_gcm_c.std_dict[the_type][rp]
             std_f = rs_gcm_f.std_dict[the_type][rp]
@@ -118,7 +129,9 @@ def main():
             vmin, vmax = limits[the_type]
             im = bmp_info.basemap.pcolormesh(xx, yy, diff, vmin=vmin, vmax=vmax, cmap=cmap)
 
-            cs = bmp_info.basemap.contourf(xx, yy, significance, levels=[0, 0.5, 1], hatches=["////", None, None],
+            cs = bmp_info.basemap.contourf(xx, yy, significance,
+                                           levels=[0, 0.5, 1],
+                                           hatches=["////", None, None],
                                            colors="none")
 
             if row == nrows - 1 and col == ncols - 1:
@@ -147,6 +160,8 @@ def main():
 
     with img_file.open("wb") as f:
         fig.savefig(f, bbox_inches="tight")
+
+    plt.close(fig)
 
 
 if __name__ == '__main__':

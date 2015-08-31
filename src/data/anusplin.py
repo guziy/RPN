@@ -9,6 +9,7 @@ from mpl_toolkits.basemap import Basemap
 import numpy as np
 from pandas.core.panel import Panel
 from scipy.spatial.ckdtree import cKDTree
+from data.base_data_manager import BaseDataManager
 from util.geo import lat_lon
 
 __author__ = 'huziy'
@@ -20,11 +21,13 @@ import pandas as pd
 # Did not use MFDataset with this data, since not sure if it can handle the peculiar time in days
 
 
-class AnuSplinManager:
+class AnuSplinManager(BaseDataManager):
     def __init__(self,
                  folder_path="/home/huziy/skynet1_rech3/anusplin_links",
                  variable="pcp",
                  file_name_preifx="ANUSPLIN_latlon_"):
+
+        super().__init__()
 
         self.lons2d = None
         self.lats2d = None
@@ -131,7 +134,7 @@ class AnuSplinManager:
         # daily_clim_fields = [
         # np.asarray([ds.variables[self.nc_varname][day - 1, :, :] for ds in ds_list]).mean(axis=0)
         #    for day, ds_list in zip(day_list, ds_lists)
-        #]
+        # ]
 
         daily_clim_fields = pool.map(_reader, list(zip(path_lists, day_of_month_list, varname_list)))
         daily_clim_fields = np.asarray(daily_clim_fields)
@@ -196,25 +199,6 @@ class AnuSplinManager:
         dists, indices = self.kdtree.query(list(zip(xt, yt, zt)))
         return mean_field.flatten()[indices].reshape(lonstarget.shape)
 
-
-    def get_daily_clim_fields_interpolated_to(self, start_year=None, end_year=None,
-                                              lons_target=None, lats_target=None):
-        # Return 365 fields
-        df = self.get_daily_climatology_fields(start_year=start_year, end_year=end_year)
-
-        assert isinstance(df, Panel)
-
-        lons1d, lats1d = lons_target.flatten(), lats_target.flatten()
-        xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons1d, lats1d)
-
-        dists, indices = self.kdtree.query(list(zip(xt, yt, zt)))
-
-        clim_fields = [
-            df.loc[:, day, :].values.flatten()[indices].reshape(lons_target.shape) for day in df.major_axis
-        ]
-        clim_fields = np.asarray(clim_fields)
-        clim_fields = np.ma.masked_where(np.isnan(clim_fields), clim_fields)
-        return df.major_axis, clim_fields
 
 
 def _reader(x):

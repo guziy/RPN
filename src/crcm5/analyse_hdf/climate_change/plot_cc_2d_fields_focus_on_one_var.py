@@ -78,7 +78,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     i_to_label = {
         0: base_label,
         1: modif_label,
-        2: "{} - {}".format(modif_label, base_label)
+        2: "{}\n--\n{}".format(modif_label, base_label)
     }
 
     j_to_title = {
@@ -95,8 +95,8 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
     nrows = ncols = 3
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=27, height_cm=20)
 
-    field_cmap = cm.get_cmap("jet", 10)
-    diff_cmap = cm.get_cmap("RdBu_r", 10)
+    field_cmap = cm.get_cmap("jet", 20)
+    diff_cmap = cm.get_cmap("RdBu_r", 20)
 
     for season in list(data_dict[base_config_c].keys()):
 
@@ -129,7 +129,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
             (1, 2): p_signif_modif_cc,
             (2, 0): p_signif_current,
             (2, 1): p_signif_future,
-            (2, 2): np.minimum(p_signif_current, p_signif_future)
+            # (2, 2): np.minimum(p_signif_current, p_signif_future)
         }
 
         ij_to_data = {
@@ -168,6 +168,12 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
         maxdiff_cc = np.percentile(all_cc_diffs[~all_cc_diffs.mask], 99)
 
         maxdiff_cc = max(np.ma.abs(maxdiff_cc), np.ma.abs(mindiff_cc))
+
+        # Limit the temperature change scale
+        if vname == "TT":
+            maxdiff_cc = min(maxdiff_cc, 10)
+
+
         mindiff_cc = -maxdiff_cc
 
 
@@ -222,7 +228,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
 
                 the_cmap = field_cmap if plotting_values else diff_cmap
 
-                locator = MaxNLocator(nbins=the_cmap.N, symmetric=not plotting_values)
+                locator = MaxNLocator(nbins=the_cmap.N // 2, symmetric=not plotting_values)
                 bounds = locator.tick_values(the_min, the_max)
 
                 if vname in ["STFA", "STFL"] and plotting_values:
@@ -302,11 +308,11 @@ def main():
 
     base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                         "quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    base_label = "CRCM5-NL"
+    base_label = "CanESM2-CRCM5-NL"
 
     modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                          "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    modif_label = "CRCM5-L"
+    modif_label = "CanESM2-CRCM5-L"
 
     # base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
     # "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"

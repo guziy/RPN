@@ -1,3 +1,5 @@
+from matplotlib.lines import Line2D
+from pathlib import Path
 
 __author__ = "huziy"
 __date__ = "$Aug 17, 2011 3:49:28 PM$"
@@ -16,6 +18,9 @@ def draw_colorbar(fig, img, ax=None, boundaries=None, ticks=None):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
     cb = fig.colorbar(img, cax=cax, boundaries=boundaries, ticks=ticks)
+
+
+
 
 
 def get_closest_tick_value(nticks, lower_limit):
@@ -91,10 +96,36 @@ def get_ranges(x_interest, y_interest):
     """
     x_min, x_max = np.min(x_interest), np.max(x_interest)
     y_min, y_max = np.min(y_interest), np.max(y_interest)
-    dx = 0.1 * ( x_max - x_min )
-    dy = 0.1 * ( y_max - y_min )
+    dx = 0.1 * (x_max - x_min)
+    dy = 0.1 * (y_max - y_min)
     return x_min - dx, x_max + dx, y_min - dy, y_max + dy
+
+
+def save_to_shape_file(bound_coords, folder_path=""):
+    # TODO: implement
+    pass
+
+def draw_upstream_area_bounds(the_ax, upstream_edges, **kwargs):
+    """
+
+    accepts all the parameters of the Line2D constructor
+
+    :param the_ax:
+    :param upstream_edges: list of lists of coordinates of edges to draw [[[(x1, x2), (y1, y2)], ...]]
+
+    :type the_ax: Axes
+
+    """
+    for p in upstream_edges:
+        for edge in p:
+            xs, ys = edge
+            the_ax.add_line(Line2D(xs, ys, **kwargs))
+
+
+
 
 
 if __name__ == "__main__":
     print("Hello World")
+
+

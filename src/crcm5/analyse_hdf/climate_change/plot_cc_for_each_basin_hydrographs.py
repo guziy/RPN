@@ -1,6 +1,8 @@
+from collections import OrderedDict
 from datetime import datetime
 import os
 from docutils.nodes import thead
+import itertools
 
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm
@@ -12,6 +14,7 @@ from osgeo.ogr import Geometry
 from pandas.tseries.converter import _daily_finder
 from rpn.rpn import RPN
 from matplotlib import cm
+from crcm5.model_point import ModelPoint
 
 from data.cell_manager import CellManager
 from util.geo.basemap_info import BasemapInfo
@@ -30,6 +33,18 @@ BASIN_BOUNDARIES_FILE = "data/shape/contour_bv_MRCC/Bassins_MRCC_utm18.shp"
 from osgeo import ogr, osr
 import numpy as np
 from util import plot_utils
+
+
+
+def flip(items, ncol):
+    """
+    To order the items in the leegend, taken from
+    http://stackoverflow.com/questions/10101141/matplotlib-legend-add-items-across-columns-instead-of-down
+    :param items:
+    :param ncol:
+    :return:
+    """
+    return itertools.chain(*[items[i::ncol] for i in range(ncol)])
 
 
 class DataToPlot(object):
@@ -203,7 +218,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         #
         #
         # line_modif = ax.plot(daily_dates, cc_modif[name].copy(),
-        #                      color="r", label="{}".format(data_to_plot.modif_label),
+        # color="r", label="{}".format(data_to_plot.modif_label),
         #                      zorder=5, lw=2)
 
         # Plot monthly
@@ -256,16 +271,20 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5, symmetric=True))
         # ax.set_ylim(bottom=vmin, top=vmax * 1.2)
 
-        ax.xaxis.set_major_formatter(FuncFormatter(format_day_tick_labels))
+        ax.xaxis.set_minor_formatter(FuncFormatter(format_day_tick_labels))
 
-        # ax.xaxis.set_minor_locator(DayLocator(interval=5))
+        ax.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
         ax.xaxis.set_major_locator(MonthLocator())
+        plt.setp(ax.xaxis.get_majorticklabels(), visible=False)
         ax.grid()
 
     the_labels = (data_to_plot.base_label, data_to_plot.modif_label)
-    ax_last.legend((line_base[0], line_modif[0], line_diff[0]),
-                   (the_labels[0], the_labels[1], "{} vs {}".format(*the_labels[::-1])),
-                   bbox_to_anchor=(1, -0.2), loc="upper right", borderaxespad=0, ncol=len(the_labels) + 1)
+
+    assert isinstance(ax_last, Axes)
+    handles = (line_base[0], line_modif[0], line_diff[0])
+    leg_labels = (the_labels[0], the_labels[1], "{} vs {}".format(*the_labels[::-1]))
+    ax_last.legend(handles, leg_labels, loc="upper right",
+                   bbox_to_anchor=(1, -0.2), borderaxespad=0, ncol=len(the_labels))
 
     plt.tight_layout()
     print("Saving the plot to {}".format(img_path))
@@ -333,7 +352,6 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
         geom = feature.GetGeometryRef()
         assert isinstance(geom, ogr.Geometry)
 
-
         basins.append(ogr.CreateGeometryFromWkb(geom.ExportToWkb()))
         basin_names.append(feature["abr"])
 
@@ -358,7 +376,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
             assert isinstance(p, ogr.Geometry)
             if b.Contains(p.Buffer(2000 * 2 ** 0.5)):
                 # Check if there is an upstream cell from the same basin
-                the_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(i, j)
+                the_mask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(i, j)
 
                 # Save the mask of the basin for future use
                 basin_name_to_mask[name] = the_mask
@@ -412,8 +430,9 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
     cmap = cm.get_cmap("rainbow", index - 1)
     bn = BoundaryNorm(list(range(index + 1)), index - 1)
 
-    basin_mask = np.ma.masked_where(basin_mask < 0.5, basin_mask)
-    bmp_info.basemap.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap, ax=ax)
+    # Do not color the basins
+    # basin_mask = np.ma.masked_where(basin_mask < 0.5, basin_mask)
+    # bmp_info.basemap.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap, ax=ax)
 
     for name, xa, ya, lona, lata in zip(basin_names_out, xs, ys, lons_out, lats_out):
 
@@ -467,8 +486,8 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'),
                     font_properties=FontProperties(size=8), zorder=20)
 
-    bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"), "basin",
-                                   linewidth=1.2, ax=ax, zorder=9)
+    # bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"), "basin",
+    #                               linewidth=1.2, ax=ax, zorder=9)
 
 
 
@@ -489,10 +508,229 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
+    for tl in ax.yaxis.get_ticklabels():
+        tl.set_visible(False)
+
+    fig.savefig("qc_basin_outlets_points.png", bbox_inches="tight")
+    # plt.show()
+    plt.close(fig)
+
+    return name_to_ij_out, basin_name_to_mask
+
+
+def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
+                       directions=None, accumulation_areas=None,
+                       lake_fraction_field=None):
+    assert isinstance(bmp_info, BasemapInfo)
+
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+    print(driver)
+    ds = driver.Open(shape_file, 0)
+
+    assert isinstance(ds, ogr.DataSource)
+    layer = ds.GetLayer()
+
+    assert isinstance(layer, ogr.Layer)
+    print(layer.GetFeatureCount())
+
+    latlong_proj = osr.SpatialReference()
+    latlong_proj.ImportFromEPSG(4326)
+
+    utm_proj = layer.GetSpatialRef()
+
+    # create Coordinate Transformation
+    coord_transform = osr.CoordinateTransformation(latlong_proj, utm_proj)
+
+    utm_coords = coord_transform.TransformPoints(list(zip(bmp_info.lons.flatten(), bmp_info.lats.flatten())))
+    utm_coords = np.asarray(utm_coords)
+    x_utm = utm_coords[:, 0].reshape(bmp_info.lons.shape)
+    y_utm = utm_coords[:, 1].reshape(bmp_info.lons.shape)
+
+    basin_mask = np.zeros_like(bmp_info.lons)
+    cell_manager = CellManager(directions, accumulation_area_km2=accumulation_areas,
+                               lons2d=bmp_info.lons, lats2d=bmp_info.lats)
+
+    index = 1
+    basins = []
+    basin_names = []
+    basin_name_to_mask = {}
+    for feature in layer:
+        assert isinstance(feature, ogr.Feature)
+        # print feature["FID"]
+
+        geom = feature.GetGeometryRef()
+        assert isinstance(geom, ogr.Geometry)
+
+        basins.append(ogr.CreateGeometryFromWkb(geom.ExportToWkb()))
+        basin_names.append(feature["abr"])
+
+    accumulation_areas_temp = accumulation_areas.copy()
+    lons_out, lats_out = [], []
+    basin_names_out = []
+    name_to_ij_out = OrderedDict()
+
+    min_basin_area = min(b.GetArea() * 1.0e-6 for b in basins)
+
+    while len(basins):
+        fm = np.max(accumulation_areas_temp)
+
+        i, j = np.where(fm == accumulation_areas_temp)
+        i, j = i[0], j[0]
+        p = ogr.CreateGeometryFromWkt("POINT ({} {})".format(x_utm[i, j], y_utm[i, j]))
+        b_selected = None
+        name_selected = None
+        for name, b in zip(basin_names, basins):
+
+            assert isinstance(b, ogr.Geometry)
+            assert isinstance(p, ogr.Geometry)
+            if b.Contains(p.Buffer(2000 * 2 ** 0.5)):
+                # Check if there is an upstream cell from the same basin
+                the_mask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(i, j)
+
+                # Save the mask of the basin for future use
+                basin_name_to_mask[name] = the_mask
+
+                # if is_part_of_points_in(b, x_utm[the_mask == 1], y_utm[the_mask == 1]):
+                # continue
+
+
+                b_selected = b
+                name_selected = name
+                # basin_names_out.append(name)
+
+                lons_out.append(bmp_info.lons[i, j])
+                lats_out.append(bmp_info.lats[i, j])
+                name_to_ij_out[name] = (i, j)
+
+                basin_mask[the_mask == 1] = index
+                index += 1
+                break
+
+        if b_selected is not None:
+            basins.remove(b_selected)
+            basin_names.remove(name_selected)
+            outlet_index_in_basin = 1
+            current_basin_name = name_selected
+            while current_basin_name in basin_names_out:
+                current_basin_name = name_selected + str(outlet_index_in_basin)
+                outlet_index_in_basin += 1
+
+            basin_names_out.append(current_basin_name)
+            print(len(basins), basin_names_out)
+
+        accumulation_areas_temp[i, j] = -1
+
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=12)
+    gs = GridSpec(1, 2, width_ratios=[1.0, 0.5], wspace=0.01)
+    fig = plt.figure()
+
+    ax = fig.add_subplot(gs[0, 0])
+    xx, yy = bmp_info.get_proj_xy()
+    bmp_info.basemap.drawcoastlines(linewidth=0.5, ax=ax)
+    bmp_info.basemap.drawrivers(zorder=5, color="0.5", ax=ax)
+
+
+    upstream_edges = cell_manager.get_upstream_polygons_for_points(
+        model_point_list=[ModelPoint(ix=i, jy=j) for (i, j) in name_to_ij_out.values()],
+        xx=xx,
+        yy=yy
+    )
+    plot_utils.draw_upstream_area_bounds(ax, upstream_edges=upstream_edges, color="r", linewidth=0.6)
+
+
+
+    xs, ys = bmp_info.basemap(lons_out, lats_out)
+    bmp_info.basemap.scatter(xs, ys, c="0.75", s=30, zorder=10)
+
+    cmap = cm.get_cmap("rainbow", index - 1)
+    bn = BoundaryNorm(list(range(index + 1)), index - 1)
+
+    # basin_mask = np.ma.masked_where(basin_mask < 0.5, basin_mask)
+    # bmp_info.basemap.pcolormesh(xx, yy, basin_mask, norm=bn, cmap=cmap, ax=ax)
+
+
+
+
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+
+    print(xmin, xmax, ymin, ymax)
+    dx = xmax - xmin
+    dy = ymax - ymin
+    step_y = 0.1
+    step_x = 0.12
+    y0_frac = 0.75
+    y0_frac_bottom = 0.02
+    x0_frac = 0.35
+    bname_to_text_coords = {
+        "RDO": (xmin + x0_frac * dx, ymin + y0_frac_bottom * dy),
+        "STM": (xmin + (x0_frac + step_x) * dx, ymin + y0_frac_bottom * dy),
+        "SAG": (xmin + (x0_frac + 2 * step_x) * dx, ymin + y0_frac_bottom * dy),
+        "BOM": (xmin + (x0_frac + 3 * step_x) * dx, ymin + y0_frac_bottom * dy),
+        "MAN": (xmin + (x0_frac + 4 * step_x) * dx, ymin + y0_frac_bottom * dy),
+        "MOI": (xmin + (x0_frac + 5 * step_x) * dx, ymin + y0_frac_bottom * dy),
+        "ROM": (xmin + (x0_frac + 5 * step_x) * dx, ymin + (y0_frac_bottom + step_y) * dy),
+        "NAT": (xmin + (x0_frac + 5 * step_x) * dx, ymin + (y0_frac_bottom + 2 * step_y) * dy),
+
+        ######
+        "CHU": (xmin + (x0_frac + 5 * step_x) * dx, ymin + y0_frac * dy),
+        "GEO": (xmin + (x0_frac + 5 * step_x) * dx, ymin + (y0_frac + step_y) * dy),
+        "BAL": (xmin + (x0_frac + 5 * step_x) * dx, ymin + (y0_frac + 2 * step_y) * dy),
+        "PYR": (xmin + (x0_frac + 4 * step_x) * dx, ymin + (y0_frac + 2 * step_y) * dy),
+        "MEL": (xmin + (x0_frac + 3 * step_x) * dx, ymin + (y0_frac + 2 * step_y) * dy),
+        "FEU": (xmin + (x0_frac + 2 * step_x) * dx, ymin + (y0_frac + 2 * step_y) * dy),
+        "ARN": (xmin + (x0_frac + 1 * step_x) * dx, ymin + (y0_frac + 2 * step_y) * dy),
+
+        ######
+        "CAN": (xmin + 0.1 * dx, ymin + 0.80 * dy),
+        "GRB": (xmin + 0.1 * dx, ymin + (0.80 - step_y) * dy),
+        "LGR": (xmin + 0.1 * dx, ymin + (0.80 - 2 * step_y) * dy),
+        "RUP": (xmin + 0.1 * dx, ymin + (0.80 - 3 * step_y) * dy),
+        "WAS": (xmin + 0.1 * dx, ymin + (0.80 - 4 * step_y) * dy),
+        "BEL": (xmin + 0.1 * dx, ymin + (0.80 - 5 * step_y) * dy),
+
+    }
+
+
+    # bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"), "basin",
+    #                                linewidth=1.2, ax=ax, zorder=9)
+
+    for name, xa, ya, lona, lata in zip(basin_names_out, xs, ys, lons_out, lats_out):
+
+        ax.annotate(name, xy=(xa, ya), xytext=bname_to_text_coords[name],
+                    textcoords='data', ha='right', va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.4', fc='white'),
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0', linewidth=0.25),
+                    font_properties=FontProperties(size=8), zorder=20)
+
+
+
+        print(r"{} & {:.0f} \\".format(name, accumulation_areas[name_to_ij_out[name]]))
+
+
+
+
+    # Plot zonally averaged lake fraction
+    ax = fig.add_subplot(gs[0, 1])
+    ydata = range(lake_fraction_field.shape[1])
+    ax.plot(lake_fraction_field.mean(axis=0) * 100, ydata, lw=2)
+
+    ax.fill_betweenx(ydata, lake_fraction_field.mean(axis=0) * 100, alpha=0.5)
+
+    ax.set_xlabel("Lake fraction (%)")
+    ax.set_ylim(min(ydata), max(ydata))
+    ax.xaxis.set_tick_params(direction='out', width=1)
+    ax.yaxis.set_tick_params(direction='out', width=1)
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("none")
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
     for tl in ax.yaxis.get_ticklabels():
         tl.set_visible(False)
 
+    plt.show()
     fig.savefig("qc_basin_outlets_points.png", bbox_inches="tight")
     # plt.show()
     plt.close(fig)
@@ -534,16 +772,16 @@ def get_image_path(base_c, base_f, modif_c, modif_f, varname):
 def main_interflow():
     base_current_path = \
         "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    base_label = "CRCM5-L"
+    base_label = "CanESM2-CRCM5-L"
 
     modif_current_path = \
         "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
-    modif_label = "CRCM5-LI"
+    modif_label = "CanESM2-CRCM5-LI"
 
     start_year_c = 1980
     end_year_c = 2010
 
-    future_shift_years = 75
+    future_shift_years = 90
 
     params = dict(
         data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
@@ -568,7 +806,6 @@ def main_interflow():
     lake_fraction = r_obj.get_first_record_for_name_and_level("ML")
     # mask ocean points
     lake_fraction = np.ma.masked_where((fldr <= 0) | (fldr > 128), lake_fraction)
-
 
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path)
 
@@ -599,18 +836,18 @@ def main_interflow():
 def main():
     base_current_path = \
         "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    base_label = "CRCM5-NL"
+    base_label = "CanESM2-CRCM5-NL"
 
     modif_current_path = \
         "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    modif_label = "CRCM5-L"
+    modif_label = "CanESM2-CRCM5-L"
 
     start_year_c = 1980
     end_year_c = 2010
 
     varname = "STFL"
 
-    future_shift_years = 75
+    future_shift_years = 90
 
     params = dict(
         data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
@@ -635,26 +872,29 @@ def main():
     lake_fraction = r_obj.get_first_record_for_name_and_level("ML")
     lake_fraction = np.ma.masked_where((fldr <= 0) | (fldr > 128), lake_fraction)
 
-
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path)
+
+
+
+    # TODO: remove this function call (does similar thing as get_basin_to_outlet_indices_map)
+    plot_basin_outlets(bmp_info=bmp_info,
+                       accumulation_areas=facc,
+                       directions=fldr,
+                       lake_fraction_field=lake_fraction)
+
+    if True:
+        raise Exception
 
     basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,
                                                                                               directions=fldr,
                                                                                               lake_fraction_field=lake_fraction)
 
-    # TODO: Remove the throwing exception (added only temporarily)
-    if True:
-        raise Exception("I was put here in order to plot basins and stop")
-
-
-
 
     data_to_plot = read_cc_and_cc_diff(base_configs, modif_configs,
                                        name_to_indices=basin_name_to_out_indices_map, varname=varname)
 
     basin_name_to_basin_mask = basin_name_to_basin_mask if varname not in ["STFA", "STFL"] else None
-
 
     img_path = get_image_path(base_config_c, base_config_f, modif_config_c, modif_config_f, varname)
 

@@ -12,11 +12,10 @@ class ExtremeProperties(object):
 
     # Make it small for testing
     nbootstrap = 1000
-
     low = "low"
     high = "high"
     extreme_types = [high, low]
-
+    
     extreme_type_to_return_periods = OrderedDict([
         ("high", [10, 50]),
         ("low", [2, 5]),
@@ -167,11 +166,11 @@ def get_annual_extrema(ts_times=None, ts_vals=None, start_year=1980, end_year=20
     # Get daily means
     df_daily = df.groupby(by=lambda d: datetime(d.year, d.month, d.day)).mean()
 
-
     df_result = {}
     for ex_type in ExtremeProperties.extreme_types:
         # Take the n-day averages
-        mask = np.array(range(len(df_daily))) // ExtremeProperties.extreme_type_to_n_agv_days[ex_type]
+        ndays = ExtremeProperties.extreme_type_to_n_agv_days[ex_type]
+        mask = np.array(range(len(df_daily))) // ndays * ndays
 
         print(len(mask), len(df_daily.index[mask]))
 
@@ -185,8 +184,9 @@ def get_annual_extrema(ts_times=None, ts_vals=None, start_year=1980, end_year=20
 
         assert isinstance(df_temp, pd.DataFrame)
         df_result[ex_type] = df_temp
-        print(df_temp.head(10))
-        # TODO: Fix
+        df_temp.columns = [ex_type, ]
+        print(df_temp.head(40))
 
-    # print(df_result.head())
-
+    df_result = pd.concat(list(df_result.values()), axis=1)
+    print(df_result.head(40))
+    return df_result

@@ -544,7 +544,7 @@ def read_station_data(folder='data/cehq_measure_data',
                       only_natural=True,
                       start_date=None,
                       end_date=None,
-                      selected_ids=None, min_number_of_complete_years=3):
+                      selected_ids=None, min_number_of_complete_years=3) -> list:
     """
     :return type: list of data.cehq_station.Station
     if start_date is not None then delete values for t < start_date

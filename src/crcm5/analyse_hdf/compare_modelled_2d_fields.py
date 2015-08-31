@@ -362,12 +362,23 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5", ]
     # labels = ["CRCM5-L1", ]
 
-    # lake effect (lake-river interactions)
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    control_label = "CRCM5-L1"
 
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    labels = ["CRCM5-L2", ]
+    # lake effect (lake-atm interactions) radiative fluxes
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_radiation_fluxes.hdf5"
+    control_label = "CRCM5-NL"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r-1980-2010_radiation_fluxes.hdf5", ]
+    labels = ["CRCM5-L1", ]
+
+
+
+
+    # lake effect (lake-river interactions)
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    # control_label = "CRCM5-L1"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    # labels = ["CRCM5-L2", ]
 
 
     # interflow effect ()

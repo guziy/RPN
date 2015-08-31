@@ -90,7 +90,7 @@ def plot_bfe_row_for_var(finfo_to_season_to_diff=None, ax_list=None, season_titl
                 ax.set_title(season)
 
             if i == 0:
-                ax.set_ylabel(infovar.get_display_label_for_var(finfo.varname))
+                ax.set_ylabel(infovar.get_long_display_label_for_var(finfo.varname))
 
             if finfo.varname in ["I5", ] and season.lower() in ["summer"]:
                 ax.set_visible(False)
@@ -180,7 +180,7 @@ def main():
         [("Annual maximum", range(1, 13)), ]
     )
 
-    variables_mean_bfe = ["TT", "PR", "I5", "STFL"]
+    variables_mean_bfe = ["TT", "PR", "I5", "STFL", "AV"]
 
     variables_annual_max_bfe = ["I5", ]
     variables_annual_max_bfe.pop()

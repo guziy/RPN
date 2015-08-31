@@ -140,15 +140,10 @@ class CRUDataManager:
         return np.mean(sel_data[ind_vector, :, :], axis=0)
 
 
-    def get_daily_climatology(self, start_year, end_year, stamp_year=2001):
+    def get_daily_climatology_dataframe(self, start_year, end_year, stamp_year=2001):
         """
-        returns a numpy array of shape (365, nx, ny) with daily climatological means
+        returns a pandas dataframe (365, nx, ny) with daily climatological means
         """
-        day = timedelta(days=1)
-        the_date = datetime(stamp_year, 1, 1)
-        stamp_days = [the_date + i * day for i in range(365)]
-        result = []
-
         nt, nx, ny = self.var_data.shape
         data_panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)),
                                   minor_axis=list(range(ny)))
@@ -159,16 +154,14 @@ class CRUDataManager:
         assert isinstance(data_panel, pandas.Panel)
         data_panel = data_panel.sort_index()
         print(data_panel.values.shape)
-        print(data_panel.items)
+        return data_panel
 
 
-        # for the_date in stamp_days:
-        #    bool_vector = np.array(map(lambda x: (x.day == the_date.day) and
-        #                                         (x.month == the_date.month) and
-        #                                         (x.year <= end_year) and (x.year >= start_year), self.times))
-        #    result.append(np.mean(self.var_data[bool_vector, :, :], axis=0))
-        # return np.array(result)
-        return data_panel.values
+    def get_daily_climatology(self, start_year, end_year, stamp_year=2001):
+        """
+        returns a numpy array of shape (365, nx, ny) with daily climatological means
+        """
+        return self.get_daily_climatology_dataframe(**locals()).values
 
 
     def interpolate_daily_climatology_to(self, clim_data, lons2d_target=None, lats2d_target=None):

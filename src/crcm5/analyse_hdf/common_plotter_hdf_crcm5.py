@@ -33,7 +33,7 @@ def explore_seasonal_interflow():
 
 
 def compare_simulations():
-    from . import compare_modelled_2d_fields
+    from crcm5.analyse_hdf import compare_modelled_2d_fields
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=34, height_cm=30)
     p = Process(target=compare_modelled_2d_fields.main)
@@ -95,7 +95,8 @@ def compare_obs_and_model_at_points():
     start_date = datetime(1980, 1, 1)
     end_date = datetime(2010, 12, 31)
 
-    compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
+    # compare_streamflow_with_obs.main(start_date=start_date, end_date=end_date)
+    compare_streamflow_with_obs.main_for_cc_paper(start_date=start_date, end_date=end_date)
     # reset back plot parameters to the default ones
     configure()
 
@@ -132,9 +133,13 @@ def compare_2d_seasonal_means_from_simulations():
 
     # varnames = ["STFA", "TT", "PR", "AV", "AH", "TRAF", "TDRA", "I5", "IMAV", "I0", "I1", "AS"]
 
-    varnames = ["STFA"]
+    # varnames = ["AB", "AU", "AR", "AI", "AD"]
 
-    # varnames = ["AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
+    varnames = ["AD-AI", "AD", "AR"]
+    # varnames = ["STFA"]
+
+
+    # varnames = ["RH", "AV", "AH", "TT", "I1", "I0", "PR", "TRAF", "STFA", "STFL", "AS", "IMAV"]
     # varnames = ["TT", "TRAF"]
     levels = len(varnames) * [0, ]
 
@@ -157,7 +162,7 @@ def compare_2d_seasonal_means_from_simulations():
     #     ("August", [8, ])
     # ])
 
-    start_year = 1980
+    start_year = 1991
     end_year = 2010
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=10)
@@ -195,7 +200,7 @@ def compare_quantiles():
 def compare_obs_and_model_lake_levels_at_points():
     from crcm5.analyse_hdf import compare_lake_levels_with_obs
 
-    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=25, height_cm=7)
+    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=25, height_cm=18)
 
     start_date = datetime(1980, 1, 1)
     end_date = datetime(2010, 12, 31)
@@ -243,10 +248,10 @@ if __name__ == "__main__":
     configure()
     #
     # do_plot_static_fields()
-    # compare_2d_seasonal_means_from_simulations()
+    compare_2d_seasonal_means_from_simulations()
 
     # Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    compare_obs_and_model_at_points()
+    # compare_obs_and_model_at_points()
 
     # compare_simulations()
     # validate_seasonal_mean_atm_fields()

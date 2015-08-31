@@ -136,7 +136,7 @@ def main(start_year = 1980, end_year = 1989):
         assert isinstance(mp, ModelPoint)
         assert isinstance(the_station, Station)
         fig = plt.figure()
-        umask = cell_manager.get_mask_of_cells_connected_with_by_indices(mp.ix, mp.jy)
+        umask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(mp.ix, mp.jy)
 
         #exclude lake cells from the profiles
         sel = (umask == 1) & (depth_to_bedrock > 3) & (acc_areakm2 >= 0)

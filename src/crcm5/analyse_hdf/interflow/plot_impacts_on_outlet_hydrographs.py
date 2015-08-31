@@ -83,7 +83,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, lons=None,
             assert isinstance(p, ogr.Geometry)
             if b.Contains(p.Buffer(2000 * 2 ** 0.5)):
                 # Check if there is an upstream cell from the same basin
-                the_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(i, j)
+                the_mask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(i, j)
 
                 # Save the mask of the basin for future use
                 basin_name_to_mask[name] = the_mask

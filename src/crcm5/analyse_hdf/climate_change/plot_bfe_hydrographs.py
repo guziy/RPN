@@ -52,7 +52,10 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
 
 
         ax.xaxis.set_major_locator(MonthLocator())
-        ax.xaxis.set_major_formatter(FuncFormatter(lambda d, pos: num2date(d).strftime("%b")[0]))
+        ax.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
+        ax.xaxis.set_minor_formatter(FuncFormatter(lambda d, pos: num2date(d).strftime("%b")[0]))
+        plt.setp(ax.xaxis.get_majorticklabels(), visible=False)
+        ax.grid()
 
         sfmt = ScalarFormatter(useMathText=True)
         sfmt.set_powerlimits([-2, 2])
@@ -64,7 +67,7 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
 
         ax_last = ax
 
-    ax_last.legend(loc="upper right", bbox_to_anchor=(1, -0.2), borderaxespad=0)
+    ax_last.legend(loc="upper right", bbox_to_anchor=(1, -0.2), borderaxespad=0, ncol=2)
 
     img_file = img_folder.joinpath("bfe_hydrographs.png")
     with img_file.open("wb") as f:
@@ -83,10 +86,10 @@ def main():
 
 
     rea_driven_path = "/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
-    rea_driven_label = "CRCM5-L-ERAI"
+    rea_driven_label = "ERAI-CRCM5-L"
 
     gcm_driven_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_label = "CRCM5-L-CanESM2"
+    gcm_driven_label = "CanESM2-CRCM5-L"
 
     start_year_c = 1980
     end_year_c = 2010
@@ -107,12 +110,14 @@ def main():
     r_obj = RPN(geo_data_file)
     facc = r_obj.get_first_record_for_name("FAA")
     fldr = r_obj.get_first_record_for_name("FLDR")
+    lkfr = r_obj.get_first_record_for_name("ML")
 
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=rea_driven_path)
 
     basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,
-                                                                                              directions=fldr)
+                                                                                              directions=fldr,
+                                                                                              lake_fraction_field=lkfr)
 
 
 

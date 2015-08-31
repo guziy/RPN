@@ -1,3 +1,5 @@
+from crcm5.analyse_hdf.return_levels.extreme_commons import ExtremeProperties
+
 __author__ = "huziy"
 __date__ = "$22 oct. 2010 12:00:55$"
 
@@ -94,6 +96,10 @@ def get_low_ret_level(params, return_period=2, zero_fraction=0.0):
     else:
         y = np.log(return_period * (1.0 - zero_fraction) / (1.0 - return_period * zero_fraction))
         lev = sigma / ksi * (np.power(y, -ksi) - 1.0) + mu
+
+    if lev < 0:
+        lev = 0
+
     return lev
 
 
@@ -516,3 +522,64 @@ if __name__ == "__main__":
     test_lm()
 
     print("Hello World")
+
+
+def do_gevfit_for_a_point(data, extreme_type=ExtremeProperties.high,
+                          return_periods=None, all_indices=None):
+    """
+    returns 2 dicts (ret_period_to_levels, ret_period_to_std)
+    with the layout {return_period: value}
+    all_indices - indices prepared beforehand with the shape: (nbootstrap, nyears)
+    """
+    if all_indices is None:
+        # to have the same result for different launches and extreme types
+        np.random.seed(seed=ExtremeProperties.seed)
+
+    is_high_flow = extreme_type == ExtremeProperties.high
+
+    if return_periods is None:
+        return_periods = ExtremeProperties.extreme_type_to_return_periods[extreme_type]
+
+    nyears = len(data)
+
+    ret_period_to_level = {k: -1 for k in return_periods}
+    ret_period_to_std = {k: -1 for k in return_periods}
+
+    # return -1 if all the data is 0
+    if np.max(data) < 0:
+        return ret_period_to_level, ret_period_to_std
+
+    if np.min(data) < 0:
+        print(data)
+
+    assert np.min(data) >= 0
+
+    params = optimize_stationary_for_period(data, high_flow=is_high_flow)
+
+    # Calculate return levels for all return periods
+    ret_period_to_level = {
+        t: get_return_level_for_type_and_period(params, t, high_flow=is_high_flow) for t in return_periods
+    }
+
+    ret_period_to_level_list = {k: [] for k in return_periods}
+    for ibs in range(ExtremeProperties.nbootstrap):
+        if all_indices is None:
+            indices = np.random.random_integers(0, high=nyears - 1, size=nyears)
+        else:
+            indices = all_indices[ibs]
+
+        params = optimize_stationary_for_period(
+            data[indices], high_flow=is_high_flow
+        )
+
+        for ret_period in return_periods:
+            ret_period_to_level_list[ret_period].append(
+                get_return_level_for_type_and_period(
+                    params, ret_period, high_flow=is_high_flow
+                )
+            )
+
+    # Calculate standard deviation of the bootstrapped return levels
+    ret_period_to_std = {t: np.std(v) for t, v in ret_period_to_level_list.items()}
+
+    return ret_period_to_level, ret_period_to_std

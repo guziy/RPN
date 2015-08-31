@@ -42,7 +42,7 @@ def main():
     season_to_months = DEFAULT_SEASON_TO_MONTHS
     varnames = ["TT", "PR"]
 
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=25)
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=17)
 
     reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
                                          start_year=1980, end_year=2010, label="ERAI-CRCM5-L")
@@ -73,7 +73,7 @@ def main():
     for vname in varnames:
         fig = plt.figure()
         ncols = len(season_to_months)
-        gs = GridSpec(6, ncols + 1, width_ratios=ncols * [1., ] + [0.09, ])
+        gs = GridSpec(4, ncols + 1, width_ratios=ncols * [1., ] + [0.09, ])
 
         clevels = vname_to_clevels[vname]
 
@@ -129,20 +129,20 @@ def main():
                                                         obs_path=vname_to_cru_path[vname],
                                                         bmp_info_agg=bmp_info_agg, axes_list=ax_list)
 
-        ax_list[0].set_ylabel("{label}\nvs\nCRU".format(label=reanalysis_driven_config.label))
+        ax_list[0].set_ylabel("{label}\n--\nCRU".format(label=reanalysis_driven_config.label))
         _format_axes(ax_list, vname=vname)
         row += 1
 
 
         # Plot performance+BFE errors with respect to CRU (Model - CRU)-------------------------
-        ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
-        plot_performance_err_with_cru.compare_vars(vname, vname_obs=None, obs_path=vname_to_cru_path[vname],
-                                                   r_config=gcm_driven_config,
-                                                   bmp_info_agg=bmp_info_agg, season_to_months=season_to_months,
-                                                   axes_list=ax_list)
-        _format_axes(ax_list, vname=vname)
-        ax_list[0].set_ylabel("{label}\nvs\nCRU".format(label=gcm_driven_config.label))
-        row += 1
+        # ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
+        # plot_performance_err_with_cru.compare_vars(vname, vname_obs=None, obs_path=vname_to_cru_path[vname],
+        #                                            r_config=gcm_driven_config,
+        #                                            bmp_info_agg=bmp_info_agg, season_to_months=season_to_months,
+        #                                            axes_list=ax_list)
+        # _format_axes(ax_list, vname=vname)
+        # ax_list[0].set_ylabel("{label}\nvs\nCRU".format(label=gcm_driven_config.label))
+        # row += 1
 
 
         # Plot performance errors with respect to ANUSPLIN (Model - ANUSPLIN)-------------------------
@@ -152,7 +152,7 @@ def main():
                                                         bmp_info_agg=bmp_info, season_to_months=season_to_months,
                                                         axes_list=ax_list)
         _format_axes(ax_list, vname=vname)
-        ax_list[0].set_ylabel("{label}\nvs\nHopkinson".format(label=reanalysis_driven_config.label))
+        ax_list[0].set_ylabel("{label}\n--\nHopkinson".format(label=reanalysis_driven_config.label))
         row += 1
 
 
@@ -160,13 +160,14 @@ def main():
 
 
         # Plot performance+BFE errors with respect to ANUSPLIN (Model - ANUSPLIN)-------------------------
-        ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
-        plot_performance_err_with_anusplin.compare_vars(vname, {vname: season_to_obs_anusplin},
-                                                        r_config=gcm_driven_config,
-                                                        bmp_info_agg=bmp_info, season_to_months=season_to_months,
-                                                        axes_list=ax_list)
-        _format_axes(ax_list, vname=vname)
-        ax_list[0].set_ylabel("{label}\nvs\nHopkinson".format(label=gcm_driven_config.label))
+        # ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
+        # plot_performance_err_with_anusplin.compare_vars(vname, {vname: season_to_obs_anusplin},
+        #                                                 r_config=gcm_driven_config,
+        #                                                 bmp_info_agg=bmp_info, season_to_months=season_to_months,
+        #                                                 axes_list=ax_list)
+        # _format_axes(ax_list, vname=vname)
+        # ax_list[0].set_ylabel("{label}\nvs\nHopkinson".format(label=gcm_driven_config.label))
+
 
         cb = plt.colorbar(cs, cax=fig.add_subplot(gs[2:, -1]))
         cb.ax.set_xlabel(infovar.get_units(vname))

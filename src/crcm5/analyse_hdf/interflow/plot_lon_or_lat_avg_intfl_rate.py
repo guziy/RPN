@@ -1,5 +1,5 @@
 from pathlib import Path
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, SymLogNorm
 from matplotlib.dates import date2num, MonthLocator, num2date, DayLocator
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import ScalarFormatter, MaxNLocator, FuncFormatter
@@ -45,7 +45,7 @@ def main():
     level_widths_mm = MM_PER_METER * infovar.soil_layer_widths_26_to_60
 
     avg_axis = "lon"
-    start_year_c = 1980
+    start_year_c = 1990
     end_year_c = 2010
 
     img_folder = Path("impact_of_interflow")
@@ -108,16 +108,16 @@ def main():
 
 
     # Do the plotting
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=30)
+    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=20, height_cm=10)
     fig = plt.figure()
 
-    gs = GridSpec(8 - 3, 2, width_ratios=[1, 0.05])
+    gs = GridSpec(1, 2, width_ratios=[1, 0.05])
 
     all_axes = []
     # ----------------------------------Interflow----------------------------------
     row = 0
     ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, intf_c[:], cmap="jet", norm=LogNorm())
+    cs = ax.contourf(num_dates_2d, z_agg_2d, intf_c[:], 60, cmap="jet", norm=SymLogNorm(5 * 1.0e-7))
     ax.set_title("Interflow rate")
     all_axes.append(ax)
 
@@ -129,87 +129,87 @@ def main():
 
     plt.colorbar(cs, cax=cax, format=sfmt)
     cax.set_xlabel("mm/day")
-    cax.yaxis.get_offset_text().set_position((-2, 10))
+    cax.yaxis.get_offset_text().set_position((-0.5, 10))
 
 
     # ----------------------------------Soil moisture----------------------------------
-    layer_index = 0
-    _, sm_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I1", level=layer_index)
-    _, sm_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I1", level=layer_index)
-
-    sm_mod = _avg_along(sm_mod, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
-    sm_base = _avg_along(sm_base, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
-
-    row += 1
-    ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, sm_mod - sm_base, cmap="jet")
-    ax.set_title("Soil moisture (liq., level={})".format(layer_index + 1))
-    all_axes.append(ax)
-
-    # Colorbar for value plots
-    cax = fig.add_subplot(gs[row, -1])
-
-    sfmt = ScalarFormatter(useMathText=True)
-    sfmt.set_powerlimits((-2, 2))
-
-    plt.colorbar(cs, cax=cax, format=sfmt)
-    cax.set_xlabel("mm")
-    cax.yaxis.get_offset_text().set_position((-2, 10))
+    # layer_index = 0
+    # _, sm_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I1", level=layer_index)
+    # _, sm_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I1", level=layer_index)
+    #
+    # sm_mod = _avg_along(sm_mod, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
+    # sm_base = _avg_along(sm_base, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
+    #
+    # row += 1
+    # ax = fig.add_subplot(gs[row, 0])
+    # cs = ax.contourf(num_dates_2d, z_agg_2d, sm_mod - sm_base, cmap="jet")
+    # ax.set_title("Soil moisture (liq., level={})".format(layer_index + 1))
+    # all_axes.append(ax)
+    #
+    # # Colorbar for value plots
+    # cax = fig.add_subplot(gs[row, -1])
+    #
+    # sfmt = ScalarFormatter(useMathText=True)
+    # sfmt.set_powerlimits((-2, 2))
+    #
+    # plt.colorbar(cs, cax=cax, format=sfmt)
+    # cax.set_xlabel("mm")
+    # cax.yaxis.get_offset_text().set_position((-2, 10))
 
     # ----------------------------------Soil moisture (level=2)----------------------------------
-    layer_index = 1
-    _, sm_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I1", level=layer_index)
-    _, sm_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I1", level=layer_index)
-
-    sm_mod = _avg_along(sm_mod, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
-    sm_base = _avg_along(sm_base, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
-
-    row += 1
-    ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, sm_mod - sm_base, cmap="jet")
-    ax.set_title("Soil moisture (liq., level={})".format(layer_index + 1))
-    all_axes.append(ax)
-
-    # Colorbar for value plots
-    cax = fig.add_subplot(gs[row, -1])
-
-    sfmt = ScalarFormatter(useMathText=True)
-    sfmt.set_powerlimits((-2, 2))
-
-    plt.colorbar(cs, cax=cax, format=sfmt)
-    cax.set_xlabel("mm")
-    cax.yaxis.get_offset_text().set_position((-2, 10))
+    # layer_index = 1
+    # _, sm_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I1", level=layer_index)
+    # _, sm_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I1", level=layer_index)
+    #
+    # sm_mod = _avg_along(sm_mod, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
+    # sm_base = _avg_along(sm_base, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
+    #
+    # row += 1
+    # ax = fig.add_subplot(gs[row, 0])
+    # cs = ax.contourf(num_dates_2d, z_agg_2d, sm_mod - sm_base, cmap="jet")
+    # ax.set_title("Soil moisture (liq., level={})".format(layer_index + 1))
+    # all_axes.append(ax)
+    #
+    # # Colorbar for value plots
+    # cax = fig.add_subplot(gs[row, -1])
+    #
+    # sfmt = ScalarFormatter(useMathText=True)
+    # sfmt.set_powerlimits((-2, 2))
+    #
+    # plt.colorbar(cs, cax=cax, format=sfmt)
+    # cax.set_xlabel("mm")
+    # cax.yaxis.get_offset_text().set_position((-2, 10))
 
     # ----------------------------------Soil moisture (level=3)----------------------------------
-    layer_index = 2
-    _, sm_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I1", level=layer_index)
-    _, sm_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I1", level=layer_index)
-
-    sm_mod = _avg_along(sm_mod, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
-    sm_base = _avg_along(sm_base, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
-
-    row += 1
-    ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, sm_mod - sm_base, cmap="jet")
-    ax.set_title("Soil moisture (liq., level={})".format(layer_index + 1))
-    all_axes.append(ax)
-
-    # Colorbar for value plots
-    cax = fig.add_subplot(gs[row, -1])
-
-    sfmt = ScalarFormatter(useMathText=True)
-    sfmt.set_powerlimits((-2, 2))
-
-    plt.colorbar(cs, cax=cax, format=sfmt)
-    cax.set_xlabel("mm")
-    cax.yaxis.get_offset_text().set_position((-2, 10))
+    # layer_index = 2
+    # _, sm_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I1", level=layer_index)
+    # _, sm_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I1", level=layer_index)
+    #
+    # sm_mod = _avg_along(sm_mod, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
+    # sm_base = _avg_along(sm_base, axis=avg_axis, land_fraction=mg_field, layer_depths=layer_widths_3d[:, :, layer_index])
+    #
+    # row += 1
+    # ax = fig.add_subplot(gs[row, 0])
+    # cs = ax.contourf(num_dates_2d, z_agg_2d, sm_mod - sm_base, cmap="jet")
+    # ax.set_title("Soil moisture (liq., level={})".format(layer_index + 1))
+    # all_axes.append(ax)
+    #
+    # # Colorbar for value plots
+    # cax = fig.add_subplot(gs[row, -1])
+    #
+    # sfmt = ScalarFormatter(useMathText=True)
+    # sfmt.set_powerlimits((-2, 2))
+    #
+    # plt.colorbar(cs, cax=cax, format=sfmt)
+    # cax.set_xlabel("mm")
+    # cax.yaxis.get_offset_text().set_position((-2, 10))
 
     # ----------------------------------Evaporation----------------------------------
     # _, av_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="AV", level=0)
     # _, av_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="AV", level=0)
     #
-    # av_mod = _avg_along(av_mod, the_mask, axis=avg_axis)
-    # av_base = _avg_along(av_base, the_mask, axis=avg_axis)
+    # av_mod = _avg_along(av_mod, land_fraction=mg_field, axis=avg_axis)
+    # av_base = _avg_along(av_base, land_fraction=mg_field, axis=avg_axis)
     #
     # row += 1
     # ax = fig.add_subplot(gs[row, 0])
@@ -252,28 +252,28 @@ def main():
     # cax.yaxis.get_offset_text().set_position((-2, 10))
 
     # ----------------------------------Soil temperature (level_index=0)----------------------------------
-    layer_index = 0
-    _, t_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I0", level=layer_index)
-    _, t_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I0", level=layer_index)
-
-    t_mod = _avg_along(t_mod, land_fraction=mg_field, axis=avg_axis)
-    t_base = _avg_along(t_base, land_fraction=mg_field, axis=avg_axis)
-
-    row += 1
-    ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, t_mod - t_base, cmap="jet")
-    ax.set_title("Soil temperature (level={})".format(layer_index + 1))
-    all_axes.append(ax)
-
-    # Colorbar for value plots
-    cax = fig.add_subplot(gs[row, -1])
-
-    sfmt = ScalarFormatter(useMathText=True)
-    sfmt.set_powerlimits((-2, 2))
-
-    plt.colorbar(cs, cax=cax, format=sfmt)
-    cax.set_xlabel("K")
-    cax.yaxis.get_offset_text().set_position((-2, 10))
+    # layer_index = 0
+    # _, t_mod = analysis.get_daily_climatology_for_rconf(modif_config, var_name="I0", level=layer_index)
+    # _, t_base = analysis.get_daily_climatology_for_rconf(base_config, var_name="I0", level=layer_index)
+    #
+    # t_mod = _avg_along(t_mod, land_fraction=mg_field, axis=avg_axis)
+    # t_base = _avg_along(t_base, land_fraction=mg_field, axis=avg_axis)
+    #
+    # row += 1
+    # ax = fig.add_subplot(gs[row, 0])
+    # cs = ax.contourf(num_dates_2d, z_agg_2d, t_mod - t_base, cmap="jet")
+    # ax.set_title("Soil temperature (level={})".format(layer_index + 1))
+    # all_axes.append(ax)
+    #
+    # # Colorbar for value plots
+    # cax = fig.add_subplot(gs[row, -1])
+    #
+    # sfmt = ScalarFormatter(useMathText=True)
+    # sfmt.set_powerlimits((-2, 2))
+    #
+    # plt.colorbar(cs, cax=cax, format=sfmt)
+    # cax.set_xlabel("K")
+    # cax.yaxis.get_offset_text().set_position((-2, 10))
 
 
     # ----------------------------------Soil moisture total (I1 + I2, level_index=0)----------------------------------

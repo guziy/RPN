@@ -1,29 +1,27 @@
 from collections import OrderedDict
-from datetime import datetime
-import itertools
-import shutil
+import os
+
 from matplotlib import cm
 import brewer2mpl
 from matplotlib.axes import Axes
-from matplotlib.dates import DateFormatter, MonthLocator, num2date
+from matplotlib.dates import MonthLocator, num2date
 from matplotlib.figure import Figure
-import os
 from matplotlib.ticker import MaxNLocator, FuncFormatter
-from mpl_toolkits.basemap import Basemap
 import pandas
-from pandas.tseries.converter import _daily_finder
-from crcm5 import infovar, model_point
-from crcm5.analyse_hdf.plot_station_positions import plot_positions_of_station_list
-from crcm5.model_point import ModelPoint
 from data import cehq_station
-from data.anusplin import AnuSplinManager
-from data.cehq_station import Station
-from data.cell_manager import CellManager
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import gridspec
 import numpy as np
-from swe import SweDataManager
+
+from crcm5 import infovar, model_point
+from crcm5.analyse_hdf.plot_station_positions import plot_positions_of_station_list
+from crcm5.model_point import ModelPoint
+from data.anusplin import AnuSplinManager
+from data.cehq_station import Station
+from data.cell_manager import CellManager
+from data.swe import SweDataManager
+
 
 __author__ = 'huziy'
 
@@ -48,7 +46,7 @@ def _plot_station_position(ax, the_station, basemap, cell_manager, the_model_poi
 
 
     # plot the arrows for upstream cells
-    ups_mask = cell_manager.get_mask_of_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
+    ups_mask = cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(the_model_point.ix, the_model_point.jy)
 
     x1d_start = x[ups_mask == 1]
     y1d_start = y[ups_mask == 1]
@@ -420,12 +418,11 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         nrows += 1
 
     figure_panel = plt.figure()
-    gs_panel = gridspec.GridSpec(nrows=nrows, ncols=ncols)
+    gs_panel = gridspec.GridSpec(nrows=nrows + 1, ncols=ncols)
     #  a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
     legend_added = False
 
     label_list = list(sim_name_to_file_name.keys())  # Needed to keep the order the same for all subplots
-    ax_panel = None
     all_years = [y for y in range(start_year, end_year + 1)]
 
 
@@ -465,9 +462,16 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     # clear the folder with images (to avoid confusion of different versions)
     _remove_previous_images(processed_stations[0])
 
+    ax_panel = figure_panel.add_subplot(gs_panel[0, :])
+
+    plot_positions_of_station_list(ax_panel, station_list,
+                                   [station_to_modelpoint_list[s][0] for s in station_list],
+                                   basemap=basemap, cell_manager=cell_manager, fill_upstream_areas=False)
+
     ax_to_share = None
     for i, the_station in enumerate(station_list):
-        ax_panel = figure_panel.add_subplot(gs_panel[i // ncols, i % ncols],
+        # +1 due to the plot with station positions
+        ax_panel = figure_panel.add_subplot(gs_panel[1 + i // ncols, i % ncols],
                                             sharex=ax_to_share)
         if ax_to_share is None:
             ax_to_share = ax_panel
@@ -627,7 +631,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         streamflow_axes = ax  # save streamflow axes for later use
 
         if not legend_added:
-            ax_panel.legend(loc=(0.0, 1.1), borderaxespad=0.5, ncol=3)
+            ax_panel.legend(loc=(0.0, 1.1), borderaxespad=0.5, ncol=1)
             ax_panel.xaxis.set_minor_formatter(FuncFormatter(lambda val, pos: num2date(val).strftime("%b")[0]))
             ax_panel.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
             ax_panel.xaxis.set_major_locator(MonthLocator())
@@ -763,7 +767,7 @@ def point_comparisons_at_outlets(hdf_folder="/home/huziy/skynet3_rech1/hdf_store
     assert len(mp_list) > 0
 
     # Get the accumulation indices so that the most important outlets can be identified
-    acc_ind_list = [np.sum(cell_manager.get_mask_of_cells_connected_with_by_indices(mp.ix, mp.jy))
+    acc_ind_list = [np.sum(cell_manager.get_mask_of_upstream_cells_connected_with_by_indices(mp.ix, mp.jy))
                     for mp in mp_list]
 
     for mp, acc_ind in zip(mp_list, acc_ind_list):

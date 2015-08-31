@@ -1,18 +1,17 @@
-from datetime import datetime
-import brewer2mpl
+import os
+
 from matplotlib import gridspec
 from matplotlib.colors import BoundaryNorm
 from matplotlib.figure import Figure
-from matplotlib.font_manager import FontProperties
-from matplotlib.ticker import MaxNLocator
-import os
 from mpl_toolkits.basemap import maskoceans
-from crcm5 import infovar
 from data import cehq_station
+from matplotlib import cm
+
+from crcm5 import infovar
 from data.anusplin import AnuSplinManager
 from data.cehq_station import Station
-from swe import SweDataManager
-from matplotlib import cm
+from data.swe import SweDataManager
+
 
 __author__ = 'huziy'
 

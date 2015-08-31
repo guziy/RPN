@@ -12,6 +12,9 @@ import numpy as np
 
 
 class CellManager:
+    DEFAULT_DRAINAGE_AREA_RELDIFF_MIN = 0.1
+
+
     # responsible for creating conected cells, and for quering subregions
     def __init__(self, flow_dirs, nx=None, ny=None,
                  lons2d=None,
@@ -104,7 +107,7 @@ class CellManager:
         return result
 
 
-    def get_mask_of_cells_connected_with_by_indices(self, ix, jy):
+    def get_mask_of_upstream_cells_connected_with_by_indices(self, ix, jy):
         """
         Note: only upstream cells are checked
         returns 2d array indicating 1 where there is a cell connected to aCell and 0 where it is not
@@ -159,7 +162,7 @@ class CellManager:
 
 
             # do not consider outlets, since they contain ocean points, the runoff for which can be
-            #negative, and this is not accounted for in the routing scheme
+            # negative, and this is not accounted for in the routing scheme
             rout_mask[io, jo] = 0
 
         return rout_mask
@@ -226,11 +229,15 @@ class CellManager:
 
 
     def get_model_points_for_stations(self, station_list, lake_fraction=None,
-                                      drainaige_area_reldiff_limit=0.1, nneighbours=8):
+                                      drainaige_area_reldiff_limit=None, nneighbours=8):
         """
         returns a map {station => modelpoint} for comparison modeled streamflows with observed
         :rtype   dict
         """
+
+
+        if drainaige_area_reldiff_limit is None:
+            drainaige_area_reldiff_limit = self.DEFAULT_DRAINAGE_AREA_RELDIFF_MIN
 
         if nneighbours == 1:
             raise Exception("Searching over 1 neighbor is not very secure and not implemented yet")
@@ -259,21 +266,21 @@ class CellManager:
 
             ix, jy = ij[0][0], ij[1][0]
 
-            #check if it is not global lake cell
+            # check if it is not global lake cell
             if lake_fraction is not None and lake_fraction[ix, jy] >= infovar.GLOBAL_LAKE_FRACTION:
                 continue
 
-            #check if the gridcell is not too far from the station
+            # check if the gridcell is not too far from the station
             if dists[imin] > 2 * self.characteristic_distance:
                 continue
 
-            #check if difference in drainage areas is not too big less than 10 %
+            # check if difference in drainage areas is not too big less than 10 %
             if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
                 print(deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2)
                 continue
 
 
-            #check if the accumulation area of the selected model point is of reasonable size
+            # check if the accumulation area of the selected model point is of reasonable size
             if self.accumulation_area_km2[ix, jy] < self.characteristic_distance ** 2 * 1e-12:
                 print("skipping the station {0}, because the upstream area " \
                       "for the corresponding model point is too small".format(s.id))
@@ -296,6 +303,58 @@ class CellManager:
             print("Found model point for the station {0}".format(s))
 
         return station_to_model_point
+
+    def get_upstream_polygons_for_points(self, model_point_list,
+                                         xx: np.ndarray=None, yy: np.ndarray=None):
+
+        """
+
+        : return : list of 2d arrays representing coordinates of the vertices of the edges
+        :param model_point_list:
+        :type model_point_list: iterable[ModelPoint]
+        :rtype : list
+        """
+
+        res = []
+
+
+        for mp in model_point_list:
+
+
+            mask = self.get_mask_of_upstream_cells_connected_with_by_indices(mp.ix, mp.jy)
+
+            edges = []  # [[(x1, x2), (y1, y2)], ...]
+            for i0, j0 in zip(*np.where(mask == 1)):
+                for di in range(-1, 2):
+                    for dj in range(-1, 2):
+                        if di == 0 and dj == 0:
+                            continue
+
+                        # Skip diagonal neighbours
+                        if abs(di * dj) == 1:
+                            continue
+
+                        i = i0 + di
+                        j = j0 + dj
+
+                        if mask[i, j] != 1:
+
+                            if j == j0:
+                                x1 = x2 = (xx[i, j] + xx[i0, j]) * 0.5
+                                y1 = (yy[i0, j0] + yy[i0, j0 - 1] + yy[i, j] + yy[i, j - 1]) * 0.25
+                                y2 = (yy[i0, j0] + yy[i0, j0 + 1] + yy[i, j] + yy[i, j + 1]) * 0.25
+                            else:  # i == i0
+                                y1 = y2 = (yy[i, j0] + yy[i, j]) * 0.5
+                                x1 = (xx[i0, j0] + xx[i0 - 1, j0] + xx[i, j] + xx[i - 1, j]) * 0.25
+                                x2 = (xx[i0, j0] + xx[i0 + 1, j0] + xx[i, j] + xx[i + 1, j]) * 0.25
+
+                            edges.append([(x1, x2), (y1, y2)])
+            res.append(edges)
+
+        # List of lists of edges
+        return res
+
+
 
 
 def main():

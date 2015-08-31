@@ -170,7 +170,7 @@ def _plot_row(vname="", level=0, config_dict=None):
         ax = fig.add_subplot(gs[the_row, col])
 
         if not col:
-            ax.set_ylabel(infovar.get_display_label_for_var(vname))
+            ax.set_ylabel(infovar.get_long_display_label_for_var(vname))
 
         if not the_row:
             ax.set_title(season)
@@ -182,7 +182,8 @@ def _plot_row(vname="", level=0, config_dict=None):
         if hasattr(season_to_plot_diff[season], "mask"):
             p = np.ma.masked_where(season_to_plot_diff[season].mask, p)
 
-        cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
+        # cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
+
         # create a legend for the contour set
         # artists, labels = cs.legend_elements()
         # ax.legend(artists, labels, handleheight=2)
@@ -227,11 +228,11 @@ def main_interflow():
 
     base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                         "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    base_label = "CRCM5-L"
+    base_label = "CanESM2-CRCM5-L"
 
     modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                          "quebec_0.1_crcm5-hcd-rl-intfl-cc-canesm2-1980-2010.hdf5"
-    modif_label = "CRCM5-LI"
+    modif_label = "CanESM2-CRCM5-LI"
 
     start_year_c = 1980
     end_year_c = 2010
@@ -315,11 +316,11 @@ def main():
 
     base_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                         "quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    base_label = "CRCM5-NL"
+    base_label = "CanESM2-CRCM5-NL"
 
     modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                          "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    modif_label = "CRCM5-L"
+    modif_label = "CanESM2-CRCM5-L"
 
     start_year_c = 1980
     end_year_c = 2010
@@ -384,5 +385,5 @@ if __name__ == '__main__':
 
     application_properties.set_current_directory()
 
-    # main()
-    main_interflow()
+    main()
+    # main_interflow()

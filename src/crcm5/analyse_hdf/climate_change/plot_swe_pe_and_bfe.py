@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -50,7 +51,8 @@ def plot_swe_bfes(runconfig_rea, runconfig_gcm, vname_model="I5", season_to_mont
 
 
 def main():
-    season_to_months = OrderedDict([(s, months) for s, months in DEFAULT_SEASON_TO_MONTHS.items() if s.lower() not in "summer"])
+    season_to_months = OrderedDict([(s, months) for s, months in DEFAULT_SEASON_TO_MONTHS.items()
+                                    if s.lower() not in ["summer", "fall"]])
 
     r_config = RunConfig(
         data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
@@ -83,12 +85,14 @@ def main():
     fig = None
     gs = None
     row_axes = None
+    obs_row_axes = None
     ncols = None
     if plot_all_vars_in_one_fig:
-        plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=12)
+        plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=12, height_cm=12)
         fig = plt.figure()
         ncols = len(season_to_months) + 1
         gs = GridSpec(len(model_vars) * 2, ncols, width_ratios=(ncols - 1) * [1., ] + [0.05, ])
+
     else:
         plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=25)
 
@@ -96,25 +100,41 @@ def main():
     for mname, oname, opath in zip(model_vars, obs_vars, obs_paths):
 
         if plot_all_vars_in_one_fig:
+            # Obs row is for observed values
+            obs_row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols)]
+            obs_row_axes[-1].set_title("mm")
+            row += 1
+
             row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols)]
+            row += 1
 
         compare_vars(vname_model=mname, vname_obs=oname, r_config=r_config,
                      season_to_months=season_to_months,
                      nx_agg=nx_agg, ny_agg=ny_agg, bmp_info_agg=bmp_info_agg,
-                     obs_path=opath, axes_list=row_axes)
+                     obs_path=opath, axes_list=row_axes, obs_axes_list=obs_row_axes)
 
-        row += 1
+        if plot_all_vars_in_one_fig:
+            obs_row_axes[0].set_ylabel("(a)", rotation="horizontal", labelpad=10)
+            row_axes[0].set_ylabel("(b)", rotation="horizontal", labelpad=10)
+            for ax in row_axes[:-1]:
+                ax.set_title("")
 
-    row_axes[0].set_ylabel("Structural")
+    # row_axes[0].annotate("(a)", (-0.2, 0.5), font_properties=FontProperties(weight="bold"), xycoords="axes fraction")
+
+
 
     # Plot bfe errs
-    row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols)]
-    plot_swe_bfes(r_config, r_config_cc, vname_model="I5", season_to_months=season_to_months,
-                  bmp_info=bmp_info, axes_list=row_axes)
+    # row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols)]
+    # plot_swe_bfes(r_config, r_config_cc, vname_model="I5", season_to_months=season_to_months,
+    #               bmp_info=bmp_info, axes_list=row_axes)
+    #
+    # row_axes[-1].set_visible(False)
 
-    row_axes[0].set_ylabel("Forcing")
-    for ax in row_axes[:-1]:
-        ax.set_title("")
+
+    # row_axes[0].annotate("(b)", (0, 1.05), font_properties=FontProperties(weight="bold"), xycoords="axes fraction")
+    # row_axes[0].set_ylabel("(b)", rotation="horizontal", labelpad=10)
+    # for ax in row_axes[:-1]:
+    #     ax.set_title("")
 
 
     # Save the figure if necessary

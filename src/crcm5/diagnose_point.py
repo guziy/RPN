@@ -1,23 +1,24 @@
 from datetime import datetime
 import os
+
 from matplotlib.axes import Axes
 from matplotlib.dates import MonthLocator, DateFormatter
-from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from mpl_toolkits.basemap import Basemap
+from data import cehq_station
+import matplotlib.pyplot as plt
+from rpn import level_kinds
+
 from crcm5.model_data import Crcm5ModelDataManager
 from cru.temperature import CRUDataManager
-from data import cehq_station
 from data.cehq_station import Station
 from data.timeseries import TimeSeries
-import matplotlib.pyplot as plt
 from domains.rotated_lat_lon import RotatedLatLon
 from gldas.gldas_manager import GldasManager
-from rpn import level_kinds
-from shape import get_rivers_from_shape
-from swe import SweDataManager
+from data.swe import SweDataManager
 from util import plot_utils, scores
+
 
 __author__ = 'huziy'
 

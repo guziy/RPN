@@ -11,20 +11,26 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import colors
 import numpy as np
+from data.base_data_manager import BaseDataManager
 from util.geo import lat_lon
 
 __author__ = 'huziy'
 
 
-class SweDataManager(CRUDataManager):
+class SweDataManager(BaseDataManager, CRUDataManager):
+
     def __init__(self, path="data/swe_ross_brown/swe.nc", var_name=""):
         self.lons2d, self.lats2d = None, None
         self.times = None
         self.var_data = None
+        BaseDataManager.__init__(self)
         CRUDataManager.__init__(self, path=path, var_name=var_name)
+
         print(list(self.nc_dataset.variables.keys()))
 
-        pass
+
+    def get_daily_climatology_fields(self, start_year=None, end_year=None):
+        return self.get_daily_climatology_dataframe(start_year=start_year, end_year=end_year).transpose(2, 0, 1)
 
     def _init_fields(self, nc_dataset):
         print("init_fields")
@@ -150,7 +156,7 @@ class SweDataManager(CRUDataManager):
 
         print(self.var_name)
 
-        mean_field = self.get_mean(start_year, end_year, months = months)
+        mean_field = self.get_mean(start_year, end_year, months=months)
         assert mean_field.shape == self.lons2d.shape, "data shape: ({0}, {1})".format(*mean_field.shape) + \
                                                       "coordinates shape: ({0}, {1})".format(*self.lons2d.shape)
         interp_field = self.interpolate_data_to(mean_field, lons_target, lats_target, nneighbours=1)
@@ -190,7 +196,7 @@ def main():
     x, y = b(lons2d, lats2d)
     img = b.contourf(x, y, data_projected, ax=ax, levels=img.levels)
 
-    #add pretty colorbar
+    # add pretty colorbar
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", "5%", pad="3%")
     cb = fig.colorbar(img, cax=cax)
@@ -205,14 +211,13 @@ def main():
 
 def test1():
     dm = SweDataManager(var_name="SWE")
-    #b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
-    #dm.save_projected_means_to_file(months=[12,1,2], dest_lons2d=lons2d, dest_lats2d=lats2d)
+    # b, lons2d, lats2d = draw_regions.get_basemap_and_coords()
+    # dm.save_projected_means_to_file(months=[12,1,2], dest_lons2d=lons2d, dest_lats2d=lats2d)
     print(dm.kdtree)
 
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    #main()
+    # main()
     test1()
     print("Hello world")
-  

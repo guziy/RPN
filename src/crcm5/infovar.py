@@ -139,7 +139,7 @@ def get_to_plot(varname, data, lake_fraction=None,
 
     if mask_oceans:
         assert lons is not None and lats is not None
-        inlands = varname not in ["PR", "TT", "HU", "AV", "AH", "AS"]
+        inlands = varname not in ["PR", "TT", "HU", "AV", "AH", "AS", "AI", "AD-AI", "AD", "AR"]
         return maskoceans(lonsin=lons, latsin=lats, datain=data1, inlands=inlands)
     return data1
 
