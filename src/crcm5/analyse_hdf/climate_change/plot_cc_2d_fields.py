@@ -51,7 +51,16 @@ def compute_seasonal_means_for_each_year(sim_config, season_to_months=None, var_
     return season_to_field
 
 
-def _plot_row(vname="", level=0, config_dict=None):
+def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
+    """
+    if plot_cc_only_for is not None, should be equal to the label of the simulation to be plotted
+    """
+
+
+    if plot_cc_only_for is not None:
+        pass
+
+
     bmp, lons, lats = config_dict.basemap, config_dict.lons, config_dict.lats
     xx, yy = bmp(lons, lats)
     lons[lons > 180] -= 360
@@ -77,7 +86,7 @@ def _plot_row(vname="", level=0, config_dict=None):
         current_modif = {}
         future_modif = {}
 
-        # vname1 
+        # vname1
         current_base1 = compute_seasonal_means_for_each_year(config_dict["Current"][label_base], var_name=vname1,
                                                              level=level,
                                                              season_to_months=season_to_months)
