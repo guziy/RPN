@@ -699,12 +699,13 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     loads stations from sqlite db
 
     :param datavariable can be "streamflow" or "level"
+    :param natural: if None, all the stations (natural and regulated are retained)
 
     """
     import sqlite3
 
 
-    assert natural
+    # assert natural
 
     # cache_file = "hydat_stations_{0}_{1}.cache".format("natural" if natural else "regulated", province)
     # os.remove(cache_file)
@@ -777,10 +778,16 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     # select stations in quebec region which are not regulated
     query = "select * from {0} join {1} on {0}.STATION_NUMBER = {1}.STATION_NUMBER" \
-            " where ({0}.{2}=? or {0}.{2}=?) and {1}.REGULATED={3};".format(stations_table,
-                                                                            station_regulation_table,
-                                                                            province_field,
-                                                                            int(not natural))
+            " where ({0}.{2}=? or {0}.{2}=?)".format(stations_table,
+                                                     station_regulation_table,
+                                                     province_field)
+
+    # Filter for natural and regulated if required
+    if natural is not None:
+        query += " and {0}.REGULATED={1};".format(station_regulation_table, int(not natural))
+    else:
+        query += ";"
+
     print("query = {0}".format(query))
     cur.execute(query, (province, province.lower()))
 

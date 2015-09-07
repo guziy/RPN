@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    stations = cehq_station.load_from_hydat_db(natural = True, province = "QC")
+    stations = cehq_station.load_from_hydat_db(natural=True, province="QC")
 
     dm = Crcm5ModelDataManager(
         samples_folder_path="/skynet3_rech1/huziy/from_guillimin/new_outputs/quebec_0.1_crcm5-r_spinup",
@@ -20,16 +20,15 @@ def main():
 
     n_cont_years = [len(s.get_list_of_complete_years()) for s in stations]
 
-
     x, y = basemap(lons, lats)
-    basemap.scatter(x, y, c = n_cont_years)
+    basemap.scatter(x, y, c=n_cont_years)
     basemap.drawcoastlines()
     basemap.colorbar()
     plt.show()
 
 
-
 if __name__ == "__main__":
     import application_properties
+
     application_properties.set_current_directory()
     main()

@@ -9,8 +9,8 @@ setup (
   packages = find_packages(),
 
   # Declare your packages' dependencies here, for eg:
-  install_requires=["matplotlib", "numpy", "netCDF4", "mpl_toolkits", "osgeo", "descartes", "shapely", "Ngl", "scipy",
-                    "GChartWrapper", "mayavi", "pykml", "lxml", "pandas", "pyresample", "fiona", "tables", "brewer2mpl",
+  install_requires=["matplotlib", "numpy", "netCDF4", "osgeo", "descartes", "shapely", "scipy",
+                    "GChartWrapper", "pykml", "lxml", "pandas", "pyresample", "fiona", "tables", "brewer2mpl",
                     'iris', 'seaborn', 'lmoments3',],
 
   # Fill in these to make your Egg ready for upload to

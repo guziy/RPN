@@ -18,7 +18,17 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
 from numpy.lib.function_base import meshgrid
 from scipy.spatial.ckdtree import cKDTree
-from rpn import level_kinds
+
+try:
+    from rpn import level_kinds
+    from rpn.rpn import RPN
+except ImportError as e:
+    class LevelKinds(object):
+        pass
+    level_kinds = LevelKinds()
+    level_kinds.ARBITRARY = -1
+    print(e)
+
 
 import application_properties
 from .model_point import ModelPoint
@@ -34,7 +44,6 @@ from util.geo import lat_lon
 __author__ = 'huziy'
 
 import numpy as np
-from rpn.rpn import RPN
 import os
 
 import matplotlib.pyplot as plt
@@ -338,7 +347,7 @@ class Crcm5ModelDataManager:
 
 
     def get_annual_mean_fields(self, start_year=-np.Inf, end_year=np.Inf, varname=None, level=-1,
-                               level_kind=level_kinds.ARBITRARY):
+                               level_kind=-1):
         """
         returns pandas.Series with the year as an index, and 2d fields of annual means as values
         {year:mean_field}
@@ -437,7 +446,7 @@ class Crcm5ModelDataManager:
         return self.lon2d_rot, self.lat2d_rot
 
     def get_spatial_integral_over_mask_of_dyn_field(self, mask, weights_2d, path_to_folder="", var_name="",
-                                                    level=-1, level_kind=level_kinds.ARBITRARY, file_prefix="dm"):
+                                                    level=-1, level_kind=-1, file_prefix="dm"):
         """
         returns a timeseries object
         """
@@ -460,7 +469,7 @@ class Crcm5ModelDataManager:
 
 
     def get_dynamic_field_for_point(self, ix, jy, path_to_folder="", var_name="",
-                                    level=-1, level_kind=level_kinds.ARBITRARY, file_prefix="dm"):
+                                    level=-1, level_kind=-1, file_prefix="dm"):
 
         """
         returns a timeseries object
