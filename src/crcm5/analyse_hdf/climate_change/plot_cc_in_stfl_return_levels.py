@@ -21,6 +21,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from util.geo import quebec_info
 
 __author__ = 'huziy'
 
@@ -40,10 +41,10 @@ def main():
     rea_driven_label = "CRCM5-L-ERAI"
 
     # gcm_driven_path_c = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_label_c = "CRCM5-L"
+    gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
+    gcm_driven_label_c = "CRCM5-NL"
 
-    gcm_driven_path_f = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-2070-2100.hdf5"
+    gcm_driven_path_f = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-2070-2100.hdf5"
 
 
     start_year_c = 1980
@@ -147,7 +148,7 @@ def main():
 
             bmp_info.basemap.drawcoastlines(ax=ax)
             bmp_info.basemap.drawmapboundary(fill_color="0.75")
-            bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"),
+            bmp_info.basemap.readshapefile(".".join(quebec_info.BASIN_BOUNDARIES_DERIVED_10km.split(".")[:-1]).replace("utm18", "latlon"),
                                            "basin",
                                            linewidth=1.2, ax=ax)
 

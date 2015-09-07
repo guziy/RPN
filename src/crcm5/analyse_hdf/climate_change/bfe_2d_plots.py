@@ -21,7 +21,7 @@ img_folder = "cc_paper/bfe"
 
 import numpy as np
 
-BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_FILE_LATLON
+BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_DERIVED_10km
 
 
 def get_diff_levels(key_to_data, ncolors=20, varname=""):

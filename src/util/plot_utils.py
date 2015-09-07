@@ -101,9 +101,48 @@ def get_ranges(x_interest, y_interest):
     return x_min - dx, x_max + dx, y_min - dy, y_max + dy
 
 
-def save_to_shape_file(bound_coords, folder_path=""):
-    # TODO: implement
-    pass
+def save_to_shape_file(line_groups, folder_path="data/shape/derived_basins_qc", in_proj=None):
+    """
+    Save basin boundaries to a file
+    :param line_groups:
+    :param folder_path:
+    """
+    from fiona import collection
+    from shapely.geometry import LineString
+    from pyproj import Proj, transform
+    from fiona import crs
+
+    from shapely.geometry import mapping
+
+    lat_lon = crs.from_epsg(4326)
+    if in_proj is None:
+        in_proj = lat_lon
+
+    folder = Path(folder_path)
+    if not folder.is_dir():
+        folder.mkdir(parents=True)
+
+    shp = folder / "basin_boundaries_derived.shp"
+
+    schema = {"geometry": "LineString", "properties": {"id": "int"}}
+
+    print("in_proj = {}".format(in_proj))
+
+
+    with collection(str(shp), mode="w", driver="ESRI Shapefile", schema=schema, crs=lat_lon) as output:
+
+        p_in = Proj(in_proj)
+        p_out = Proj(output.crs)
+
+        for i, p in enumerate(line_groups):
+
+            print(p[0])
+            lines = [LineString(np.asarray(transform(p_in, p_out, *edge)).transpose()) for edge in p]
+            # poly = polygonize(lines)
+            for line in lines:
+                print(line.wkt)
+                output.write({"properties": {"id": i}, "geometry": mapping(line)})
+
 
 def draw_upstream_area_bounds(the_ax, upstream_edges, **kwargs):
     """

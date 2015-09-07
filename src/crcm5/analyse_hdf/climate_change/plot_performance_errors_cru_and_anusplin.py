@@ -21,7 +21,7 @@ import numpy as np
 
 img_folder = Path("cc_paper/perf_err_with_anusplin_and_cru_merged")
 
-BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_FILE_LATLON
+BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_DERIVED_10km
 
 
 def _format_axes(ax_list, vname="TT"):

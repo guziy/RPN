@@ -222,7 +222,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         #                      zorder=5, lw=2)
 
         # Plot monthly
-        monthly_dates = [datetime(2001, m, 1) for m in range(1, 13)]
+        monthly_dates = [datetime(2001, m, 15) for m in range(1, 13)]
         monthly_base = [np.mean([v for d, v in zip(daily_dates, cc_base[name]) if d.month == m]) for m in range(1, 13)]
         monthly_modif = [np.mean([v for d, v in zip(daily_dates, cc_modif[name]) if d.month == m]) for m in
                          range(1, 13)]
@@ -252,7 +252,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
 
 
         # Plot monthly
-        monthly_dates = [datetime(2001, m, 1) for m in range(1, 13)]
+        monthly_dates = [datetime(2001, m, 15) for m in range(1, 13)]
         monthly_delta = [np.mean([v for d, v in zip(daily_dates, delta[name]) if d.month == m]) for m in range(1, 13)]
         line_diff = ax_twin.plot(monthly_dates, monthly_delta, "g--",
                                  label="({})-({})".format(data_to_plot.modif_label, data_to_plot.base_label),
@@ -276,6 +276,9 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         ax.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
         ax.xaxis.set_major_locator(MonthLocator())
         plt.setp(ax.xaxis.get_majorticklabels(), visible=False)
+
+        ax.set_xlim(monthly_dates[0].replace(day=1), monthly_dates[-1].replace(day=31))
+
         ax.grid()
 
     the_labels = (data_to_plot.base_label, data_to_plot.modif_label)
@@ -284,7 +287,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
     handles = (line_base[0], line_modif[0], line_diff[0])
     leg_labels = (the_labels[0], the_labels[1], "{} vs {}".format(*the_labels[::-1]))
     ax_last.legend(handles, leg_labels, loc="upper right",
-                   bbox_to_anchor=(1, -0.2), borderaxespad=0, ncol=len(the_labels))
+                   bbox_to_anchor=(1, -0.2), borderaxespad=0)
 
     plt.tight_layout()
     print("Saving the plot to {}".format(img_path))
@@ -635,8 +638,17 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
         xx=xx,
         yy=yy
     )
-    plot_utils.draw_upstream_area_bounds(ax, upstream_edges=upstream_edges, color="r", linewidth=0.6)
 
+
+    upstream_edges_latlon = cell_manager.get_upstream_polygons_for_points(
+        model_point_list=[ModelPoint(ix=i, jy=j) for (i, j) in name_to_ij_out.values()],
+        xx=bmp_info.lons,
+        yy=bmp_info.lats
+    )
+
+
+    plot_utils.draw_upstream_area_bounds(ax, upstream_edges=upstream_edges, color="r", linewidth=0.6)
+    plot_utils.save_to_shape_file(upstream_edges_latlon, in_proj=None)
 
 
     xs, ys = bmp_info.basemap(lons_out, lats_out)
@@ -877,13 +889,11 @@ def main():
 
 
     # TODO: remove this function call (does similar thing as get_basin_to_outlet_indices_map)
-    plot_basin_outlets(bmp_info=bmp_info,
-                       accumulation_areas=facc,
-                       directions=fldr,
-                       lake_fraction_field=lake_fraction)
+    # plot_basin_outlets(bmp_info=bmp_info,
+    #                    accumulation_areas=facc,
+    #                    directions=fldr,
+    #                    lake_fraction_field=lake_fraction)
 
-    if True:
-        raise Exception
 
     basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
                                                                                               accumulation_areas=facc,
@@ -915,4 +925,4 @@ if __name__ == '__main__':
     application_properties.set_current_directory()
 
     main()
-    # main_interflow()
+    main_interflow()

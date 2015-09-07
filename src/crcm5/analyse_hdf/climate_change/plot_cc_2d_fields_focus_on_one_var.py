@@ -188,7 +188,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
 
 
         mindiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 1)
-        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 99)
+        maxdiff_proc = np.percentile(all_proc_diffs[~all_proc_diffs.mask], 95)
 
         maxdiff_proc = max(np.abs(maxdiff_proc), np.abs(mindiff_proc))
         mindiff_proc = -maxdiff_proc
@@ -264,7 +264,7 @@ def _plot_var(vname="", level=0, config_dict=None, data_dict=None):
                     # not_signif = np.ma.masked_where(plot_data[i][j].mask, not_signif)
                     # bmp.pcolormesh(xx, yy, not_signif, vmin=0, vmax=1, cmap=cm.get_cmap("gray", 20))
                     p = np.ma.masked_where(plot_data[i][j].mask, p)
-                    cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
+                    cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.1, 1], colors='none')
                     # create a legend for the contour set
                     # artists, labels = cs.legend_elements()
                     # ax.legend(artists, labels, handleheight=2)

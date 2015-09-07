@@ -17,31 +17,40 @@ from rpn.rpn import RPN
 def plot_acc_area_with_glaciers():
     gmask_vname = "VF"
     gmask_level = 2
-    gmask_path = "/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_144x115_GLNM_PRSF_CanHR85"
-    r = RPN(gmask_path)
-
-    gmask = r.get_first_record_for_name_and_level(varname=gmask_vname,
-                                                  level=gmask_level)
-
+    # gmask_path = "/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_144x115_GLNM_PRSF_CanHR85"
+    gmask_path = "/RESCUE/skynet3_rech1/huziy/CNRCWP/Calgary_flood/geophys_CORDEX_NA_0.11deg_695x680_filled_grDes_barBor_Crop2Gras_peat"
+    
+    # stab reading of the glacier mask
+    # r = RPN(gmask_path)
+    # gmask = r.get_first_record_for_name_and_level(varname=gmask_vname,
+    #                                              level=gmask_level)
+    
+    r = RPN("/RESCUE/skynet3_rech1/huziy/CNRCWP/Calgary_flood/pm2013061400_00000000p")
+    r.get_first_record_for_name("PR") # Because I almost sure that PR is there
     proj_params = r.get_proj_parameters_for_the_last_read_rec()
     rll = RotatedLatLon(**proj_params)
     lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
-    basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons, lats2d=lats)
-    gmask = np.ma.masked_where(gmask < 0.01, gmask)
+    basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons, lats2d=lats, resolution="i")
+    # gmask = np.ma.masked_where(gmask < 0.01, gmask)
+    gmask = np.ma.masked_all(lons.shape)
     mask_value = 0.25
     gmask[~gmask.mask] = mask_value
 
-    path = "/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/directions_north_america_0.25deg_glaciers.nc"
+    path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_WestCaUs_dx0.11deg.nc"
     # path = "/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/infocell_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_104x75.nc"
     ds = Dataset(path)
 
+
+    margin = 20
+
     var_name = "accumulation_area"
-    data = ds.variables[var_name][:]
+    data = ds.variables[var_name][margin:-margin, margin:-margin]
 
     data = np.ma.masked_where(data <= 0, data)
 
     # flow directions
-    fldr = ds.variables["flow_direction_value"][:]
+    fldr = ds.variables["flow_direction_value"][:][margin:-margin, margin:-margin]
+
     i_shifts, j_shifts = direction_and_value.flowdir_values_to_shift(fldr)
 
 
@@ -68,44 +77,54 @@ def plot_acc_area_with_glaciers():
     inds_i_next = inds_i + i_shifts
     inds_j_next = inds_j + j_shifts
 
+    inds_i_next = np.ma.masked_where((inds_i_next == nx) | (inds_i_next == -1), inds_i_next)
+    inds_j_next = np.ma.masked_where((inds_j_next == ny) | (inds_j_next == -1), inds_j_next)
+
+
     u = np.ma.masked_all_like(x)
     v = np.ma.masked_all_like(x)
 
-    good = ~inds_i_next.mask
+    good = (~inds_i_next.mask) & (~inds_j_next.mask)
     u[good] = x[inds_i_next[good], inds_j_next[good]] - x[inds_i[good], inds_j[good]]
     v[good] = y[inds_i_next[good], inds_j_next[good]] - y[inds_i[good], inds_j[good]]
 
-    basemap.quiver(x[20:-20, 20:-20], y[20:-20, 20:-20], u[20:-20, 20:-20], v[20:-20, 20:-20],
+    basemap.quiver(x, y, u, v,
                    pivot="tail", width=0.0005, scale_units="xy", headlength=20, headwidth=15, scale=1)
 
     basemap.drawcoastlines(linewidth=0.5)
 
-    plt.legend([Rectangle((0, 0), 5, 5, fc=cmap(mask_value)), ], ["Glaciers", ], loc=3)
+    basemap.drawrivers(color="b")
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/athabasca/athabasca_dissolved", "atabaska",
-                          zorder=2, linewidth=3, color="m")
+    # plt.legend([Rectangle((0, 0), 5, 5, fc=cmap(mask_value)), ], ["Glaciers", ], loc=3)
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/fraizer/fraizer", "frazier",
-                          zorder=2, linewidth=3, color="m")
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/athabasca/athabasca_dissolved", "atabaska",
+    #                      zorder=2, linewidth=3, color="m")
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/South_sas/South_sas_dissolved", "south_sask",
-                          zorder=2, linewidth=3, color="m")
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/fraizer/fraizer", "frazier",
+    #                      zorder=2, linewidth=3, color="m")
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/north_sas/north_sas", "north_sask",
-                          zorder=2, linewidth=3, color="m")
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/South_sas/South_sas_dissolved", "south_sask",
+    #                      zorder=2, linewidth=3, color="m")
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/watersheds_up_sas/watershed_up_sas_proj",
-                          "upsas",
-                          zorder=2, linewidth=3, color="m")
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/north_sas/north_sas", "north_sask",
+    #                      zorder=2, linewidth=3, color="m")
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/network/network", "rivers",
-                          zorder=2, linewidth=0.5, color="b")
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/watersheds_up_sas/watershed_up_sas_proj",
+    #                      "upsas",
+    #                      zorder=2, linewidth=3, color="m")
 
-    basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/network_up_sas/network_up_sout_sas_proj", "network",
-                          zorder=2, linewidth=0.5, color="b")
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/network/network", "rivers",
+    #                      zorder=2, linewidth=0.5, color="b")
+
+    # basemap.readshapefile("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/lat_lon/network_up_sas/network_up_sout_sas_proj", "network",
+    #                      zorder=2, linewidth=0.5, color="b")
 
 
-    plt.savefig("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/directions.png", bbox_inches="tight")
+    basemap.readshapefile("/skynet3_exec2/aganji/NE_can/bow_river/bow_projected", "basin", color="m", linewidth=2)
+
+    # plt.savefig("/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/directions.png", bbox_inches="tight")
+    plt.savefig("/RESCUE/skynet3_rech1/huziy/CNRCWP/Calgary_flood/directions.png", bbox_inches="tight")
+    
     plt.show()
 
 

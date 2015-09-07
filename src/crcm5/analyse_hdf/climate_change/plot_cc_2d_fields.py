@@ -14,6 +14,7 @@ from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 import numpy as np
 import matplotlib.pyplot as plt
 from util import plot_utils
+from util.geo import quebec_info
 
 __author__ = 'huziy'
 
@@ -57,16 +58,25 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
     """
 
 
-    if plot_cc_only_for is not None:
-        pass
 
 
-    bmp, lons, lats = config_dict.basemap, config_dict.lons, config_dict.lats
+    lons, lats = config_dict.lons, config_dict.lats
+
+    bmp = config_dict.basemap
+    """
+    :type bmp: mpl_toolkits.basemap.Basemap
+    """
+
+
     xx, yy = bmp(lons, lats)
     lons[lons > 180] -= 360
 
     fig = config_dict.fig
     gs = config_dict.gs
+    """:type : matplotlib.gridspec.GridSpec """
+    nrows_subplots, ncols_subplots = gs.get_geometry()
+
+
     label_base = config_dict.label_base
     label_modif = config_dict.label_modif
 
@@ -139,6 +149,13 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
                                                             level=level,
                                                             season_to_months=season_to_months)
 
+
+
+
+
+
+
+
     # Calculate the differences in cc signal
     season_to_diff = OrderedDict()
 
@@ -149,13 +166,29 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
     # Get the ranges for colorbar and calculate p-values
     season_to_pvalue = OrderedDict()
     for season in list(current_base.keys()):
-        season_to_diff[season] = (future_modif[season] - current_modif[season]) - \
-                                 (future_base[season] - current_base[season])
 
         _, pvalue_current = ttest_ind(current_modif[season], current_base[season], axis=0, equal_var=False)
         _, pvalue_future = ttest_ind(future_modif[season], future_base[season], axis=0, equal_var=False)
 
-        season_to_pvalue[season] = np.minimum(pvalue_current, pvalue_future)
+        if plot_cc_only_for is None:
+            season_to_pvalue[season] = np.minimum(pvalue_current, pvalue_future)
+
+            season_to_diff[season] = (future_modif[season] - current_modif[season]) - \
+                                     (future_base[season] - current_base[season])
+
+        else:
+
+            if plot_cc_only_for == label_base:
+                season_to_pvalue[season] = ttest_ind(future_base[season], current_base[season], axis=0, equal_var=False)
+                c_data = current_base[season]
+                f_data = future_base[season]
+            else:
+                _, season_to_pvalue[season] = ttest_ind(future_modif[season], current_modif[season], axis=0, equal_var=False)
+                c_data = current_modif[season]
+                f_data = future_modif[season]
+
+            season_to_diff[season] = f_data - c_data
+
 
         # Convert units if required
         if vname in config_dict.multipliers:
@@ -184,25 +217,33 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
         if not the_row:
             ax.set_title(season)
 
-        img = bmp.pcolormesh(xx, yy, season_to_plot_diff[season].copy(), vmin=-diff_max, vmax=diff_max,
-                             cmap=cmap, norm=bn)
+        img = bmp.pcolormesh(xx, yy, season_to_plot_diff[season].copy(),
+                             vmin=-diff_max, vmax=diff_max,
+                             cmap=cmap, norm=bn, ax=ax)
+
+        bmp.readshapefile(quebec_info.BASIN_BOUNDARIES_DERIVED_10km[:-4], "basin_edge", ax=ax)
 
         p = season_to_pvalue[season]
         if hasattr(season_to_plot_diff[season], "mask"):
             p = np.ma.masked_where(season_to_plot_diff[season].mask, p)
 
-        # cs = bmp.contourf(xx, yy, p, hatches=["//"], levels=[0.1, 1], colors='none')
-
-        # create a legend for the contour set
-        # artists, labels = cs.legend_elements()
-        # ax.legend(artists, labels, handleheight=2)
+        # cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.1, 1], colors='none')
+        #
+        # if (col == ncols_subplots - 2) and (the_row == nrows_subplots - 1):
+        #     # create a legend for the contour set
+        #     artists, labels = cs.legend_elements()
+        #     labels = ["not sign."]
+        #     ax.legend(artists, labels, handleheight=1, loc="upper right",
+        #               bbox_to_anchor=(1.0, -0.05), borderaxespad=0., frameon=False)
 
 
         bmp.drawcoastlines(ax=ax, linewidth=0.4)
         if vname in ["I5"] and season.lower() in ["summer"]:
             ax.set_visible(False)
 
-    cb = plt.colorbar(img, cax=fig.add_subplot(gs[the_row, len(current_base)]))
+
+
+    cb = plt.colorbar(img, cax=fig.add_subplot(gs[the_row, len(current_base)]), extend="both")
 
     if hasattr(config_dict, "name_to_units") and vname in config_dict.name_to_units:
         cb.ax.set_title(config_dict.name_to_units[vname])
@@ -312,7 +353,7 @@ def main():
     # var_names = ["TT", "HU", "PR", "AV", "STFL"]
     # var_names = ["TRAF", "STFL", "TRAF+TDRA"]
     # var_names = ["TT", "PR", "STFL"]
-    var_names = ["TT", "PR", "I5", "STFL", ]
+    var_names = ["TT", "PR", "I5", "AV", "STFL", "IMAV"]
     levels = [0, ] * len(var_names)
     multipliers = {
         "PR": 1.0,
@@ -330,6 +371,9 @@ def main():
     modif_current_path = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/" \
                          "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
     modif_label = "CanESM2-CRCM5-L"
+
+    # plot_cc_only_for = modif_label
+    plot_cc_only_for = None
 
     start_year_c = 1980
     end_year_c = 2010
@@ -381,10 +425,13 @@ def main():
     for vname, level, the_row in zip(var_names, levels, list(range(len(levels)))):
         config_dict.the_row = the_row
 
-        _plot_row(vname=vname, level=level, config_dict=config_dict)
+        _plot_row(vname=vname, level=level, config_dict=config_dict, plot_cc_only_for=plot_cc_only_for)
 
     # Save the image to the file
-    img_path = get_image_path(base_config_c, base_config_f, modif_config_c, season_to_months=season_to_months)
+    if plot_cc_only_for is None:
+        img_path = get_image_path(base_config_c, base_config_f, modif_config_c, season_to_months=season_to_months)
+    else:
+        img_path = get_image_path(modif_config_c, modif_config_f, modif_config_c, season_to_months=season_to_months)
     fig.savefig(img_path, bbox_inches="tight")
     plt.close(fig)
 
