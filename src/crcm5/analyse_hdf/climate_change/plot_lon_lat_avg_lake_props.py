@@ -1,4 +1,5 @@
 from pathlib import Path
+from matplotlib import cm
 from matplotlib.colors import LogNorm
 from matplotlib.dates import date2num, MonthLocator, num2date, DayLocator
 from matplotlib.gridspec import GridSpec
@@ -9,6 +10,7 @@ from crcm5.analyse_hdf.run_config import RunConfig
 import numpy as np
 from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 import matplotlib.pyplot as plt
+from util.cmap_helpers.norms import MidpointNormalize
 from util.units import MM_PER_METER
 from util import plot_utils
 
@@ -126,7 +128,15 @@ def main():
     # ----------------------------------Lake temperature----------------------------------
     row = 0
     ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_temp_f - lake_temp_c[:, :], cmap="jet")
+    cmap = cm.get_cmap("bwr", 11)
+    to_plot = lake_temp_f - lake_temp_c[:, :]
+    vmax = max(to_plot.max(), 0)
+    vmin = min(to_plot.min(), 0)
+    vmax = max(abs(vmin), abs(vmax))
+    # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
+    clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
+
+    cs = ax.contourf(num_dates_2d, z_agg_2d, to_plot, cmap=cmap, levels=clevs)
     ax.set_title("Lake temperature (liquid)")
     all_axes.append(ax)
 
@@ -154,7 +164,14 @@ def main():
 
     row += 1
     ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_th, cmap="jet")
+
+    vmax = max(lake_ice_th.max(), 0)
+    vmin = min(lake_ice_th.min(), 0)
+    vmax = max(abs(vmin), abs(vmax))
+    # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
+    clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
+
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_th, cmap=cmap, levels=clevs)
     ax.set_title("Lake ice thickness")
     all_axes.append(ax)
 
@@ -182,7 +199,14 @@ def main():
 
     row += 1
     ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap="jet")
+
+    vmax = max(lake_ice_fraction.max(), 0)
+    vmin = min(lake_ice_fraction.min(), 0)
+    vmax = max(abs(vmin), abs(vmax))
+    # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
+    clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
+
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap=cmap, levels=clevs)
     ax.set_title("Lake ice fraction")
     all_axes.append(ax)
 
@@ -209,8 +233,18 @@ def main():
 
     row += 1
     ax = fig.add_subplot(gs[row, 0])
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap="jet")
-    ax.set_title("Water level")
+
+    vmax = max(lake_ice_fraction.max(), 0)
+    vmin = min(lake_ice_fraction.min(), 0)
+    vmax = max(abs(vmin), abs(vmax))
+    # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
+    clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
+    clevs = list(clevs)
+    clevs.remove(0)
+
+
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap=cmap, levels=clevs)
+    ax.set_title("Lake level")
     all_axes.append(ax)
 
     # Colorbar for value plots

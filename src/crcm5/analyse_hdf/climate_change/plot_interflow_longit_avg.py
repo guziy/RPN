@@ -131,7 +131,7 @@ def main():
     locator = MaxNLocator(nbins=20, symmetric=True)
     clevs = locator.tick_values(vmin=vmin, vmax=vmax)
 
-    ax = fig.add_subplot(gs[1, :2])
+    ax = fig.add_subplot(gs[1, 1])
 
     cs = ax.contourf(num_dates_2d, lats_agg_2d, diff, cmap=diff_cmap,
                      levels=clevs, extend="both")

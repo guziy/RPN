@@ -227,14 +227,16 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
         if hasattr(season_to_plot_diff[season], "mask"):
             p = np.ma.masked_where(season_to_plot_diff[season].mask, p)
 
-        # cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.1, 1], colors='none')
-        #
-        # if (col == ncols_subplots - 2) and (the_row == nrows_subplots - 1):
-        #     # create a legend for the contour set
-        #     artists, labels = cs.legend_elements()
-        #     labels = ["not sign."]
-        #     ax.legend(artists, labels, handleheight=1, loc="upper right",
-        #               bbox_to_anchor=(1.0, -0.05), borderaxespad=0., frameon=False)
+
+        if plot_cc_only_for is not None:
+            cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.1, 1], colors='none')
+
+            if (col == ncols_subplots - 2) and (the_row == nrows_subplots - 1):
+                # create a legend for the contour set
+                artists, labels = cs.legend_elements()
+                labels = ["not significant"]
+                ax.legend(artists, labels, handleheight=1, loc="upper right",
+                          bbox_to_anchor=(1.0, -0.05), borderaxespad=0., frameon=False)
 
 
         bmp.drawcoastlines(ax=ax, linewidth=0.4)
@@ -372,8 +374,8 @@ def main():
                          "quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
     modif_label = "CanESM2-CRCM5-L"
 
-    # plot_cc_only_for = modif_label
-    plot_cc_only_for = None
+    plot_cc_only_for = modif_label
+    # plot_cc_only_for = None
 
     start_year_c = 1980
     end_year_c = 2010
