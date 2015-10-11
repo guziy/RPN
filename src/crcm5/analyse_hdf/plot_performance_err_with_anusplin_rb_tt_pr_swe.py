@@ -149,9 +149,11 @@ def main():
     obs_path_swe = "data/swe_ross_brown/swe.nc"
     model_var_to_obs_path = OrderedDict([
         ("TT", obs_path_anusplin),
-        ("PR", obs_path_anusplin),
+    #    ("PR", obs_path_anusplin),
         ("I5", obs_path_swe)
     ])
+
+
 
     vname_to_obs_data = {}
 

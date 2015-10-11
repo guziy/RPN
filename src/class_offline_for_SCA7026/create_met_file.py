@@ -12,7 +12,7 @@ from multiprocessing import Process
 
 __author__ = 'huziy'
 
-from . import util_class_offline
+from class_offline_for_SCA7026 import util_class_offline
 import numpy as np
 import shutil
 
@@ -43,7 +43,8 @@ def cache_tree_generator(f):
 
     return cached
 
-##Decorator to cache the tree generator
+
+# Decorator to cache the tree generator
 @cache_tree_generator
 def generate_kdtree(folder_with_ini_files, filename_prefix):
     lons, lats = [], []
@@ -82,20 +83,28 @@ def get_points_of_interest():
         ("ORLANDO",  (278.50, 28.54)),
         ("PHOENIX",  (248.91, 33.46)),
         ("MONTREAL", (286.56, 45.72)),
-        ("FAIRBANKS", (212.66, 64.91))
+        ("FAIRBANKS", (212.66, 64.91)),
+        ("QUEBEC", (360 - 71.216667, 46.816667))
         ])
 
 
 def interpolate_for_the_list_of_points():
+
+    out_folder = "SCA7026"
+    if not os.path.isdir(out_folder):
+        os.mkdir(out_folder)
+
+
     for point, coords in get_points_of_interest().items():
-        p = Process(target=main, kwargs=dict(point_name=point, dest_lon=coords[0], dest_lat=coords[1]))
+        p = Process(target=main,
+                    kwargs=dict(point_name=point, dest_lon=coords[0], dest_lat=coords[1], out_folder=out_folder))
         p.start()
 
 
-def main(point_name="", dest_lon=None, dest_lat=None):
+def main(point_name="", dest_lon=None, dest_lat=None, out_folder=None):
     source_data_path = "/skynet1_rech3/camille/ERA_1958-2010"
     fname_pattern = "ERA-Interim_1979-2010_{}.rpn"
-    #fname_pattern = "ERA_1958-2010_{}.rpn"
+    # fname_pattern = "ERA_1958-2010_{}.rpn"
 
     varnames = [
         "TT", "UV", "SD", "AD", "HU", "P0", "PR"
@@ -103,13 +112,13 @@ def main(point_name="", dest_lon=None, dest_lat=None):
 
     ignore_leap_year = True
 
-    #point_name = "YUMA_erai"
-    #dest_lat, dest_lon = 32.58, 245.61
+    # point_name = "YUMA_erai"
+    # dest_lat, dest_lon = 32.58, 245.61
 
-    #point_name = "FLINT"
-    #dest_lat, dest_lon = 43.27, 276.83
+    # point_name = "FLINT"
+    # dest_lat, dest_lon = 43.27, 276.83
 
-    #longitude should be in the range [-180, 180]
+    # longitude should be in the range [-180, 180]
     dest_lon = dest_lon - 360 if dest_lon > 180 else dest_lon
 
 
@@ -117,15 +126,12 @@ def main(point_name="", dest_lon=None, dest_lat=None):
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(dest_lon, dest_lat)
 
     start_year = 1980
-    end_year = 1981
+    end_year = 2010
     out_step_min = 30  # interpolate in time if needed
 
-    out_folder = "SCA7026"
-    if not os.path.isdir(out_folder):
-        os.mkdir(out_folder)
 
 
-    #Determine the index of the closest point
+    # Determine the index of the closest point
     tt_path = os.path.join(source_data_path, fname_pattern.format("TT"))
 
     robj = RPN(tt_path)
@@ -146,7 +152,7 @@ def main(point_name="", dest_lon=None, dest_lat=None):
 
     shift_min = timedelta(minutes=int(dest_lon / 15.0 * 60))
 
-    #write data to the text file
+    # write data to the text file
     with open(os.path.join(out_folder, "{}_{}-{}.MET".format(point_name, start_year, end_year)), "w") as f:
         df = pd.DataFrame()
         dates = None
@@ -154,7 +160,7 @@ def main(point_name="", dest_lon=None, dest_lat=None):
             print("Reading {}".format(vname))
             r = RPN(os.path.join(source_data_path, fname_pattern.format(vname)))
             data = r.get_time_records_iterator_for_name_and_level(varname=vname)
-            #select only dates from the range of interest and for the position of interest
+            # select only dates from the range of interest and for the position of interest
 
             data = {k: v.flatten()[ind] for k, v in data if start_year <= k.year <= end_year + 1}
 
@@ -190,8 +196,8 @@ def main(point_name="", dest_lon=None, dest_lat=None):
 
             t_local = d + shift_min
             cos_zen = util_class_offline.get_cos_of_zenith_angle(dest_lat, t_local)
-            #swrad = 0.0
-            #if cos_zen > 0.0:
+            # swrad = 0.0
+            # if cos_zen > 0.0:
             swrad = row["SD"]
 
             day_of_year = d.timetuple().tm_yday
@@ -206,9 +212,9 @@ def main(point_name="", dest_lon=None, dest_lat=None):
             )
             f.write(line)
 
-    #Get ini file
+    # Get ini file
     src_ini = find_closest_ini_point(longitude=dest_lon, latitude=dest_lat)
-    shutil.copyfile(src_ini, "{}.INI".format(point_name))
+    shutil.copyfile(src_ini, "{}/{}.INI".format(out_folder, point_name))
 
 
     print(dist, ind)

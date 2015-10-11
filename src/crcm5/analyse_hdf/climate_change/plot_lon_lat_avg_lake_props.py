@@ -1,6 +1,6 @@
 from pathlib import Path
 from matplotlib import cm
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, BoundaryNorm
 from matplotlib.dates import date2num, MonthLocator, num2date, DayLocator
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import ScalarFormatter, MaxNLocator, FuncFormatter
@@ -122,13 +122,13 @@ def main():
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=30)
     fig = plt.figure()
 
-    gs = GridSpec(4, 2, width_ratios=[1, 0.05])
+    gs = GridSpec(4, 2, width_ratios=[1, 0.02])
 
     all_axes = []
     # ----------------------------------Lake temperature----------------------------------
     row = 0
     ax = fig.add_subplot(gs[row, 0])
-    cmap = cm.get_cmap("bwr", 11)
+    cmap = cm.get_cmap("bwr", 15)
     to_plot = lake_temp_f - lake_temp_c[:, :]
     vmax = max(to_plot.max(), 0)
     vmin = min(to_plot.min(), 0)
@@ -136,7 +136,7 @@ def main():
     # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
     clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
 
-    cs = ax.contourf(num_dates_2d, z_agg_2d, to_plot, cmap=cmap, levels=clevs)
+    cs = ax.contourf(num_dates_2d, z_agg_2d, to_plot, cmap=cmap, levels=clevs, extend="both")
     ax.set_title("Lake temperature (liquid)")
     all_axes.append(ax)
 
@@ -171,7 +171,7 @@ def main():
     # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
     clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
 
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_th, cmap=cmap, levels=clevs)
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_th, cmap=cmap, levels=clevs, extend="both")
     ax.set_title("Lake ice thickness")
     all_axes.append(ax)
 
@@ -188,13 +188,13 @@ def main():
     # ----------------------------------Lake ice fraction----------------------------------
     level = 0
     varname = "LC"
-    _, lake_depth_c = analysis.get_daily_climatology_for_rconf(current_config,
-                                                               var_name=varname, level=level)
+    _, lake_ice_fraction_c = analysis.get_daily_climatology_for_rconf(current_config,
+                                                                      var_name=varname, level=level)
 
-    _, lake_depth_f = analysis.get_daily_climatology_for_rconf(future_config,
-                                                               var_name=varname, level=level)
+    _, lake_ice_fraction_f = analysis.get_daily_climatology_for_rconf(future_config,
+                                                                      var_name=varname, level=level)
 
-    lake_ice_fraction = _avg_along(lake_depth_f - lake_depth_c, axis=avg_axis,
+    lake_ice_fraction = _avg_along(lake_ice_fraction_f - lake_ice_fraction_c, axis=avg_axis,
                                    lake_fraction=lake_fraction)
 
     row += 1
@@ -206,7 +206,7 @@ def main():
     # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
     clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
 
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap=cmap, levels=clevs)
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap=cmap, levels=clevs, extend="both")
     ax.set_title("Lake ice fraction")
     all_axes.append(ax)
 
@@ -219,7 +219,7 @@ def main():
     plt.colorbar(cs, cax=cax, format=sfmt)
     cax.set_xlabel("")
     cax.yaxis.get_offset_text().set_position((-2, 10))
-    # ----------------------------------Lake ice fraction----------------------------------
+    # ----------------------------------Lake depth----------------------------------
     level = 0
     varname = "CLDP"
     _, lake_depth_c = analysis.get_daily_climatology_for_rconf(current_config,
@@ -228,22 +228,19 @@ def main():
     _, lake_depth_f = analysis.get_daily_climatology_for_rconf(future_config,
                                                                var_name=varname, level=level)
 
-    lake_ice_fraction = _avg_along(lake_depth_f - lake_depth_c, axis=avg_axis,
-                                   lake_fraction=lake_fraction)
+    lake_depth_cc = _avg_along(lake_depth_f - lake_depth_c, axis=avg_axis,
+                               lake_fraction=lake_fraction)
 
     row += 1
     ax = fig.add_subplot(gs[row, 0])
 
-    vmax = max(lake_ice_fraction.max(), 0)
-    vmin = min(lake_ice_fraction.min(), 0)
-    vmax = max(abs(vmin), abs(vmax))
-    # norm = MidpointNormalize(vmin=vmin, vmax=vmax)
-    clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
-    clevs = list(clevs)
-    clevs.remove(0)
+    clevs = [0.01, 0.1, 0.5, 0.75, 1, 2, 3]
+    clevs = [-c for c in reversed(clevs)] + clevs
+    cmap = cm.get_cmap("bwr", len(clevs) - 1)
 
+    norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
 
-    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap=cmap, levels=clevs)
+    cs = ax.contourf(num_dates_2d, z_agg_2d, lake_depth_cc, cmap=cmap, levels=clevs, norm=norm, extend="both")
     ax.set_title("Lake level")
     all_axes.append(ax)
 
@@ -253,7 +250,7 @@ def main():
     sfmt = ScalarFormatter(useMathText=True)
     sfmt.set_powerlimits((-2, 2))
 
-    plt.colorbar(cs, cax=cax, format=sfmt)
+    plt.colorbar(cs, cax=cax, format=sfmt, ticks=clevs)
     cax.set_xlabel("m")
     cax.yaxis.get_offset_text().set_position((-2, 10))
 

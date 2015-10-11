@@ -355,7 +355,7 @@ def main():
     # var_names = ["TT", "HU", "PR", "AV", "STFL"]
     # var_names = ["TRAF", "STFL", "TRAF+TDRA"]
     # var_names = ["TT", "PR", "STFL"]
-    var_names = ["TT", "PR", "I5", "AV", "STFL", "IMAV"]
+    var_names = ["TT", "PR", "I5", "AV", "STFL"]
     levels = [0, ] * len(var_names)
     multipliers = {
         "PR": 1.0,

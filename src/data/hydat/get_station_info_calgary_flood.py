@@ -4,6 +4,8 @@ from data import cehq_station
 import matplotlib.pyplot as plt
 
 from netCDF4 import Dataset
+
+from data.cehq_station import Station
 from data.cell_manager import CellManager
 
 __author__ = 'san'
@@ -17,6 +19,7 @@ def get_station_objects(db_path="/home/san/Downloads/Hydat.sqlite"):
     stations = cehq_station.load_from_hydat_db(natural=None, province=PROVINCE, path=db_path, selected_ids=selected_ids)
     for s in stations:
         print(s)
+    # add an additional station here, if required
     return stations
 
 
@@ -46,20 +49,20 @@ def get_cell_manager_from_directions_file(path="/home/san/Downloads/directions_W
 def main():
     import application_properties
     application_properties.set_current_directory()
-    stations = get_station_objects()
+    stations = get_station_objects(db_path="/RESCUE/skynet3_rech1/huziy/hydat_db/Hydat.sqlite")
     """:type : list[data.cehq_station.Station] """
 
-
+    directions_file = "/RESCUE/skynet3_rech1/huziy/CNRCWP/Calgary_flood/directions_north_america_0.11deg_floods.nc"
     fig = plt.figure()
     ax = fig.add_subplot(111)
     bmp = Basemap()
 
 
-    ds = Dataset("calg_flood_stations_upstream_masks.nc", "w")
+    ds = Dataset("calg_flood_stations_upstream_masks_na_0.11deg.nc", "w")
     """
     :type : netCDF4.Dataset
     """
-    cell_manager = get_cell_manager_from_directions_file()
+    cell_manager = get_cell_manager_from_directions_file(path=directions_file)
 
 
     station_to_modelpoint = cell_manager.get_model_points_for_stations(station_list=stations, drainaige_area_reldiff_limit=0.15)

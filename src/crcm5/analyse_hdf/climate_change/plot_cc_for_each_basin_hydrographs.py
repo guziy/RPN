@@ -210,9 +210,6 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
 
         ax = fig.add_subplot(gs[row, col])
         ax_last = ax
-        bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=1, alpha=0.5)
-        ax.annotate(name, (0.9, 0.1), xycoords="axes fraction", bbox=bbox_props, zorder=10,
-                    alpha=0.5, horizontalalignment="right", verticalalignment="bottom")
 
         # line_base = ax.plot(daily_dates, cc_base[name].copy(), "b", label="{}".format(data_to_plot.base_label), lw=2)
         #
@@ -227,7 +224,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         monthly_modif = [np.mean([v for d, v in zip(daily_dates, cc_modif[name]) if d.month == m]) for m in
                          range(1, 13)]
 
-        line_base = ax.plot(monthly_dates, monthly_base, "b", label="{}".format(data_to_plot.base_label), lw=2)
+        line_base = ax.plot(monthly_dates, monthly_base, "b", label="{}".format(data_to_plot.base_label), lw=2, zorder=4)
         line_modif = ax.plot(monthly_dates, monthly_modif, color="r", label="{}".format(data_to_plot.modif_label),
                              zorder=5, lw=2)
 
@@ -256,7 +253,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         monthly_delta = [np.mean([v for d, v in zip(daily_dates, delta[name]) if d.month == m]) for m in range(1, 13)]
         line_diff = ax_twin.plot(monthly_dates, monthly_delta, "g--",
                                  label="({})-({})".format(data_to_plot.modif_label, data_to_plot.base_label),
-                                 lw=3)
+                                 lw=3, zorder=6)
 
         ax_twin.yaxis.set_major_locator(MaxNLocator(nbins=5, symmetric=True))
         # ax_twin.set_ylim(bottom=diff_vmin, top=diff_vmax)
@@ -281,6 +278,12 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
 
         ax.grid()
 
+        bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=1)
+        ax_twin.annotate(name, (0.9, 0.1), xycoords="axes fraction", bbox=bbox_props, zorder=20,
+                    alpha=0.5, horizontalalignment="right", verticalalignment="bottom")
+
+
+
     the_labels = (data_to_plot.base_label, data_to_plot.modif_label)
 
     assert isinstance(ax_last, Axes)
@@ -291,7 +294,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
 
     plt.tight_layout()
     print("Saving the plot to {}".format(img_path))
-    fig.savefig(img_path, bbox_inches="tight", dpi=600)
+    fig.savefig(img_path, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -770,7 +773,7 @@ def get_image_path(base_c, base_f, modif_c, modif_f, varname):
     if not img_folder.exists():
         img_folder.mkdir(parents=True)
 
-    img_name = "plot1d_{}-{}_{}-{}_{}.png".format(base_f.start_year, base_f.end_year,
+    img_name = "plot1d_{}-{}_{}-{}_{}.eps".format(base_f.start_year, base_f.end_year,
                                                   base_c.start_year, base_c.end_year,
                                                   varname)
 
@@ -842,7 +845,8 @@ def main_interflow():
     calculate_and_plot_climate_change_hydrographs(data_to_plot,
                                                   name_to_out_indices=basin_name_to_out_indices_map,
                                                   months=list(range(1, 13)), varname=varname,
-                                                  img_path=img_path, basin_name_to_basin_mask=basin_name_to_basin_mask)
+                                                  img_path=img_path,
+                                                  basin_name_to_basin_mask=basin_name_to_basin_mask)
 
 
 def main():

@@ -155,6 +155,13 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
         if varname in ["I5"] and season.lower() in ["summer"]:
             ax.set_visible(False)
 
+
+        # Plot a colorbar for each subplot if required.
+        if hasattr(basemap_info, "draw_colorbar_for_each_subplot"):
+            if basemap_info.draw_colorbar_for_each_subplot:
+                cb = basemap_info.basemap.colorbar(cs, ax=ax)
+                cb.ax.set_title(infovar.get_units(var_name=varname))
+
     cax = fig.add_subplot(gs[:, -1]) if axes_list is None else axes_list[-1]
 
     # Add the colorbar if there are additional axes supplied for it

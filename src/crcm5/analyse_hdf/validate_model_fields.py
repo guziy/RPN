@@ -399,8 +399,8 @@ def do_4_seasons(start_year=1980, end_year=2010):
     season_to_months = {
         "Winter": [12, 1, 2],
         "Spring": list(range(3, 6)),
-        "Summer": list(range(6, 9)),
-        "Fall": list(range(9, 11))
+        # "Summer": list(range(6, 9)),
+        # "Fall": list(range(9, 11))
     }
 
     season_to_plot_indices = {
@@ -413,7 +413,12 @@ def do_4_seasons(start_year=1980, end_year=2010):
     simlabel_to_path = {
         # "CRCM5-R-CanESM2-current": "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5",
         #        "CRCM5-R": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
+
+        "CRCM5-NL": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r.hdf5",
         "CRCM5-L1": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5",
+
+
+
         #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap.hdf",
         #        "CRCM5-HCD-RL-INTFL-ECOCLIMAP-ERA075": "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ecoclimap_era075.hdf"
 

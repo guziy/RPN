@@ -126,12 +126,12 @@ def main():
     # file names are in the following form: ERA_Interim_0.75d_6h_analysis_199010
     path_to_rpn_files = "/RECH/data/Driving_data/Offline/ERA-Interim_0.75/6h_Analysis"
 
-    varnames = ["PR", "TT", "HU", "UU", "VV", "N4", "AD", "SN"]
-    offsets = [0, 273.15, 0, 0, 0, 0, 0, 0]
-    units = ["mm/s", "K", "kg/kg", "m/s", "m/s", "W/m**2", "W/m**2", "mm/s"]
+    varnames = ["PR", "TT", "HU", "UU", "VV", "N4", "AD", "SN", "P0"]
+    offsets = [0, 273.15, 0, 0, 0, 0, 0, 0, 0]
+    units = ["mm/s", "K", "kg/kg", "m/s", "m/s", "W/m**2", "W/m**2", "mm/s", "hPa"]
 
     mpers_per_knot = 0.514444444
-    multipliers = [1.0e3, 1., 1., mpers_per_knot, mpers_per_knot, 1.0, 1.0, 1.0e3]
+    multipliers = [1.0e3, 1., 1., mpers_per_knot, mpers_per_knot, 1.0, 1.0, 1.0e3, 1]
     create_yearly_from_rpn(path_to_rpn_files, out_folder, varnames=varnames,
                            multipliers=multipliers, units=units, offsets=offsets)
 

@@ -1,10 +1,21 @@
 
-__author__="huziy"
-__date__ ="$26 mai 2010 12:23:59$"
+__author__ = "huziy"
+__date__ = "$26 mai 2010 12:23:59$"
 
 import os
 
 PROJECT_DIR = 'RPN'
+
+
+
+def main_decorator(func):
+
+    def wrapper(*args, **kwargs):
+        set_current_directory()
+        func(*args, **kwargs)
+
+    return wrapper
+
 
 
 def set_current_directory():

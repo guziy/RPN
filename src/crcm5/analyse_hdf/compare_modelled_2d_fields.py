@@ -237,12 +237,23 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     # determine vmin and vmax for the row
     for season, field in data.items():
         # field = _get_to_plot(var_name, field, lake_fraction=domain_props.lake_fraction, lons=lons2d, lats = lats2d)
-        min_current, max_current = np.percentile(field[~field.mask], 1), np.percentile(field[~field.mask], 99)
+        min_current, max_current = np.percentile(field[~field.mask], 5), np.percentile(field[~field.mask], 97)
         if vmin is None or min_current < vmin:
             vmin = min_current
 
         if vmax is None or max_current > vmax:
             vmax = max_current
+
+    # Temporary Only to be consistent for indirect lake effect
+    if var_name == "STFA" and sim_label.startswith("(CRCM5-L1) - (CRCM5-NL)"):
+        vmax = 75
+        vmin = -75
+
+    if var_name == "STFA" and sim_label.startswith("(CRCM5-L2) - (CRCM5-L1)"):
+        vmax = 500
+        vmin = -500
+
+
 
     ncolors = 13 if exclude_0_from_diff_colorbar else 10
     bounds = None
@@ -270,7 +281,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     print("vmin = {0}; vmax = {1}".format(vmin, vmax))
 
     col = 0
-    axes[0].set_ylabel(sim_label, font_properties=FontProperties(style="italic"))
+    axes[0].set_ylabel(sim_label)
     im = None
     for season in season_list:
         field = data[season]
@@ -364,21 +375,21 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
 
     # lake effect (lake-atm interactions) radiative fluxes
-    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_radiation_fluxes.hdf5"
-    control_label = "CRCM5-NL"
-
-    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r-1980-2010_radiation_fluxes.hdf5", ]
-    labels = ["CRCM5-L1", ]
+    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-r_radiation_fluxes.hdf5"
+    # control_label = "CRCM5-NL"
+    #
+    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r-1980-2010_radiation_fluxes.hdf5", ]
+    # labels = ["CRCM5-L1", ]
 
 
 
 
     # lake effect (lake-river interactions)
-    # control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
-    # control_label = "CRCM5-L1"
-    #
-    # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
-    # labels = ["CRCM5-L2", ]
+    control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
+    control_label = "CRCM5-L1"
+
+    paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
+    labels = ["CRCM5-L2", ]
 
 
     # interflow effect ()

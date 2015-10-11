@@ -1,7 +1,9 @@
 import matplotlib
 # matplotlib.use("Agg")
 
-from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import BASIN_BOUNDARIES_FILE
+from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import BASIN_BOUNDARIES_FILE, \
+    get_basin_to_outlet_indices_map, plot_basin_outlets
+from data.cell_manager import CellManager
 from util import plot_utils
 
 
@@ -41,10 +43,10 @@ def main():
     rea_driven_label = "CRCM5-L-ERAI"
 
     # gcm_driven_path_c = "/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-1980-2010.hdf5"
-    gcm_driven_label_c = "CRCM5-NL"
+    gcm_driven_path_c = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
+    gcm_driven_label_c = "CRCM5-L"
 
-    gcm_driven_path_f = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-r-cc-canesm2-2070-2100.hdf5"
+    gcm_driven_path_f = "/home/huziy/skynet3_rech1/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-2070-2100.hdf5"
 
 
     start_year_c = 1980
@@ -68,9 +70,21 @@ def main():
     r_obj = RPN(geo_data_file)
     facc = r_obj.get_first_record_for_name("FAA")
     fldr = r_obj.get_first_record_for_name("FLDR")
+    lkfr = r_obj.get_first_record_for_name("ML")
+
 
     # get basemap information
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=rea_driven_path)
+
+
+    # get basin mask
+    _, bname_to_mask = plot_basin_outlets(bmp_info=bmp_info, directions=fldr, accumulation_areas=facc, lake_fraction_field=lkfr)
+
+    all_basins_mask = np.zeros(fldr.shape)
+    for bname, the_mask in bname_to_mask.items():
+        all_basins_mask += the_mask
+
+
 
     rs_gcm_c = get_return_levels_and_unc_using_bootstrap(gcm_driven_config_c, varname=varname)
 
@@ -128,8 +142,10 @@ def main():
             significance = significance.astype(int)
 
             vmin, vmax = limits[the_type]
+            diff = np.ma.masked_where(all_basins_mask < 0.5, diff)
             im = bmp_info.basemap.pcolormesh(xx, yy, diff, vmin=vmin, vmax=vmax, cmap=cmap)
 
+            significance = np.ma.masked_where(all_basins_mask < 0.5, significance)
             cs = bmp_info.basemap.contourf(xx, yy, significance,
                                            levels=[0, 0.5, 1],
                                            hatches=["////", None, None],
@@ -138,7 +154,7 @@ def main():
             if row == nrows - 1 and col == ncols - 1:
                 # create a legend for the contour set
                 artists, labels = cs.legend_elements()
-                ax.legend([artists[0], ], ["not sign.", ], handleheight=0.5,
+                ax.legend([artists[0], ], ["not significant", ], handleheight=0.5,
                           bbox_to_anchor=(1, -0.1), loc="upper right", borderaxespad=0.)
 
             ax.set_title("T = {}-year".format(rp))

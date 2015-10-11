@@ -69,10 +69,10 @@ def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, 
 
     ax_last.legend(loc="upper right", bbox_to_anchor=(1, -0.2), borderaxespad=0, ncol=2)
 
-    img_file = img_folder.joinpath("bfe_hydrographs.png")
+    img_file = img_folder.joinpath("bfe_hydrographs.eps")
     with img_file.open("wb") as f:
         fig.tight_layout()
-        fig.savefig(f, bbox_inches="tight", format="png")
+        fig.savefig(f, bbox_inches="tight", format="eps")
 
 
 def main():

@@ -499,7 +499,6 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         ax = fig.add_subplot(gs[3, 0:2])
         upstream_mask = _plot_station_position(ax, the_station, basemap, cell_manager,
                                                station_to_modelpoint_list[the_station][0])
-        # TODO: implement and call _plot_level_station_position()
 
 
         # plot streamflows
@@ -592,8 +591,8 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                 # convert to m/s
                 values_model_evp /= 1000.0
                 values_model_evp = values_model_evp - np.mean(values_model_evp)
-                ax.plot(dates, values_model_evp, label=label + "-NR", lw=2)
-                ax_panel.plot(dates, values_model_evp, label=label + "-NR", lw=2)
+                ax.plot(dates, values_model_evp, label=label + "(P-E)", lw=2)
+                ax_panel.plot(dates, values_model_evp, label=label + "(P-E)", lw=2)
 
         if the_station is not None:
             print(type(dates[0]))
