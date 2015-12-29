@@ -6,9 +6,9 @@ import numpy as np
 
 default_seasons = OrderedDict([
     ("Winter", (1, 2, 12)),
-    ("Spring", (1, 2, 12)),
-    ("Summer", (1, 2, 12)),
-    ("Fall", (1, 2, 12)),
+    ("Spring", (3, 4, 5)),
+    ("Summer", (6, 7, 8)),
+    ("Fall", (9, 10, 11)),
 ])
 
 var_name_to_file_prefix = {
