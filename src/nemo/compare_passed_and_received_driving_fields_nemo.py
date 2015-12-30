@@ -3,6 +3,11 @@ from application_properties import main_decorator
 # Objective: To check if what passed to NEMO from CRCM, is handled OK
 
 from rpn.rpn_multi import MultiRPN
+from rpn import level_kinds
+
+import numpy as np
+
+from netCDF4 import Dataset
 
 @main_decorator
 def main():
@@ -16,8 +21,18 @@ def main():
     month = 4
     year = 1981
 
-    mrpn = MultiRPN("{}/*_{}{}".format(path_to_crcm5_outputs, year, month))
+    mrpn = MultiRPN("{}/*_{}{}/dm*".format(path_to_crcm5_outputs, year, month))
+    data = mrpn.get_all_time_records_for_name_and_level(varname=vname_crcm5, level=1, level_kind=level_kinds.HYBRID)
 
+    # Calculate the monthly mean fields in both cases
+    assert isinstance(data, dict)
+    mm_crcm5 = np.array(list(data.values())).mean(axis=0)
+
+    print("crcm5-out-shape = ", mm_crcm5.shape)
+    with Dataset(path_to_nemo_outputs) as ds:
+        mm_nemo = ds.variables[vname_nemo][:].mean(axis=0)
+
+    print("nemo-out-shape = ", mm_nemo.shape)
 
 
 
