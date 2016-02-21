@@ -179,7 +179,7 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
         else:
 
             if plot_cc_only_for == label_base:
-                season_to_pvalue[season] = ttest_ind(future_base[season], current_base[season], axis=0, equal_var=False)
+                _, season_to_pvalue[season] = ttest_ind(future_base[season], current_base[season], axis=0, equal_var=False)
                 c_data = current_base[season]
                 f_data = future_base[season]
             else:
@@ -229,7 +229,7 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
 
 
         if plot_cc_only_for is not None:
-            cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.1, 1], colors='none')
+            cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.05, 1], colors='none')
 
             if (col == ncols_subplots - 2) and (the_row == nrows_subplots - 1):
                 # create a legend for the contour set
@@ -433,8 +433,13 @@ def main():
     if plot_cc_only_for is None:
         img_path = get_image_path(base_config_c, base_config_f, modif_config_c, season_to_months=season_to_months)
     else:
-        img_path = get_image_path(modif_config_c, modif_config_f, modif_config_c, season_to_months=season_to_months)
+
+        config_c = base_config_c if base_config_c.label == plot_cc_only_for else modif_config_c
+        config_f = base_config_f if base_config_f.label == plot_cc_only_for else modif_config_f
+
+        img_path = get_image_path(config_c, config_f, config_c, season_to_months=season_to_months)
     fig.savefig(img_path, bbox_inches="tight")
+    print("saving the plot to: {}".format(img_path))
     plt.close(fig)
 
 

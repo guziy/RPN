@@ -9,11 +9,16 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.dates import MonthLocator, num2date
 from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
+from matplotlib.patches import Polygon
 from matplotlib.ticker import MaxNLocator, FuncFormatter, ScalarFormatter
+from mpl_toolkits.basemap import maskoceans
 from osgeo.ogr import Geometry
 from pandas.tseries.converter import _daily_finder
+from rpn.domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
 from matplotlib import cm
+
+import my_colormaps
 from crcm5.model_point import ModelPoint
 
 from data.cell_manager import CellManager
@@ -33,7 +38,6 @@ BASIN_BOUNDARIES_FILE = "data/shape/contour_bv_MRCC/Bassins_MRCC_utm18.shp"
 from osgeo import ogr, osr
 import numpy as np
 from util import plot_utils
-
 
 
 def flip(items, ncol):
@@ -169,7 +173,6 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
     # sort the basins to be from north to south
     items = list(sorted(list(name_to_out_indices.items()), key=lambda item: item[1][1], reverse=True))
 
-
     # Get corresponding timeseries, average over basins if required
     delta = data_to_plot.get_diff_timeseries(basin_name_to_mask=basin_name_to_basin_mask)
     cc_base = data_to_plot.get_cc_timeseries(sim_label=data_to_plot.base_label)
@@ -224,7 +227,8 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         monthly_modif = [np.mean([v for d, v in zip(daily_dates, cc_modif[name]) if d.month == m]) for m in
                          range(1, 13)]
 
-        line_base = ax.plot(monthly_dates, monthly_base, "b", label="{}".format(data_to_plot.base_label), lw=2, zorder=4)
+        line_base = ax.plot(monthly_dates, monthly_base, "b", label="{}".format(data_to_plot.base_label), lw=2,
+                            zorder=4)
         line_modif = ax.plot(monthly_dates, monthly_modif, color="r", label="{}".format(data_to_plot.modif_label),
                              zorder=5, lw=2)
 
@@ -260,7 +264,6 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
         # ax_twin.invert_yaxis()
         ax_twin.yaxis.set_major_formatter(sfmt)
 
-
         # ax.grid()
         subplot_count += 1
         ax.yaxis.set_major_formatter(sfmt)
@@ -280,9 +283,7 @@ def calculate_and_plot_climate_change_hydrographs(data_to_plot,
 
         bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=1)
         ax_twin.annotate(name, (0.9, 0.1), xycoords="axes fraction", bbox=bbox_props, zorder=20,
-                    alpha=0.5, horizontalalignment="right", verticalalignment="bottom")
-
-
+                         alpha=0.5, horizontalalignment="right", verticalalignment="bottom")
 
     the_labels = (data_to_plot.base_label, data_to_plot.modif_label)
 
@@ -427,6 +428,7 @@ def get_basin_to_outlet_indices_map(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=N
     # im = bmp.pcolormesh(xx, yy, basin_mask.reshape(xx.shape))
     bmp_info.basemap.drawcoastlines(linewidth=0.5, ax=ax)
     bmp_info.basemap.drawrivers(zorder=5, color="0.5", ax=ax)
+    bmp_info.basemap.drawparallels(np.arange(-90, 90, 10), labels=[False, True, False, False])
     # bmp.colorbar(im)
 
 
@@ -626,8 +628,8 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
 
         accumulation_areas_temp[i, j] = -1
 
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=12)
-    gs = GridSpec(1, 2, width_ratios=[1.0, 0.5], wspace=0.01)
+    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=24)
+    gs = GridSpec(2, 2, width_ratios=[1.0, 0.5], wspace=0.01)
     fig = plt.figure()
 
     ax = fig.add_subplot(gs[0, 0])
@@ -635,27 +637,30 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
     bmp_info.basemap.drawcoastlines(linewidth=0.5, ax=ax)
     bmp_info.basemap.drawrivers(zorder=5, color="0.5", ax=ax)
 
-
     upstream_edges = cell_manager.get_upstream_polygons_for_points(
-        model_point_list=[ModelPoint(ix=i, jy=j) for (i, j) in name_to_ij_out.values()],
-        xx=xx,
-        yy=yy
+            model_point_list=[ModelPoint(ix=i, jy=j) for (i, j) in name_to_ij_out.values()],
+            xx=xx,
+            yy=yy
     )
-
 
     upstream_edges_latlon = cell_manager.get_upstream_polygons_for_points(
-        model_point_list=[ModelPoint(ix=i, jy=j) for (i, j) in name_to_ij_out.values()],
-        xx=bmp_info.lons,
-        yy=bmp_info.lats
+            model_point_list=[ModelPoint(ix=i, jy=j) for (i, j) in name_to_ij_out.values()],
+            xx=bmp_info.lons,
+            yy=bmp_info.lats
     )
-
 
     plot_utils.draw_upstream_area_bounds(ax, upstream_edges=upstream_edges, color="r", linewidth=0.6)
     plot_utils.save_to_shape_file(upstream_edges_latlon, in_proj=None)
 
-
     xs, ys = bmp_info.basemap(lons_out, lats_out)
     bmp_info.basemap.scatter(xs, ys, c="0.75", s=30, zorder=10)
+    bmp_info.basemap.drawparallels(np.arange(-90, 90, 5),
+                                   labels=[True, False, False, False], linewidth=0.5)
+
+    bmp_info.basemap.drawmeridians(np.arange(-180, 180, 5),
+                                   labels=[False, False, False, True], linewidth=0.5)
+
+
 
     cmap = cm.get_cmap("rainbow", index - 1)
     bn = BoundaryNorm(list(range(index + 1)), index - 1)
@@ -706,24 +711,17 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
 
     }
 
-
     # bmp_info.basemap.readshapefile(".".join(BASIN_BOUNDARIES_FILE.split(".")[:-1]).replace("utm18", "latlon"), "basin",
     #                                linewidth=1.2, ax=ax, zorder=9)
 
     for name, xa, ya, lona, lata in zip(basin_names_out, xs, ys, lons_out, lats_out):
-
         ax.annotate(name, xy=(xa, ya), xytext=bname_to_text_coords[name],
                     textcoords='data', ha='right', va='bottom',
                     bbox=dict(boxstyle='round,pad=0.4', fc='white'),
                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0', linewidth=0.25),
                     font_properties=FontProperties(size=8), zorder=20)
 
-
-
         print(r"{} & {:.0f} \\".format(name, accumulation_areas[name_to_ij_out[name]]))
-
-
-
 
     # Plot zonally averaged lake fraction
     ax = fig.add_subplot(gs[0, 1])
@@ -745,7 +743,112 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
     for tl in ax.yaxis.get_ticklabels():
         tl.set_visible(False)
 
-    plt.show()
+    # plot elevation, buffer zone, big lakes, grid cells
+    ax = fig.add_subplot(gs[1, :])
+    geophy_file = "/RESCUE/skynet3_rech1/huziy/from_guillimin/geophys_Quebec_0.1deg_260x260_with_dd_v6"
+
+    r = RPN(geophy_file)
+    elev = r.get_first_record_for_name("ME")
+    lkfr = r.get_first_record_for_name("LKFR")
+    fldr = r.get_first_record_for_name("FLDR")
+
+    params = r.get_proj_parameters_for_the_last_read_rec()
+    lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+    rll = RotatedLatLon(**params)
+
+    bsmp = rll.get_basemap_object_for_lons_lats(lons2d=lons, lats2d=lats, resolution="l")
+    xx, yy = bsmp(lons, lats)
+
+    dx = (xx[0, 0] - xx[-1, 0]) / xx.shape[0]
+    dy = (yy[0, 0] - yy[0, -1]) / yy.shape[1]
+
+    xx_ll_crnrs = xx - dx / 2
+    yy_ll_crnrs = yy - dy / 2
+
+    xx_ur_crnrs = xx + dx / 2
+    yy_ur_crnrs = yy + dy / 2
+
+
+
+
+    ll_lon, ll_lat = bsmp(xx_ll_crnrs[0, 0], yy_ll_crnrs[0, 0], inverse=True)
+    ur_lon, ur_lat = bsmp(xx_ur_crnrs[-1, -1], yy_ur_crnrs[-1, -1], inverse=True)
+
+
+    crnr_lons = np.array([
+        [ll_lon, ll_lon],
+        [ur_lon, ur_lon]
+    ])
+
+    crnr_lats = np.array([
+        [ll_lat, ll_lat],
+        [ur_lat, ur_lat]
+    ])
+
+    bsmp = rll.get_basemap_object_for_lons_lats(lons2d=crnr_lons, lats2d=crnr_lats)
+
+
+
+    # plot elevation
+    levs = [0, 100, 200, 300, 500, 700, 1000, 1500, 2000, 2800]
+    norm = BoundaryNorm(levs, len(levs) - 1)
+    the_cmap = my_colormaps.get_cmap_from_ncl_spec_file(path="colormap_files/OceanLakeLandSnow.rgb",
+                                                        ncolors=len(levs) - 1)
+
+    lons[lons > 180] -= 360
+    me_to_plot = maskoceans(lons, lats, elev, resolution="l")
+    im = bsmp.contourf(xx, yy, me_to_plot,
+                       cmap=the_cmap, levels=levs, norm=norm, ax=ax)
+    bsmp.colorbar(im)
+
+    bsmp.drawcoastlines(linewidth=0.5, ax=ax)
+
+    # show large lake points
+    gl_lakes = np.ma.masked_where((lkfr < 0.6) | (fldr <= 0) | (fldr > 128), lkfr)
+    gl_lakes[~gl_lakes.mask] = 1.0
+    bsmp.pcolormesh(xx, yy, gl_lakes, cmap=cm.get_cmap("Blues"), ax=ax,
+                    vmin=0, vmax=1, zorder=3)
+
+
+    # show free zone border
+    margin = 20
+    x1 = xx_ll_crnrs[margin, margin]
+    x2 = xx_ur_crnrs[-margin, margin]
+    y1 = yy_ll_crnrs[margin, margin]
+    y2 = yy_ur_crnrs[margin, -margin]
+    pol_corners = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
+    ax.add_patch(Polygon(xy=pol_corners, fc="none", ls="solid", lw=3, zorder=5))
+
+    # show blending zone border (with halo zone)
+    margin = 10
+    x1 = xx_ll_crnrs[margin, margin]
+    x2 = xx_ur_crnrs[-margin, margin]
+    y1 = yy_ll_crnrs[margin, margin]
+    y2 = yy_ur_crnrs[margin, -margin]
+    pol_corners = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
+    ax.add_patch(Polygon(xy=pol_corners, fc="none", ls="dashed", lw=3, zorder=5))
+
+
+    # show the grid
+    step = 20
+    xx_ll_crnrs_ext = np.zeros([n + 1 for n in xx_ll_crnrs.shape])
+    yy_ll_crnrs_ext = np.zeros([n + 1 for n in yy_ll_crnrs.shape])
+
+    xx_ll_crnrs_ext[:-1, :-1] = xx_ll_crnrs
+    yy_ll_crnrs_ext[:-1, :-1] = yy_ll_crnrs
+    xx_ll_crnrs_ext[:-1, -1] = xx_ll_crnrs[:, -1]
+    yy_ll_crnrs_ext[-1, :-1] = yy_ll_crnrs[-1, :]
+
+    xx_ll_crnrs_ext[-1, :] = xx_ur_crnrs[-1, -1]
+    yy_ll_crnrs_ext[:, -1] = yy_ur_crnrs[-1, -1]
+
+    bsmp.pcolormesh(xx_ll_crnrs_ext[::step, ::step], yy_ll_crnrs_ext[::step, ::step], np.ma.masked_all_like(xx_ll_crnrs_ext)[::step, ::step],
+                    edgecolors="0.6", ax=ax, linewidth=0.05, zorder=4, alpha=0.5)
+
+    ax.set_title("Elevation (m)")
+
+
+    # plt.show()
     fig.savefig("qc_basin_outlets_points.png", bbox_inches="tight")
     # plt.show()
     plt.close(fig)
@@ -777,7 +880,6 @@ def get_image_path(base_c, base_f, modif_c, modif_f, varname):
                                                   base_c.start_year, base_c.end_year,
                                                   varname)
 
-
     # check that the future period is the same in the base and modified configurations
     assert modif_f.start_year == base_f.start_year
     assert modif_f.end_year == base_f.end_year
@@ -799,7 +901,7 @@ def main_interflow():
     future_shift_years = 90
 
     params = dict(
-        data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
+            data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
 
     geo_data_file = "/skynet3_rech1/huziy/hdf_store/pm1979010100_00000000p"
 
@@ -809,7 +911,7 @@ def main_interflow():
     base_configs = [base_config_c, base_config_f]
 
     params.update(dict(
-        data_path=modif_current_path, label=modif_label))
+            data_path=modif_current_path, label=modif_label))
 
     modif_config_c = RunConfig(**params)
     modif_config_f = modif_config_c.get_shifted_config(future_shift_years)
@@ -866,7 +968,7 @@ def main():
     future_shift_years = 90
 
     params = dict(
-        data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
+            data_path=base_current_path, start_year=start_year_c, end_year=end_year_c, label=base_label)
 
     geo_data_file = "/skynet3_rech1/huziy/hdf_store/pm1979010100_00000000p"
 
@@ -876,7 +978,7 @@ def main():
     base_configs = [base_config_c, base_config_f]
 
     params.update(dict(
-        data_path=modif_current_path, label=modif_label))
+            data_path=modif_current_path, label=modif_label))
 
     modif_config_c = RunConfig(**params)
     modif_config_f = modif_config_c.get_shifted_config(future_shift_years)
@@ -890,19 +992,16 @@ def main():
 
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=base_current_path)
 
+    # plots basin boundaries and names on the domain plot
+    basin_name_to_out_indices_map, basin_name_to_basin_mask = plot_basin_outlets(bmp_info=bmp_info,
+                                                                                 accumulation_areas=facc,
+                                                                                 directions=fldr,
+                                                                                 lake_fraction_field=lake_fraction)
 
-
-    # TODO: remove this function call (does similar thing as get_basin_to_outlet_indices_map)
-    # plot_basin_outlets(bmp_info=bmp_info,
-    #                    accumulation_areas=facc,
-    #                    directions=fldr,
-    #                    lake_fraction_field=lake_fraction)
-
-
-    basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
-                                                                                              accumulation_areas=facc,
-                                                                                              directions=fldr,
-                                                                                              lake_fraction_field=lake_fraction)
+    # basin_name_to_out_indices_map, basin_name_to_basin_mask = get_basin_to_outlet_indices_map(bmp_info=bmp_info,
+    #                                                                                           accumulation_areas=facc,
+    #                                                                                           directions=fldr,
+    #                                                                                           lake_fraction_field=lake_fraction)
 
 
     data_to_plot = read_cc_and_cc_diff(base_configs, modif_configs,
@@ -911,7 +1010,6 @@ def main():
     basin_name_to_basin_mask = basin_name_to_basin_mask if varname not in ["STFA", "STFL"] else None
 
     img_path = get_image_path(base_config_c, base_config_f, modif_config_c, modif_config_f, varname)
-
 
     # select lake rich basins
     sel_basins = ["ARN", "PYR", "LGR", "RDO", "SAG", "WAS"]
@@ -929,4 +1027,4 @@ if __name__ == '__main__':
     application_properties.set_current_directory()
 
     main()
-    main_interflow()
+    # main_interflow()

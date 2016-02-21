@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_north_cross(lon0, lat0, basemap, ax = None):
+def plot_north_cross(lon0, lat0, basemap, ax=None):
     """
     :type ax: Axes
     """
@@ -33,17 +33,17 @@ def plot_north_cross(lon0, lat0, basemap, ax = None):
     north_point = basemap(lon0, latn)
     south_point = basemap(lon0, lats)
 
-    #hor_line = Line2D([xe, xw], [ye, yw], color="k")
-    ax.add_line(FancyArrowPatch(south_point, north_point, arrowstyle="->", mutation_scale=30, linewidth = 4))
-    ax.add_line(FancyArrowPatch(east_point, west_point, arrowstyle="-", mutation_scale=30, linewidth = 4))
-    ax.annotate("N", xy = north_point, va = "bottom", ha = "center",
-        font_properties = FontProperties(weight="bold", size=20))
-
+    # hor_line = Line2D([xe, xw], [ye, yw], color="k")
+    ax.add_line(FancyArrowPatch(south_point, north_point, arrowstyle="->", mutation_scale=30, linewidth=4))
+    ax.add_line(FancyArrowPatch(east_point, west_point, arrowstyle="-", mutation_scale=30, linewidth=4))
+    ax.annotate("N", xy=north_point, va="bottom", ha="center",
+                font_properties=FontProperties(weight="bold", size=20))
 
     pass
 
 
 NA_RIVERS_SHAPE_PATH = "/home/huziy/skynet3_exec1/other_shape/10m-rivers-lake-centerlines/ne_10m_rivers_lake_centerlines"
+
 
 def get_lons_lats_using_grid_params(g_params, rot_latlon):
     """
@@ -63,7 +63,6 @@ def get_lons_lats_using_grid_params(g_params, rot_latlon):
     lonr = g_params.lonr
     latr = g_params.latr
 
-
     dx = g_params.dx
     dy = g_params.dy
 
@@ -72,7 +71,7 @@ def get_lons_lats_using_grid_params(g_params, rot_latlon):
             loni = lonr + (i - iref) * dx
             latj = latr + (j - jref) * dy
 
-            lons2d[i,j], lats2d[i,j] = rot_latlon.toGeographicLonLat(loni, latj)
+            lons2d[i, j], lats2d[i, j] = rot_latlon.toGeographicLonLat(loni, latj)
 
     return lons2d, lats2d
     pass
@@ -84,17 +83,15 @@ def plot_domain_for_different_margins(path, margins=None):
 
     lons2d, lats2d = rpnObj.get_longitudes_and_latitudes()
 
-    #projection parameters
+    # projection parameters
     lon_1 = -68
     lat_1 = 52
     lon_2 = 16.65
     lat_2 = 0.0
 
-
-
-    rot_lat_lon = RotatedLatLon(lon1 = lon_1, lat1=lat_1, lon2=lon_2, lat2 = lat_2)
-    xll, yll = rot_lat_lon.toProjectionXY(lons2d[0,0], lats2d[0,0])
-    xur, yur = rot_lat_lon.toProjectionXY(lons2d[-1, -1], lats2d[-1,-1])
+    rot_lat_lon = RotatedLatLon(lon1=lon_1, lat1=lat_1, lon2=lon_2, lat2=lat_2)
+    xll, yll = rot_lat_lon.toProjectionXY(lons2d[0, 0], lats2d[0, 0])
+    xur, yur = rot_lat_lon.toProjectionXY(lons2d[-1, -1], lats2d[-1, -1])
 
     if xll < 0: xll += 360.0
     if xur < 0: xur += 360.0
@@ -115,40 +112,36 @@ def plot_domain_for_different_margins(path, margins=None):
     x1lon, y1lat = rot_lat_lon.toGeographicLonLat(x1, y1)
     x2lon, y2lat = rot_lat_lon.toGeographicLonLat(x2, y2)
 
-
     llcrnrlon, llcrnrlat = rot_lat_lon.toGeographicLonLat(x1 - dx, y1 - dx)
     urcrnrlon, urcrnrlat = rot_lat_lon.toGeographicLonLat(x2 + dx, y2 + dx)
 
-
-    basemap = Basemap(projection = "omerc",
-        lon_1=lon_1, lat_1=lat_1,
-        lon_2=lon_2, lat_2=lat_2,
-        llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
-        urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, no_rot=True, resolution="l")
+    basemap = Basemap(projection="omerc",
+                      lon_1=lon_1, lat_1=lat_1,
+                      lon_2=lon_2, lat_2=lat_2,
+                      llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat,
+                      urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat, no_rot=True, resolution="l")
 
     basemap.drawcoastlines()
     basemap.drawrivers()
 
-
-
     x1, y1 = basemap(x1lon, y1lat)
     x2, y2 = basemap(x2lon, y2lat)
 
-    #add rectangle for the grid 220x220
-#    r1 = Rectangle((x1, y1), x2-x1, y2-y1, facecolor="none", edgecolor="r",  linewidth=5  )
+    # add rectangle for the grid 220x220
+    #    r1 = Rectangle((x1, y1), x2-x1, y2-y1, facecolor="none", edgecolor="r",  linewidth=5  )
 
     ax = plt.gca()
     assert isinstance(ax, Axes)
-#    xr1_label, yr1_label = rot_lat_lon.toGeographicLonLat(xur - 2 * dx, yll + 2 * dy)
-#    xr1_label, yr1_label = basemap( xr1_label, yr1_label )
-#    ax.annotate("{0}x{1}".format(nx, ny), xy = (xr1_label, yr1_label), va = "bottom", ha = "right", color = "r")
-#    assert isinstance(ax, Axes)
-#    ax.add_patch(r1)
+    #    xr1_label, yr1_label = rot_lat_lon.toGeographicLonLat(xur - 2 * dx, yll + 2 * dy)
+    #    xr1_label, yr1_label = basemap( xr1_label, yr1_label )
+    #    ax.annotate("{0}x{1}".format(nx, ny), xy = (xr1_label, yr1_label), va = "bottom", ha = "right", color = "r")
+    #    assert isinstance(ax, Axes)
+    #    ax.add_patch(r1)
 
     margins_all = [0] + margins
 
     for margin in margins_all:
-        #mfree = margin - 20
+        # mfree = margin - 20
         xlli = xll + margin * dx
         ylli = yll + margin * dy
         xuri = xur - margin * dx
@@ -160,54 +153,50 @@ def plot_domain_for_different_margins(path, margins=None):
         x1, y1 = basemap(x1lon, y1lat)
         x2, y2 = basemap(x2lon, y2lat)
 
-        ri = Rectangle((x1, y1), x2-x1, y2-y1, facecolor="none", edgecolor="r",  linewidth=5  )
+        ri = Rectangle((x1, y1), x2 - x1, y2 - y1, facecolor="none", edgecolor="r", linewidth=5)
         ax.add_patch(ri)
 
         xri_label, yri_label = rot_lat_lon.toGeographicLonLat(xlli + 2 * dx, yuri - 2 * dy)
-        xri_label, yri_label = basemap( xri_label, yri_label )
-        ax.annotate("{0}x{1}\nmarg. = {2}".format(nx - margin * 2, ny - margin * 2, margin + 20), xy = (xri_label, yri_label),
-            va = "top", ha = "left", color = "k", backgroundcolor = "w")
-
+        xri_label, yri_label = basemap(xri_label, yri_label)
+        ax.annotate("{0}x{1}\nmarg. = {2}".format(nx - margin * 2, ny - margin * 2, margin + 20),
+                    xy=(xri_label, yri_label),
+                    va="top", ha="left", color="k", backgroundcolor="w")
 
     plt.show()
 
 
-
-def plot_domain_using_coords_from_file(path = ""):
+def plot_domain_using_coords_from_file(path=""):
     fig = plt.figure()
     assert isinstance(fig, Figure)
     rpnObj = RPN(path)
 
     lons2d, lats2d = rpnObj.get_longitudes_and_latitudes()
 
-    basemap = Basemap(projection = "omerc",lon_1=-68, lat_1=52,
-        lon_2=16.65, lat_2=0.0, llcrnrlon=lons2d[0,0], llcrnrlat=lats2d[0,0],
-        urcrnrlon=lons2d[-1,-1], urcrnrlat=lats2d[-1, -1], no_rot=True)
+    basemap = Basemap(projection="omerc", lon_1=-68, lat_1=52,
+                      lon_2=16.65, lat_2=0.0, llcrnrlon=lons2d[0, 0], llcrnrlat=lats2d[0, 0],
+                      urcrnrlon=lons2d[-1, -1], urcrnrlat=lats2d[-1, -1], no_rot=True)
 
-
-    #basemap.drawcoastlines()
+    # basemap.drawcoastlines()
 
 
 
     rot_lat_lon_proj = RotatedLatLon(lon1=-68, lat1=52, lon2=16.65, lat2=0.0)
 
-
-    g_params = GridParams(lonr=180, latr=0, iref=45, jref=41, dx = 0.5, dy = 0.5, nx=86, ny=86)
+    g_params = GridParams(lonr=180, latr=0, iref=45, jref=41, dx=0.5, dy=0.5, nx=86, ny=86)
 
     lons2d_1, lats2d_1 = get_lons_lats_using_grid_params(g_params, rot_lat_lon_proj)
 
-
-    basemap = Basemap(projection = "omerc",lon_1=-68, lat_1=52,
-        lon_2=16.65, lat_2=0.0, llcrnrlon=lons2d_1[18,18], llcrnrlat=lats2d_1[18,18],
-        urcrnrlon=lons2d_1[-1,-1], urcrnrlat=lats2d_1[-1, -1], no_rot=True, resolution="i")
+    basemap = Basemap(projection="omerc", lon_1=-68, lat_1=52,
+                      lon_2=16.65, lat_2=0.0, llcrnrlon=lons2d_1[18, 18], llcrnrlat=lats2d_1[18, 18],
+                      urcrnrlon=lons2d_1[-1, -1], urcrnrlat=lats2d_1[-1, -1], no_rot=True, resolution="i")
 
     basemap.drawcoastlines(linewidth=0.4)
     basemap.drawrivers()
-    #basemap.drawmeridians(np.arange(-180, 0, 20))
+    # basemap.drawmeridians(np.arange(-180, 0, 20))
 
 
     x, y = basemap(lons2d, lats2d)
-    basemap.scatter(x, y, c = "r", linewidths = 0, s = 1.0)
+    basemap.scatter(x, y, c="r", linewidths=0, s=1.0)
     print(x.shape)
 
     xll_big, yll_big = g_params.get_ll_point(marginx=20, marginy=20)
@@ -216,70 +205,57 @@ def plot_domain_using_coords_from_file(path = ""):
     xll_big, yll_big = rot_lat_lon_proj.toGeographicLonLat(xll_big, yll_big)
     xll_big, yll_big = basemap(xll_big, yll_big)
 
-
     xur_big, yur_big = g_params.get_ur_point(marginx=20, marginy=20)
     xur_big += g_params.dx / 2.0
     yur_big += g_params.dy / 2.0
     xur_big, yur_big = rot_lat_lon_proj.toGeographicLonLat(xur_big, yur_big)
     xur_big, yur_big = basemap(xur_big, yur_big)
 
-
-
     margin = 20
 
-    #plot 0.25 degree grid
-    g_params = GridParams(lonr=180, latr=0, iref=71, jref=63, dx = 0.25, dy = 0.25, nx=133, ny=133)
+    # plot 0.25 degree grid
+    g_params = GridParams(lonr=180, latr=0, iref=71, jref=63, dx=0.25, dy=0.25, nx=133, ny=133)
     lons2d_2, lats2d_2 = get_lons_lats_using_grid_params(g_params, rot_lat_lon_proj)
-    x2, y2 = basemap(lons2d_2[margin:-margin,margin:-margin], lats2d_2[margin:-margin,margin:-margin])
-    basemap.scatter(x2, y2, c = "g", linewidth = 0, marker = "s", s = 7.5)
+    x2, y2 = basemap(lons2d_2[margin:-margin, margin:-margin], lats2d_2[margin:-margin, margin:-margin])
+    basemap.scatter(x2, y2, c="g", linewidth=0, marker="s", s=7.5)
 
-
-    #plot 0.5 degree grid using the output file
-    #debug
+    # plot 0.5 degree grid using the output file
+    # debug
     rObj1 = RPN("/home/huziy/skynet3_exec1/from_guillimin/quebec_86x86_0.5deg_without_lakes/pm1985010100_00000000p")
     lons2d_1, lats2d_1 = rObj1.get_longitudes_and_latitudes()
 
-    #x1, y1 = basemap(lons2d_1[margin:-margin,margin:-margin], lats2d_1[margin:-margin,margin:-margin])
+    # x1, y1 = basemap(lons2d_1[margin:-margin,margin:-margin], lats2d_1[margin:-margin,margin:-margin])
     x1, y1 = basemap(lons2d_1, lats2d_1)
 
-    print(x1.shape, lons2d_1[0,0], lats2d_1[0,0])
+    print(x1.shape, lons2d_1[0, 0], lats2d_1[0, 0])
 
+    basemap.scatter(x1, y1, c="b", linewidths=0, s=10)
 
-    basemap.scatter(x1, y1, c = "b", linewidths = 0, s = 10)
-
-
-
-
-
-
-    dx1 = (x1[1,0] - x1[0,0]) / 2.0
-    dy1 = (y1[0,1] - y1[0,0]) / 2.0
+    dx1 = (x1[1, 0] - x1[0, 0]) / 2.0
+    dy1 = (y1[0, 1] - y1[0, 0]) / 2.0
 
     rbig = Rectangle((xll_big, yll_big), xur_big - xll_big,
-        yur_big - yll_big, linewidth=2, edgecolor="b",
-        facecolor="none"
-    )
+                     yur_big - yll_big, linewidth=2, edgecolor="b",
+                     facecolor="none"
+                     )
 
     ax = plt.gca()
     assert isinstance(ax, Axes)
-    #ax.add_patch(rsmall)
+    # ax.add_patch(rsmall)
     ax.add_patch(rbig)
 
+    # draw north arrow
+    plot_north_cross(-45, 45, basemap, ax=ax)
 
-    #draw north arrow
-    plot_north_cross(-45, 45, basemap, ax = ax)
-
-
-    #zoom to a region
-    axins = zoomed_inset_axes(ax, 4, loc=1) # zoom = 6
+    # zoom to a region
+    axins = zoomed_inset_axes(ax, 4, loc=1)  # zoom = 6
     basemap.drawcoastlines(ax=axins)
-    basemap.drawrivers(ax = axins)
-    basemap.scatter(x, y, c = "r", linewidths = 0, s = 5, ax = axins)
-    basemap.scatter(x2, y2, c = "g", marker = "s", linewidth = 0, s = 15, ax = axins)
-    basemap.scatter(x1, y1, c = "b", linewidths = 0, s = 25, ax = axins)
+    basemap.drawrivers(ax=axins)
+    basemap.scatter(x, y, c="r", linewidths=0, s=5, ax=axins)
+    basemap.scatter(x2, y2, c="g", marker="s", linewidth=0, s=15, ax=axins)
+    basemap.scatter(x1, y1, c="b", linewidths=0, s=25, ax=axins)
 
-
-    #subregion to zoom in
+    # subregion to zoom in
     nx, ny = lons2d.shape
     part = 3
     xins_ll = lons2d[nx / part, ny / part]
@@ -295,14 +271,12 @@ def plot_domain_using_coords_from_file(path = ""):
 
     # draw a bbox of the region of the inset axes in the parent axes and
     # connecting lines between the bbox and the inset axes area
-    mark_inset(ax, axins, loc1=2, loc2=4, fc="none", linewidth = 2)
+    mark_inset(ax, axins, loc1=2, loc2=4, fc="none", linewidth=2)
 
-    fig.tight_layout(pad = 0.8)
+    fig.tight_layout(pad=0.8)
     fig.savefig("high_low_res_domains.png")
 
     pass
-
-
 
 
 def main():
@@ -311,14 +285,15 @@ def main():
 
     plot_domain_using_coords_from_file(path=coord_file)
 
-    #plot_domain_for_different_margins(coord_file)
+    # plot_domain_for_different_margins(coord_file)
 
     pass
 
+
 if __name__ == "__main__":
     import application_properties
+
     plot_utils.apply_plot_params(width_pt=None, width_cm=40, height_cm=40, font_size=15)
     application_properties.set_current_directory()
     main()
     print("Hello world")
-  

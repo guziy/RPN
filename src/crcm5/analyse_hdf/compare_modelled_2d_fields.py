@@ -302,7 +302,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
         if significance is not None:
             cs = basemap.contourf(x, y, significance[season], levels=[0, 0.5, 1],
                                   colors="none",
-                                  hatches=[None, ".."],
+                                  hatches=[None, "*"],
                                   ax=ax)
 
             # basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
@@ -380,7 +380,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r-1980-2010_radiation_fluxes.hdf5", ]
     # labels = ["CRCM5-L1", ]
-
+    #
 
 
 

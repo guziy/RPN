@@ -25,7 +25,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     """
     ds = nc.Dataset(nc_path)
 
-    ncNameToRpnName = {'flow_direction_value': 'fldr', 'slope': 'slop',
+    ncnametorpnname = {'flow_direction_value': 'fldr', 'slope': 'slop',
                        'channel_length': 'leng', 'accumulation_area': 'facc',
                        "lake_fraction": "lkfr", "lake_outlet": "lkou",
                        "drainage_density": "dd"
@@ -44,12 +44,12 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     #params
     dx = gc.dx
     dy = gc.dy
-    iref = gc.iref  #no need to do -1, doing it later in the formulas
+    iref = gc.iref  # no need to do -1, doing it later in the formulas
     jref = gc.jref
-    xref = gc.xref  #rotated longitude
-    yref = gc.yref  #rotated latitude
+    xref = gc.xref  # rotated longitude
+    yref = gc.yref  # rotated latitude
 
-    #projection parameters
+    # projection parameters
     lon1 = gc.lon1
     lat1 = gc.lat1
 
@@ -64,7 +64,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     y = np.zeros((1, nj))
     y[0, :] = [yref + (j - jref + 1) * dy for j in range(nj)]
 
-    #write coordinates
+    # write coordinates
     rObj.write_2D_field(name="^^", grid_type="E", data=y, typ_var="X", level=0, ip=list(range(100, 103)),
                         lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2, label="Routing")
 
@@ -78,7 +78,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
 
     slope_data = None
     flowdir_data = None
-    for ncName, rpnName in ncNameToRpnName.items():
+    for ncName, rpnName in ncnametorpnname.items():
         data = ds.variables[ncName][:]
         grid_type = 'Z'
         rObj.write_2D_field(name=rpnName, level=1, data=data,
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     #    gc=gc, out_path="directions_0.1deg_with_dd.rpn")
 
 
-    #params taken from gemclim settings
+    # params taken from gemclim settings
     params = dict(
         dx=0.1, dy=0.1,
         lon1=180, lat1=0.0,
@@ -193,8 +193,12 @@ if __name__ == "__main__":
     )
 
     gc = GridConfig(**params)
+    # convert(
+    #     nc_path="/skynet3_rech1/huziy/hydrosheds/directions_great_lakes_210_130_0.1deg.nc",
+    #     gc=gc, out_path="directions_0.1deg_GL.rpn")
+
     convert(
-        nc_path="/skynet3_rech1/huziy/hydrosheds/directions_great_lakes_210_130_0.1deg.nc",
-        gc=gc, out_path="directions_0.1deg_GL.rpn")
+        nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_great_lakes_210_130_0.1deg.nc",
+        gc=gc, out_path="/RESCUE/skynet3_rech1/huziy/GLK_exps_geophysical_fields/directions_0.1deg_GL_v1.rpn")
 
     print("Hello World")

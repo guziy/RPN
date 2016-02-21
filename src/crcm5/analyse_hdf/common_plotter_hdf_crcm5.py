@@ -77,7 +77,7 @@ def compare_simulations_differences():
     #     ("August", [8, ])
     # ])
 
-    start_year = 1980
+    start_year = 1991
     end_year = 2010
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=30)
@@ -211,7 +211,7 @@ def compare_obs_and_model_lake_levels_at_points():
 
 def plot_veg_fractions_for_a_random_run():
     """
-    Used to only once plot data for a rundom (even not mine) run
+    Used to only once plot data for a random (even not mine) run
 
     """
     from rpn_utils import plot_veg_fractions

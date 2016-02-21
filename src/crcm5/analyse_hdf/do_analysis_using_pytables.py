@@ -4,7 +4,11 @@ import os
 import pickle
 from pathlib import Path
 import re
+
+from scipy.spatial import KDTree
+
 from crcm5.analyse_hdf.run_config import RunConfig
+from util.geo import lat_lon
 from util.geo.basemap_info import BasemapInfo
 
 __author__ = 'huziy'
@@ -623,3 +627,56 @@ if __name__ == "__main__":
     print("Elapsed time {0} seconds".format(time.clock() - t0))
 
     print("Hello world")
+
+
+def get_timeseries_for_for_points(lons, lats, data_path="", varname="LD"):
+    """
+    return the list of timeseries for the points with the given coordinates,
+    using the nearest neighbor interpolation
+    :param varname: variable name
+    :param data_path: path to the hdf5 file
+    :param lons:
+    :param lats:
+    :return: pd.DataFrame with axes (time, point_index)
+    """
+
+    assert len(lons) == len(lats)
+
+    df = None
+    indices = None
+    lk_fraction = None
+    with tb.open_file(data_path) as h:
+        var_table = h.get_node("/{}".format(varname))
+        for i, row in enumerate(var_table):
+            if df is None:
+                df = pd.DataFrame(index=range(len(var_table)), columns=["date", ] + list(range(len(lons))))
+
+                # calculate indices of the grid corresponding to the points
+                bmp_info = get_basemap_info_from_hdf(file_path=data_path)
+                """
+                :type bmp_info: BasemapInfo
+                """
+                grid_lons, grid_lats = bmp_info.lons, bmp_info.lats
+
+                x, y, z = lat_lon.lon_lat_to_cartesian(grid_lons.flatten(), grid_lats.flatten())
+
+                ktree = KDTree(list(zip(x, y, z)))
+
+                x1, y1, z1 = lat_lon.lon_lat_to_cartesian(lons, lats)
+
+                dists, indices = ktree.query(list(zip(x1, y1, z1)))
+
+                lk_fraction = get_array_from_file(path=data_path, var_name="lake_fraction")
+
+            df.loc[i, :] = [datetime(row["year"], row["month"], row["day"], row["hour"]), ] + list(row["field"].flatten()[indices])
+
+            if i > 100:
+                break
+
+    # print lake fractions
+    print(lk_fraction.flatten()[indices])
+    print(sum(lk_fraction.flatten()[indices] > 0.05))
+
+    df.set_index("date", inplace=True)
+    df.sort_index(inplace=True)
+    return df

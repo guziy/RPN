@@ -16,6 +16,8 @@ img_folder = Path("cc_paper/bfe/1D")
 
 import numpy as np
 
+# Comment: also plots the domain figure used in paper3
+
 
 def plot_comparison_hydrographs(basin_name_to_out_indices_map, rea_config=None, gcm_config=None):
     """

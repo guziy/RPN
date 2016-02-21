@@ -2,8 +2,6 @@ import itertools
 import pickle
 import pandas
 
-__author__ = "huziy"
-__date__ = "$8 dec. 2010 10:38:26$"
 
 import re
 import os
@@ -15,20 +13,34 @@ import numpy as np
 import application_properties
 
 
+
+__author__ = "huziy"
+__date__ = "$8 dec. 2010 10:38:26$"
+
+
+
+
 class Station:
-    def __init__(self):
+    def __init__(self, st_id=None, lon=None, lat=None, name="None", date_to_value=None):
         self.source = "Unknown"
-        self.id = None
-        self.name = None
-        self.longitude = None
-        self.latitude = None
+        self.id = st_id
+        self.name = name
+        self.longitude = lon
+        self.latitude = lat
         self.drainage_km2 = None
         self.natural = False
 
         self.dates = []
         self.values = []
 
-        self.date_to_value = {}
+        if date_to_value is None:
+            self.date_to_value = {}
+        else:
+            self.date_to_value = date_to_value
+
+            dates_sorted = list(sorted(date_to_value))
+            self.dates = dates_sorted
+            self.values = [date_to_value[d] for d in dates_sorted]
 
         # daily climatology of mean swe upstream (as seen by the model) to the station
         # ideally pandas.Timeseries?
@@ -43,7 +55,6 @@ class Station:
 
         self.river_name = ""
         self._complete_years = None
-
 
     def get_mean_value(self):
         return np.mean(self.values)
@@ -63,7 +74,6 @@ class Station:
 
             result[m - 1] = np.mean(np.array(self.values)[indices])
         return result
-
 
     def get_daily_normals(self, start_date=None, end_date=None, stamp_year=2001):
         """
@@ -97,7 +107,6 @@ class Station:
 
         return year_dates, np.array(daily_means)
 
-
     def get_value_for_date(self, the_date):
         if len(self.date_to_value) != len(self.dates):
             self.date_to_value = dict(list(zip(self.dates, self.values)))
@@ -108,7 +117,6 @@ class Station:
         self.values = []
         self.date_to_value = {}
         pass
-
 
     def delete_data_for_year(self, year):
         to_remove_dates = []
@@ -126,7 +134,6 @@ class Station:
                 del self.date_to_value[d]
         assert len(self.dates) == len(self.date_to_value)
 
-
     def delete_data_before_year(self, year):
         if self.dates[0].year >= year:
             return
@@ -134,14 +141,12 @@ class Station:
         for the_year in range(self.dates[0].year, year):
             self.delete_data_for_year(the_year)
 
-
     def delete_data_after_year(self, year):
         if self.dates[-1].year <= year:
             return
 
         for the_year in range(year + 1, self.dates[-1].year + 1):
             self.delete_data_for_year(the_year)
-
 
     # returns a dict {date => value}
     # if the data for the year is not continuous returns an empty dict
@@ -189,7 +194,6 @@ class Station:
         print(list(map(len, series_list)))
         return series_list[-1]
 
-
     def remove_record_for_date(self, the_date):
         if the_date in self.dates:
             i = int(self.dates.index(the_date))
@@ -197,10 +201,9 @@ class Station:
             del self.dates[i]
             del self.values[i]
 
-
     def get_timeseries_length(self):
         assert len(self.dates) == len(self.date_to_value), 'list_len, dict_len = {0},{1}'.format(len(self.dates), len(
-            self.date_to_value))
+                self.date_to_value))
         return len(self.dates)
 
     def parse_from_cehq(self, path, only_natural=False):
@@ -263,12 +266,10 @@ class Station:
         self.values = list(map(float, values))
         self.date_to_value = dict(list(zip(self.dates, self.values)))
 
-
     def info(self):
         return '%s: lon=%3.1f; lat = %3.1f; drainage(km**2) = %f ' % (self.id,
                                                                       self.longitude, self.latitude,
                                                                       self.drainage_km2)
-
 
     # override hashing methods to use in dictionary
     def __hash__(self):
@@ -280,7 +281,6 @@ class Station:
 
         return self.id == other.id
 
-
     @classmethod
     def get_stamp_days(cls, stamp_year):
         """
@@ -288,7 +288,6 @@ class Station:
         """
         dt = timedelta(days=1)
         return [datetime(stamp_year, 1, 1) + i * dt for i in range(365)]
-
 
     def delete_data_after_date(self, the_date):
         """
@@ -312,7 +311,6 @@ class Station:
             del self.date_to_value[d]
 
         del self.dates[index:], self.values[index:]
-
 
     def delete_data_before_date(self, the_date):
         """
@@ -362,7 +360,6 @@ class Station:
         self._complete_years = years
         return years
 
-
     def get_daily_climatology_for_complete_years(self, stamp_dates=None, years=None):
         if stamp_dates is None:
             stamp_year = 2001
@@ -382,7 +379,6 @@ class Station:
 
         return stamp_dates, vals
 
-
     def get_daily_climatology_for_complete_years_with_pandas(self, stamp_dates=None, years=None):
         assert stamp_dates is not None
         assert years is not None
@@ -398,7 +394,6 @@ class Station:
 
         stamp_year = stamp_dates[0].year
 
-
         daily_clim = df.groupby(by=lambda the_date: datetime(stamp_year, the_date.month, the_date.day)).mean()
 
         print(daily_clim.head())
@@ -409,9 +404,7 @@ class Station:
 
         vals = [daily_clim.ix[d, "values"] for d in stamp_dates]
 
-
         return stamp_dates, vals
-
 
     def __str__(self):
         return "Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
@@ -419,6 +412,8 @@ class Station:
                                                                                         self.latitude,
                                                                                         self.drainage_km2)
 
+    def __len__(self):
+        return len(self.dates)
 
     def parse_from_hydat(self, path):
         f = open(path)
@@ -571,7 +566,6 @@ def read_station_data(folder='data/cehq_measure_data',
         if end_date is not None:
             s.delete_data_after_date(end_date)
 
-
         # If there is less than 3 years of continuous data, discard the station
         if len(s.get_list_of_complete_years()) <= min_number_of_complete_years:
             continue
@@ -704,7 +698,6 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     """
     import sqlite3
 
-
     # assert natural
 
     # cache_file = "hydat_stations_{0}_{1}.cache".format("natural" if natural else "regulated", province)
@@ -764,14 +757,12 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         if table_data["name"] not in tables_of_interest:
             continue  # skip tables which are not interesting
 
-
         # determine table layout
         cur.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;", (table_data["name"],))
 
         scheme = cur.fetchone()
         print(scheme)
         print("++++" * 20)
-
 
     # create station objects using data from sqlite db
 
@@ -823,7 +814,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
         # read streamflows for the station
         query = "select * from {0} where STATION_NUMBER = ?".format(daily_var_table)
-        cur.execute(query, (s.id, ))
+        cur.execute(query, (s.id,))
 
         data_for_station = cur.fetchall()
         if len(data_for_station) < 365:  # there is no way it can have at least one complete year
@@ -856,23 +847,23 @@ if __name__ == "__main__":
 
 
     # s = Station()
-    #s.parse_from_cehq('data/cehq_measure_data/051004_Q.txt')
-    #data = s.get_continuous_dataseries_for_year(1970)
+    # s.parse_from_cehq('data/cehq_measure_data/051004_Q.txt')
+    # data = s.get_continuous_dataseries_for_year(1970)
     #    for date in sorted(data.keys()):
     #        print date, '-->', data[date]
 
-    #s.parse_from_hydat("/home/huziy/skynet3_rech1/HYDAT/daily_streamflow_02OJ007.csv")
+    # s.parse_from_hydat("/home/huziy/skynet3_rech1/HYDAT/daily_streamflow_02OJ007.csv")
 
-    #s.get_daily_climatology_for_complete_years()
-    #print np.max(s.values)
-    #print np.max(s.dates)
+    # s.get_daily_climatology_for_complete_years()
+    # print np.max(s.values)
+    # print np.max(s.dates)
     t0 = time.clock()
     load_from_hydat_db(province='ON', start_date=datetime(1979, 1, 1), end_date=datetime(1988, 12, 31))
     print("Execution time is: {0} seconds".format(time.clock() - t0))
-    #slist = read_grdc_stations(st_id_list=["2903430", "2909150", "2912600", "4208025"],
+    # slist = read_grdc_stations(st_id_list=["2903430", "2909150", "2912600", "4208025"],
     #    descriptor_file_path="/skynet3_rech1/huziy/GRDC_all_stations/GRDC663Sites.txt")
     #
-    #for s in slist:
+    # for s in slist:
     #    assert isinstance(s, Station)
     #    print s.drainage_km2
 
