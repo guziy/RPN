@@ -1,15 +1,14 @@
 import os
 from mpl_toolkits.basemap import Basemap
 from domains.grid_config import GridConfig
+import netCDF4 as nc
+from rpn.rpn import RPN
+import matplotlib.pyplot as plt
+import numpy as np
 
 __author__ = "huziy"
 __date__ = "$Aug 20, 2011 1:45:02 PM$"
 
-import netCDF4 as nc
-from rpn.rpn import RPN
-
-import matplotlib.pyplot as plt
-import numpy as np
 
 # LAM projection specification
 # 1st point - center of the grid
@@ -19,6 +18,7 @@ import numpy as np
 
 def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     """
+    :param out_path:
     :type nc_path: string
     :type gc: GridConfig
     gc - holds grid parameters

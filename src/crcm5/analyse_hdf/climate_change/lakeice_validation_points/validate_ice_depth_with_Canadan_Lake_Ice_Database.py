@@ -111,11 +111,9 @@ def main():
     print([s.id for s in stations])
 
     lons, lats, nvals = list(zip(*[(s.longitude, s.latitude, len(s)) for s in stations]))
-    df = analysis.get_timeseries_for_for_points(lons, lats,
-                                                data_path=model_data_path,
-                                                varname=ice_depth_varname)
-
-
+    df = analysis.get_timeseries_for_points_cached(lons, lats,
+                                                   data_path=model_data_path,
+                                                   varname=ice_depth_varname)
 
     for i, s in enumerate(stations):
         assert isinstance(s, Station)

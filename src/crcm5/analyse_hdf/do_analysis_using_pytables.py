@@ -629,7 +629,34 @@ if __name__ == "__main__":
     print("Hello world")
 
 
-def get_timeseries_for_for_points(lons, lats, data_path="", varname="LD"):
+def get_timeseries_for_points_cached(lons, lats, data_path="", varname=""):
+    def get_cache_path():
+        """
+        return path to the cache file based on the parameters
+        """
+        import hashlib
+        path_code = hashlib.sha224(data_path.encode()).hexdigest()
+        coords_code = "_".join(["{:.2f}".format(xy) for xy in lons + lats])
+        path = "{}_{}_{}.cache".format(path_code, varname, coords_code)
+        return path
+
+    cache_file = get_cache_path()
+    data_key = "ice_depth_dataframe"
+
+    if os.path.isfile(cache_file):
+        print("reusing cache: {}".format(cache_file))
+        ds = pd.HDFStore(cache_file)
+        df = ds[data_key]
+        ds.close()
+    else:
+        df = get_timeseries_for_points(lons, lats, data_path=data_path, varname=varname)
+        df.to_hdf(cache_file, data_key)
+
+    return df
+
+
+
+def get_timeseries_for_points(lons, lats, data_path="", varname="LD"):
     """
     return the list of timeseries for the points with the given coordinates,
     using the nearest neighbor interpolation
@@ -669,9 +696,6 @@ def get_timeseries_for_for_points(lons, lats, data_path="", varname="LD"):
                 lk_fraction = get_array_from_file(path=data_path, var_name="lake_fraction")
 
             df.loc[i, :] = [datetime(row["year"], row["month"], row["day"], row["hour"]), ] + list(row["field"].flatten()[indices])
-
-            if i > 100:
-                break
 
     # print lake fractions
     print(lk_fraction.flatten()[indices])
