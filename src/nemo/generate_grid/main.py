@@ -2,6 +2,9 @@ import os
 from mpl_toolkits.basemap import Basemap
 from domains.rotated_lat_lon import RotatedLatLon
 from nemo import nemo_commons
+from nemo.create_initial_temperature_and_salinity_files import create_file_with_field
+from nemo.generate_grid.nemo_domain_properties import known_domains
+from nemo.interpolate_dfs_data import Interpolator
 
 __author__ = 'huziy'
 
@@ -39,13 +42,12 @@ __author__ = 'huziy'
 
 
 from netCDF4 import Dataset
-from . import nemo_domain_properties as dom_props
 import numpy as np
 from geopy import distance as gpy_dist
 from scipy.spatial import distance as sp_dist
 
 
-def generate_grid_coordinates():
+def generate_grid_coordinates(dom_props=None):
     lons_rot = np.asarray([dom_props.lonref + (i - dom_props.iref) * dom_props.dx for i in range(1, dom_props.nx + 1)])
     lats_rot = np.asarray([dom_props.latref + (i - dom_props.jref) * dom_props.dy for i in range(1, dom_props.ny + 1)])
 
@@ -53,8 +55,7 @@ def generate_grid_coordinates():
     print(lats_rot.shape)
     lons_rot[lons_rot < 0] += 360
 
-    rll = RotatedLatLon(lon1=dom_props.lon1, lat1=dom_props.lat1,
-                        lon2=dom_props.lon2, lat2=dom_props.lat2)
+    rll = dom_props.rll
 
     truepole_lonr, truepole_latr = rll.get_true_pole_coords_in_rotated_system()
     rotpole_lon, rotpole_lat = rll.get_north_pole_coords()
@@ -148,11 +149,18 @@ def generate_grid_coordinates():
 
 def main():
     out_folder = "nemo_grids"
+
+    config_name = "GLK_440x260_0.1deg"
+    dom_props = known_domains[config_name]
+    dom_props.config_name = config_name
+
     out_file = "coordinates_{0}.nc".format(dom_props.config_name)
     out_path = os.path.join(out_folder, out_file)
     ds = Dataset(out_path, "w", format="NETCDF3_CLASSIC")
     if not os.path.isdir(out_folder):
         os.mkdir(out_folder)
+
+
 
     print(dom_props.nx, dom_props.ny)
 
@@ -183,7 +191,7 @@ def main():
     e1f = ds.createVariable("e1f", "f4", ("y", "x"))
     e2f = ds.createVariable("e2f", "f4", ("y", "x"))
 
-    coords = generate_grid_coordinates()
+    coords = generate_grid_coordinates(dom_props=dom_props)
     glamt[:], gphit[:], e1t[:], e2t[:] = coords["T"]
     glamu[:], gphiu[:], e1u[:], e2u[:] = coords["U"]
     glamv[:], gphiv[:], e1v[:], e2v[:] = coords["V"]
@@ -191,10 +199,29 @@ def main():
 
     ds.close()
 
+    # interpolate bathymetry
+    interpolator = Interpolator(coord_file=out_path)
+    interpolator.interpolate_file("/skynet1_rech3/huziy/EXP_0.1deg/DFS4.3_interpolated/nondfs_sasha/bathy_meter.nc", os.path.join(out_folder, config_name + "{}.nc".format("bathy_meter")))
+
+
+    # Create initial conditions file
+    t_file_name = "IC_T.nc"
+    t_var_name = "votemper"
+
+    s_file_name = "IC_S.nc"
+    s_var_name = "vosaline"
+
+    # the_shape = 35, ny, nx
+    the_shape = 35, dom_props.ny, dom_props.nx
+    initial_temperature = 4.0 * np.ones(the_shape)
+    initial_salinity = 0.0 * np.ones(the_shape)
+
+    create_file_with_field(folder=out_folder, fname=t_file_name, var_name=t_var_name, data=initial_temperature)
+    create_file_with_field(folder=out_folder, fname=s_file_name, var_name=s_var_name, data=initial_salinity)
+
 
 if __name__ == "__main__":
     import application_properties
 
     application_properties.set_current_directory()
     main()
-    pass

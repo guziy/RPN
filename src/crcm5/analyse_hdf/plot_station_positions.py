@@ -21,7 +21,7 @@ def plot_positions_of_station_list(ax, stations, model_points, basemap, cell_man
     delta = 1.0 / float(len(model_points))
     darkness = 0
 
-    cmap = cm.get_cmap(name="spectral", lut = len(model_points))
+    cmap = cm.get_cmap(name="jet", lut = len(model_points))
 
 
     artists = []

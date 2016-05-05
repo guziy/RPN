@@ -18,7 +18,7 @@ varname_to_cmapname = {
     "sosstsst": "coolwarm",
     "votemper": "jet"
 }
-from . import generate_grid.nemo_domain_properties as domprops
+from nemo.generate_grid import nemo_domain_properties as domprops
 
 
 lake_to_folder_with_sim_data_1981_2000_seplakes_exp = {

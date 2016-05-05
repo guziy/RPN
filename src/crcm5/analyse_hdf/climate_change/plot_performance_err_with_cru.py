@@ -1,23 +1,24 @@
 from collections import OrderedDict
 from pathlib import Path
 
+import numpy as np
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.basemap import maskoceans
-import numpy as np
 
 from crcm5 import infovar
+from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 from crcm5.analyse_hdf.run_config import RunConfig
 from cru.temperature import CRUDataManager
 from data.swe import SweDataManager
 from util import plot_utils
-from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
+from util.array_utils import aggregate_array
 from util.geo import quebec_info
 from util.geo.basemap_info import BasemapInfo
+from util.geo.mask_from_shp import get_mask
 from util.seasons_info import DEFAULT_SEASON_TO_MONTHS
-
 
 __author__ = 'huziy'
 
@@ -27,18 +28,6 @@ img_folder = Path("cc_paper/performane_error_with_cru")
 BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_DERIVED_10km
 
 import matplotlib.pyplot as plt
-
-
-def aggregate_array(in_arr, nagg_x=2, nagg_y=2):
-    """
-
-
-    :type in_arr: numpy.ndarray
-    :type nagg_y: int
-    """
-    from skimage.util import view_as_blocks
-
-    return view_as_blocks(in_arr, (nagg_x, nagg_y)).mean(axis=2).mean(axis=2)
 
 
 def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None, obs_path=None):
@@ -58,7 +47,6 @@ def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_t
         bmp_info = analysis.get_basemap_info_from_hdf(file_path=rconfig.data_path)
 
     bmp_info_agg = bmp_info.get_aggregated(nagg_x=nx_agg, nagg_y=ny_agg)
-
 
     # Validate temperature and precip
     model_vars = ["TT", "PR"]
@@ -150,11 +138,9 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
         if basemap_info.should_draw_basin_boundaries:
             basemap_info.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
 
-
         # Hide snow plots for summer
         if varname in ["I5"] and season.lower() in ["summer"]:
             ax.set_visible(False)
-
 
         # Plot a colorbar for each subplot if required.
         if hasattr(basemap_info, "draw_colorbar_for_each_subplot"):
@@ -180,9 +166,17 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
 
 def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
                  season_to_months=None,
-                 obs_path=None, nx_agg=5, ny_agg=5, bmp_info_agg=None, axes_list=None, obs_axes_list=None):
+                 obs_path=None, nx_agg=5, ny_agg=5, bmp_info_agg=None,
+                 diff_axes_list=None, obs_axes_list=None,
+                 model_axes_list=None, bmp_info_model=None,
+                 mask_shape_file=None):
     """
 
+    if obs_axes_list is not None, plot observation data in those
+
+    :param mask_shape_file:
+    :param bmp_info_model: basemap info native to the model
+    :param model_axes_list: Axes to plot model outputs
     :param vname_model:
     :param vname_obs:
     :param r_config:
@@ -191,7 +185,7 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
     :param nx_agg:
     :param ny_agg:
     :param bmp_info_agg:
-    :param axes_list: if it is None the plots for each variable is done in separate figures
+    :param diff_axes_list: if it is None the plots for each variable is done in separate figures
     """
 
     if vname_obs is None:
@@ -201,6 +195,7 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
     seasonal_clim_fields_model = analysis.get_seasonal_climatology_for_runconfig(run_config=r_config,
                                                                                  varname=vname_model, level=0,
                                                                                  season_to_months=season_to_months)
+
 
     season_to_clim_fields_model_agg = OrderedDict()
     for season, field in seasonal_clim_fields_model.items():
@@ -221,17 +216,29 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
                                                               end_year=r_config.end_year)
 
     seasonal_clim_fields_obs_interp = OrderedDict()
+    # Derive the mask from a shapefile if provided
+    if mask_shape_file is not None:
+        the_mask = get_mask(bmp_info_agg.lons, bmp_info_agg.lats, shp_path=mask_shape_file)
+    else:
+        the_mask = np.zeros_like(bmp_info_agg.lons)
+
     for season, obs_field in seasonal_clim_fields_obs.items():
-        seasonal_clim_fields_obs_interp[season] = obs_manager.interpolate_data_to(obs_field,
-                                                                                  lons2d=bmp_info_agg.lons,
-                                                                                  lats2d=bmp_info_agg.lats,
-                                                                                  nneighbours=1)
+        obs_field = obs_manager.interpolate_data_to(obs_field,
+                                                    lons2d=bmp_info_agg.lons,
+                                                    lats2d=bmp_info_agg.lats,
+                                                    nneighbours=1)
+
+        obs_field = np.ma.masked_where(the_mask > 0.5, obs_field)
+
+        seasonal_clim_fields_obs_interp[season] = obs_field
 
         # assert hasattr(seasonal_clim_fields_obs_interp[season], "mask")
 
     season_to_err = OrderedDict()
     print("-------------var: {} (PE with CRU)---------------------".format(vname_model))
     for season in seasonal_clim_fields_obs_interp:
+        seasonal_clim_fields_obs_interp[season] = np.ma.masked_where(np.isnan(seasonal_clim_fields_obs_interp[season]),
+                                                                     seasonal_clim_fields_obs_interp[season])
         season_to_err[season] = season_to_clim_fields_model_agg[season] - seasonal_clim_fields_obs_interp[season]
 
         if vname_model in ["I5"]:
@@ -239,20 +246,25 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
             lons[lons > 180] -= 360
             season_to_err[season] = maskoceans(lons, bmp_info_agg.lats, season_to_err[season])
 
-
         good_vals = season_to_err[season]
         good_vals = good_vals[~good_vals.mask]
-        good_vals = good_vals[good_vals >= 0]
+        
         print("{}: min={}; max={}; avg={}".format(season,
                                                   good_vals.min(),
                                                   good_vals.max(),
-                                                  np.abs(good_vals).mean()))
+                                                  good_vals.mean()))
+
+        print("---------percetages --- CRU ---")
+        print("{}: {} \%".format(season, good_vals.mean() / seasonal_clim_fields_obs_interp[season][~season_to_err[season].mask].mean() * 100))
+
+
+
 
 
     cs = plot_seasonal_mean_biases(season_to_error_field=season_to_err,
                                    varname=vname_model,
                                    basemap_info=bmp_info_agg,
-                                   axes_list=axes_list)
+                                   axes_list=diff_axes_list)
 
     if obs_axes_list is not None and vname_model in ["I5"]:
 
@@ -261,21 +273,51 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
         xx, yy = bmp_info_agg.get_proj_xy()
         lons = bmp_info_agg.lons.copy()
         lons[lons > 180] -= 360
+
+
+        lons_model = None
+        xx_model, yy_model = None, None
+        cs_mod = None
+
         norm = BoundaryNorm(clevs, 256)
         for col, (season, obs_field) in enumerate(seasonal_clim_fields_obs_interp.items()):
+
+            # Obsrved fields
             ax = obs_axes_list[col]
 
             if bmp_info_agg.should_draw_basin_boundaries:
                 bmp_info_agg.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
 
             to_plot = maskoceans(lons, bmp_info_agg.lats, obs_field)
-            cs_obs = bmp_info_agg.basemap.contourf(xx, yy, to_plot, levels=clevs, ax=ax, norm=norm)
+            cs_obs = bmp_info_agg.basemap.contourf(xx, yy, to_plot, levels=clevs, ax=ax, norm=norm, extend="max")
 
-            bmp_info_agg.basemap.drawcoastlines(ax=ax)
+            bmp_info_agg.basemap.drawcoastlines(ax=ax, linewidth=0.3)
 
             ax.set_title(season)
 
+            # Model outputs
+            if model_axes_list is not None:
+                ax = model_axes_list[col]
+
+                if bmp_info_agg.should_draw_basin_boundaries:
+                    bmp_info_agg.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
+
+                if lons_model is None:
+                    lons_model = bmp_info_model.lons.copy()
+                    lons_model[lons_model > 180] -= 360
+                    xx_model, yy_model = bmp_info_model.basemap(lons_model, bmp_info_model.lats)
+
+                model_field = seasonal_clim_fields_model[season]
+
+                to_plot = maskoceans(lons_model, bmp_info_model.lats, model_field)
+                cs_mod = bmp_info_agg.basemap.contourf(xx_model, yy_model, to_plot, levels=cs_obs.levels, ax=ax,
+                                                       norm=cs_obs.norm, cmap=cs_obs.cmap, extend="max")
+
+                bmp_info_agg.basemap.drawcoastlines(ax=ax, linewidth=0.3)
+
+
         plt.colorbar(cs_obs, cax=obs_axes_list[-1])
+
 
     return cs
 
@@ -295,7 +337,6 @@ def main():
     bmp_info = analysis.get_basemap_info_from_hdf(file_path=r_config.data_path)
 
     bmp_info_agg = bmp_info.get_aggregated(nagg_x=nx_agg, nagg_y=ny_agg)
-
 
     # Validate temperature and precip
     model_vars = ["TT", "PR"]
@@ -328,7 +369,7 @@ def main():
         compare_vars(vname_model=mname, vname_obs=oname, r_config=r_config,
                      season_to_months=season_to_months,
                      nx_agg=nx_agg, ny_agg=ny_agg, bmp_info_agg=bmp_info_agg,
-                     obs_path=opath, axes_list=row_axes)
+                     obs_path=opath, diff_axes_list=row_axes)
 
         row += 1
 

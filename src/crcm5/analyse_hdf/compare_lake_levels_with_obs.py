@@ -546,7 +546,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             lf_total = 0
             for the_model_point in station_to_modelpoint_list[the_station]:
 
-                if the_model_point.lake_fraction is not None:
+                if the_model_point.lake_fraction is None:
                     mult = 1.0
                 else:
                     mult = the_model_point.lake_fraction
@@ -571,7 +571,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                 if label.lower() in ["crcm5-hcd-rl", "crcm5-l2"]:
                     dates, temp = analysis.get_daily_climatology_for_a_point_cldp_due_to_precip_evap(
                         path=fpath, i_index=the_model_point.ix, j_index=the_model_point.jy,
-                        year_list=year_list)
+                        year_list=year_list, point_label=the_station.id)
 
                     if values_model_evp is None:
                         values_model_evp = mult * np.asarray(temp)

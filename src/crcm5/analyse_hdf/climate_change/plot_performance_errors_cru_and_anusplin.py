@@ -1,3 +1,6 @@
+import os
+from collections import OrderedDict
+
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
@@ -7,6 +10,7 @@ from crcm5 import infovar
 from crcm5.analyse_hdf.run_config import RunConfig
 from util import plot_utils
 from util.geo import quebec_info
+from util.geo.mask_from_shp import get_mask
 from util.seasons_info import DEFAULT_SEASON_TO_MONTHS
 import crcm5.analyse_hdf.do_analysis_using_pytables as analysis
 
@@ -19,9 +23,13 @@ from crcm5.analyse_hdf.climate_change import plot_performance_err_with_cru
 from crcm5.analyse_hdf.climate_change import plot_performance_err_with_anusplin
 import numpy as np
 
+from application_properties import main_decorator
+
 img_folder = Path("cc_paper/perf_err_with_anusplin_and_cru_merged")
 
 BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_DERIVED_10km
+
+GL_SHP_FOLDER = "data/shp/Great_lakes_coast_shape"
 
 
 def _format_axes(ax_list, vname="TT"):
@@ -30,16 +38,18 @@ def _format_axes(ax_list, vname="TT"):
         the_ax.set_title("")
 
 
+@main_decorator
 def main():
-    # Preparations
-    import application_properties
-
-    application_properties.set_current_directory()
-
     if not img_folder.is_dir():
         img_folder.mkdir(parents=True)
 
-    season_to_months = DEFAULT_SEASON_TO_MONTHS
+    season_to_months = OrderedDict([
+        ("Winter (DJF)", (1, 2, 12)),
+        ("Spring (MAM)", range(3, 6)),
+        ("Summer (JJA)", range(6, 9)),
+        ("Fall (SON)", range(9, 12)),
+    ])
+
     varnames = ["TT", "PR"]
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=17)
@@ -89,20 +99,25 @@ def main():
             rconfig=reanalysis_driven_config, bmp_info=bmp_info, season_to_months=season_to_months,
             obs_path=vname_to_cru_path[vname], vname=vname
         )
+
+        # Mask out the Great Lakes
+        cru_mask = get_mask(bmp_info_agg.lons, bmp_info_agg.lats, shp_path=os.path.join(GL_SHP_FOLDER, "gl_cst.shp"))
+        for season in season_to_obs_cru:
+            season_to_obs_cru[season] = np.ma.masked_where(cru_mask > 0.5, season_to_obs_cru[season])
+
         ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
         cs = None
         xx_agg, yy_agg = bmp_info_agg.get_proj_xy()
         for j, (season, obs_field) in enumerate(season_to_obs_cru.items()):
             ax = ax_list[j]
-            cs = bmp_info_agg.basemap.contourf(xx_agg, yy_agg, obs_field, levels=clevels, ax=ax)
+            cs = bmp_info_agg.basemap.contourf(xx_agg, yy_agg, obs_field.copy(), levels=clevels, ax=ax)
             bmp_info.basemap.drawcoastlines(ax=ax)
             bmp_info.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
             ax.set_title(season)
 
         ax_list[0].set_ylabel("CRU")
-        # plt.colorbar(cs, cax=ax_list[-1])
+        # plt.colorbar(cs, caax=ax_list[-1])
         row += 1
-
 
         # Plot ANUSPLIN values-------------------------
         ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
@@ -120,6 +135,27 @@ def main():
         _format_axes(ax_list, vname=vname)
         row += 1
 
+        # Plot model (CRCM) values-------------------------
+        # ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
+        # cs = None
+        #
+        # season_to_field_crcm = analysis.get_seasonal_climatology_for_runconfig(run_config=reanalysis_driven_config,
+        #                                                                        varname=vname, level=0,
+        #                                                                        season_to_months=season_to_months)
+        #
+        # for j, (season, crcm_field) in enumerate(season_to_field_crcm.items()):
+        #     ax = ax_list[j]
+        #     cs = bmp_info.basemap.contourf(xx, yy, crcm_field * 1000 * 24 * 3600, levels=clevels, ax=ax)
+        #     bmp_info.basemap.drawcoastlines(ax=ax)
+        #     bmp_info.basemap.readshapefile(BASIN_BOUNDARIES_SHP[:-4], "basin", ax=ax)
+        #     ax.set_title(season)
+        #
+        # ax_list[0].set_ylabel(reanalysis_driven_config.label)
+        # cb = plt.colorbar(cs, cax=fig.add_subplot(gs[:2, -1]))
+        # cb.ax.set_xlabel(infovar.get_units(vname))
+        # _format_axes(ax_list, vname=vname)
+        # row += 1
+
 
         # Plot (Model - CRU) Performance biases-------------------------
         ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
@@ -127,12 +163,12 @@ def main():
                                                         r_config=reanalysis_driven_config,
                                                         season_to_months=season_to_months,
                                                         obs_path=vname_to_cru_path[vname],
-                                                        bmp_info_agg=bmp_info_agg, axes_list=ax_list)
+                                                        bmp_info_agg=bmp_info_agg, diff_axes_list=ax_list,
+                                                        mask_shape_file=os.path.join(GL_SHP_FOLDER, "gl_cst.shp"))
 
         ax_list[0].set_ylabel("{label}\n--\nCRU".format(label=reanalysis_driven_config.label))
         _format_axes(ax_list, vname=vname)
         row += 1
-
 
         # Plot performance+BFE errors with respect to CRU (Model - CRU)-------------------------
         # ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
@@ -155,10 +191,6 @@ def main():
         ax_list[0].set_ylabel("{label}\n--\nHopkinson".format(label=reanalysis_driven_config.label))
         row += 1
 
-
-
-
-
         # Plot performance+BFE errors with respect to ANUSPLIN (Model - ANUSPLIN)-------------------------
         # ax_list = [fig.add_subplot(gs[row, j]) for j in range(ncols)]
         # plot_performance_err_with_anusplin.compare_vars(vname, {vname: season_to_obs_anusplin},
@@ -169,10 +201,8 @@ def main():
         # ax_list[0].set_ylabel("{label}\nvs\nHopkinson".format(label=gcm_driven_config.label))
 
 
-        cb = plt.colorbar(cs, cax=fig.add_subplot(gs[2:, -1]))
+        cb = plt.colorbar(cs, cax=fig.add_subplot(gs[-2:, -1]))
         cb.ax.set_xlabel(infovar.get_units(vname))
-
-
 
         # Save the plot
         img_file = "{vname}_{sy}-{ey}_{sim_label}.eps".format(

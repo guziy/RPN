@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from matplotlib import cm
 from matplotlib.colors import SymLogNorm, LogNorm, BoundaryNorm
@@ -149,13 +150,34 @@ def main():
         the_ax.xaxis.set_major_locator(MonthLocator())
         the_ax.grid()
         if i != 1:
-            the_ax.set_ylabel("Latitude")
+            the_ax.set_ylabel(r"Latitude ${\rm \left(^\circ N \right)}$")
 
 
+
+    # identify approximately the melting period and lower latitudes
+    march1 = date2num(datetime(daily_dates[0].year, 3, 1))
+    june1 = date2num(datetime(daily_dates[0].year, 6, 1))
+
+    sel_mask = (num_dates_2d >= march1) & (num_dates_2d < june1) & (lats_agg_2d <= 50)
+    print("Mean interflow decrease in the southern regions: {}%".format(diff[sel_mask].mean()))
+
+
+    # identify the regions of max interflow rates in current and future climates
+    lat_min = 55
+    lat_max = 57.5
+
+    may1 = date2num(datetime(daily_dates[0].year, 5, 1))
+    july1 = date2num(datetime(daily_dates[0].year, 7, 1))
+
+    mean_max_current = intf_c[(lats_agg_2d >= lat_min) & (lats_agg_2d <= lat_max) & (num_dates_2d <= july1) & (num_dates_2d >= june1)].mean()
+    mean_max_future = intf_f[(lats_agg_2d >= lat_min) & (lats_agg_2d <= lat_max) & (num_dates_2d <= june1) & (num_dates_2d >= may1)].mean()
+
+    print("Mean change in the maximum interflow rate: {} %".format((mean_max_future - mean_max_current) * 100 / mean_max_current))
 
     img_file = Path(img_folder).joinpath("INTF_rate_longit_avg.png")
     fig.tight_layout()
-    fig.savefig(str(img_file), bbox_inches="tight")
+    from crcm5.analyse_hdf import common_plot_params
+    fig.savefig(str(img_file), bbox_inches="tight", transparent=True, dpi=common_plot_params.FIG_SAVE_DPI)
 
 
 

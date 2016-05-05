@@ -17,6 +17,7 @@ from matplotlib import colors
 import matplotlib.pyplot as plt
 import numpy as np
 from util import plot_utils
+from scipy import stats
 
 __author__ = 'huziy'
 
@@ -131,7 +132,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
 
             # Set axes labels
             if row == nrows - 1:
-                ax.set_xlabel("Obs.")
+                ax.set_xlabel("Observations")
 
             if col == 0:
                 ax.set_ylabel("Model")
@@ -176,6 +177,8 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
             label_to_return_levels[sim_label] = OrderedDict()
             label_to_extrema_model[sim_label] = OrderedDict()
 
+
+
         # Calculate the return levels and standard deviations
         for ext_type in ExtremeProperties.extreme_types:
 
@@ -186,6 +189,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
                                                                                        extreme_type=ext_type,
                                                                                        return_periods=return_periods)
             return_levels_obs, rl_stds_obs = label_to_return_levels[obs_label][ext_type]
+
 
             # get annual extremas for the model output at the points colose to the stations
             for sim_label, sim_path in sim_name_to_file_path.items():
@@ -206,6 +210,8 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
 
 
 
+
+
                 # Do the plotting
                 for rp in return_periods:
                     ax = ext_type_to_rp_to_ax[ext_type][rp]
@@ -220,12 +226,33 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_year=1980, end_
 
 
 
-
                     # save the data for maybe further calculation of the correlation coefficients
                     label_to_ax_to_xdata[sim_label][ax].append(return_levels_obs[rp])
                     label_to_ax_to_ydata[sim_label][ax].append(return_levels[rp])
 
                     sim_label_to_handle[sim_label] = h
+
+
+
+    # Calculate the biases
+    for sim_label in sim_name_to_file_path:
+        for ext_type in ExtremeProperties.extreme_types:
+            ret_periods = ExtremeProperties.extreme_type_to_return_periods[ext_type]
+            for rp in ret_periods:
+
+                ax = ext_type_to_rp_to_ax[ext_type][rp]
+                mod = np.asarray(label_to_ax_to_ydata[sim_label][ax])
+                obs = np.asarray(label_to_ax_to_xdata[sim_label][ax])
+
+                bias = np.mean((mod - obs)/obs)
+                corr, pv = stats.pearsonr(mod, obs)
+                print("({sim_label}) Mean bias for {rp}-year {ext_type}-flow return level is: {bias}; corr={corr:.2f}; corr_pval={corr_pval:2g}".format(
+                    sim_label=sim_label, rp=rp, bias=bias, corr=corr, corr_pval=pv,
+                    ext_type=ext_type
+                ))
+
+
+
 
     sfmt = ScalarFormatter(useMathText=True)
     sfmt.set_powerlimits((-2, 2))

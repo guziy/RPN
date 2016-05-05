@@ -6,28 +6,34 @@ __author__ = 'huziy'
 import numpy as np
 
 
-class GridConfig():
+class GridConfig(object):
     projection = "rotpole"
 
     def __init__(self, **kwargs):
-        self.dx = self.dy = kwargs["dx"]
-        self.iref, self.jref = kwargs["iref"], kwargs["jref"]
-        self.ni, self.nj = kwargs["ni"], kwargs["nj"]
-        self.xref, self.yref = kwargs["xref"], kwargs["yref"]
-        self.lon1, self.lat1 = kwargs["lon1"], kwargs["lat1"]
-        self.lon2, self.lat2 = kwargs["lon2"], kwargs["lat2"]
-        self.ni, self.nj = kwargs["ni"], kwargs["nj"]
+        self.dx = self.dy = kwargs.get("dx", -1)
+        self.iref, self.jref = kwargs.get("iref", -1), kwargs.get("jref", -1)
 
+        self.xref, self.yref = kwargs.get("xref", -1), kwargs.get("yref", -1)
+        self.ni, self.nj = kwargs.get("ni", -1), kwargs.get("nj", -1)
+
+        self.rll = None
+        if "rll" not in kwargs:
+            self.lon1, self.lat1 = kwargs.get("lon1"), kwargs.get("lat1")
+            self.lon2, self.lat2 = kwargs.get("lon2"), kwargs.get("lat2")
+            if None not in (self.lon1, self.lon2, self.lat1, self.lat2):
+                self.rll = RotatedLatLon(lon1=self.lon1, lon2=self.lon2, lat1=self.lat1, lat2=self.lat2)
+        else:
+            self.rll = kwargs.get("rll")
 
     @classmethod
     def get_default_for_resolution(cls, res=0.5):
         """
+        :param res:
         :rtype GridConfig
         """
         obj = GridConfig()
         obj.dx = obj.dy = res
         if res == 0.5:
-
             obj.iref = 46  # starts from 1 not 0!!
             obj.jref = 42  # starts from 1 not 0!!
             obj.ni = 86
@@ -50,9 +56,45 @@ class GridConfig():
 
         return obj
 
+    def get_basemap(self, lons, lats, **kwargs):
+        return self.get_rot_latlon_proj_obj().get_basemap_object_for_lons_lats(lons2d=lons,
+                                                                               lats2d=lats,
+                                                                               **kwargs)
 
-    def get_basemap(self):
-        return Basemap()
+    def get_rot_latlon_proj_obj(self):
+        return self.rll
+
+
+
+    def subgrid(self, i0, j0, di=-1, dj=-1):
+
+        """
+
+        :param i0: 0-based i-index of the lower left corner of the domain
+        :param j0:
+        :param di: number of grid points in i direction
+        :param dj: number of grid points in j direction
+        """
+
+
+        subgr = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref)
+
+        if di > 0:
+            subgr.ni = di
+        else:
+            subgr.ni = self.ni
+
+        if dj > 0:
+            subgr.nj = dj
+        else:
+            subgr.nj = self.nj
+
+
+        subgr.iref -= i0
+        subgr.jref -= j0
+
+        return subgr
+
 
 
 def get_rotpole_for_na_glaciers():
@@ -75,7 +117,7 @@ def get_rotpole_for_na_glaciers():
 
 
 def main():
-    pass
+    GridConfig.get_default_for_resolution(0.1)
 
 
 if __name__ == "__main__":

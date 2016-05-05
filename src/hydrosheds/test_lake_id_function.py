@@ -1,6 +1,7 @@
-from matplotlib.colors import LogNorm
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
+
+from data.cell_manager import CellManager
 from domains import grid_config
 import numpy as np
 from domains.grid_config import GridConfig
@@ -20,7 +21,34 @@ params = dict(
 gc = GridConfig(**params)
 
 
-def plot_directions(nc_path_to_directions=""):
+def calculate_lake_ids(fldirs, lkfract, lkout):
+    current_id = 1
+    lkfr_limit = 0.6
+
+    cmanager = CellManager(fldirs)
+
+    iout_list, jout_list = np.where(lkout > 0.5)
+
+    lkids = np.zeros_like(fldirs)
+
+    lkid_to_mask = {}
+    lkid_to_npoints_upstream = {}
+    for i, j in zip(iout_list, jout_list):
+        the_mask = cmanager.get_mask_of_upstream_cells_connected_with_by_indices(i, j) > 0.5
+        the_mask = the_mask & ((lkfract >= lkfr_limit) | (lkout > 0.5))
+
+        lkid_to_mask[current_id] = the_mask
+        lkid_to_npoints_upstream[current_id] = the_mask.sum()
+        current_id += 1
+
+    for the_id in sorted(lkid_to_mask, key=lambda xx: lkid_to_npoints_upstream[xx], reverse=True):
+        lkids[lkid_to_mask[the_id]] = the_id
+
+    return lkids
+
+
+
+def main(nc_path_to_directions=""):
     ds = Dataset(nc_path_to_directions)
 
     margin = 20
@@ -32,15 +60,27 @@ def plot_directions(nc_path_to_directions=""):
 
     # flow directions
     fldr = ds.variables["flow_direction_value"][:][margin:-margin, margin:-margin]
+    lkfr = ds.variables["lake_fraction"][:][margin:-margin, margin:-margin]
+    lkouts = ds.variables["lake_outlet"][:][margin:-margin, margin:-margin]
 
+
+    lkids = calculate_lake_ids(fldr, lkfr, lkouts)
+
+
+
+    # plotting
     i_shifts, j_shifts = direction_and_value.flowdir_values_to_shift(fldr)
-
     lons, lats = [ds.variables[key][margin:-margin, margin:-margin] for key in ["lon", "lat"]]
-
     bsmap = gc.get_basemap(lons=lons, lats=lats)
 
     x, y = bsmap(lons, lats)
     fig = plt.figure(figsize=(15, 15))
+
+
+    img = bsmap.pcolormesh(x, y, lkids)
+    bsmap.colorbar(img)
+
+    bsmap.pcolormesh(x, y, lkouts, cmap="gray_r")
 
     nx, ny = x.shape
     inds_j, inds_i = np.meshgrid(range(ny), range(nx))
@@ -69,8 +109,5 @@ def plot_directions(nc_path_to_directions=""):
     plt.show()
 
 
-
-
-if __name__ == "__main__":
-    # main()
-    plot_directions(nc_path_to_directions="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_great_lakes_210_130_0.1deg_v2.nc")
+if __name__ == '__main__':
+    main(nc_path_to_directions="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_great_lakes_210_130_0.1deg_v2.nc")

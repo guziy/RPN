@@ -628,11 +628,11 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
 
         accumulation_areas_temp[i, j] = -1
 
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=24)
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=20, height_cm=20)
     gs = GridSpec(2, 2, width_ratios=[1.0, 0.5], wspace=0.01)
     fig = plt.figure()
 
-    ax = fig.add_subplot(gs[0, 0])
+    ax = fig.add_subplot(gs[1, 0])
     xx, yy = bmp_info.get_proj_xy()
     bmp_info.basemap.drawcoastlines(linewidth=0.5, ax=ax)
     bmp_info.basemap.drawrivers(zorder=5, color="0.5", ax=ax)
@@ -724,7 +724,7 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
         print(r"{} & {:.0f} \\".format(name, accumulation_areas[name_to_ij_out[name]]))
 
     # Plot zonally averaged lake fraction
-    ax = fig.add_subplot(gs[0, 1])
+    ax = fig.add_subplot(gs[1, 1])
     ydata = range(lake_fraction_field.shape[1])
     ax.plot(lake_fraction_field.mean(axis=0) * 100, ydata, lw=2)
 
@@ -744,7 +744,7 @@ def plot_basin_outlets(shape_file=BASIN_BOUNDARIES_FILE, bmp_info=None,
         tl.set_visible(False)
 
     # plot elevation, buffer zone, big lakes, grid cells
-    ax = fig.add_subplot(gs[1, :])
+    ax = fig.add_subplot(gs[0, :])
     geophy_file = "/RESCUE/skynet3_rech1/huziy/from_guillimin/geophys_Quebec_0.1deg_260x260_with_dd_v6"
 
     r = RPN(geophy_file)

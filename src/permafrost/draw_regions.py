@@ -19,7 +19,7 @@ from osgeo import osr
 from rpn.rpn import RPN
 import matplotlib.pyplot as plt
 
-#from descartes.patch import PolygonPatch
+# from descartes.patch import PolygonPatch
 
 permafrost_types = ("C", "D", "S", "I")
 permafrost_types_long_names = ("Continuous", "Discontinuous", "Sporadic", "Isolated")
@@ -48,7 +48,7 @@ def delete_points_in_countries(points_lat_long, points, indices, countries=None,
             print(geom.ExportToWkt())
 
         to_del = filter(lambda x: geom.Distance(x[1]) < 0.2,
-                                   list(zip(points, points_lat_long, indices)))
+                        list(zip(points, points_lat_long, indices)))
 
         to_del = list(to_del)
         for p_del, p_ll_del, i_del in to_del:
@@ -63,15 +63,14 @@ def delete_points_in_countries(points_lat_long, points, indices, countries=None,
 
 
 def get_basemap_and_coords_improved(
-        file_path= "data/CORDEX/NorthAmerica_0.44deg_CanHistoE1/Samples/NorthAmerica_0.44deg_CanHistoE1_198101/pm1950010100_00816912p",
-        field_name= "PR"):
-
+        file_path="data/CORDEX/NorthAmerica_0.44deg_CanHistoE1/Samples/NorthAmerica_0.44deg_CanHistoE1_198101/pm1950010100_00816912p",
+        field_name="PR"):
     rpnobj = RPN(file_path)
     the_mask = rpnobj.get_first_record_for_name(field_name)
 
-    plt.figure()
-    plt.pcolormesh(the_mask.transpose())
-    plt.show()
+    # plt.figure()
+    # plt.pcolormesh(the_mask.transpose())
+    # plt.show()
 
     proj_params = rpnobj.get_proj_parameters_for_the_last_read_rec()
     rll = RotatedLatLon(**proj_params)
@@ -80,7 +79,6 @@ def get_basemap_and_coords_improved(
     basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons2d, lats2d=lats2d)
     rpnobj.close()
     return basemap, lons2d, lats2d
-
 
 
 def get_basemap_and_coords(
@@ -111,8 +109,7 @@ def get_basemap_and_coords(
                    lat_2=lat2,
                    lon_2=lon2,
                    no_rot=True, anchor=anchor
-    ), lons2D, lats2D
-
+                   ), lons2D, lats2D
 
 
 def create_gdal_point_and_transform(x, y, transformation=None):
@@ -136,12 +133,14 @@ def create_points_envelope_gdal(points):
     return ogr.CreateGeometryFromWkt(rect_s)
 
 
-def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp"
-):
-#    cache_file = "permafrost_types.bin"
+def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp", land_mask=None
+                        ):
+    #    cache_file = "permafrost_types.bin"
 
-#    if os.path.isfile(cache_file):
-#        return pickle.load(open(cache_file))
+    #    if os.path.isfile(cache_file):
+    #        return pickle.load(open(cache_file))
+
+    # TODO: Add a mask parameter, fro example there is no permafrost over ocean
 
     ogr.UseExceptions()
 
@@ -154,38 +153,47 @@ def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp
 
     ct = osr.CoordinateTransformation(latlong, layer.GetSpatialRef())
 
-    points = [create_gdal_point_and_transform(x[0], x[1], ct) for x in zip(lons2d.flatten(), lats2d.flatten())]
 
-    #points_lat_long = map(lambda x: create_gdal_point_and_transform(x[0], x[1]),
+
+    # points_lat_long = map(lambda x: create_gdal_point_and_transform(x[0], x[1]),
     #                      zip(lons2d.flatten(), lats2d.flatten()))
 
-    i_indices_1d = np.array(range(lons2d.shape[0]))
-    j_indices_1d = np.array(range(lons2d.shape[1]))
+    if land_mask is None:
+        i_indices_1d = np.array(range(lons2d.shape[0]))
+        j_indices_1d = np.array(range(lons2d.shape[1]))
 
-    j_indices_2d, i_indices_2d = np.meshgrid(j_indices_1d, i_indices_1d)
-    indices = list(zip(i_indices_2d.flatten(), j_indices_2d.flatten()))
-    indices = list(indices)
+        j_indices_2d, i_indices_2d = np.meshgrid(j_indices_1d, i_indices_1d)
+        indices = list(zip(i_indices_2d.flatten(), j_indices_2d.flatten()))
+        indices = list(indices)
 
-    ##do not consider territories of the following countries
-    rej_countries = ["Greenland", "Iceland", "Russia"]
-    rej_countries = []
-    #delete_points_in_countries(points_lat_long, points, indices, countries=rej_countries)
+        points = [create_gdal_point_and_transform(x[0], x[1], ct) for x in zip(lons2d.flatten(), lats2d.flatten())]
+
+    else:
+        i_indices_1d, j_indices_1d = np.where(land_mask)
+        indices = list(zip(i_indices_1d, j_indices_1d))
+        points = [create_gdal_point_and_transform(x[0], x[1], ct) for x in zip(lons2d[land_mask], lats2d[land_mask])]
+
+
+    # do not consider territories of the following countries
+    # rej_countries = ["Greenland", "Iceland", "Russia"]
+    # rej_countries = []
+    # delete_points_in_countries(points_lat_long, points, indices, countries=rej_countries)
 
     permafrost_kind_field = np.zeros(lons2d.shape)
-    #grid_polygon = create_points_envelope_gdal(points)
+    # grid_polygon = create_points_envelope_gdal(points)
 
-    #set spatial and attribute filters to take only the features with valid EXTENT field,
-    #and those which are close to the area of interest
-    #layer.SetSpatialFilter(grid_polygon)
+    # set spatial and attribute filters to take only the features with valid EXTENT field,
+    # and those which are close to the area of interest
+    # layer.SetSpatialFilter(grid_polygon)
     query = "EXTENT IN  (\'{0}\',\'{1}\',\'{2}\' ,\'{3}\')".format(*permafrost_types)
     query += "OR EXTENT IN  (\'{0}\',\'{1}\',\'{2}\' ,\'{3}\')".format(*[x.lower() for x in permafrost_types])
     print(query)
     layer.SetAttributeFilter(query)
 
     print(layer.GetFeatureCount())
-    #print grid_polygon.ExportToWkt()
+    # print grid_polygon.ExportToWkt()
 
-    ##read features from the shape file
+    # read features from the shape file
     feature = layer.GetNextFeature()
     i = 0
     while feature:
@@ -193,9 +201,9 @@ def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp
         points_to_remove = []
         indices_to_remove = []
         for ind, p in zip(indices, points):
-            assert isinstance(geom, ogr.Geometry)
+            # assert isinstance(geom, ogr.Geometry)
             if geom.Contains(p):
-                perm_type = list(feature.items())["EXTENT"]
+                perm_type = feature.items()["EXTENT"]
                 permafrost_kind_field[ind] = permafrost_types.index(perm_type) + 1
                 points_to_remove.append(p)
                 indices_to_remove.append(ind)
@@ -210,7 +218,7 @@ def get_permafrost_mask(lons2d, lats2d, zones_path="data/permafrost/permaice.shp
         i += 1
 
     datastore.Destroy()
-    #pickle.dump(permafrost_kind_field, open(cache_file, "w"))
+    # pickle.dump(permafrost_kind_field, open(cache_file, "w"))
     return permafrost_kind_field
 
 
@@ -232,10 +240,10 @@ def main():
     cmap.set_over("w")
     cmap.set_under("w")
 
-    #permafrost_kind_field = np.ma.masked_where(permafrost_kind_field == 0, permafrost_kind_field)
+    # permafrost_kind_field = np.ma.masked_where(permafrost_kind_field == 0, permafrost_kind_field)
 
     ax_map = plt.gca()
-    #img = basemap.pcolormesh(x1, y1, permafrost_kind_field, ax = ax_map, vmin = 0.5, vmax = 4.5, cmap = cmap )
+    # img = basemap.pcolormesh(x1, y1, permafrost_kind_field, ax = ax_map, vmin = 0.5, vmax = 4.5, cmap = cmap )
     permafrost_kind_field = maskoceans(lons2d, lats2d, permafrost_kind_field)
 
     img = basemap.contourf(x0, y0, permafrost_kind_field, levels=np.arange(0.5, 5, 0.5), cmap=cmap)
@@ -249,10 +257,8 @@ def main():
     basemap.drawcoastlines(ax=ax_map)
     plt.savefig("test.png")
 
-
-
-    #gdal.Dataset.
-    #TODO: implement
+    # gdal.Dataset.
+    # TODO: implement
     pass
 
 
@@ -269,42 +275,41 @@ def test_ease_basemap():
 
 
 def save_pf_mask_to_netcdf(path="permafrost_types_arctic.nc",
-                           path_to_rpn_with_target_grid = None,
-                           rpn_field_name_with_target_grid = "PR"):
+                           path_to_rpn_with_target_grid=None,
+                           rpn_field_name_with_target_grid="PR"):
     ds = Dataset(path, mode="w", format="NETCDF3_CLASSIC")
 
     b, lons2d, lats2d = get_basemap_and_coords_improved(
-        file_path=path_to_rpn_with_target_grid,
-        field_name=rpn_field_name_with_target_grid
+            file_path=path_to_rpn_with_target_grid,
+            field_name=rpn_field_name_with_target_grid
     )
     print(lons2d.shape)
     pf_mask = get_permafrost_mask(lons2d, lats2d)
     ds.createDimension('lon', lons2d.shape[0])
     ds.createDimension('lat', lons2d.shape[1])
 
-    lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
-    latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
-    maskVariable = ds.createVariable("pf_type", "i4", ('lon', 'lat'))
-    maskVariable.description = "0-no data, 1-Continuous, 2-Discontinuous, 3-Sporadic, 4-Isolated"
+    lon_variable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+    lat_variable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+    mask_variable = ds.createVariable("pf_type", "i4", ('lon', 'lat'))
+    mask_variable.description = "0-no data, 1-Continuous, 2-Discontinuous, 3-Sporadic, 4-Isolated"
 
-    maskVariable[:, :] = pf_mask[:, :]
-    lonVariable[:, :] = lons2d[:, :]
-    latVariable[:, :] = lats2d[:, :]
+    mask_variable[:, :] = pf_mask[:, :]
+    lon_variable[:, :] = lons2d[:, :]
+    lat_variable[:, :] = lats2d[:, :]
 
     ds.close()
 
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    #test_ease_basemap()
-    #main()
-    #save_pf_mask_to_netcdf()
+    # test_ease_basemap()
+    # main()
+    # save_pf_mask_to_netcdf()
     save_pf_mask_to_netcdf(path="permafrost_types_arctic_using_contains.nc",
-                          path_to_rpn_with_target_grid="/b2_fs2/huziy/geophy_from_others/land_sea_glacier_mask_phy_arctic_for_pfregions",
-                          rpn_field_name_with_target_grid="FMSK")
+                           path_to_rpn_with_target_grid="/b2_fs2/huziy/geophy_from_others/land_sea_glacier_mask_phy_arctic_for_pfregions",
+                           rpn_field_name_with_target_grid="FMSK")
 
     # save_pf_mask_to_netcdf(path="permafrost_types_arctic_using_test.nc",
     #                        path_to_rpn_with_target_grid="/b2_fs2/huziy/geophy_from_others/pmOMSC26_Can_long_new_v01_204204_moyenne",
     #                        rpn_field_name_with_target_grid="TRAF")
     print("Hello world")
-  

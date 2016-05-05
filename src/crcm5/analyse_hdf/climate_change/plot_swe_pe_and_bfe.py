@@ -6,7 +6,8 @@ from pathlib import Path
 from mpl_toolkits.basemap import maskoceans
 from crcm5 import infovar
 from crcm5.analyse_hdf.climate_change import plot_performance_err_with_cru
-from crcm5.analyse_hdf.climate_change.plot_performance_err_with_cru import compare_vars, aggregate_array
+from crcm5.analyse_hdf.climate_change.plot_performance_err_with_cru import compare_vars
+from util.array_utils import aggregate_array
 from crcm5.analyse_hdf.run_config import RunConfig
 from util import plot_utils
 from util.seasons_info import DEFAULT_SEASON_TO_MONTHS
@@ -88,10 +89,10 @@ def main():
     obs_row_axes = None
     ncols = None
     if plot_all_vars_in_one_fig:
-        plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=12, height_cm=12)
+        plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=12, height_cm=18)
         fig = plt.figure()
         ncols = len(season_to_months) + 1
-        gs = GridSpec(len(model_vars) * 2, ncols, width_ratios=(ncols - 1) * [1., ] + [0.05, ])
+        gs = GridSpec(len(model_vars) * 3, ncols, width_ratios=(ncols - 1) * [1., ] + [0.05, ])
 
     else:
         plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=25)
@@ -105,17 +106,23 @@ def main():
             obs_row_axes[-1].set_title("mm")
             row += 1
 
+            model_row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols - 1)]
+            row += 1
+
             row_axes = [fig.add_subplot(gs[row, col]) for col in range(ncols)]
             row += 1
 
         compare_vars(vname_model=mname, vname_obs=oname, r_config=r_config,
                      season_to_months=season_to_months,
-                     nx_agg=nx_agg, ny_agg=ny_agg, bmp_info_agg=bmp_info_agg,
-                     obs_path=opath, axes_list=row_axes, obs_axes_list=obs_row_axes)
+                     nx_agg=nx_agg, ny_agg=ny_agg, bmp_info_agg=bmp_info_agg, bmp_info_model=bmp_info,
+                     obs_path=opath,
+                     diff_axes_list=row_axes, obs_axes_list=obs_row_axes, model_axes_list=model_row_axes)
 
         if plot_all_vars_in_one_fig:
             obs_row_axes[0].set_ylabel("(a)", rotation="horizontal", labelpad=10)
-            row_axes[0].set_ylabel("(b)", rotation="horizontal", labelpad=10)
+            model_row_axes[0].set_ylabel("(b)", rotation="horizontal", labelpad=10)
+
+            row_axes[0].set_ylabel("(c)", rotation="horizontal", labelpad=10)
             for ax in row_axes[:-1]:
                 ax.set_title("")
 
@@ -139,9 +146,12 @@ def main():
 
     # Save the figure if necessary
     if plot_all_vars_in_one_fig:
+
+        from crcm5.analyse_hdf import common_plot_params
+
         fig_path = img_folder.joinpath("{}.png".format("_".join(model_vars)))
         with fig_path.open("wb") as figfile:
-            fig.savefig(figfile, format="png", bbox_inches="tight")
+            fig.savefig(figfile, format="png", bbox_inches="tight", dpi=common_plot_params.FIG_SAVE_DPI)
 
         plt.close(fig)
 

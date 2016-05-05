@@ -280,6 +280,13 @@ def calclulate_spring_peak_err(dates, qobs, qmod, st_id=None, da_obs=None, da_mo
 
     print("{}: int(dqdt) = {}".format(st_id, s))
 
+    qmod = np.asarray(qmod)
+    qobs = np.asarray(qobs)
+
+    from scipy import stats
+    corr, pval = stats.pearsonr(qmod, qobs)
+    print("{}: bias={:.3f}%, corr={:.3f}, corr-pvalue={:2g} ".format(st_id, np.sum(qmod - qobs) / np.sum(qobs) * 100, corr, pval))
+
 
 # noinspection PyNoneFunctionAssignment
 def _plot_upstream_surface_runoff(ax, the_model_point, model_data_dict=None,
@@ -468,7 +475,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     if ncols * nrows < len(mp_list):
         nrows += 1
 
-    figure_stfl = plt.figure()
+    figure_stfl = plt.figure(figsize=(4 * ncols, 3 * nrows))
     gs_stfl = gridspec.GridSpec(nrows=nrows, ncols=ncols)
     # a flag which signifies if a legend should be added to the plot, it is needed so we ahve only one legend per plot
     legend_added = False
@@ -594,7 +601,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
             if sim_name_to_color is None:
                 ax_stfl.plot(dates, values_model, label=label, lw=2)
             else:
-                ax_stfl.plot(dates, values_model, label=label, lw=2, c=sim_name_to_color[label])
+                ax_stfl.plot(dates, values_model, sim_name_to_color[label], label=label, lw=2)
 
                 print(20 * "!!!")
                 print("{} -> {}".format(label, sim_name_to_color[label]))
@@ -623,6 +630,10 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
                                            st_id="{}: {}".format(label, the_station.id),
                                            da_mod=the_model_point.accumulation_area,
                                            da_obs=the_station.drainage_km2)
+
+
+
+
 
         ax.set_ylabel(r"Streamflow: ${\rm m^3/s}$")
         assert isinstance(ax, Axes)
@@ -654,7 +665,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         streamflow_axes = ax  # save streamflow axes for later use
 
         if not legend_added:
-            ax_stfl.legend(loc="lower left", bbox_to_anchor=(0, 1.1), borderaxespad=0, ncol=3)
+            ax_stfl.legend(loc="lower left", bbox_to_anchor=(0, 1.15), borderaxespad=0, ncol=3)
             ax_stfl.xaxis.set_minor_formatter(FuncFormatter(lambda x, pos: num2date(x).strftime("%b")[0]))
             ax_stfl.xaxis.set_minor_locator(MonthLocator(bymonthday=15))
             ax_stfl.xaxis.set_major_locator(MonthLocator())
@@ -741,7 +752,7 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
         im_path = os.path.join(im_folder_path, im_name)
 
         if plot_upstream_area_averaged:
-            fig.savefig(im_path, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight")
+            fig.savefig(im_path, dpi=cpp.FIG_SAVE_DPI, bbox_inches="tight", transparent=True)
 
         plt.close(fig)
 
@@ -751,8 +762,8 @@ def draw_model_comparison(model_points=None, stations=None, sim_name_to_file_nam
     assert isinstance(figure_stfl, Figure)
     figure_stfl.tight_layout()
     figure_stfl.savefig(os.path.join(images_folder,
-                                     "comp_point_with_obs_{0}.eps".format("_".join(label_list))),
-                        bbox_inches="tight")
+                                     "comp_point_with_obs_{0}.png".format("_".join(label_list))),
+                        bbox_inches="tight", transparent=True, dpi=cpp.FIG_SAVE_DPI)
     plt.close(figure_stfl)
 
     # close information text files
@@ -786,7 +797,7 @@ def plot_point_positions_with_upstream_areas(processed_stations, processed_model
         tl.set_visible(False)
 
     impath = os.path.join(images_folder, "station_positions.png")
-    fig.savefig(impath, bbox_inches="tight")
+    fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI, transparent=True)
     plt.close(fig)
     plt.rcParams.update(rc_params_backup)
 
@@ -855,6 +866,11 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
         "104001", "093806", "093801", "081002", "081007", "080718"
     ]
 
+    # for presentation
+    # ids_with_lakes_upstream = [
+    #    "104001", "093806",
+    # ]
+
     selected_ids = ["092715", "074903", "080104", "081007", "061905",
                     "093806", "090613", "081002", "093801", "080718", "104001"]
 
@@ -874,22 +890,28 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
 
     sim_labels = [
         # "CRCM5-R",
-        # "CRCM5-L2",
-        "CRCM5-L1",
-        "CRCM5-NL"
+        "CRCM5-L2",
+        # "CRCM5-L1",
+        # "CRCM5-NL"
         # "CRCM5-HCD-RL-INTF-a"
     ]
 
     sim_file_names = [
         # "quebec_0.1_crcm5-r.hdf5",
-        # "quebec_0.1_crcm5-hcd-rl.hdf5",
+        "quebec_0.1_crcm5-hcd-rl.hdf5",
         # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5",
-        "quebec_0.1_crcm5-hcd-r.hdf5",
-        "quebec_0.1_crcm5-r.hdf5",
+        # "quebec_0.1_crcm5-hcd-r.hdf5",
+        # "quebec_0.1_crcm5-r.hdf5",
         # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5"
         # "quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5"
 
     ]
+
+    simname_to_color = {
+        "CRCM5-NL": "b",
+        "CRCM5-L2": "r",
+        "Obs.": "g"
+    }
 
     sim_name_to_file_name = OrderedDict()
     for k, v in zip(sim_labels, sim_file_names):
@@ -920,6 +942,11 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
     print("Initial list of stations:")
     for s in stations:
         print("{0}".format(s))
+        assert isinstance(s, Station)
+        cy = s.get_list_of_complete_years()
+        print("{} of complete years: {}".format(len(cy), cy))
+
+
 
 
     # Commented hydat station for performance during testing
@@ -947,7 +974,7 @@ def main(hdf_folder="/home/huziy/skynet3_rech1/hdf_store", start_date=None, end_
                           start_year=start_date.year, end_year=end_date.year, stations=stations,
                           stfl_name="STFA",
                           drainage_area_reldiff_min=0.1,
-                          plot_upstream_area_averaged=False)
+                          plot_upstream_area_averaged=False, sim_name_to_color=simname_to_color)
 
 
 def main_for_cc_paper(start_date=None, end_date=None):
@@ -956,6 +983,13 @@ def main_for_cc_paper(start_date=None, end_date=None):
     ids_with_lakes_upstream = [
         "104001", "093806", "093801", "081002", "081007", "080718"
     ]
+
+    # for a presentation
+    # ids_with_lakes_upstream = [
+    #     "104001", "093806", "081002", "081007",
+    # ]
+
+
 
     selected_ids = ids_with_lakes_upstream
 
@@ -972,7 +1006,7 @@ def main_for_cc_paper(start_date=None, end_date=None):
         "/RESCUE/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5"
     ]
 
-    color_list = ["b", "r", "g"]
+    color_list = ["dodgerblue", "r", "g"]
     sim_name_to_color = OrderedDict([
         ("Obs.", "k")
     ])
@@ -991,7 +1025,7 @@ def main_for_cc_paper(start_date=None, end_date=None):
     for s in stations:
         print("{0}".format(s))
 
-    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=25, height_cm=12)
+    plot_utils.apply_plot_params(font_size=16, width_pt=None, width_cm=25, height_cm=12)
     draw_model_comparison(model_points=None, sim_name_to_file_name=sim_name_to_file_name,
                           hdf_folder=None,
                           start_year=start_date.year, end_year=end_date.year, stations=stations,

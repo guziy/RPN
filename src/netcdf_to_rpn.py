@@ -197,8 +197,28 @@ if __name__ == "__main__":
     #     nc_path="/skynet3_rech1/huziy/hydrosheds/directions_great_lakes_210_130_0.1deg.nc",
     #     gc=gc, out_path="directions_0.1deg_GL.rpn")
 
-    convert(
-        nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_great_lakes_210_130_0.1deg.nc",
-        gc=gc, out_path="/RESCUE/skynet3_rech1/huziy/GLK_exps_geophysical_fields/directions_0.1deg_GL_v1.rpn")
+    # convert(
+    #     nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_great_lakes_210_130_0.1deg_v2.nc",
+    #     gc=gc, out_path="/RESCUE/skynet3_rech1/huziy/GLK_exps_geophysical_fields/directions_0.1deg_GL_v2.rpn")
+
+
+    params_gl_ext = dict(
+            dx=0.1, dy=0.1,
+            lon1=180, lat1=0.0,
+            lon2=-84, lat2=1.0,
+            iref=135, jref=120,
+            ni=440, nj=260,
+            xref=276.0, yref=48.0
+    )
+    gc_gl_ext = GridConfig(**params_gl_ext)
+
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_440x260_GL+NENA_0.1deg.nc",
+            gc=gc_gl_ext, out_path="/HOME/huziy/directions_440x260_GL+NENA_0.1deg.rpn")
+
+
 
     print("Hello World")
+
+
+
+

@@ -1,7 +1,7 @@
 import matplotlib
 # matplotlib.use("Agg")
 
-from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import BASIN_BOUNDARIES_FILE, \
+from crcm5.analyse_hdf.climate_change.plot_cc_for_each_basin_hydrographs import \
     get_basin_to_outlet_indices_map, plot_basin_outlets
 from data.cell_manager import CellManager
 from util import plot_utils
@@ -172,6 +172,19 @@ def main():
                 cax = fig.add_subplot(gs[row, -1])
                 plt.colorbar(im, cax=cax, extend="both")
                 cax.set_title("%")
+
+
+
+            # Print basin average changes
+            print("--- start ----------------{rp}-year {ext_type} flow ----------------".format(rp=rp, ext_type=the_type))
+
+            bname_to_diff = [(bname, diff[the_mask > 0.5].mean()) for bname, the_mask in bname_to_mask.items()]
+            bname_to_diff = list(sorted(bname_to_diff, key=lambda item: item[1]))
+
+            for bname, the_diff in bname_to_diff:
+                print("{bname}: cc = {cc:.2f}%".format(bname=bname, cc=the_diff))
+
+            print("--- end ----------------{rp}-year {ext_type} flow ----------------".format(rp=rp, ext_type=the_type))
 
     img_file = img_folder.joinpath("rl_cc_{}.png".format(gcm_driven_config_c.label))
 

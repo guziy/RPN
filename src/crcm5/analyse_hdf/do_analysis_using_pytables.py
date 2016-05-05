@@ -4,9 +4,11 @@ import os
 import pickle
 from pathlib import Path
 import re
+from queue import PriorityQueue
 
 from scipy.spatial import KDTree
 
+from crcm5.analyse_hdf.rain_duration_distr_for_region import Selection
 from crcm5.analyse_hdf.run_config import RunConfig
 from util.geo import lat_lon
 from util.geo.basemap_info import BasemapInfo
@@ -116,7 +118,7 @@ def get_mean_2d_fields_for_months(path="", var_name="", level=None, months=None,
 
 
 
-def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=None):
+def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=None, point_label=""):
     """
 
     :param path:
@@ -135,8 +137,12 @@ def get_lake_level_timesries_due_to_precip_evap(path="", i_index=None, j_index=N
         dates.append(datetime(the_row["year"], the_row["month"], the_row["day"], the_row["hour"]))
         vals.append(the_row["field"][i_index, j_index])
 
-    ts = pd.TimeSeries(data=vals, index=dates)
-    ts = ts.sort_index()
+
+    ts = pd.Series(data=vals, index=dates)
+    ts.sort_index(inplace=True)
+
+    # dump the binary for debug
+    pickle.dump(ts, open("evp_lake_lev_{}.bin".format(point_label), "wb"))
 
     dt = ts.index[1] - ts.index[0]
     print("dt = ", dt)
@@ -217,27 +223,30 @@ def get_annual_extrema(rconfig=None, varname="STFL", months_of_interest=None, n_
 
 
 def get_daily_climatology_for_a_point_cldp_due_to_precip_evap(path="", i_index=None, j_index=None,
-                                                              year_list=None):
+                                                              year_list=None, point_label=""):
     """
 
+    :param year_list:
     :param path:
     :param i_index:
     :param j_index:
     :return:
     """
-    ts = get_lake_level_timesries_due_to_precip_evap(path=path, i_index=i_index, j_index=j_index)
+    ts = get_lake_level_timesries_due_to_precip_evap(path=path, i_index=i_index, j_index=j_index,
+                                                     point_label=point_label)
 
-    assert isinstance(ts, pd.TimeSeries)
-    ts = ts.select(lambda d: d.year in year_list)
+    assert isinstance(ts, pd.Series)
+    ts = ts.select(lambda d: d.year in year_list and not (d.month == 2 and d.day == 29))
 
     ts_clim = ts.groupby(
-        lambda d: datetime(2001, d.month, d.day) if not (d.month == 2 and d.day == 29) else
-        datetime(2001, d.month, d.day - 1)).mean()
+        lambda d: datetime(2001, d.month, d.day)).mean()
 
     assert isinstance(ts_clim, pd.Series)
-    ts_clim = ts_clim.sort_index()
+    ts_clim.sort_index(inplace=True)
 
     # assert isinstance(ts_clim, pd.TimeSeries)
+
+
 
     return ts_clim.index.to_pydatetime(), ts_clim.values
 
@@ -318,8 +327,13 @@ def get_daily_climatology_for_a_point(path="", var_name="STFL", level=None,
 def get_annual_maxima(path_to_hdf_file="", var_name="STFL", level=None, start_year=None, end_year=None):
     result = OrderedDict()
 
-    cache_file_path = Path(path_to_hdf_file + ".cache").joinpath(
-        "annual_max_{}-{}".format(start_year, end_year)).joinpath("{}.bin".format(var_name))
+    if level is None:
+        cache_file_path = Path(path_to_hdf_file + ".cache").joinpath(
+            "annual_max_{}-{}".format(start_year, end_year)).joinpath("{}.bin".format(var_name))
+    else:
+        cache_file_path = Path(path_to_hdf_file + ".cache").joinpath(
+            "annual_max_{}-{}".format(start_year, end_year)).joinpath("{}_level_index_{}.bin".format(var_name, level))
+
 
     # Load the maxima from cache
     if cache_file_path.is_file():
@@ -553,6 +567,9 @@ def calculate_daily_mean_fields():
     plt.savefig("intfl_diff.png")
 
 
+
+
+
 def get_seasonal_climatology_for_runconfig(run_config=None, varname="", level=0, season_to_months=None):
     assert isinstance(run_config, RunConfig)
     result = OrderedDict()
@@ -573,7 +590,6 @@ def get_seasonal_climatology(hdf_path="", start_year=None, end_year=None, var_na
     daily_fields = np.asarray(daily_fields)
     selection_vec = np.where(np.array([d.month in months for d in daily_dates], dtype=np.bool))[0]
     selected_data = daily_fields[selection_vec, :, :]
-    print(selected_data.shape)
     return np.mean(selected_data, axis=0)
 
 
@@ -612,10 +628,70 @@ def get_np_arr_sorted_for_year(year, the_table, level_index=0):
     return get_pandas_panel_sorted_for_year(year, the_table, level_index=level_index).values
 
 
-def get_area_mean_timeseries(hdf_path, var_name="PR", level_index=0, selection=None):
-    assert hasattr(selection, "ll")  # Indices of the lower left corner of the selection
-    assert hasattr(selection, "ur")  # --//-- upper right corner of the selection
+def get_area_mean_timeseries(hdf_path, var_name="PR", level_index=0, selection=None, the_mask=None,
+                             start_year=None, end_year=None):
 
+
+    """
+    The data is multiplied by the mask before averaging (masked points are not averaged over)
+    :param hdf_path:
+    :param var_name:
+    :param level_index:
+    :param selection:
+    :param the_mask:
+    :param start_year:
+    :param end_year:
+    :return:
+    """
+    import hashlib
+
+    path_hash = hashlib.sha224(hdf_path.encode()).hexdigest()
+
+
+    mask_sum = the_mask.sum() if the_mask is not None else 0
+    cache_file = "{}_{}_{}-{}_lev_index_{}_mask_{}_cache.hdf5".format(path_hash, var_name, start_year, end_year, level_index, mask_sum)
+
+    if os.path.isfile(cache_file):
+        print("reusing cache file at: {}".format(cache_file))
+        with pd.HDFStore(cache_file) as ds:
+            return ds["ts"]
+
+    assert level_index is not None, "Please, specify the index of the levele you want to retreive"
+
+    if selection is not None:
+        # Indices of the lower left corner of the selection
+        # --//-- upper right corner of the selection
+        assert isinstance(selection, Selection)
+        i0, j0 = selection.ll_indices()
+        i1, j1 = selection.ur_indices()
+        raise NotImplementedError("Subsetting based on the selection object is not implemented yet.")
+
+    with tb.open_file(hdf_path) as h:
+        v_table = h.get_node("/{}".format(var_name))
+
+        query = []
+        if start_year is not None:
+            query += ["(year >= {})".format(start_year), ]
+
+        if end_year is not None:
+            query += ["(year <= {})".format(end_year), ]
+
+        query += ["(level_index == {})".format(level_index), ]
+
+        query = "&".join(query)
+
+        vals = []
+        dates = []
+        for row in v_table.where(query):
+            dates.append(datetime(row["year"], row["month"], row["day"], row["hour"]))
+
+            data = the_mask * row["field"]
+            vals.append(data.sum() / the_mask.sum())
+
+        s = pd.Series(index=dates, data=vals)
+        s.sort_index(inplace=True)
+        s.to_hdf(cache_file, "ts")
+        return s
 
 if __name__ == "__main__":
     import application_properties

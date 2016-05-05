@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 from util import plot_utils
 from util.geo import quebec_info
 
+from crcm5.analyse_hdf import common_plot_params
+
 __author__ = 'huziy'
 
 # Plot seasonal mean fields
@@ -52,13 +54,10 @@ def compute_seasonal_means_for_each_year(sim_config, season_to_months=None, var_
     return season_to_field
 
 
-def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
+def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None, mark_significance=True):
     """
     if plot_cc_only_for is not None, should be equal to the label of the simulation to be plotted
     """
-
-
-
 
     lons, lats = config_dict.lons, config_dict.lats
 
@@ -152,10 +151,6 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
 
 
 
-
-
-
-
     # Calculate the differences in cc signal
     season_to_diff = OrderedDict()
 
@@ -164,6 +159,7 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
     diff_max = 0
     print(list(current_base.keys()))
     # Get the ranges for colorbar and calculate p-values
+    print("------------------ impacts on projected changes to {} -----------------------".format(vname))
     season_to_pvalue = OrderedDict()
     for season in list(current_base.keys()):
 
@@ -197,10 +193,15 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
         field_to_plot = infovar.get_to_plot(vname, season_to_diff[season].mean(axis=0), lons=lons, lats=lats)
         season_to_plot_diff[season] = field_to_plot
 
+
+        print("{}: {}".format(season, season_to_plot_diff[season].mean()))
+
         if hasattr(field_to_plot, "mask"):
             diff_max = max(np.percentile(np.abs(field_to_plot[~field_to_plot.mask]), 95), diff_max)
         else:
             diff_max = max(np.percentile(np.abs(field_to_plot), 95), diff_max)
+
+    print("--------------------------------------------------------")
 
     img = None
     locator = MaxNLocator(nbins=10, symmetric=True)
@@ -228,7 +229,7 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None):
             p = np.ma.masked_where(season_to_plot_diff[season].mask, p)
 
 
-        if plot_cc_only_for is not None:
+        if plot_cc_only_for is not None and mark_significance:
             cs = bmp.contourf(xx, yy, p, hatches=["..."], levels=[0.05, 1], colors='none')
 
             if (col == ncols_subplots - 2) and (the_row == nrows_subplots - 1):
@@ -355,7 +356,10 @@ def main():
     # var_names = ["TT", "HU", "PR", "AV", "STFL"]
     # var_names = ["TRAF", "STFL", "TRAF+TDRA"]
     # var_names = ["TT", "PR", "STFL"]
-    var_names = ["TT", "PR", "I5", "AV", "STFL"]
+    # var_names = ["TT", "PR", "I5", "STFL", "AV", "AH"]
+
+    var_names = ["TT", ]
+
     levels = [0, ] * len(var_names)
     multipliers = {
         "PR": 1.0,
@@ -375,6 +379,7 @@ def main():
     modif_label = "CanESM2-CRCM5-L"
 
     plot_cc_only_for = modif_label
+
     # plot_cc_only_for = None
 
     start_year_c = 1980
@@ -402,7 +407,7 @@ def main():
     ])
 
     # Changes global plot properties mainly figure size and font size
-    plot_utils.apply_plot_params(font_size=12, width_cm=25, height_cm=25)
+    plot_utils.apply_plot_params(font_size=12, width_cm=25, height_cm=10)
 
 
     # Plot the differences
@@ -427,7 +432,7 @@ def main():
     for vname, level, the_row in zip(var_names, levels, list(range(len(levels)))):
         config_dict.the_row = the_row
 
-        _plot_row(vname=vname, level=level, config_dict=config_dict, plot_cc_only_for=plot_cc_only_for)
+        _plot_row(vname=vname, level=level, config_dict=config_dict, plot_cc_only_for=plot_cc_only_for, mark_significance=False)
 
     # Save the image to the file
     if plot_cc_only_for is None:
@@ -438,7 +443,7 @@ def main():
         config_f = base_config_f if base_config_f.label == plot_cc_only_for else modif_config_f
 
         img_path = get_image_path(config_c, config_f, config_c, season_to_months=season_to_months)
-    fig.savefig(img_path, bbox_inches="tight")
+    fig.savefig(img_path, bbox_inches="tight", transparent=True, dpi=common_plot_params.FIG_SAVE_DPI)
     print("saving the plot to: {}".format(img_path))
     plt.close(fig)
 

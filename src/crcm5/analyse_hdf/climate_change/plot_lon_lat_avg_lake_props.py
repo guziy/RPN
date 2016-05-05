@@ -119,7 +119,7 @@ def main():
 
 
     # Do the plotting
-    plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=30)
+    plot_utils.apply_plot_params(font_size=14, width_pt=None, width_cm=20, height_cm=30)
     fig = plt.figure()
 
     gs = GridSpec(4, 2, width_ratios=[1, 0.02])
@@ -137,7 +137,7 @@ def main():
     clevs = MaxNLocator(cmap.N + 1).tick_values(-vmax, vmax)
 
     cs = ax.contourf(num_dates_2d, z_agg_2d, to_plot, cmap=cmap, levels=clevs, extend="both")
-    ax.set_title("Lake temperature (liquid)")
+    ax.set_title("Lake surface water temperature")
     all_axes.append(ax)
 
     # Colorbar for value plots
@@ -162,6 +162,11 @@ def main():
 
     lake_ice_th = _avg_along(lake_ice_th_f - lake_ice_th_c, axis=avg_axis, lake_fraction=lake_fraction)
 
+    # get the points for which the average should be calculated
+    winter_points = np.asarray([i for i, d in enumerate(daily_dates) if d.month in [1, 2, 12]])
+
+
+
     row += 1
     ax = fig.add_subplot(gs[row, 0])
 
@@ -173,6 +178,10 @@ def main():
 
     cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_th, cmap=cmap, levels=clevs, extend="both")
     ax.set_title("Lake ice thickness")
+
+
+
+    print("Mean change in ice thickness: {} m".format(lake_ice_th.mean(axis=1)[winter_points].mean()))
     all_axes.append(ax)
 
     # Colorbar for value plots
@@ -208,6 +217,7 @@ def main():
 
     cs = ax.contourf(num_dates_2d, z_agg_2d, lake_ice_fraction, cmap=cmap, levels=clevs, extend="both")
     ax.set_title("Lake ice fraction")
+    print("Mean change in ice fraction: {}".format(lake_ice_fraction.mean(axis=1)[winter_points].mean()))
     all_axes.append(ax)
 
     # Colorbar for value plots

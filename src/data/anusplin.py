@@ -51,10 +51,72 @@ class AnuSplinManager(BaseDataManager):
             self.folder_path = folder_path.replace("skynet1_rech3", "skynet3_rech1")
             print("Using {} instead".format(self.folder_path))
 
-        self.fname_format = "{0}{1}_%Y_%m.nc".format(file_name_preifx, variable)
+        self.fname_format = "{0}{1}".format(file_name_preifx, variable) + "_%Y_%m.nc"
         self._read_lon_lats()
         self.name = "ANUSPLIN"
         pass
+
+
+    def get_seasonal_fields(self, start_year: int = -np.Inf, end_year: int = np.Inf, months: list = range(1, 13)) -> pd.Panel:
+
+        months_str = "-".join([str(m) for m in months])
+        cache_file = "anusplin_seasonal_means_{}_{}_{}_{}.cache.hdf".format(start_year, end_year, self.nc_varname, months_str)
+        hdf_key = "seasonal_means_frame"
+        if os.path.isfile(cache_file):
+            store = pd.HDFStore(cache_file)
+            df = store.get(hdf_key)
+            store.close()
+            return df
+
+
+        data = []
+        year_axis = []
+
+        for y in range(start_year, end_year + 1):
+            print("reading fields for {} .... ".format(y))
+
+
+
+            files = [os.path.join(self.folder_path, datetime(y, m, 1).strftime(self.fname_format)) if m > 2 else os.path.join(self.folder_path, datetime(y + 1, m, 1).strftime(self.fname_format)) for m in months if not (y == end_year and m in [12, 1, 2])]
+
+
+            if y == end_year:
+                if set(months) == {1, 2, 12}:
+                    assert len(files) == 0
+
+
+            mean_year = None
+            counter_year = 0
+            for fp in files:
+                ds = Dataset(fp)
+                print(ds)
+                v = ds.variables[self.nc_varname][:]
+
+                print(v.shape[0])
+                if mean_year is None:
+                    mean_year = v.sum(axis=0)
+                    counter_year = v.shape[0]
+                else:
+                    mean_year += v.sum(axis=0)
+                    counter_year += v.shape[0]
+
+                ds.close()
+
+            if mean_year is None:
+                continue
+
+            year_axis.append(y)
+            data.append(mean_year / counter_year)
+
+
+
+        data = np.array(data)
+        panel = pd.Panel(data=data.transpose((1, 0, 2)), items=range(data.shape[1]), major_axis=year_axis, minor_axis=range(data.shape[2]))
+
+        panel.to_hdf(cache_file, hdf_key)
+
+        return panel
+
 
     def _read_lon_lats(self):
         """

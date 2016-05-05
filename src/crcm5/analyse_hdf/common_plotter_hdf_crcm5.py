@@ -143,8 +143,12 @@ def compare_2d_seasonal_means_from_simulations():
     # varnames = ["TT", "TRAF"]
     # levels = len(varnames) * [0, ]
 
-    varnames = ["AD", "STFA", "AV", "AH", "I0", "I1", "TT", "PR"]
-    levels = [None, None, None, None, 1, 1, None, None]
+    # varnames = ["AD", "STFA", "AV", "AH", "I0", "I1", "TT", "PR", "TRAF"]
+    # These are actually 0-based level indices
+    # levels = [None, None, None, None, 1, 1, None, None, 0]
+
+    varnames = ["STFA", ]
+    levels = [0, ]
 
     # Used to plot control and differences
 
@@ -251,7 +255,7 @@ if __name__ == "__main__":
     compare_2d_seasonal_means_from_simulations()
 
     # Compare observed and modelled streamflow and upstream caracteristics for streamflow gauging stations
-    # compare_obs_and_model_at_points()
+    #compare_obs_and_model_at_points()
 
     # compare_simulations()
     # validate_seasonal_mean_atm_fields()

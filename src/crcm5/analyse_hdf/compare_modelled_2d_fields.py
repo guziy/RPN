@@ -255,7 +255,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
 
 
 
-    ncolors = 13 if exclude_0_from_diff_colorbar else 10
+    ncolors = 13 if exclude_0_from_diff_colorbar else 50
     bounds = None
     if increments:
         # +1 to include white
@@ -299,10 +299,13 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
         im = basemap.pcolormesh(x, y, field, norm=field_norm, cmap=field_cmap, ax=ax)
         basemap.drawcoastlines(ax=ax, linewidth=cpp.COASTLINE_WIDTH)
 
+
+
         if significance is not None:
-            cs = basemap.contourf(x, y, significance[season], levels=[0, 0.5, 1],
+            to_plot = np.ma.masked_where(field.mask, significance[season])
+            cs = basemap.contourf(x, y, to_plot, levels=[0, 0.5, 1],
                                   colors="none",
-                                  hatches=[None, "*"],
+                                  hatches=["*", None],
                                   ax=ax)
 
             # basemap.contour(x, y, significance[season], levels = [0.5, ], ax = ax,
@@ -320,7 +323,7 @@ def _plot_row(axes, data, sim_label, var_name, increments=False,
     if isinstance(field_norm, LogNorm):
         plt.colorbar(im, cax=axes[-1])
     else:
-        plt.colorbar(im, cax=axes[-1], extend="both", ticks=bounds)
+        plt.colorbar(im, cax=axes[-1], extend="both", ticks=field_norm.boundaries[::5])
 
 
 def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
@@ -380,14 +383,13 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r-1980-2010_radiation_fluxes.hdf5", ]
     # labels = ["CRCM5-L1", ]
-    #
+
 
 
 
     # lake effect (lake-river interactions)
     control_path = "/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-r.hdf5"
     control_label = "CRCM5-L1"
-
     paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5", ]
     labels = ["CRCM5-L2", ]
 
@@ -398,7 +400,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     #
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS.hdf5", ]
     # labels = ["CRCM5-L2I", ]
-
+    #
 
     # paths = ["/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl-intfl_ITFS_avoid_truncation1979-1989.hdf5", ]
     # labels = ["CRCM5-L2I-short", ]
@@ -439,7 +441,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
     if lake_fraction is None:
         lake_fraction = np.zeros(lons2d.shape)
 
-    ncolors = 10
+    ncolors = 50 # change to 10 for the paper plots
     # +1 to include white
     diff_cmap = cm.get_cmap("RdBu", ncolors + 1)
 
@@ -533,6 +535,9 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
                       season_list=season_list, significance=label_to_season_to_significance[the_label])
             the_row += 1
 
+            for the_ax, the_season in zip(axes, season_list):
+                the_ax.set_title(the_season)
+
         folderpath = os.path.join(images_folder, "seasonal_mean_maps/{0}_vs_{1}_for_{2}_{3}-{4}".format(
             "_".join(labels), control_label, "-".join(list(season_to_months.keys())), start_year, end_year))
         if not os.path.isdir(folderpath):
@@ -540,7 +545,7 @@ def plot_control_and_differences_in_one_panel_for_all_seasons(varnames=None,
 
         imname = "{0}_{1}.png".format(var_name, "_".join(labels + [control_label]))
         impath = os.path.join(folderpath, imname)
-        fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI)
+        fig.savefig(impath, bbox_inches="tight", dpi=cpp.FIG_SAVE_DPI, transparent=True)
 
 
 def study_lake_effect_on_atmosphere():

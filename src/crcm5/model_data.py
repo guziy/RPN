@@ -688,27 +688,29 @@ class Crcm5ModelDataManager:
             def day_selector(row):
                 amonth = row["month"]
                 aday = row["day"]
-                alevel = row["level_index"]
-                return amonth, aday, alevel
+                return amonth, aday
 
             date_to_mean_field = {}
             date_to_count = {}
 
             period_selector_stmt = "(year >= {0}) & (year <= {1})".format(start_year, end_year)
 
+            if level_index is None:
+                period_selector_stmt += " & (level_index == {})".format(level_index)
+
+
             # calculate mean using chunks of grouped data
             for group_keys, grouped_rows in itertools.groupby(vartable.where(period_selector_stmt), day_selector):
-                amonth, adayofmonth, alevel = group_keys
+                amonth, adayofmonth = group_keys
 
                 # ignore the 29th of February
                 if amonth == 2 and adayofmonth == 29:
                     continue
 
-                if level_index is not None and alevel != level_index:
-                    continue
+
                 data = [
                     row["field"] for row in grouped_rows
-                ]
+                    ]
                 data = np.asarray(data)
 
                 d = datetime(stamp_year, amonth, adayofmonth)
@@ -733,7 +735,7 @@ class Crcm5ModelDataManager:
             # Use query for each day of month
             while the_date.year == stamp_year:
                 if level_index is not None:
-                    expr = "(level == {0}) & (month == {1}) & (day == {2})".format(level_index, the_date.month,
+                    expr = "(level_index == {0}) & (month == {1}) & (day == {2})".format(level_index, the_date.month,
                                                                                    the_date.day)
                     result = np.mean([row["field"] for row in vartable.where(expr)], axis=0)
                 else:
@@ -775,8 +777,8 @@ class Crcm5ModelDataManager:
         months = list(range(1, 13)) if months is None else months
 
         # check if cached data exist
-        cache_folder = "{}.cache/seasonal_means/{}/{}-{}/level_{}".format(
-            path_to_hdf, var_name, start_year, end_year, "-".join([str(m) for m in sorted(months)]), level
+        cache_folder = "{}.cache/seasonal_means/{}/{}-{}/level_{}_{}".format(
+            path_to_hdf, var_name, start_year, end_year, level, "-".join([str(m) for m in sorted(months)])
         )
         cache_folder = os.path.realpath(cache_folder)
 
@@ -800,6 +802,21 @@ class Crcm5ModelDataManager:
             var_table = h.get_node("/" + var_name)
 
             def year_selector(arow):
+                # Use continuous DJF
+                if arow["month"] <= 2:
+                    if arow["year"] > start_year:
+                        return arow["year"] - 1
+                    else:
+                        # skip the first Jan and Feb
+                        return -1
+
+
+                # Skip the last december
+                if arow["month"] == 12 and arow["year"] == end_year:
+                    return -1
+
+
+
                 return arow["year"]
 
             # create index on date related columns if it is not created yet
@@ -837,7 +854,9 @@ class Crcm5ModelDataManager:
                 year_to_counter[the_year] = cur_n + data.shape[0]
                 print("current year is {0}".format(the_year))
 
-            result = np.asarray([year_to_mean[y] for y in range(start_year, end_year + 1)])
+
+            current_last_year = end_year if len(set(months).intersection({1, 2})) > 0 else end_year + 1
+            result = np.asarray([year_to_mean[y] for y in range(start_year, current_last_year)])
 
             print("Saving cache to: {}".format(cache_file))
             pickle.dump(result, open(cache_file, "wb"))  # save calculated means for reuse

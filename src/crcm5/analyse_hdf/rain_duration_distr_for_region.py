@@ -8,7 +8,6 @@ __author__ = 'huziy'
 
 # Compare distributions of the durations of precipitation events
 
-from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -54,6 +53,8 @@ def get_duration_to_occurences_array(data_path, period=None, selection=None):
 
 
 def main():
+    from crcm5.analyse_hdf import do_analysis_using_pytables as analysis
+
     import application_properties
     application_properties.set_current_directory()
 

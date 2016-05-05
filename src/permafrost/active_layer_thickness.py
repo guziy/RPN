@@ -585,25 +585,30 @@ def get_alt_for_year(args):
     return data_manager.get_active_layer_thickness(year, mean_temps_to_use=mean_temps_to_use)
 
 
-def save_alts_to_netcdf_file(path="alt.nc"):
-    data_path = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1"
-    year_range = range(1950, 2101)
+def save_alts_to_netcdf_file(path="alt.nc",
+                             data_path = "/home/huziy/skynet1_rech3/cordex/CORDEX_DIAG/NorthAmerica_0.44deg_MPI_B1",
+                             year_range=None, coord_file=None):
+
+    year_range = range(1950, 2101) if year_range is None else year_range
     ds = Dataset(path, mode="w", format="NETCDF3_CLASSIC")
-    coord_file = os.path.join(data_path, "pmNorthAmerica_0.44deg_MPIHisto_B1_200009_moyenne")
+
+    if coord_file is None:
+        coord_file = os.path.join(data_path, "pmNorthAmerica_0.44deg_MPIHisto_B1_200009_moyenne")
+
     b, lons2d, lats2d = draw_regions.get_basemap_and_coords(file_path=coord_file)
     ds.createDimension('year', len(year_range))
     ds.createDimension('lon', lons2d.shape[0])
     ds.createDimension('lat', lons2d.shape[1])
 
-    lonVariable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
-    latVariable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
-    yearVariable = ds.createVariable("year", "i4", ("year",))
+    lon_variable = ds.createVariable('longitude', 'f4', ('lon', 'lat'))
+    lat_variable = ds.createVariable('latitude', 'f4', ('lon', 'lat'))
+    year_variable = ds.createVariable("year", "i4", ("year",))
 
-    altVariable = ds.createVariable("alt", "f4", ('year', 'lon', 'lat'))
+    alt_variable = ds.createVariable("alt", "f4", ('year', 'lon', 'lat'))
 
-    lonVariable[:, :] = lons2d[:, :]
-    latVariable[:, :] = lats2d[:, :]
-    yearVariable[:] = year_range
+    lon_variable[:, :] = lons2d[:, :]
+    lat_variable[:, :] = lats2d[:, :]
+    year_variable[:] = year_range
 
     dm = CRCMDataManager(data_folder=data_path)
     dm_list = len(year_range) * [dm]
@@ -611,10 +616,8 @@ def save_alts_to_netcdf_file(path="alt.nc"):
     pool = Pool(processes=6)
     alts = pool.map(get_alt_for_year, list(zip(year_range, dm_list, mean_types)))
     alts = np.array(alts)
-    altVariable[:, :, :] = alts[:, :, :]
+    alt_variable[:, :, :] = alts[:, :, :]
     ds.close()
-
-    pass
 
 
 def plot_means_and_stds_for_period(year_range=list(range(1981, 2011)),
