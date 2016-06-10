@@ -39,8 +39,8 @@ def get_ts_with_real_dates_from_file(path="", start_year=-np.Inf, end_year=np.In
 
     day = timedelta(days=1)
     for y in range(start_year, end_year + 1):
-        offset = 0 if calendar.isleap(y) else 1
-        dates = [datetime(y, 1, 1) + day * (jd - offset) for jd in jday]
+        offset = 0 if calendar.isleap(y - 1) else 1
+        dates = [datetime(y - 1, 1, 1) + day * (jd - offset) for jd in jday]
         s = pd.Series(index=dates, data=df[str(y)].values)
         ser_list.append(s)
 
@@ -60,7 +60,6 @@ def main():
 
     for c in df.columns:
         print(c)
-
 
 
 if __name__ == '__main__':

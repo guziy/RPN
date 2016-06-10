@@ -7,7 +7,7 @@
       <excludeFolder url="file://$MODULE_DIR$/nbproject" />
       <excludeFolder url="file://$MODULE_DIR$/src.bak" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.4.3 virtualenv at /RESCUE/skynet3_rech1/huziy/python_virtualenvs/py3.4" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.4.4 virtualenv at ~/virtualenvs/py3.4" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">

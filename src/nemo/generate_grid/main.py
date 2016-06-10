@@ -46,6 +46,8 @@ import numpy as np
 from geopy import distance as gpy_dist
 from scipy.spatial import distance as sp_dist
 
+import matplotlib.pyplot as plt
+
 
 def generate_grid_coordinates(dom_props=None):
     lons_rot = np.asarray([dom_props.lonref + (i - dom_props.iref) * dom_props.dx for i in range(1, dom_props.nx + 1)])
@@ -67,7 +69,12 @@ def generate_grid_coordinates(dom_props=None):
                 llcrnrlon=llcrnrlon, llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon, urcrnrlat=urcrnrlat)
 
     print(lons_rot[0, 0], lats_rot[0, 0], lons_rot[-1, -1], lats_rot[-1, -1])
+
+
+
     lons_real, lats_real = b(lons_rot, lats_rot, inverse=True)
+
+
 
     print("Check consistency of the transformations (below): ")
     # from RotatedLatlon

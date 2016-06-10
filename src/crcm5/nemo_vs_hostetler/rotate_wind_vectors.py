@@ -21,13 +21,8 @@ from netCDF4 import Dataset, datetime, date2num
 
 
 def rotate_vecs_from_geo_to_rotpole(uu_geo, vv_geo, lons, lats, bmp=None):
-
-
     urot, vrot = bmp.rotate_vector(uu_geo, vv_geo, lons=lons, lats=lats)
     return urot, vrot
-
-
-
 
 
 
@@ -134,8 +129,7 @@ def main():
 
     bmp, lons, lats = nemo_hl_util.get_basemap_obj_and_coords_from_rpn_file(path=coord_file)
     xx, yy = bmp(lons, lats)
-
-
+    lons[lons > 180] -= 360
 
 
     # loop through all files rotate vaectors and save to netcdf

@@ -41,3 +41,27 @@ def get_monthyeardate_to_paths_map(file_prefix="pm", start_year=-np.Inf, end_yea
         monthyear_to_pathlist[datetime(y, m, 1)] = current_list
 
     return monthyear_to_pathlist
+
+
+
+class IndexRectangle(object):
+
+    def __init__(self, ill=0, jll=0, ni=-1, nj=-1):
+        """
+        Represents an index selection inside a domain
+        :param ill:
+        :param jll:
+        :param ni:
+        :param nj:
+        """
+        self.ill = ill
+        self.jll = jll
+        self.ni = ni
+        self.nj = nj
+
+    def get_ur_corner(self):
+        return self.ill + self.ni - 1, self.jll + self.nj - 1
+
+
+    def get_2d_slice(self):
+        return np.s_[self.ill: self.ill + self.ni, self.jll: self.jll + self.nj]

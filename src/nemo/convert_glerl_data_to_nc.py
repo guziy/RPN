@@ -2,7 +2,7 @@ import cartopy
 from cartopy import crs
 from netCDF4 import Dataset
 from mpl_toolkits.basemap import Basemap
-from nemo.glerl_icecov_data2d_interface import GLERLIceCoverManager
+from nemo.glerl_icecov_data2d_interface import GLERLIceCoverManager, get_date_from_nic_cis_filepath
 import numpy as np
 from datetime import datetime
 
@@ -41,6 +41,8 @@ class GlerlGrid(object):
 
 def main():
     obs_data_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecover_all_files"
+    obs_data_path_1973_2002 = "/HOME/huziy/skynet3_rech1/nemo_obs_for_validation/ice_cover_glk/daily_grids_1973_2002/data"
+
 
     from pathlib import Path
 
@@ -52,9 +54,10 @@ def main():
 
     gman = GLERLIceCoverManager(data_folder=obs_data_path)
 
-    out_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecov.nc"
+    out_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecov1.nc"
 
-    start_date = datetime.strptime(data_files[0].name[1:-3], "%Y%m%d")
+    # start_date = datetime.strptime(data_files[0].name[1:-3], "%Y%m%d")
+    start_date = datetime(1973, 1, 1)
     with Dataset(out_path, mode="w") as ds:
         ds.createDimension("time")
         ds.createDimension("lon", gman.ncols_target)
@@ -74,9 +77,45 @@ def main():
         lat_var[:] = gman.lats2d_target
 
 
-        import matplotlib.pyplot as plt
+        i1 = 0
+        # write the data for 1973-2002 period
+        for i, fpath in enumerate(sorted(Path(obs_data_path_1973_2002).iterdir(), key=lambda zp: zp.name[:-5])):
 
-        for i, fpath in enumerate(data_files):
+            if not fpath.name.lower()[-3:] in ["cis", "nic"]:
+                continue
+
+            the_date = get_date_from_nic_cis_filepath(fpath)
+
+            data = gman.get_data_from_file_interpolate_if_needed(fpath)
+
+            dvar[i, :, :] = data
+
+            dt = the_date - start_date
+
+            tvar[i] = dt.total_seconds() / (3600.0 * 24.0)
+
+
+            # debug for testing
+            # if fpath.name[-5] != "0":
+            #     import matplotlib.pyplot as plt
+            #
+            #     plt.figure()
+            #     prj = crs.PlateCarree()
+            #     ax = plt.axes(projection=prj)
+            #     ax.pcolormesh(gman.lons2d_target, gman.lats2d_target, data, transform=prj)
+            #     ax.add_feature(cartopy.feature.LAKES, facecolor="none", edgecolor="k", linewidth=2)
+            #     ax.coastlines()
+            #     plt.show()
+            #
+            #     if True:
+            #         raise Exception()
+
+            i1 += 1
+
+
+        print("processed data for 1973-2002 period")
+
+        for i, fpath in enumerate(data_files, start=i1):
 
             current_date = datetime.strptime(fpath.name[1:-3], "%Y%m%d")
 

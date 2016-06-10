@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
+from pathlib import Path
 from rpn import level_kinds
 from rpn.rpn_multi import MultiRPN
 
@@ -64,16 +65,24 @@ def main():
     HL_LABEL = "CRCM5_HL"
     NEMO_LABEL = "CRCM5_NEMO"
 
+    # sim_label_to_path = OrderedDict(
+    #     [(HL_LABEL, "/RESCUE/skynet3_rech1/huziy/CNRCWP/C5/2016/2-year-runs/coupled-GL+stfl_oneway/Samples"),
+    #      (NEMO_LABEL, "/HOME/huziy/skynet3_rech1/CNRCWP/C5/2016/2-year-runs/coupled-GL+stfl/Samples")]
+    # )
+
+
     sim_label_to_path = OrderedDict(
-        [(HL_LABEL, "/RESCUE/skynet3_rech1/huziy/CNRCWP/C5/2016/2-year-runs/coupled-GL+stfl_oneway/Samples"),
-         (NEMO_LABEL, "/HOME/huziy/skynet3_rech1/CNRCWP/C5/2016/2-year-runs/coupled-GL+stfl/Samples")]
+        [("Control", "/RESCUE/skynet3_rech1/huziy/CNRCWP/C5/2016/test_ouptuts/control/Samples"),
+         ("Control+perftweaks", "/RESCUE/skynet3_rech1/huziy/CNRCWP/C5/2016/test_ouptuts/coupled-GL-perftest/Samples")]
     )
+
+
 
     #var_name_list = ["TT", "PR", "LC", "HR", "HU", "AV", "I5", "AL", "TJ"]
     var_name_list = ["TT", "PR", "LC", "HU", "I5"]
 
-    season_to_months = commons.season_to_months
-
+    # season_to_months = commons.season_to_months
+    season_to_months = OrderedDict([("December", [12, ]),])
 
     vname_to_level = {
         "TT": 1, "PR": -1, "SN": -1, "LC": -1, "HR": 1, "HU": 1, "AV": -1, "I5": -1, "AL": -1, "TJ": -1
@@ -137,19 +146,22 @@ def main():
     # get a coord file ...
     coord_file = ""
     found_coord_file = False
-    for mdir in os.listdir(sim_label_to_path[HL_LABEL]):
 
-        mdir_path = os.path.join(sim_label_to_path[HL_LABEL], mdir)
-        if not os.path.isdir(mdir_path):
+    samples_with_coords_path = Path(next(sim_label_to_path.items())[1])
+
+    for mdir in samples_with_coords_path.iterdir():
+
+
+        if not mdir.is_dir():
             continue
 
 
-        for fn in os.listdir(mdir_path):
+        for fn in mdir.iterdir():
             print(fn)
-            if fn[:2] not in ["pm", "dm", "pp", "dp"]:
+            if fn.name[:2] not in ["pm", "dm", "pp", "dp"]:
                 continue
 
-            coord_file = os.path.join(mdir_path, fn)
+            coord_file = str(fn)
             found_coord_file = True
 
         if found_coord_file:

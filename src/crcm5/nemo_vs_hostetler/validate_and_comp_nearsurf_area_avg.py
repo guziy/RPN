@@ -147,7 +147,7 @@ def main():
                                                               varname=vname, mask=avg_mask_ext)
 
 
-    plot_utils.apply_plot_params(font_size=10, width_cm=20, height_cm=20)
+    plot_utils.apply_plot_params(font_size=12, width_cm=20, height_cm=20)
     fig = plt.figure()
     gs = GridSpec(len(vname_to_ts_hl), 1)
 
@@ -182,7 +182,7 @@ def main():
     fig.autofmt_xdate()
 
     fig.tight_layout()
-    fig.savefig(os.path.join(img_folder, "{}-{}_validate_{}_{}_ts_with_erai.png".format(start_year, end_year, HL_LABEL, NEMO_LABEL)))
+    fig.savefig(os.path.join(img_folder, "{}-{}_validate_{}_{}_ts_with_erai.png".format(start_year, end_year, HL_LABEL, NEMO_LABEL)), transparent=True, dpi=400)
 
 
 

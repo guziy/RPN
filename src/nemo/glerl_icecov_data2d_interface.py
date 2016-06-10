@@ -1,5 +1,9 @@
-from datetime import datetime
+import calendar
+from datetime import datetime, timedelta
+
+import re
 from mpl_toolkits.basemap import Basemap
+from pathlib import Path
 from scipy.spatial.ckdtree import cKDTree
 from util.geo import lat_lon
 
@@ -25,6 +29,34 @@ def update_grid_info(func):
         return func(*args, **kwargs)
 
     return update
+
+
+
+
+def get_date_from_nic_cis_filepath(path):
+
+    p = Path(path)
+
+    print(p.name)
+
+    year = int(p.name[:2])
+
+    if year < 10:
+        year += 100
+
+    year += 1900
+
+    day_of_year = int(p.name[2:5])
+
+    if calendar.isleap(year + 1) and day_of_year > 59:
+        day_of_year += 1
+
+
+    return datetime(year, 12, 1) + (day_of_year - 101) * timedelta(days=1)
+
+
+
+
 
 
 class GLERLIceCoverManager(object):
@@ -246,11 +278,9 @@ class GLERLIceCoverManager(object):
         :param line:
         :return:
         """
-        sarr = np.fromiter((c for c in line), dtype=np.dtype("S1"))
-        sarr.shape = (len(line) // 3, 3)
-        return [float(b"".join(s)) for s in sarr]
+        return [float(tok) for tok in re.findall(".{3}", line)]
 
-    def get_data_from_path(self, path):
+    def get_data_from_path(self, path, skiplines=6):
         data = []
         nrows = None
         nodata_value = -1
@@ -259,7 +289,7 @@ class GLERLIceCoverManager(object):
             # Skip the first 6 lines
             last_position = -1
             line = ""
-            for i in range(6):
+            for i in range(skiplines):
                 last_position = f.tell()
                 line = f.readline()
                 if "nrows" in line.lower():
@@ -303,11 +333,35 @@ class GLERLIceCoverManager(object):
         return self.get_data_from_path(path)
 
 
+    def _parse_nic_cis_data_file(self, path):
+
+        # 0 - means no data
+        if path[-5] == "0":
+            return np.ma.masked_all((516, 510))
+
+        data = []
+        for line in open(path):
+            # print(line)
+            data.append([int(tok) for tok in re.findall(".{2}", line.strip())])
+        data = np.asarray(data)
+        data[data == 99] = 100
+        data = np.ma.masked_where(data < 0, data)
+
+        data = np.flipud(data.astype("f4") / 100.0).transpose()
+
+        return data
+
+
+
     def get_data_from_file_interpolate_if_needed(self, the_path):
 
         the_path = str(the_path)
 
-        data = self.get_data_from_path(the_path)
+        if the_path.lower()[-3:] in ["cis", "nic"]:
+            data = self._parse_nic_cis_data_file(the_path)
+        else:
+            data = self.get_data_from_path(the_path)
+
         if data.shape != (self.ncols_target, self.ncols_target):
             # The interpolation is needed
             domain_descr = data.shape

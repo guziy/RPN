@@ -9,6 +9,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
 from pathlib import Path
 from rpn import level_kinds
+from rpn.rpn import RPN
 
 from application_properties import main_decorator
 from crcm5.nemo_vs_hostetler import nemo_hl_util
@@ -80,7 +81,7 @@ def get_map_ij_to_nonlocal_mask(region_of_lake_effect_snow_mask, lake_mask, npoi
     return result
 
 
-def get_wind_blows_from_lake_mask(lake_mask, lake_effect_region, u_field, v_field, dx=0.1, dy=0.1, lake_ice_frac=None, ncell_steps_limit=50):
+def get_wind_blows_from_lake_mask(lake_mask, lake_effect_region, u_field, v_field, dx=0.1, dy=0.1, lake_ice_frac=None, lats_rot=None):
     """
 
     """
@@ -90,6 +91,12 @@ def get_wind_blows_from_lake_mask(lake_mask, lake_effect_region, u_field, v_fiel
 
 
     dtx = np.asarray(dx / np.abs(u_field))
+
+    if lats_rot is not None:
+        dtx *= np.cos(np.radians(lats_rot))
+
+
+
     dty = np.asarray(dy / np.abs(v_field))
 
     wind_blows_from_lake = np.zeros_like(lake_mask, dtype=np.bool)
@@ -107,7 +114,7 @@ def get_wind_blows_from_lake_mask(lake_mask, lake_effect_region, u_field, v_fiel
         if lake_ice_frac[i, j] > 0.7:
             continue
 
-        while nsteps < ncell_steps_limit:
+        while True:
 
 
             if dtx[i1, j1] < dty[i1, j1] / 3.0:
@@ -128,13 +135,15 @@ def get_wind_blows_from_lake_mask(lake_mask, lake_effect_region, u_field, v_fiel
             if (i1 < 0) or (i1 >= nx) or (j1 < 0) or (j1 >= ny):
                 break
             else:
-                if not lake_mask[i1, j1]:
-                    if not lake_effect_region[i1, j1]:
+                if not (lake_effect_region[i1, j1] or lake_mask[i1, j1]):
+                    break
+                else:
+                    if wind_blows_from_lake[i1, j1]:
                         break
                     else:
                         wind_blows_from_lake[i1, j1] = True
 
-    return wind_blows_from_lake
+    return wind_blows_from_lake & lake_effect_region
 
 
 
@@ -193,6 +202,12 @@ def main():
 
     bmp, lons, lats = nemo_hl_util.get_basemap_obj_and_coords_from_rpn_file(path=coord_file)
     xx, yy = bmp(lons, lats)
+
+
+    r = RPN(coord_file)
+    lats_rot = r.get_first_record_for_name("^^")
+    lons_rot = r.get_first_record_for_name(">>")
+
 
 
     lake_mask = np.greater(commons.get_nemo_lake_mask_from_rpn(coord_file, vname="NEM1"), 0)
@@ -310,7 +325,9 @@ def main():
 
                 # add a condition on the wind fetch from lakes and ice fraction.
                 wind_blows_from_lake = get_wind_blows_from_lake_mask(lake_mask, lake_effect_regions, u_var[ti, :, :], v_var[ti, :, :],
-                                                                    dx=dx, dy=dy, ncell_steps_limit=15)
+                                                                    dx=dx, dy=dy, lake_ice_frac=lkice_manager.get_lake_fraction_for_date(the_date=t), lats_rot=lats_rot)
+
+
 
                 time_wind_blows_from_lake[wind_blows_from_lake] += dt_seconds / 3600.0
                 where_lake_effect_snow = where_lake_effect_snow & (time_wind_blows_from_lake >= wind_blows_from_lake_time_limit_hours)
@@ -349,7 +366,7 @@ def main():
 
         # normalization
 
-        lake_effect_snowfall_mean_duration *= dt_seconds / (24 * 60 * 60)  # convert to days
+        lake_effect_snowfall_mean_duration *= dt_seconds / (24 * 60 * 60.0)  # convert to days
 
 
         lake_effect_mean_snowrate_m_per_s = np.ma.masked_where(~lake_effect_regions, lake_effect_mean_snowrate_m_per_s)
@@ -395,7 +412,7 @@ def main():
     for col, sim_label in enumerate(sim_label_to_path):
         # plot the duration of lake-effect snow events
         ax = fig.add_subplot(gs[0, col])
-        cs = bmp.pcolormesh(xx, yy, sim_label_to_duration_mean[sim_label], ax=ax, vmin=0, vmax=vmax_duration)
+        cs = bmp.pcolormesh(xx, yy, sim_label_to_duration_mean[sim_label], ax=ax, vmin=0, vmax=vmax_duration, cmap="rainbow_r")
         bmp.drawcoastlines(linewidth=0.3, ax=ax)
         plt.colorbar(cs, ax=ax)
         ax.set_title("Duration (days)")
@@ -404,7 +421,7 @@ def main():
         # plot the mean intensity of the lake-effect snow events
         ax = fig.add_subplot(gs[1, col])
         cs = bmp.pcolormesh(xx, yy, sim_label_to_lake_effect_sprecip_mean[sim_label],
-                          ax=ax, vmax=vmax_snowrate, vmin=lower_snow_fall_limit)
+                          ax=ax, vmax=vmax_snowrate, vmin=lower_snow_fall_limit, cmap="rainbow_r")
         bmp.drawcoastlines(linewidth=0.3, ax=ax)
 
         plt.colorbar(cs, ax=ax)
@@ -415,9 +432,9 @@ def main():
         # plot the mean duration of the lake effect snowfall events per year
         ax = fig.add_subplot(gs[2, col])
         to_plot = sim_label_to_year_to_lake_effect_snow_fall_duration[sim_label][1980]
-        clevs = np.arange(0, 3, 0.2)
+        clevs = [0, 0.1, ] + list(np.arange(0.4, 3.2, 0.4))
         bn = BoundaryNorm(clevs, len(clevs))
-        cmap = cm.get_cmap("jet", len(clevs))
+        cmap = cm.get_cmap("spectral_r", len(clevs))
 
         cs = bmp.pcolormesh(xx, yy, to_plot, ax=ax, norm=bn, cmap=cmap)
         bmp.drawcoastlines(linewidth=0.3, ax=ax)
