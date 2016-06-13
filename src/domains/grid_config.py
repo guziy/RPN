@@ -16,6 +16,13 @@ class GridConfig(object):
         self.xref, self.yref = kwargs.get("xref", -1), kwargs.get("yref", -1)
         self.ni, self.nj = kwargs.get("ni", -1), kwargs.get("nj", -1)
 
+        # interpolated driving data (width of the outer band in number of gridpoints)
+        self.halo = 10
+
+        # size of the blending zone in grid points
+        self.blendig = 10
+
+
         self.rll = None
         if "rll" not in kwargs:
             self.lon1, self.lat1 = kwargs.get("lon1"), kwargs.get("lat1")
@@ -70,8 +77,14 @@ class GridConfig(object):
 
             for i in [-1, 0]:
                 for j in [-1, 0]:
-                    lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonr[i, j], latr[i, j])
+                    shiftx = self.dx / 2.0
+                    shifty = self.dy / 2.0
 
+                    shiftx = -shiftx if i == 0 else shiftx
+                    shifty = -shifty if i == 0 else shifty
+
+
+                    lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonr[i, j] + shiftx, latr[i, j] + shifty)
 
         return self.get_rot_latlon_proj_obj().get_basemap_object_for_lons_lats(lons2d=lons,
                                                                                lats2d=lats,
@@ -89,17 +102,20 @@ class GridConfig(object):
         lons = np.zeros((2, 2))
         lats = np.zeros((2, 2))
 
-
-
         margin = halo + blending
 
-        for i in [-margin, margin]:
-            for j in [-margin, margin]:
+        for i in [-margin - 1, margin]:
+            mulx = -1 if i >= 0 else 1
+            i1 = 0 if i > 0 else -1
+            shiftx = mulx * self.dx / 2.0
 
-                i1 = 0 if i > 0 else -1
+            for j in [-margin - 1, margin]:
                 j1 = 0 if j > 0 else -1
+                muly = -1 if j >= 0 else 1
+                shifty = muly * self.dy / 2.0
 
-                lons[i1, j1], lats[i1, j1] = self.rll.toGeographicLonLat(lonr[i, j], latr[i, j])
+
+                lons[i1, j1], lats[i1, j1] = self.rll.toGeographicLonLat(lonr[i, j] + shiftx, latr[i, j] + shifty)
 
         return lons, lats
 
@@ -164,6 +180,41 @@ class GridConfig(object):
 
         gc.iref = 2 * (self.iref - margin_pts) + margin_pts
         gc.jref = 2 * (self.jref - margin_pts) + margin_pts
+        return gc
+
+    def decrease_resolution_keep_free_domain_same(self, factor, halo_pts=10, blending_pts=10):
+        gc = GridConfig(rll=self.rll, dx=self.dx * factor, dy=self.dy * factor, xref=self.xref, yref=self.yref)
+        margin_pts = halo_pts + blending_pts
+        gc.ni = (self.ni - 2 * margin_pts) / factor + 2 * margin_pts
+        gc.nj = (self.nj - 2 * margin_pts) / factor + 2 * margin_pts
+
+
+        # Change the reference point if the new iref and jref cannot be the same
+
+        new_iref = self.iref - margin_pts
+        new_jref = self.jref - margin_pts
+
+
+        new_iref = new_iref // factor + (new_iref % factor != 0)
+        x00 = self.xref + self.dx * (margin_pts + 1 - self.iref) - self.dx / 2.0
+        new_xref = x00 + new_iref * self.dx * factor - self.dx * factor / 2.0
+
+        new_jref = new_jref // factor + (new_jref % factor != 0)
+        y00 = self.yref + self.dy * (margin_pts + 1 - self.jref) - self.dy / 2.0
+        new_yref = y00 + new_jref * self.dy * factor - self.dy * factor / 2.0
+
+
+        gc.iref = new_iref + margin_pts
+        gc.jref = new_jref + margin_pts
+
+        gc.xref = new_xref
+        gc.yref = new_yref
+
+
+        gc.ni = int(gc.ni)
+        gc.nj = int(gc.nj)
+
+
         return gc
 
     def move(self, di=0, dj=0):

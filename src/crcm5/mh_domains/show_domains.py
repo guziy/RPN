@@ -6,6 +6,8 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 from pathlib import Path
 
+from mpl_toolkits.axisartist import Axes
+
 from application_properties import main_decorator
 from crcm5.mh_domains import default_domains
 from domains.grid_config import GridConfig
@@ -17,16 +19,23 @@ img_folder = "mh"
 GRDC_basins_of_interest = [19, 16, 88, 107]
 
 
+def show_multiple_domains(label_to_config):
+    pass
+
+
+
 def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GRDC_basins=False):
     assert isinstance(grid_config, GridConfig)
-    fig = plt.figure()
 
+    fig = plt.figure()
     ax = plt.gca()
 
     halo = 10 if halo is None else halo
     blending = 10 if blending is None else blending
 
     bmp = grid_config.get_basemap(resolution="i")
+
+
     bmp.readshapefile(default_domains.MH_BASINS_PATH[:-4], "basin", color="m", linewidth=2)
 
     if show_GRDC_basins:
@@ -42,11 +51,10 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
         ax.add_collection(PatchCollection(patches, facecolor='none', edgecolor='b', linewidths=2., zorder=2))
 
 
-
     lons, lats = grid_config.get_free_zone_corners(halo=halo, blending=blending)
 
     xx, yy = bmp(lons, lats)
-    ax = plt.gca()
+
 
     coords = [(xx[0, 0], yy[0, 0]), (xx[0, -1], yy[0, -1]), (xx[-1, -1], yy[-1, -1]), (xx[-1, 0], yy[-1, 0])]
     ax.add_patch(Polygon(coords, facecolor="none"))
@@ -55,11 +63,9 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
     if draw_rivers:
         bmp.drawrivers()
 
-    bmp.drawcoastlines(linewidth=0.3)
-    bmp.drawstates(linewidth=0.3)
-    bmp.drawcountries(linewidth=0.3)
-
-    ax.set_title(r"${}".format(grid_config.ni) + r"\times" + "{}$ grid cells, resolution {} $^\circ$".format(grid_config.nj, grid_config.dx))
+    bmp.drawcoastlines(linewidth=0.3, ax=ax)
+    bmp.drawstates(linewidth=0.3, ax=ax)
+    bmp.drawcountries(linewidth=0.3, ax=ax)
 
 
     p = Path(img_folder)
@@ -67,7 +73,14 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
         p.mkdir()
 
 
-    fig.savefig(str(p.joinpath("mh_dx{}.png".format(grid_config.dx))), bbox_inches="tight", transparent=True)
+
+    ax.set_title(
+        r"${}".format(grid_config.ni) + r"\times" + "{}$ grid cells, resolution {} $^\circ$".format(grid_config.nj,
+                                                                                                    grid_config.dx))
+
+    plt.savefig(str(p.joinpath("mh_dx{}.png".format(grid_config.dx))), bbox_inches="tight", transparent=True)
+
+    return fig, ax, bmp
 
 
 @main_decorator
@@ -79,10 +92,13 @@ def main():
     mh_gc022 = mh_gc044.double_resolution_keep_free_domain_same()
     mh_gc011 = mh_gc022.double_resolution_keep_free_domain_same()
 
-    test_bc = default_domains.gc_cordex_011.subgrid(0, 260, di=420, dj=380)
+    test_bc_011 = default_domains.gc_cordex_011.subgrid(12, 244, di=404, dj=380)
+
+    test_bc_044 = test_bc_011.decrease_resolution_keep_free_domain_same(4)
 
 
 
+    print(test_bc_044)
 
     plot_utils.apply_plot_params()
     # show_domain(mh_gc044)
@@ -90,10 +106,14 @@ def main():
     # show_domain(mh_gc011)
 
 
-    show_domain(test_bc, draw_rivers=False, show_GRDC_basins=True)
+    print(test_bc_011)
+
+    # fig, ax, bmp = show_domain(default_domains.gc_cordex_011, draw_rivers=False)
+    show_domain(test_bc_011, draw_rivers=False, show_GRDC_basins=True)
+    show_domain(test_bc_044, draw_rivers=False, show_GRDC_basins=True)
+
 
     plt.show()
-    pass
 
 
 if __name__ == '__main__':
