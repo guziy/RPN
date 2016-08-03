@@ -705,7 +705,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     #    if os.path.isfile(cache_file):
     #        return pickle.load(open(cache_file))
 
-    province = province.upper()
+    province = province.upper() if province is not None else None
 
     # shortcuts for table names
     stations_table = "STATIONS"
@@ -768,10 +768,15 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
 
     # select stations in quebec region which are not regulated
-    query = "select * from {0} join {1} on {0}.STATION_NUMBER = {1}.STATION_NUMBER" \
-            " where ({0}.{2}=? or {0}.{2}=?)".format(stations_table,
-                                                     station_regulation_table,
-                                                     province_field)
+    if province is not None:
+        query = "select * from {0} join {1} on {0}.STATION_NUMBER = {1}.STATION_NUMBER" \
+                " where ({0}.{2}=? or {0}.{2}=?)".format(stations_table,
+                                                         station_regulation_table,
+                                                         province_field)
+    else:
+        query = "select * from {0} join {1} on {0}.STATION_NUMBER = {1}.STATION_NUMBER" \
+                " ".format(stations_table,
+                    station_regulation_table)
 
     # Filter for natural and regulated if required
     if natural is not None:
@@ -780,14 +785,20 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         query += ";"
 
     print("query = {0}".format(query))
-    cur.execute(query, (province, province.lower()))
+    if province is not None:
+        cur.execute(query, (province, province.lower()))
+    else:
+        cur.execute(query)
 
     data = cur.fetchall()
 
     print(list(data[0].keys()))
 
     print("Fetched the following station: ")
-    print("There are {0} non-regulated stations in {1}.".format(len(data), province))
+
+    if natural:
+        print("There are {0} non-regulated stations in {1}.".format(len(data), province))
+
 
     # the_row = cur.fetchone()
 
@@ -799,11 +810,18 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         s.latitude = the_row["LATITUDE"]
         s.id = the_row["STATION_NUMBER"]
         s.name = the_row["STATION_NAME"]
-        s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
+        s.drainage_km2 = the_row["DRAINAGE_AREA_EFFECT"]
+
+        if s.drainage_km2 is None:
+            s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
+
+
 
         if selected_ids is not None:
             if s.id not in selected_ids:
                 continue
+            else:
+                print("Found station {}, checking if it has enough data ...".format(s))
 
         # Skip the stations without related infoormation
         if s.drainage_km2 is None:
@@ -858,7 +876,7 @@ if __name__ == "__main__":
     # print np.max(s.values)
     # print np.max(s.dates)
     t0 = time.clock()
-    load_from_hydat_db(province='ON', start_date=datetime(1979, 1, 1), end_date=datetime(1988, 12, 31))
+    load_from_hydat_db(province='MB', start_date=datetime(1979, 1, 1), end_date=datetime(2007, 12, 31))
     print("Execution time is: {0} seconds".format(time.clock() - t0))
     # slist = read_grdc_stations(st_id_list=["2903430", "2909150", "2912600", "4208025"],
     #    descriptor_file_path="/skynet3_rech1/huziy/GRDC_all_stations/GRDC663Sites.txt")

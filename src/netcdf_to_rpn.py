@@ -1,5 +1,7 @@
 import os
 from mpl_toolkits.basemap import Basemap
+
+from crcm5.mh_domains import default_domains
 from domains.grid_config import GridConfig
 import netCDF4 as nc
 from rpn.rpn import RPN
@@ -16,7 +18,7 @@ __date__ = "$Aug 20, 2011 1:45:02 PM$"
 
 
 
-def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
+def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None, do_plots=False):
     """
     :param out_path:
     :type nc_path: string
@@ -29,7 +31,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
                        'channel_length': 'leng', 'accumulation_area': 'facc',
                        "lake_fraction": "lkfr", "lake_outlet": "lkou",
                        "drainage_density": "dd"
-    }
+                       }
     if out_path is None:
         rObj = RPN(os.path.basename(nc_path)[:-2] + "rpn", mode='w')
     else:
@@ -38,10 +40,7 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     #
     ig = []
 
-
-
-
-    #params
+    # params
     dx = gc.dx
     dy = gc.dy
     iref = gc.iref  # no need to do -1, doing it later in the formulas
@@ -50,11 +49,15 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
     yref = gc.yref  # rotated latitude
 
     # projection parameters
-    lon1 = gc.lon1
-    lat1 = gc.lat1
+    if hasattr(gc, "rll"):
+        lon1 = gc.rll.lon1
+        lat1 = gc.rll.lat1
 
-    lon2 = gc.lon2
-    lat2 = gc.lat2
+        lon2 = gc.rll.lon2
+        lat2 = gc.rll.lat2
+    else:
+        raise Exception(
+            "You are trying to use an outdated version of the GridConfig class, Please switch to the one where projection info is bundled into the rll field")
 
     ni = gc.ni
     nj = gc.nj
@@ -89,79 +92,81 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None):
             flowdir_data = data
     rObj.close()
 
-    ind = (flowdir_data > 0) & (slope_data < 0)
-    print(flowdir_data[ind], slope_data[ind])
-    assert np.all(~ind)
 
-    channel_length = ds.variables['channel_length'][:]
-    acc_area = ds.variables['accumulation_area'][:]
-    slope = ds.variables['slope'][:]
-    fldr = ds.variables['flow_direction_value'][:]
+    if do_plots:
+        ind = (flowdir_data > 0) & (slope_data < 0)
+        print(flowdir_data[ind], slope_data[ind])
+        assert np.all(~ind)
 
-    lons = ds.variables["lon"][:]
-    lats = ds.variables["lat"][:]
+        channel_length = ds.variables['channel_length'][:]
+        acc_area = ds.variables['accumulation_area'][:]
+        slope = ds.variables['slope'][:]
+        fldr = ds.variables['flow_direction_value'][:]
 
-    basemap = Basemap()
-    [x, y] = basemap(lons, lats)
+        lons = ds.variables["lon"][:]
+        lats = ds.variables["lat"][:]
 
-    plt.figure()
-    acc_area = np.ma.masked_where((acc_area < 0), acc_area)
-    #basemap.drawcoastlines(linewidth = 0.1)
-    #basemap.pcolormesh(x, y, acc_area)
-    plt.pcolormesh(acc_area.transpose())
+        basemap = Basemap()
+        [x, y] = basemap(lons, lats)
 
-    plt.colorbar()
-    plt.title('accumulation area')
-    #plt.xlim(x.min(), x.max())
-    #plt.ylim(y.min(), y.max())
-    plt.savefig("accumulation_area.png")
+        plt.figure()
+        acc_area = np.ma.masked_where((acc_area < 0), acc_area)
+        # basemap.drawcoastlines(linewidth = 0.1)
+        # basemap.pcolormesh(x, y, acc_area)
+        plt.pcolormesh(acc_area.transpose())
 
-    plt.figure()
-    channel_length = np.ma.masked_where(channel_length < 0, channel_length)
-    plt.pcolormesh(channel_length.transpose())
-    print("channel_length limits", channel_length.min(), channel_length.max())
-    plt.colorbar()
-    plt.title('channel length')
-    plt.savefig("channel_length.png")
+        plt.colorbar()
+        plt.title('accumulation area')
+        # plt.xlim(x.min(), x.max())
+        # plt.ylim(y.min(), y.max())
+        plt.savefig("accumulation_area.png")
 
-    plt.figure()
-    slope = np.ma.masked_where(slope < 0, slope)
-    plt.pcolormesh(slope.transpose())
-    plt.colorbar()
-    plt.title('slope')
-    plt.savefig("slope.png")
+        plt.figure()
+        channel_length = np.ma.masked_where(channel_length < 0, channel_length)
+        plt.pcolormesh(channel_length.transpose())
+        print("channel_length limits", channel_length.min(), channel_length.max())
+        plt.colorbar()
+        plt.title('channel length')
+        plt.savefig("channel_length.png")
 
-    plt.figure()
-    a2 = 11.0
-    a3 = 0.43
-    a4 = 1.0
-    indx = np.where((slope >= 0) & (channel_length >= 0 ))
-    x = np.zeros(slope.shape)
-    x = np.ma.masked_where(slope < 0, x)
-    x[indx] = (a2 + a3 * acc_area[indx] ** a4) * channel_length[indx]
-    plt.pcolormesh(x.transpose())
-    plt.colorbar()
+        plt.figure()
+        slope = np.ma.masked_where(slope < 0, slope)
+        plt.pcolormesh(slope.transpose())
+        plt.colorbar()
+        plt.title('slope')
+        plt.savefig("slope.png")
 
-    plt.savefig("bankfull_store.png")
-    print(list(ds.variables.keys()))
+        plt.figure()
+        a2 = 11.0
+        a3 = 0.43
+        a4 = 1.0
+        indx = np.where((slope >= 0) & (channel_length >= 0))
+        x = np.zeros(slope.shape)
+        x = np.ma.masked_where(slope < 0, x)
+        x[indx] = (a2 + a3 * acc_area[indx] ** a4) * channel_length[indx]
+        plt.pcolormesh(x.transpose())
+        plt.colorbar()
 
-    plt.figure()
-    print('fldr where slope is negative')
-    print(np.all(fldr[slope < 0] == -1))
-    fldr = np.ma.masked_where(fldr < 0, fldr)
-    plt.pcolormesh(fldr.transpose())
-    plt.colorbar()
-    plt.title('fldr')
+        plt.savefig("bankfull_store.png")
+        print(list(ds.variables.keys()))
 
-    print(fldr.shape)
-    fldr = fldr[10:-10, 10:-10]
-    channel_length = channel_length[10:-10, 10:-10]
-    slope = slope[10:-10, 10:-10]
-    plt.savefig("fldr.png")
+        plt.figure()
+        print('fldr where slope is negative')
+        print(np.all(fldr[slope < 0] == -1))
+        fldr = np.ma.masked_where(fldr < 0, fldr)
+        plt.pcolormesh(fldr.transpose())
+        plt.colorbar()
+        plt.title('fldr')
 
-    print(len(fldr[fldr == 0]))
+        print(fldr.shape)
+        fldr = fldr[10:-10, 10:-10]
+        channel_length = channel_length[10:-10, 10:-10]
+        slope = slope[10:-10, 10:-10]
+        plt.savefig("fldr.png")
 
-    ds.close()
+        print(len(fldr[fldr == 0]))
+
+        plt.close("all")
     pass
 
 
@@ -169,16 +174,16 @@ import application_properties
 
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    #convert(nc_path="directions_qc_dx0.1deg260x260.nc")
-    #convert(nc_path="/home/huziy/skynet3_exec1/hydrosheds/directions_qc_dx0.1deg_2.nc")
-    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_2.nc")
-    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v3.nc")
-    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v4.nc")
-    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_3.nc")
-    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_4.nc")
+    # convert(nc_path="directions_qc_dx0.1deg260x260.nc")
+    # convert(nc_path="/home/huziy/skynet3_exec1/hydrosheds/directions_qc_dx0.1deg_2.nc")
+    # convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_2.nc")
+    # convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v3.nc")
+    # convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.5deg_86x86.v4.nc")
+    # convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_3.nc")
+    # convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_qc_dx0.1deg_4.nc")
 
-    #gc = GridConfig.get_default_for_resolution(res = 0.1)
-    #convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_with_drainage_density/directions_qc_dx0.1deg_4.nc",
+    # gc = GridConfig.get_default_for_resolution(res = 0.1)
+    # convert(nc_path="/home/huziy/skynet3_rech1/Netbeans Projects/Java/DDM/directions_with_drainage_density/directions_qc_dx0.1deg_4.nc",
     #    gc=gc, out_path="directions_0.1deg_with_dd.rpn")
 
 
@@ -202,23 +207,42 @@ if __name__ == "__main__":
     #     gc=gc, out_path="/RESCUE/skynet3_rech1/huziy/GLK_exps_geophysical_fields/directions_0.1deg_GL_v2.rpn")
 
 
+
+    # Extended Northeastern North America
+    # params_gl_ext = dict(
+    #     dx=0.1, dy=0.1,
+    #     lon1=180, lat1=0.0,
+    #     lon2=-84, lat2=1.0,
+    #     iref=135, jref=120,
+    #     ni=440, nj=260,
+    #     xref=276.0, yref=48.0
+    # )
+    # gc_gl_ext = GridConfig(**params_gl_ext)
+    #
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_440x260_GL+NENA_0.1deg.nc",
+    #         gc=gc_gl_ext, out_path="/HOME/huziy/directions_440x260_GL+NENA_0.1deg.rpn")
+
+
+    # Extended Northeastern North America
     params_gl_ext = dict(
-            dx=0.1, dy=0.1,
-            lon1=180, lat1=0.0,
-            lon2=-84, lat2=1.0,
-            iref=135, jref=120,
-            ni=440, nj=260,
-            xref=276.0, yref=48.0
+        dx=0.1, dy=0.1,
+        lon1=180, lat1=0.0,
+        lon2=-84, lat2=1.0,
+        iref=135, jref=120,
+        ni=452, nj=260,
+        xref=276.0, yref=48.0
     )
     gc_gl_ext = GridConfig(**params_gl_ext)
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_452x260_GL+NENA_0.1deg.nc",
+            gc=gc_gl_ext, out_path="/HOME/huziy/directions_452x260_GL+NENA_0.1deg.rpn")
 
-    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_440x260_GL+NENA_0.1deg.nc",
-            gc=gc_gl_ext, out_path="/HOME/huziy/directions_440x260_GL+NENA_0.1deg.rpn")
+    # CORDEX NA at 0.44 deg resolution
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_na_0.44deg_CORDEX.nc",
+    #         gc=default_domains.gc_cordex_044)
 
+
+
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc", gc=default_domains.bc_mh_044)
 
 
     print("Hello World")
-
-
-
-

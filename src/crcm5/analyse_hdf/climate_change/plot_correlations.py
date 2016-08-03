@@ -20,6 +20,11 @@ from util import stat_helpers, plot_utils
 img_folder = "cc-paper-comments"
 
 
+varname_to_ts_label = {
+    "TT": "2-m air temperature,\n" + r"[${\rm ^\circ C}$]",
+    "PR": "Precipitation,\n [mm/day]"
+}
+
 @main_decorator
 def main():
     start_year = 1980
@@ -172,11 +177,13 @@ def plot_corr_fields_and_std(vname="TT", season_to_months=None, sim_config=None)
 
     for col, season in enumerate(season_to_months):
 
+        # Correlation fields
         row = 0
         ax = fig.add_subplot(gs[row, col])
         ax.set_title(season)
         if col == 0:
-            ax.set_ylabel("Correlation")
+            pass
+            # ax.set_ylabel("Correlation")
         cs_corr = bmp_info.basemap.contourf(xx, yy, season_to_corr[season], levels=clevs_corr, ax=ax, cmap=cmap)
         bmp_info.basemap.drawcoastlines(ax=ax)
 
@@ -185,7 +192,8 @@ def plot_corr_fields_and_std(vname="TT", season_to_months=None, sim_config=None)
         row += 1
         ax = fig.add_subplot(gs[row, col])
         if col == 0:
-            ax.set_ylabel(r"$\left( \sigma_{\rm model} - \sigma_{\rm obs.}\right)/\sigma_{\rm obs.} \cdot 100\%$")
+            pass
+            # ax.set_ylabel(r"$\left( \sigma_{\rm model} - \sigma_{\rm obs.}\right)/\sigma_{\rm obs.} \cdot 100\%$")
 
         cs_std = bmp_info.basemap.contourf(xx, yy, season_to_std_diff[season], levels=clevs_std_diff, ax=ax, cmap=cmap_std, extend="both")
         bmp_info.basemap.drawcoastlines(ax=ax)
@@ -196,7 +204,7 @@ def plot_corr_fields_and_std(vname="TT", season_to_months=None, sim_config=None)
         row += 1
         ax = fig.add_subplot(gs[row, col])
         if col == 0:
-            ax.set_ylabel("Area-average")
+            ax.set_ylabel(varname_to_ts_label[vname])
 
         ax.plot(season_to_years[season], season_to_area_mean_obs[season], "k", label="Obs.")
         ax.plot(season_to_years[season], season_to_area_mean_model[season], "r", label="Mod.")
@@ -227,7 +235,7 @@ def plot_corr_fields_and_std(vname="TT", season_to_months=None, sim_config=None)
     from crcm5.analyse_hdf import common_plot_params
     fig.tight_layout()
     fig.savefig(os.path.join(img_folder, "{}_{}-{}_corr_std.png".format(vname, sim_config.start_year, sim_config.end_year)), bbox_inches="tight", dpi=common_plot_params.FIG_SAVE_DPI)
-
+    plt.close(fig)
 
 
 

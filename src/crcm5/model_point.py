@@ -124,3 +124,7 @@ class ModelPoint:
         return stamp_dates, vals
 
 
+    def __str__(self):
+        return "ModelPoint(ix={}, jy={})".format(self.ix, self.jy)
+
+

@@ -10,7 +10,7 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
     :param lats2d:
     :param shp_path:
     :rtype : np.ndarray
-    The mask is 1 for the points inside of the polygons
+    The mask is >= 1 for the points inside of the polygons
     """
     ds = ogr.Open(shp_path)
     """
@@ -28,6 +28,7 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
 
     pt = ogr.Geometry(ogr.wkbPoint)
 
+    feature_id = 1
     for i in range(ds.GetLayerCount()):
         layer = ds.GetLayer(i)
         """
@@ -47,11 +48,12 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
 
 
             g = feat.GetGeometryRef()
+
             """
             :type : ogr.Geometry
             """
 
-            assert isinstance(g, ogr.Geometry)
+            # assert isinstance(g, ogr.Geometry)
 
 
 
@@ -60,7 +62,10 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
                     pt.SetPoint_2D(0, float(xx[pi, pj]), float(yy[pi, pj]))
 
 
-                    mask[pi, pj] += int(g.Contains(pt))
+                    if g.Contains(pt):
+                        mask[pi, pj] += feature_id
+
+            feature_id += 1
 
     return mask
 

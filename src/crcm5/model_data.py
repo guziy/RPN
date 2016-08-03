@@ -203,27 +203,7 @@ class Crcm5ModelDataManager:
 
 
     def get_daily_means(self, var_name=None):
-        if True:
-            raise NotImplementedError()
-
-        if var_name is None:
-            var_name = self.var_name
-
-        all_dates = []
-        all_fields = []
-        if self.all_files_in_one_folder:
-            for fName in os.listdir(self.samples_folder):
-                if not fName.startswith(self.file_name_prefix):
-                    continue
-                fpath = os.path.join(self.samples_folder, fName)
-                r_obj = RPN(fpath)
-                data = r_obj.get_all_time_records_for_name(varname=var_name)
-
-                r_obj.close()
-
-                # return d
-        else:
-            raise NotImplementedError("Output dates query is not implemented for this input")
+        raise NotImplementedError("Output dates query is not implemented for this input")
 
 
     def _get_relevant_file_paths(self):

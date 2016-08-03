@@ -16,10 +16,11 @@ from util import plot_utils
 img_folder = "mh"
 
 
-GRDC_basins_of_interest = [19, 16, 88, 107]
+
 
 
 def show_multiple_domains(label_to_config):
+    # TODO: implement
     pass
 
 
@@ -45,7 +46,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
         patches = []
 
         for info, shape in zip(bmp.basin_info, bmp.basin):
-            if info["BASIN_ID"] in GRDC_basins_of_interest:
+            if info["BASIN_ID"] in default_domains.GRDC_basins_of_interest:
                 patches.append(Polygon(np.array(shape), True))
 
         ax.add_collection(PatchCollection(patches, facecolor='none', edgecolor='b', linewidths=2., zorder=2))
@@ -78,9 +79,14 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
         r"${}".format(grid_config.ni) + r"\times" + "{}$ grid cells, resolution {} $^\circ$".format(grid_config.nj,
                                                                                                     grid_config.dx))
 
-    plt.savefig(str(p.joinpath("mh_dx{}.png".format(grid_config.dx))), bbox_inches="tight", transparent=True)
+    fig.savefig(str(p.joinpath("mh_dx{}.png".format(grid_config.dx))), bbox_inches="tight", transparent=True)
 
-    return fig, ax, bmp
+
+
+def show_bc_mh_domains():
+
+    pass
+
 
 
 @main_decorator
@@ -90,10 +96,8 @@ def main():
 
     mh_gc044 = default_domains.gc_cordex_044.subgrid(20, 60, di=130, dj=110)
     mh_gc022 = mh_gc044.double_resolution_keep_free_domain_same()
-    mh_gc011 = mh_gc022.double_resolution_keep_free_domain_same()
 
     test_bc_011 = default_domains.gc_cordex_011.subgrid(12, 244, di=404, dj=380)
-
     test_bc_044 = test_bc_011.decrease_resolution_keep_free_domain_same(4)
 
 
@@ -109,9 +113,12 @@ def main():
     print(test_bc_011)
 
     # fig, ax, bmp = show_domain(default_domains.gc_cordex_011, draw_rivers=False)
-    show_domain(test_bc_011, draw_rivers=False, show_GRDC_basins=True)
-    show_domain(test_bc_044, draw_rivers=False, show_GRDC_basins=True)
+    # show_domain(test_bc_011, draw_rivers=False, show_GRDC_basins=True)
+    # show_domain(test_bc_044, draw_rivers=False, show_GRDC_basins=True)
 
+
+    show_domain(default_domains.bc_mh_044)
+    show_domain(default_domains.bc_mh_011)
 
     plt.show()
 

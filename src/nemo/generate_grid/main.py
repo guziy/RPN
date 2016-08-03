@@ -157,7 +157,7 @@ def generate_grid_coordinates(dom_props=None):
 def main():
     out_folder = "nemo_grids"
 
-    config_name = "GLK_440x260_0.1deg"
+    config_name = "GLK_452x260_0.1deg"
     dom_props = known_domains[config_name]
     dom_props.config_name = config_name
 
@@ -208,19 +208,20 @@ def main():
 
     # interpolate bathymetry
     interpolator = Interpolator(coord_file=out_path)
-    interpolator.interpolate_file("/skynet1_rech3/huziy/EXP_0.1deg/DFS4.3_interpolated/nondfs_sasha/bathy_meter.nc", os.path.join(out_folder, config_name + "{}.nc".format("bathy_meter")))
+    interpolator.interpolate_file("/RESCUE/skynet3_rech1/huziy/GLK_bathymetry_from_EC/bathy_meter.nc",
+                                  os.path.join(out_folder, "bathy_meter_{}.nc".format(config_name)))
 
 
     # Create initial conditions file
-    t_file_name = "IC_T.nc"
+    t_file_name = "IC_T_{}.nc".format(config_name)
     t_var_name = "votemper"
 
-    s_file_name = "IC_S.nc"
+    s_file_name = "IC_S_{}.nc".format(config_name)
     s_var_name = "vosaline"
 
     # the_shape = 35, ny, nx
-    the_shape = 35, dom_props.ny, dom_props.nx
-    initial_temperature = 4.0 * np.ones(the_shape)
+    the_shape = 23, dom_props.ny, dom_props.nx
+    initial_temperature = 4.2 * np.ones(the_shape)
     initial_salinity = 0.0 * np.ones(the_shape)
 
     create_file_with_field(folder=out_folder, fname=t_file_name, var_name=t_var_name, data=initial_temperature)
