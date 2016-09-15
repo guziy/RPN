@@ -1,3 +1,5 @@
+from mpl_toolkits.basemap import Basemap
+
 from domains.grid_config import GridConfig, gridconfig_from_grid_nml
 from domains.rotated_lat_lon import RotatedLatLon
 
@@ -6,9 +8,9 @@ default_projection = RotatedLatLon(lon1=-97.0, lat1=47.5, lon2=-7.0, lat2=0.)
 
 # iref and jref are 1-based indices coming from gemclim_settings.nml
 
-gc_cordex_011 = GridConfig(rll=default_projection, dx=0.11, dy=0.11, ni=695, nj=680, iref=21, jref=580, xref=145.955, yref=28.525)
-gc_cordex_022 = GridConfig(rll=default_projection, dx=0.22, dy=0.22, ni=380, nj=360, iref=21, jref=300, xref=146.01, yref=28.47)
-gc_cordex_044 = GridConfig(rll=default_projection, dx=0.44, dy=0.44, ni=212, nj=200, iref=21, jref=160, xref=146.12, yref=28.36)
+gc_cordex_na_011 = GridConfig(rll=default_projection, dx=0.11, dy=0.11, ni=695, nj=680, iref=21, jref=580, xref=145.955, yref=28.525)
+gc_cordex_na_022 = GridConfig(rll=default_projection, dx=0.22, dy=0.22, ni=380, nj=360, iref=21, jref=300, xref=146.01, yref=28.47)
+gc_cordex_na_044 = GridConfig(rll=default_projection, dx=0.44, dy=0.44, ni=212, nj=200, iref=21, jref=160, xref=146.12, yref=28.36)
 
 
 
@@ -18,9 +20,7 @@ gc_cordex_Arctic_044 = GridConfig(
 )
 
 cordex_na_proj = RotatedLatLon(lon1=-97, lat1=47.5, lon2=-7.0, lat2=0.0)
-gc_cordex_NA_044 = GridConfig(
-    rll=cordex_na_proj, dx=0.44, dy=0.44, ni=212, nj=200, iref=21, jref=160, xref=146.12, yref=28.36
-)
+
 
 gc_panarctic_05 = gridconfig_from_grid_nml(
     """
@@ -71,6 +71,20 @@ GRDC_basins_GL = [117]
 
 
 # Create the domains for the bc_mh project
-bc_mh_011 = gc_cordex_011.subgrid(12, 244, di=404, dj=380)
+bc_mh_011 = gc_cordex_na_011.subgrid(12, 244, di=404, dj=380)
 bc_mh_022 = bc_mh_011.decrease_resolution_keep_free_domain_same(2)
 bc_mh_044 = bc_mh_011.decrease_resolution_keep_free_domain_same(4)
+
+
+
+
+def test():
+    gc = gc_cordex_na_011
+
+    bmp = gc.get_basemap_for_free_zone()
+    assert isinstance(bmp, Basemap)
+    print(bmp.proj4string)
+    
+
+if __name__ == '__main__':
+    test()

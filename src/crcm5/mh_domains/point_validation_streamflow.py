@@ -22,16 +22,8 @@ from util import plot_utils
 img_folder = Path("mh")
 
 
-
-
-
-
-
 @main_decorator
 def main():
-
-
-
     model_data_path = Path("/RECH2/huziy/BC-MH/bc_mh_044deg/Diagnostics")
     # model_data_path = Path("/RECH2/huziy/BC-MH/bc_mh_044deg/Samples")
 
@@ -43,39 +35,38 @@ def main():
     faa = r.get_first_record_for_name("FAA")
     lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
-
     gc = default_domains.bc_mh_044
 
     cell_manager = CellManager(fldir, nx=fldir.shape[0], ny=fldir.shape[1],
                                lons2d=lons, lats2d=lats, accumulation_area_km2=faa)
 
-
     selected_station_ids = ["06EA002", ]
 
     stations = cehq_station.load_from_hydat_db(province="SK", selected_ids=selected_station_ids, natural=None)
 
-
     # (06EA002): CHURCHILL RIVER AT SANDY BAY at (-102.31832885742188,55.52333068847656), accum. area is 212000.0 km**2
     # TODO: plot where is this station, compare modelled and observed hydrographs
 
-    for s in stations:
-        print(s)
+    # for s in stations:
+    #     assert isinstance(s, cehq_station.Station)
+    #     s.latitude += 0.9
+    #     s.longitude -= 0.2
+    #     print(s)
 
-    station_to_model_point = cell_manager.get_model_points_for_stations(stations, drainaige_area_reldiff_limit=0.08, nneighbours=16)
+    station_to_model_point = cell_manager.get_model_points_for_stations(stations, drainaige_area_reldiff_limit=0.8,
+                                                                        nneighbours=1)
 
     print(station_to_model_point[stations[0]])
 
     station = stations[0]
     assert isinstance(station, cehq_station.Station)
 
-    obs_not_corrected = pd.Series(index=station.dates, data=station.values).groupby(by=lambda d: d.replace(day=15)).mean()
-    obs_corrected = pd.read_csv("mh/obs_data/Churchill Historic Monthly Apportionable Flow_06EA002.csv", skiprows=2)
+    obs_not_corrected = pd.Series(index=station.dates, data=station.values).groupby(
+        by=lambda d: d.replace(day=15)).mean()
+    obs_corrected = pd.read_csv("mh/obs_data/Churchill Historic Monthly Apportionable Flow_06EA002.csv.bak.original", skiprows=2)
 
     print(obs_corrected.head())
     print(obs_corrected.year.iloc[0], obs_corrected.year.iloc[-1])
-
-
-
 
     date_index = pd.date_range(start=datetime(obs_corrected.year.iloc[0] - 1, 12, 15),
                                end=datetime(obs_corrected.year.iloc[-1], 12, 15),
@@ -86,16 +77,15 @@ def main():
     print(date_index)
     data = np.concatenate([r for r in obs_corrected.values[:, 1:-1]])
 
-
     factor = date_index.map(lambda d: 1000 / (calendar.monthrange(d.year, d.month)[1] * 24 * 3600))
     print(factor[:10])
     obs_corrected = pd.Series(index=date_index, data=data * factor)
 
+    station_to_modelled_data = get_model_data(station_to_model_point, output_path=model_data_path,
+                                              grid_config=gc, basins_of_interest_shp=default_domains.MH_BASINS_PATH,
+                                              cell_manager=cell_manager, vname="STFL")
 
-
-    modelled_data = get_model_data(model_point=station_to_model_point[station], station=station, output_path=model_data_path,
-                                   grid_config=gc, basins_of_interest_shp=default_domains.MH_BASINS_PATH,
-                                   cell_manager=cell_manager, vname="STFL")
+    modelled_data = station_to_modelled_data[station]
 
     fig = plt.figure()
     ax = obs_corrected.plot(label="obs corrected")
@@ -109,16 +99,20 @@ def main():
     fig.savefig(str(img_file))
     plt.close(fig)
 
-
     # climatology
     start_year = 1980
     end_year = 2010
+
+    date_selector = lambda d: (start_year <= d.year <= end_year) and not ((d.month == 2) and (d.day == 29))
+
     fig = plt.figure()
-    ax = obs_corrected.select(lambda d: start_year <= d.year <= end_year).groupby(lambda d: d.replace(year=2001)).mean().plot(label="obs corrected")
+    ax = obs_corrected.select(date_selector).groupby(lambda d: d.replace(year=2001)).mean().plot(label="obs corrected")
 
-    obs_not_corrected.select(lambda d: start_year <= d.year <= end_year).groupby(lambda d: d.replace(year=2001)).mean().plot(label="obs not corrected", ax=ax, color="k")
+    obs_not_corrected.select(date_selector).groupby(lambda d: d.replace(year=2001)).mean().plot(
+        label="obs not corrected", ax=ax, color="k")
 
-    modelled_data.select(lambda d: start_year <= d.year <= end_year).groupby(lambda d: d.replace(year=2001)).mean().plot(label="CRCM5", ax=ax, color="r")
+    modelled_data.select(date_selector).groupby(lambda d: d.replace(year=2001)).mean().plot(label="CRCM5", ax=ax,
+                                                                                            color="r")
 
     ax.xaxis.set_major_locator(MonthLocator(bymonthday=15))
     ax.xaxis.set_major_formatter(DateFormatter("%b"))
@@ -129,10 +123,8 @@ def main():
     fig.savefig(str(img_file))
     plt.close(fig)
 
-
     # Interannual variability
     fig = plt.figure()
-
 
     obs_corrected = obs_corrected.select(lambda d: start_year <= d.year <= end_year)
     modelled_data = modelled_data.select(lambda d: start_year <= d.year <= end_year)
@@ -141,7 +133,6 @@ def main():
     for m in range(1, 13):
         obs = obs_corrected.select(lambda d: d.month == m)
         mod = modelled_data.select(lambda d: d.month == m)
-
 
         print(obs.head())
 
@@ -155,14 +146,10 @@ def main():
     ax.set_xlabel("Month")
     ax.set_title("Inter-annual variability")
 
-
-
-
     img_file = img_folder.joinpath("{}_interannual.png".format(station.id))
-    fig.savefig(str(img_file))
+    fig.tight_layout()
+    fig.savefig(str(img_file), bbox_inches="tight")
     plt.close(fig)
-
-
 
 
 if __name__ == '__main__':

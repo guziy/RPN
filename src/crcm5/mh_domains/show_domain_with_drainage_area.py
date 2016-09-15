@@ -41,7 +41,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
 
     if directions_file is not None:
         with Dataset(directions_file) as ds:
-            lons2d, lats2d, faa = [ds.variables[k][:] for k in ["lon", "lat", "lake_fraction"]]
+            lons2d, lats2d, faa = [ds.variables[k][:] for k in ["lon", "lat", "accumulation_area"]]
 
         # Focus over the selected watersheds
         data_mask = None
@@ -60,7 +60,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
         if data_mask is not None:
             data = np.ma.masked_where(data_mask < 0.5, data)
 
-        im = bmp.pcolormesh(xxx, yyy, data, cmap="bone_r")
+        im = bmp.pcolormesh(xxx, yyy, data, cmap="bone_r", norm=LogNorm())
         bmp.colorbar(im)
 
     # bmp.readshapefile(default_domains.MH_BASINS_PATH[:-4], "basin", color="m", linewidth=basin_border_width)
@@ -104,12 +104,14 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
 
     if not is_subplot:
         fig.savefig(str(p.joinpath("{}_dx{}.png".format(imgfile_prefix, grid_config.dx))), bbox_inches="tight",
-                    transparent=False, dpi=600)
+                    transparent=True, dpi=600)
 
         plt.close(fig)
 
 
 def show_all_domains():
+
+    transparent = True
     from util import plot_utils
     plot_utils.apply_plot_params(width_cm=17, height_cm=6.5, font_size=6)
 
@@ -132,7 +134,7 @@ def show_all_domains():
                 directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc",
                 include_buffer=False, ax=ax)
 
-    fig1.savefig(str(img_folder_path.joinpath("bc_mh_011_and_044.png")), bbox_inches="tight", transparent=False,
+    fig1.savefig(str(img_folder_path.joinpath("bc_mh_011_and_044.png")), bbox_inches="tight", transparent=transparent,
                  dpi=600)
     plt.close(fig1)
 
@@ -145,7 +147,7 @@ def show_all_domains():
                 grdc_basins_of_interest=default_domains.GRDC_basins_of_interest_Panarctic,
                 draw_rivers=False,
                 directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_arctic_0.5deg_Bernardo.nc",
-                imgfile_prefix="PanArctic_0.5deg",
+                imgfile_prefix="PanArctic_0.5deg" + "_transparent" if transparent else "",
                 include_buffer=False, ax=ax)
 
     ax = fig2.add_subplot(gs[0, 1])
@@ -153,10 +155,10 @@ def show_all_domains():
                 grdc_basins_of_interest=default_domains.GRDC_basins_of_interest_NA,
                 draw_rivers=False,
                 directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_na_0.44deg_CORDEX.nc",
-                imgfile_prefix="CORDEX_NA_0.44deg",
+                imgfile_prefix="CORDEX_NA_0.44deg" + "_transparent" if transparent else "",
                 include_buffer=False, ax=ax)
 
-    fig2.savefig(str(img_folder_path.joinpath("NA_and_Arctic_044.png")), bbox_inches="tight", transparent=False,
+    fig2.savefig(str(img_folder_path.joinpath("NA_and_Arctic_044.png")), bbox_inches="tight", transparent=transparent,
                  dpi=600)
     plt.close(fig2)
 
@@ -186,20 +188,20 @@ def main():
     #             imgfile_prefix="bc-mh_0.22deg",
     #             include_buffer=False)
 
-    # show_all_domains()
+    show_all_domains()
 
 
-    show_domain(default_domains.bc_mh_044, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
-                path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
-                directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc")
-
-    show_domain(default_domains.bc_mh_022, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
-                path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
-                directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg.nc")
-
-    show_domain(default_domains.bc_mh_011, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
-                path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
-                directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc")
+    # show_domain(default_domains.bc_mh_044, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
+    #             path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
+    #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc")
+    #
+    # show_domain(default_domains.bc_mh_022, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
+    #             path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
+    #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg.nc")
+    #
+    # show_domain(default_domains.bc_mh_011, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
+    #             path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
+    #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc")
 
 
 if __name__ == '__main__':

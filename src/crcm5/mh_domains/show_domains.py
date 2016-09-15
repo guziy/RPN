@@ -94,10 +94,10 @@ def main():
     # Show selected domains, basins, and/or flow directions or flow accumulations
 
 
-    mh_gc044 = default_domains.gc_cordex_044.subgrid(20, 60, di=130, dj=110)
+    mh_gc044 = default_domains.gc_cordex_na_044.subgrid(20, 60, di=130, dj=110)
     mh_gc022 = mh_gc044.double_resolution_keep_free_domain_same()
 
-    test_bc_011 = default_domains.gc_cordex_011.subgrid(12, 244, di=404, dj=380)
+    test_bc_011 = default_domains.gc_cordex_na_011.subgrid(12, 244, di=404, dj=380)
     test_bc_044 = test_bc_011.decrease_resolution_keep_free_domain_same(4)
 
 
