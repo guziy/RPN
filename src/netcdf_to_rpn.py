@@ -224,17 +224,17 @@ if __name__ == "__main__":
 
 
     # Extended Northeastern North America
-    params_gl_ext = dict(
-        dx=0.1, dy=0.1,
-        lon1=180, lat1=0.0,
-        lon2=-84, lat2=1.0,
-        iref=135, jref=120,
-        ni=452, nj=260,
-        xref=276.0, yref=48.0
-    )
-    gc_gl_ext = GridConfig(**params_gl_ext)
-    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_452x260_GL+NENA_0.1deg.nc",
-            gc=gc_gl_ext, out_path="/HOME/huziy/directions_452x260_GL+NENA_0.1deg.rpn")
+    # params_gl_ext = dict(
+    #     dx=0.1, dy=0.1,
+    #     lon1=180, lat1=0.0,
+    #     lon2=-84, lat2=1.0,
+    #     iref=135, jref=120,
+    #     ni=452, nj=260,
+    #     xref=276.0, yref=48.0
+    # )
+    # gc_gl_ext = GridConfig(**params_gl_ext)
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_452x260_GL+NENA_0.1deg.nc",
+    #         gc=gc_gl_ext, out_path="/HOME/huziy/directions_452x260_GL+NENA_0.1deg.rpn")
 
     # CORDEX NA at 0.44 deg resolution
     # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_na_0.44deg_CORDEX.nc",
@@ -242,7 +242,21 @@ if __name__ == "__main__":
 
 
 
-    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc", gc=default_domains.bc_mh_044)
+    # Cordex North America
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_na_0.44deg_CORDEX.nc",
+    #         gc=default_domains.gc_cordex_na_044)
+
+    # PanArctic 0.5 deg
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_arctic_0.5deg_Bernardo.nc",
+            gc=default_domains.gc_panarctic_05)
+
+
+    print(default_domains.bc_mh_022)
+
+    if False:
+        # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc", gc=default_domains.bc_mh_044)
+        convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg.nc", gc=default_domains.bc_mh_022)
+        convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc", gc=default_domains.bc_mh_011)
 
 
     print("Hello World")

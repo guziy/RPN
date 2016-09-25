@@ -35,9 +35,10 @@ def update_grid_info(func):
 
 def get_date_from_nic_cis_filepath(path):
 
-    p = Path(path)
-
-    print(p.name)
+    if not isinstance(path, Path):
+        p = Path(path)
+    else:
+        p = path
 
     year = int(p.name[:2])
 

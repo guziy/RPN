@@ -15,14 +15,15 @@ class MyNdArray(np.ndarray):
 field_name_to_shp_name = {
     "flow_direction_value": "fldir",
     "lake_outlet": "lkout",
-    "cell_area"  : "carea",
+    "cell_area": "carea",
     "lake_fraction": "lkfr",
     "lon": "lon",
     "lat": "lat",
     "accumulation_area": "accarea",
-    "channel_length" : "chalen",
-    "slope" : "slope"    
+    "channel_length": "chalen",
+    "slope": "slope"
 }
+
 
 def main():
     directions_dir = Path("/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro")
@@ -51,15 +52,15 @@ def main():
         with Dataset(str(dir_file)) as ds:
             for vname, var in ds.variables.items():
                 fields_to_add[vname] = var[:].view(MyNdArray)
-                fields_to_add[vname].type_of_shp_field = "I" if vname.lower() in ["flow_direction_value", "lake_outlet"] else "F"
+                fields_to_add[vname].type_of_shp_field = "float"
+                print("{} ranges from {} to {}".format(vname, fields_to_add[vname].min(), fields_to_add[vname].max()))
 
 
         # Export the cells to a shapefile
 
-
-
         fields_to_add = {field_name_to_shp_name[k]: v for k, v in fields_to_add.items()}
-        gc.export_to_shape(shp_folder=str(shp_dir), shp_filename=out_shp_filename, shape_fields=fields_to_add)
+
+        gc.export_to_shape_fiona(shp_folder=shp_dir, shp_filename=out_shp_filename, shape_fields=fields_to_add)
 
 
 if __name__ == '__main__':

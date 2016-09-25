@@ -1,5 +1,12 @@
 from multiprocessing.pool import Pool
 import os.path
+
+from pathlib import Path
+
+from rpn import level_kinds
+from rpn.rpn_multi import MultiRPN
+
+from crcm5.mh_domains import default_domains
 from crcm5.model_data import Crcm5ModelDataManager
 
 __author__ = "huziy"
@@ -12,6 +19,10 @@ from rpn.rpn import RPN
 
 import os
 import numpy as np
+
+
+EXTEND_MARGIN = 20  # The number of gridpoints added from each side
+TARGET_GRID_COVERAGE = default_domains.bc_mh_011
 
 
 def extract_field(name="VF", level=3, in_file="", out_file=None, margin=0):
@@ -93,51 +104,48 @@ def extract_runoff_to_netcdf_folder(folder_path='data/CORDEX/Africa/Samples'):
 
 
 def extract_runoff_to_nc_process(args):
-    inPath, outPath = args
+    in_path, out_path = args
 
-    if os.path.isfile(outPath):
-        return  #skip files that already exist
+    if os.path.exists(out_path):
+        print("Nothing to do for: {}".format(out_path))
+        return  # skip files that already exist
 
-    #print "in: {0}".format( inPath )
-    #print "out: {0}".format( outPath )
 
     traf_name = "TRAF"
     tdra_name = "TDRA"
 
-    r = RPN(inPath)
-    r.suppress_log_messages()
-    traf_data = r.get_all_time_records_for_name(varname=traf_name)
-    tdra_data = r.get_all_time_records_for_name(varname=tdra_name)
+    r = MultiRPN(in_path)
+    traf_data = r.get_all_time_records_for_name_and_level(varname=traf_name, level=5, level_kind=level_kinds.ARBITRARY)
+    tdra_data = r.get_all_time_records_for_name_and_level(varname=tdra_name, level=5, level_kind=level_kinds.ARBITRARY)
     r.close()
 
     nx, ny = list(traf_data.items())[0][1].shape
 
-    ds = nc.Dataset(outPath, "w", format="NETCDF3_CLASSIC")
-    ds.createDimension("lon", nx)
-    ds.createDimension("lat", ny)
-    ds.createDimension("time", None)
+    with nc.Dataset(out_path, "w", format="NETCDF3_CLASSIC") as ds:
+        ds.createDimension("lon", nx)
+        ds.createDimension("lat", ny)
+        ds.createDimension("time", None)
 
-    varTraf = ds.createVariable(traf_name, "f4", dimensions=("time", "lon", "lat"))
-    varTraf.units = "kg/( m**2 * s )"
+        varTraf = ds.createVariable(traf_name, "f4", dimensions=("time", "lon", "lat"))
+        varTraf.units = "kg/( m**2 * s )"
 
-    varTdra = ds.createVariable(tdra_name, "f4", dimensions=("time", "lon", "lat"))
-    varTdra.units = "kg/( m**2 * s )"
+        varTdra = ds.createVariable(tdra_name, "f4", dimensions=("time", "lon", "lat"))
+        varTdra.units = "kg/( m**2 * s )"
 
-    timeVar = ds.createVariable("time", "f4", dimensions=("time",))
+        timeVar = ds.createVariable("time", "f4", dimensions=("time",))
 
-    sorted_dates = list(sorted(traf_data.keys()))
+        sorted_dates = list(sorted(traf_data.keys()))
 
-    timeVar.units = "hours since {0}".format(sorted_dates[0])
-    timeVar[:] = nc.date2num(sorted_dates, timeVar.units)
+        timeVar.units = "hours since {0}".format(sorted_dates[0])
+        timeVar[:] = nc.date2num(sorted_dates, timeVar.units)
 
-    varTraf[:] = np.array(
-        [traf_data[d] for d in sorted_dates]
-    )
+        varTraf[:] = np.array(
+            [traf_data[d] for d in sorted_dates]
+        )
 
-    varTdra[:] = np.array(
-        [tdra_data[d] for d in sorted_dates]
-    )
-    ds.close()
+        varTdra[:] = np.array(
+            [tdra_data[d] for d in sorted_dates]
+        )
 
 
 def runoff_to_netcdf_parallel(indir, outdir):
@@ -150,7 +158,30 @@ def runoff_to_netcdf_parallel(indir, outdir):
 
     out_paths = [os.path.join(outdir, inName + ".nc") for inName in in_names]
 
-    ppool = Pool(processes=20)
+    ppool = Pool(processes=10)
+    print("The paths below go to: ")
+    print(in_paths[0])
+    print("Go into: {}".format(out_paths[0]))
+    ppool.map(extract_runoff_to_nc_process, list(zip(in_paths, out_paths)))
+
+
+def runoff_to_netcdf_parallel_with_multirpn(indir, outdir):
+
+    indir_p = Path(indir)
+    outdir_p = Path(outdir)
+
+
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
+
+
+
+    in_paths = [[str(x) for x in monthdir.iterdir() if x.name.startswith("pm") and x.name.endswith("p")] for monthdir in indir_p.iterdir() if monthdir.is_dir()]
+
+
+    out_paths = [str(outdir_p.joinpath(monthdir.name + ".nc")) for monthdir in indir_p.iterdir() if monthdir.is_dir()]
+
+    ppool = Pool(processes=10)
     ppool.map(extract_runoff_to_nc_process, list(zip(in_paths, out_paths)))
 
 
@@ -233,8 +264,38 @@ if __name__ == "__main__":
     # runoff_to_netcdf_parallel("/b2_fs2/huziy/Arctic_0.5deg_OMSC_26L_ERA40I/",
     #                           "/skynet3_rech1/huziy/runoff_arctic_nc/ERA40")
 
+    # extract_sand_and_clay_from_rpn(
+    #     rpn_path="/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_SAND_CLAY_DPTH",
+    #     outpath="/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_sand_clay_dpth.nc")
+
+
+
+    # For offline routing (CORDEX NA 0.11)
+    # runoff_to_netcdf_parallel_with_multirpn("/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.11deg_links",
+    #                                         "/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.11deg_NA_RUNOFF_NC")
+
+    # extract_sand_and_clay_from_rpn(
+    #     rpn_path="/HOME/data/Simulations/CRCM5/North_America/NorthAmerica_0.11deg_ERA40-Int0.75_B1/Samples/NorthAmerica_0.11deg_ERA40-Int0.75_B1_195801/pm1958010100_00000000p",
+    #     outpath="/HOME/huziy/skynet3_rech1/water_route_mh_bc_011deg_wc/sand_clay_depth_to_bedrock_650x640.nc"
+    # )
+
+    # For offline routing (CORDEX NA 0.44)
+    # runoff_to_netcdf_parallel_with_multirpn("/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.44deg_links",
+    #                                         "/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.44deg_NA_RUNOFF_NC")
+    #
+    # extract_sand_and_clay_from_rpn(
+    #     rpn_path="/HOME/data/Simulations/CRCM5/North_America/NorthAmerica_0.44deg_ERA40-Int0.75_B1/Samples/NorthAmerica_0.44deg_ERA40-Int0.75_B1_195801/pm1958010100_00000000p",
+    #     outpath="/HOME/huziy/skynet3_rech1/water_route_mh_bc_044deg_wc/sand_clay_depth_to_bedrock_0.44_2012x200.nc"
+    # )
+    # -----------------------------------------
+
+    # For offline routing (CORDEX NA 0.22)
+    runoff_to_netcdf_parallel_with_multirpn("/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.22deg_links",
+                                            "/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.22deg_NA_RUNOFF_NC")
+
     extract_sand_and_clay_from_rpn(
-        rpn_path="/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_SAND_CLAY_DPTH",
-        outpath="/RESCUE/skynet3_rech1/huziy/CNRCWP/C3/geophys_West_NA_0.25deg_104x75_GLNM_PRSF_CanHR85_sand_clay_dpth.nc")
+        rpn_path="/HOME/data/Simulations/CRCM5/North_America/NorthAmerica_0.22deg_ERA40-Int0.75_B1/Samples/NorthAmerica_0.22deg_ERA40-Int0.75_B1_195801/pm1958010100_00000000p",
+        outpath="/HOME/huziy/skynet3_rech1/water_route_mh_bc_022deg_wc/sand_clay_depth_to_bedrock_0.22_380x360.nc"
+    )
 
     print("Hello World")

@@ -239,52 +239,70 @@ class CellManager:
         if drainaige_area_reldiff_limit is None:
             drainaige_area_reldiff_limit = self.DEFAULT_DRAINAGE_AREA_RELDIFF_MIN
 
-        if nneighbours == 1:
-            raise Exception("Searching over 1 neighbor is not very secure and not implemented yet")
+        # if nneighbours == 1:
+        #     raise Exception("Searching over 1 neighbor is not very secure and not implemented yet")
 
         station_to_model_point = {}
         model_acc_area = self.accumulation_area_km2
         model_acc_area_1d = model_acc_area.flatten()
 
+        grid = np.indices(model_acc_area.shape)
+
         for s in station_list:
-            if s.drainage_km2 < self.characteristic_distance ** 2 * 1e-12:
-                print("skipping {0}, because drainage area is too small: {1} km**2".format(s.id, s.drainage_km2))
-                continue
 
-            assert isinstance(s, Station)
             x, y, z = lat_lon.lon_lat_to_cartesian(s.longitude, s.latitude)
-            dists, inds = self.kdtree.query((x, y, z), k=nneighbours)
 
-            deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
+            if s.drainage_km2 is None or nneighbours == 1:
+                # return the closest grid point
 
-            # this returns a  list of numpy arrays
-            imin = np.where(np.abs(model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
+                dists, inds = self.kdtree.query((x, y, z), k=1)
+                ix, jy = [g1.flatten()[inds] for g1 in grid]
 
-            deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
+                imin = 0
+                dists = [dists]
 
-            ij = np.where(deltaDa2D == deltaDaMin)
+                if s.drainage_km2 is None:
+                    print("Using the closest grid point, since the station does not report its drainage area: {}".format(s))
 
-            ix, jy = ij[0][0], ij[1][0]
+            else:
 
-            # check if it is not global lake cell
-            if lake_fraction is not None and lake_fraction[ix, jy] >= infovar.GLOBAL_LAKE_FRACTION:
-                continue
+                if s.drainage_km2 < self.characteristic_distance ** 2 * 1e-12:
+                    print("skipping {0}, because drainage area is too small: {1} km**2".format(s.id, s.drainage_km2))
+                    continue
 
-            # check if the gridcell is not too far from the station
-            if dists[imin] > 2 * self.characteristic_distance:
-                continue
+                assert isinstance(s, Station)
+                dists, inds = self.kdtree.query((x, y, z), k=nneighbours)
 
-            # check if difference in drainage areas is not too big less than 10 %
-            if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
-                print(deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2)
-                continue
+                deltaDaMin = np.min(np.abs(model_acc_area_1d[inds] - s.drainage_km2))
+
+                # this returns a  list of numpy arrays
+                imin = np.where(np.abs(model_acc_area_1d[inds] - s.drainage_km2) == deltaDaMin)[0][0]
+
+                # deltaDa2D = np.abs(self.accumulation_area_km2 - s.drainage_km2)
+
+                # ij = np.where(deltaDa2D == deltaDaMin)
+                ix, jy = grid[0].flatten()[inds][imin], grid[1].flatten()[inds][imin]
+
+                # check if it is not global lake cell
+                if lake_fraction is not None and lake_fraction[ix, jy] >= infovar.GLOBAL_LAKE_FRACTION:
+                    continue
+
+                # check if the gridcell is not too far from the station
+                if dists[imin] > 2 * self.characteristic_distance:
+                    continue
+
+                # check if difference in drainage areas is not too big less than 10 %
+                if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
+                    print("Drainage area relative difference is too high, skipping {}.".format(s.id))
+                    print(deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2)
+                    continue
 
 
-            # check if the accumulation area of the selected model point is of reasonable size
-            if self.accumulation_area_km2[ix, jy] < self.characteristic_distance ** 2 * 1e-12:
-                print("skipping the station {0}, because the upstream area " \
-                      "for the corresponding model point is too small".format(s.id))
-                continue
+                # check if the accumulation area of the selected model point is of reasonable size
+                if self.accumulation_area_km2[ix, jy] < self.characteristic_distance ** 2 * 1e-12:
+                    print("skipping the station {0}, because the upstream area " \
+                          "for the corresponding model point is too small".format(s.id))
+                    continue
 
             mp = ModelPoint()
             mp.ix = ix
@@ -294,7 +312,11 @@ class CellManager:
             mp.latitude = self.lats2d[ix, jy]
 
             mp.accumulation_area = self.accumulation_area_km2[ix, jy]
-            mp.distance_to_station = dists[imin]
+
+            try:
+                mp.distance_to_station = dists[imin]
+            except TypeError:
+                mp.distance_to_station = float(dists)
 
             station_to_model_point[s] = mp
 

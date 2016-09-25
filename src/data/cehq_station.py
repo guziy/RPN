@@ -1,3 +1,4 @@
+import calendar
 import itertools
 import pickle
 import pandas
@@ -9,6 +10,7 @@ import codecs
 from datetime import datetime, timedelta, date
 import time
 import numpy as np
+from pathlib import Path
 
 import application_properties
 
@@ -55,6 +57,17 @@ class Station:
 
         self.river_name = ""
         self._complete_years = None
+
+
+    def copy_metadata(self, other):
+        """
+        copy metadata from another station
+        :param other:
+        """
+        self.longitude = other.longitude
+        self.latitude = other.latitude
+        self.drainage_km2 = other.drainage_km2
+
 
     def get_mean_value(self):
         return np.mean(self.values)
@@ -279,7 +292,7 @@ class Station:
         if other is None:
             return False
 
-        return self.id == other.id
+        return self.id.strip() == other.id.strip()
 
     @classmethod
     def get_stamp_days(cls, stamp_year):
@@ -341,7 +354,7 @@ class Station:
 
     def get_list_of_complete_years(self):
         """
-        assumes that the observed data frequency is daily
+        The year is assumed complete if the number of data records is not less than 10% of the maximum number of records
         """
 
         if self._complete_years is not None:
@@ -349,14 +362,40 @@ class Station:
 
         years = []
 
+        counts = []
+
         years_all = np.array([d.year for d in self.dates])
         years_unique = np.unique(years_all)
 
+
+        max_count = -1
+        max_year = -1
         for y in years_unique:
             count = np.array(years_all == y, dtype=bool).astype(int).sum()
-            if count >= 365:
-                years.append(y)
+            years.append(y)
+            counts.append(count)
 
+            if max_count < count:
+                max_count = count
+                max_year = y
+
+
+        # Check if the year with max number of records is continuous
+        max_year_dates = [d for d in sorted(self.dates) if d.year == max_year]
+        dt = max_year_dates[1] - max_year_dates[0]
+
+        the_max_year_is_ok = True
+        for d1, d2 in zip(max_year_dates[:-1], max_year_dates[1:]):
+            if (d2 - d1) > dt:
+                the_max_year_is_ok = False
+                break
+
+        if not the_max_year_is_ok:
+            years = []
+        else:
+            years = [y for y, c in zip(years, counts) if c > 0.85 * max_count]
+
+        # caching
         self._complete_years = years
         return years
 
@@ -378,6 +417,18 @@ class Station:
             vals.append(np.mean(x[x > 0]))
 
         return stamp_dates, vals
+
+
+
+    def get_monthly_climatology(self, years_list=None):
+        s = pandas.Series(index=self.dates, data=self.values)
+
+        if years_list is not None:
+            s = s.select(lambda d: d.year in years_list)
+
+        return s.groupby(lambda d: datetime(2001, d.month, 15)).mean()
+
+
 
     def get_daily_climatology_for_complete_years_with_pandas(self, stamp_dates=None, years=None):
         assert stamp_dates is not None
@@ -492,25 +543,30 @@ class Station:
             df_month = pandas.DataFrame(data=month_vals, index=month_dates, columns=["value"])
             df_list.append(df_month)
 
-        df = pandas.concat(df_list, verify_integrity=True)
-        df.sort(inplace=True)
-        if start_date is not None:
-            df = df.select(lambda d: start_date <= d <= end_date)
 
-        if end_date is not None:
-            df = df.select(lambda d: d <= end_date)
-
-        if not len(df):
+        if len(df_list) == 0:
             self.dates = []
             self.values = []
             self.date_to_value = {}
             return
 
-        self.dates = df.index
-        self.values = df.values.flatten()
-        self.date_to_value = dict(list(zip(self.dates, self.values)))
 
-        pass
+        df = pandas.concat(df_list, verify_integrity=True)
+        assert isinstance(df, pandas.DataFrame)
+        df.sort_index(inplace=True)
+        if start_date is not None:
+            df = df.select(lambda d: start_date <= d)
+
+        if end_date is not None:
+            df = df.select(lambda d: d <= end_date)
+
+        _set_data_from_pandas_timeseries(df, self)
+
+
+def _set_data_from_pandas_timeseries(ts, the_station):
+    the_station.dates = ts.index
+    the_station.values = ts.values.flatten()
+    the_station.date_to_value = dict(list(zip(the_station.dates, the_station.values)))
 
 
 def _get_degrees(group):
@@ -682,13 +738,91 @@ def read_grdc_stations(st_id_list=None, data_file_patt="/skynet3_rech1/huziy/GRD
 
     return res
 
-    pass
+
+
+
+def get_manitoba_hydro_stations(folder_path="mh/obs_data"):
+    """
+
+    :param folder_path:
+    :return: the list of statio objects filled with the data from MH, note need to attach the metadata from hydat for it to be usable
+    """
+    folder_path_p = Path(folder_path)
+
+    result = []
+    for the_file in folder_path_p.iterdir():
+
+        if the_file.is_dir():
+            continue
+
+        if the_file.name.startswith("."):
+            continue
+
+        if not the_file.name.endswith(".csv"):
+            continue
+
+        station_id = the_file.name.split("_")[-1][:-4]
+        result.append(load_from_2column_csv(str(the_file), station_id, skip_rows=2))
+
+    return result
+
+
+
+def load_from_2column_csv(csv_path, station_id, skip_rows=2):
+    import pandas as pd
+    obs_corrected = pd.read_csv(csv_path, skiprows=skip_rows)
+    print(obs_corrected.head())
+
+    if hasattr(obs_corrected, "year"):
+        # for monthly data
+        date_index = pd.date_range(start=datetime(obs_corrected.year.iloc[0] - 1, 12, 15),
+                                   end=datetime(obs_corrected.year.iloc[-1], 12, 15), freq="M")
+        date_index = date_index.shift(15, freq=pd.datetools.day)
+        factor = date_index.map(lambda d: 1000 / (calendar.monthrange(d.year, d.month)[1] * 24 * 3600))
+        print(obs_corrected.year.iloc[0], obs_corrected.year.iloc[-1])
+
+        data = np.concatenate([r for r in obs_corrected.values[:, 1:-1]]) * factor.values
+
+    elif hasattr(obs_corrected, "Date"):
+        obs_corrected.dropna(inplace=True)
+
+        # Check several date formats before giving up
+        date_formats = ["%b %d %Y", "%Y-%m-%d"]
+
+        assert isinstance(obs_corrected, pd.DataFrame)
+
+        value_error = None
+        for date_format in date_formats:
+            try:
+                date_index = obs_corrected.Date.map(lambda s: datetime.strptime(s, date_format))
+                value_error = None
+                break
+            except ValueError as ve:
+                value_error = ve
+
+        if value_error is not None:
+            raise value_error
+
+
+        colnames = list(obs_corrected)
+        if "m3/s" in colnames[-1].lower().replace(" ", ""):
+            factor = date_index.map(lambda d: 1)
+        elif "cfs" in colnames[-1].lower().replace(" ", ""):
+            factor = date_index.map(lambda d: 0.028316846999968986)
+        else:
+            raise IOError("Unknown streamflow units in {}".format(csv_path))
+
+        data = obs_corrected.values[:, -1] * factor.values
+    else:
+        raise IOError("Could not find time information in {}".format(csv_path))
+
+    return Station(st_id=station_id, date_to_value=dict(zip(date_index, data)))
 
 
 def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
                        natural=True,
                        province="QC", start_date=None, end_date=None, datavariable="streamflow",
-                       min_drainage_area_km2=None, selected_ids=None):
+                       min_drainage_area_km2=None, selected_ids=None, skip_data_checks=False):
     """
     loads stations from sqlite db
 
@@ -823,9 +957,9 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
             else:
                 print("Found station {}, checking if it has enough data ...".format(s))
 
-        # Skip the stations without related infoormation
-        if s.drainage_km2 is None:
-            continue
+        # Skip the stations without related information
+        # if s.drainage_km2 is None:
+        #     continue
 
         if (min_drainage_area_km2 is not None) and (min_drainage_area_km2 >= s.drainage_km2):
             continue
@@ -835,14 +969,14 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         cur.execute(query, (s.id,))
 
         data_for_station = cur.fetchall()
-        if len(data_for_station) < 365:  # there is no way it can have at least one complete year
+        if not skip_data_checks and len(data_for_station) < 365:  # there is no way it can have at least one complete year
             # skip the stations with no data
             continue
 
         s.read_data_from_hydat_db_results(data_for_station, start_date=start_date,
                                           end_date=end_date, variable=datavariable)
 
-        if len(s.get_list_of_complete_years()) < 10:
+        if not skip_data_checks and len(s.get_list_of_complete_years()) < 10:
             # also ignore the stations with less than 10 complete years of data
             continue
 

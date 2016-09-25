@@ -1,5 +1,10 @@
+from collections import OrderedDict
+
 from mpl_toolkits.basemap import Basemap
 from pathlib import Path
+
+from shapely.geometry import Polygon
+from shapely.geometry import mapping
 
 from application_properties import main_decorator
 from domains.rotated_lat_lon import RotatedLatLon
@@ -103,9 +108,11 @@ class GridConfig(object):
 
 
 
-    def export_to_shape(self, shp_folder="", shp_filename="", free_zone_only=True):
+    def export_to_shape(self, shp_folder="", shp_filename="", free_zone_only=True,
+                        export_mask=None, shape_fields=None):
         """
         export the grid to the shape file
+        :param export_mask: Mask to specify exactly which gridcells should be exported
         :param free_zone_only:
         :param shp_folder:
         :param shp_filename:
@@ -115,11 +122,25 @@ class GridConfig(object):
 
 
         w = shp.Writer(shp.POLYGON)
+        
+        
         w.field("i", fieldType="I")
         w.field("j", fieldType="I")
 
+        field_names_in_order = ["i", "j"]
 
-        folder = Path(shp_folder)
+        if shape_fields is not None:
+            for field_name, field in shape_fields.items():
+                
+                w.field(field_name, *field.type_of_shp_field)
+
+                field_names_in_order.append(field_name)
+                    
+
+        if isinstance(shp_folder, str):
+            folder = Path(shp_folder)
+        else:
+            folder = shp_folder
 
         # create the directory if does not exist
         if not folder.is_dir():
@@ -140,11 +161,17 @@ class GridConfig(object):
         end_j = self.nj - margin - 1
 
 
+        if export_mask is None:
+            export_mask = np.ones((self.ni, self.nj), dtype=bool)
+
         for i in range(start_i, end_i + 1):
             x = lonr[i]
 
             for j in range(start_j, end_j + 1):
                 y = latr[j]
+
+                if not export_mask[i, j]:
+                    continue
 
                 p00 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y - self.dy / 2.0)
                 p01 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y + self.dy / 2.0)
@@ -156,12 +183,109 @@ class GridConfig(object):
                     [p00, p01, p11, p10]
                 ])
 
-                w.record(i + 1, j + 1)
+                if shape_fields is None:
+                    w.record(i + 1, j + 1)
+                else:
+                    record_fields = {}
+                    record_fields["i"] = i + 1
+                    record_fields["j"] = j + 1
+                    for field_name, field in shape_fields.items():
+                        record_fields[field_name] = field[i, j]
+
+                    w.record(*[record_fields[key] for key in field_names_in_order])
 
         # w.poly(parts=[[[-20, -20], [-20, 20], [20, 20], [20, -20]],])
         # w.record(1, 1)
 
         w.save(str(folder.joinpath(shp_filename)))
+
+    def export_to_shape_fiona(self, shp_folder="", shp_filename="", free_zone_only=True,
+                        export_mask=None, shape_fields=None):
+        """
+        export the grid to the shape file
+        using fiona since pyshp was not compatible with arcgis
+        :param export_mask: Mask to specify exactly which gridcells should be exported
+        :param free_zone_only:
+        :param shp_folder:
+        :param shp_filename:
+        """
+
+
+        from fiona.crs import from_epsg
+        import fiona
+
+        proj = from_epsg(4326)
+
+        if isinstance(shp_folder, str):
+            folder = Path(shp_folder)
+        else:
+            folder = shp_folder
+
+
+        # create the directory if does not exist
+        if not folder.is_dir():
+            folder.mkdir()
+
+
+        schema = {
+            "geometry": "Polygon",
+            "properties": OrderedDict(
+                [("i", "int"), ("j", "int")]
+            )
+        }
+
+
+        if shape_fields is not None:
+
+            # additional fields
+            for field_name, field in shape_fields.items():
+                schema["properties"][field_name] = field.type_of_shp_field
+
+        with fiona.open(str(folder.joinpath(shp_filename)), mode="w", driver="ESRI Shapefile", crs=proj, schema=schema) as output:
+
+            lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
+            latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
+
+            margin = 0
+            if free_zone_only:
+                margin = self.blendig + self.halo
+
+            start_i = margin
+            start_j = margin
+
+            end_i = self.ni - margin - 1
+            end_j = self.nj - margin - 1
+
+            if export_mask is None:
+                export_mask = np.ones((self.ni, self.nj), dtype=bool)
+
+            for i in range(start_i, end_i + 1):
+                x = lonr[i]
+
+                for j in range(start_j, end_j + 1):
+                    y = latr[j]
+
+                    if not export_mask[i, j]:
+                        continue
+
+                    p00 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y - self.dy / 2.0)
+                    p01 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y + self.dy / 2.0)
+                    p11 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y + self.dy / 2.0)
+                    p10 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y - self.dy / 2.0)
+
+
+                    poly = Polygon(shell=[p00, p01, p11, p10])
+                    props = OrderedDict([("i", i + 1), ("j", j + 1)])
+
+                    if shape_fields is not None:
+                        for field_name, field in shape_fields.items():
+                            converter = float if field.type_of_shp_field in ["float"] else int
+                            props[field_name] = converter(field[i, j])
+
+                    output.write({"geometry": mapping(poly), "properties": props})
+
+
+
 
     def export_to_shape_ogr(self, shp_folder="", shp_filename="", free_zone_only=True):
         """

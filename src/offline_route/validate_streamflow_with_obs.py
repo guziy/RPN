@@ -9,7 +9,7 @@ from rpn.rpn import RPN
 from scipy.spatial.ckdtree import cKDTree
 from crcm5.compare_runs import plot_station_positions
 from crcm5.model_point import ModelPoint
-from data import cehq_station
+import data.cehq_station as cehq_station
 from data.cehq_station import Station
 from domains.rotated_lat_lon import RotatedLatLon
 from offline_route.plot_seasonal_means import TIME_FORMAT

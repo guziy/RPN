@@ -9,12 +9,13 @@ import numpy as np
 
 EARTH_RADIUS_METERS = 0.637122e7  # mean earth radius used in the CRCM5 model for area calculation
 
+
 # longitude and latitude are in radians
 def get_nvector(rad_lon, rad_lat):
     return [np.cos(rad_lat) * np.cos(rad_lon), np.cos(rad_lat) * np.sin(rad_lon), np.sin(rad_lat)]
 
 
-#p1 and p2 are geopoint objects
+# p1 and p2 are geopoint objects
 def get_distance_in_meters(*arg):
     """
     arg = point1, point2

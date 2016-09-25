@@ -222,6 +222,14 @@ def _plot_row(vname="", level=0, config_dict=None, plot_cc_only_for=None, mark_s
                              vmin=-diff_max, vmax=diff_max,
                              cmap=cmap, norm=bn, ax=ax)
 
+
+        # logging
+        good_vals = season_to_plot_diff[season]
+        good_vals = good_vals[~good_vals.mask]
+        print("------" * 10)
+        print("{}: min={}; max={}; area-avg={};".format(season, good_vals.min(), good_vals.max(), good_vals.mean()))
+
+
         bmp.readshapefile(quebec_info.BASIN_BOUNDARIES_DERIVED_10km[:-4], "basin_edge", ax=ax)
 
         p = season_to_pvalue[season]

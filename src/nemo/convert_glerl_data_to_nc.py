@@ -67,6 +67,7 @@ def main():
         tvar.units = "days since {:%Y-%m-%d %H:%M:%S}".format(start_date)
         tvar.description = "ice cover data from GLERL"
         dvar = ds.createVariable("ice_cover", "f4", ("time", "lon", "lat"))
+        dvar.coordinates = "lon lat"
 
 
         lon_var = ds.createVariable("lon", "f4", ("lon", "lat"))
@@ -79,12 +80,21 @@ def main():
 
         i1 = 0
         # write the data for 1973-2002 period
-        for i, fpath in enumerate(sorted(Path(obs_data_path_1973_2002).iterdir(), key=lambda zp: zp.name[:-5])):
+        for i, fpath in enumerate(sorted(Path(obs_data_path_1973_2002).iterdir(), key=lambda zp: get_date_from_nic_cis_filepath(zp))):
 
             if not fpath.name.lower()[-3:] in ["cis", "nic"]:
                 continue
 
             the_date = get_date_from_nic_cis_filepath(fpath)
+
+
+            # Avoid duplicates
+            if the_date.year >= 2003:
+                continue
+
+            if the_date.year == 2002 and the_date.month >= 12:
+                continue
+
 
             data = gman.get_data_from_file_interpolate_if_needed(fpath)
 
