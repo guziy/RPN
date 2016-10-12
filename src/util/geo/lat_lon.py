@@ -68,6 +68,23 @@ def cartesian_to_lon_lat(x):
     return lon, lat
 
 
+def geo_uv_to_cartesian_velocity(u_we, v_sn, lons_rad, lats_rad):
+    """
+    Convert the geographic wind components into the cartesian components in the system with a center in the middle of the Earth
+    :param u_we:
+    :param v_sn:
+    :param lons_rad:
+    :param lats_rad:
+    :return:
+    """
+    vel_x = -u_we * np.sin(lons_rad) - v_sn * np.sin(lats_rad) * np.cos(lons_rad)
+    vel_y = u_we * np.cos(lons_rad) - v_sn * np.sin(lats_rad) * np.sin(lons_rad)
+    vel_z = v_sn * np.cos(lats_rad)
+    return np.array([vel_x, vel_y, vel_z])
+
+
+
+
 #nvectors.shape = (3, nx, ny)
 def get_coefs_between(nvectors1, nvectors2):
     return np.array([1.0 / (get_angle_between_vectors(v1, v2) * EARTH_RADIUS_METERS ) ** 2.0 for v1, v2 in

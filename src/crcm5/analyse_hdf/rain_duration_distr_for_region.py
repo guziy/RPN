@@ -30,9 +30,10 @@ class Selection(object):
 
 class Period(object):
 
-    def __init__(self, start_year=1980, end_year=2010):
+    def __init__(self, start_year=1980, end_year=2010, month_list=None):
         self.start_year = start_year
         self.end_year = end_year
+        self.month_list = month_list
 
 
     def get_nyears(self):

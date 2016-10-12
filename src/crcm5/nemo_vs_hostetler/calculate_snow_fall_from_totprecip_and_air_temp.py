@@ -20,6 +20,7 @@ from crcm5.nemo_vs_hostetler.nemo_hl_util import get_monthyeardate_to_paths_map
 
 FRESH_SNOW_MIN_DENSITY_KG_PER_M3 = 50.0
 
+
 def get_snow_fall_m_per_s(precip_m_per_s, tair_deg_c):
     """
 

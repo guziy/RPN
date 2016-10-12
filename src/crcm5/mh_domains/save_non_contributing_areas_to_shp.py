@@ -111,7 +111,7 @@ def main():
         assert isinstance(gc, GridConfig)
 
         # Export the cells to a shapefile
-        gc.export_to_shape(shp_folder=str(shp_dir), shp_filename=out_shp_filename, export_mask=the_mask)
+        gc.export_to_shape_fiona(shp_folder=str(shp_dir), shp_filename=out_shp_filename, export_mask=the_mask)
 
 
 
