@@ -6,7 +6,7 @@ import numpy as np
 from geopy.distance import distance
 
 # maximum number of iterations for backtracking
-N_ITER_MAX_BACKTRACK = 10
+N_ITER_MAX_BACKTRACK = 20
 
 
 def get_velocity_at(vel_field, r, ktree, i_grd, j_grd):
@@ -30,27 +30,8 @@ def get_epsilon(lons2d, lats2d):
     :param lats2d:
     :return:
     """
-    total_x_bottom = distance((lats2d[0, 0], lons2d[0, 0]), (lats2d[-1, 0], lons2d[-1, 0]))
-    total_x_top = distance((lats2d[0, -1], lons2d[0, -1]), (lats2d[-1, -1], lons2d[-1, -1]))
 
-    total_x = 0.5 * (total_x_bottom + total_x_top)
-
-
-    total_y_left = distance((lats2d[0, 0], lons2d[0, 0]), (lats2d[0, -1], lons2d[0, -1]))
-    total_y_right = distance((lats2d[-1, 0], lons2d[-1, 0]), (lats2d[-1, -1], lons2d[-1, -1]))
-
-    total_y = 0.5 * (total_y_left + total_y_right)
-
-    nx, ny = lons2d.shape
-
-    # Avoid division by 0
-    if nx == 1:
-        nx = 2
-
-    if ny == 1:
-        ny = 2
-
-    eps = min(total_x / (nx - 1), total_y / (ny - 1))
+    eps = distance((lats2d[1, 1], lons2d[1, 1]), (lats2d[0, 0], lons2d[0, 0])).meters
     return eps
 
 

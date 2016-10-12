@@ -140,7 +140,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         v_sn = v_sn.groupby(day_dates).mean(dim="t")
         print("Successfully imported wind components")
 
-        wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree=ktree,
+        wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask, ktree=ktree,
                                                                      region_of_interest=reg_of_interest, dt_secs=secs_per_day)
 
         snfl = wind_blows_from_lakes * snfl
