@@ -31,6 +31,10 @@ vname_to_multiplier_CRCM5[V_SN] = mps_per_knot
 vname_to_offset_CRCM5 = defaultdict(lambda: 0)
 
 
+# variable name to the prefix of a file mapping
+vname_to_fname_prefix_CRCM5 = defaultdict(lambda: "dm")
+vname_to_fname_prefix_CRCM5[SNOWFALL_RATE] = "pm"
+
 
 vname_map_netcdf = {
 

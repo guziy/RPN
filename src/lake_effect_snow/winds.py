@@ -6,11 +6,12 @@ import numpy as np
 from geopy.distance import distance
 
 # maximum number of iterations for backtracking
-N_ITER_MAX_BACKTRACK = 20
+N_ITER_MAX_BACKTRACK = 10
 
 
-def get_velocity_at(vel_field, r, ktree, i_grd, j_grd):
+def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
     """
+    :type ktree: KDTree
     :param j_grd:
     :param i_grd:
     :param ktree:
@@ -18,9 +19,30 @@ def get_velocity_at(vel_field, r, ktree, i_grd, j_grd):
     :param r: vector where the value is needed
     """
 
-    dist, ind_r = ktree.query(r)
-    i, j = i_grd.flatten()[ind_r], j_grd.flatten()[ind_r]
-    return vel_field[:, i, j]
+    if nneighbours == 1:
+        dist, ind_r = ktree.query(r, k=nneighbours)
+        i, j = i_grd.flatten()[ind_r], j_grd.flatten()[ind_r]
+        return vel_field[:, i, j]
+    else:
+        dists, inds_r = ktree.query(r, k=nneighbours)
+
+        i_arr, j_arr = i_grd.flatten()[inds_r], j_grd.flatten()[inds_r]
+
+        w_total = 0.0
+        vel_mean = None
+        for i, j, dist in zip(i_arr, j_arr, dists):
+            if dist == 0:
+                return vel_field[:, i, j]
+
+            wi = 1.0 / dist
+            w_total += wi
+
+            if vel_mean is None:
+                vel_mean = wi * vel_field[:, i, j]
+            else:
+                vel_mean += wi * vel_field[:, i, j]
+
+        return vel_mean / w_total
 
 
 def get_epsilon(lons2d, lats2d):
@@ -35,10 +57,12 @@ def get_epsilon(lons2d, lats2d):
     return eps
 
 
-def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, region_of_interest=None, dt_secs=None):
+def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, region_of_interest=None, dt_secs=None,
+                                   nneighbours=1):
     """
     Get masks of the regions where wind is blowing from lakes
 
+    :param nneighbours: number of closest neighbours to consider for wind interpolation
     :param region_of_interest:
     :param dt_secs: time step of the wind fields (if not specified, assume 1 day)
     :param u_we: dimensions (time, x, y)
@@ -47,8 +71,6 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
     :param ktree: Needed for passing from the physical space to the index space, created from flattened lons, last and
     represented in the 3D cartesian space with an origin at the centre of the Earth.
     """
-
-    assert isinstance(ktree, KDTree)
 
     if dt_secs is None:
         dt_secs = timedelta(days=1).total_seconds()
@@ -86,7 +108,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
         else:
             vel_tm1 = velocity[:, ti - 1, :, :]
 
-
+        converged_count = 0
         for xa, ya, za in zip(xa_list, ya_list, za_list):
 
             r0 = np.array([xa, ya, za])
@@ -97,8 +119,8 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
             i_r0, j_r0 = i_grid.flatten()[ind_r0], j_grid.flatten()[ind_r0]
 
 
-            vel_t_r0 = get_velocity_at(vel_t, r0, ktree=ktree, i_grd=i_grid, j_grd=j_grid)
-            vel_tm1_r0 = get_velocity_at(vel_tm1, r0, ktree=ktree, i_grd=i_grid, j_grd=j_grid)
+            vel_t_r0 = get_velocity_at(vel_t, r0, ktree=ktree, i_grd=i_grid, j_grd=j_grid, nneighbours=nneighbours)
+            vel_tm1_r0 = get_velocity_at(vel_tm1, r0, ktree=ktree, i_grd=i_grid, j_grd=j_grid, nneighbours=nneighbours)
 
             r1 = r0 - dt_secs * 0.5 * (vel_tm1_r0 + vel_t_r0)
 
@@ -111,16 +133,19 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
 
                 rmiddle = (r0 + r1) * 0.5
 
-                vel_t_rmiddle = get_velocity_at(vel_t, rmiddle, ktree=ktree, i_grd=i_grid, j_grd=j_grid)
-                vel_tm1_rmiddle = get_velocity_at(vel_tm1, rmiddle, ktree=ktree, i_grd=i_grid, j_grd=j_grid)
+                vel_t_rmiddle = get_velocity_at(vel_t, rmiddle, ktree=ktree, i_grd=i_grid, j_grd=j_grid, nneighbours=nneighbours)
+                vel_tm1_rmiddle = get_velocity_at(vel_tm1, rmiddle, ktree=ktree, i_grd=i_grid, j_grd=j_grid, nneighbours=nneighbours)
 
                 r_prev = r1
                 r1 = r0 - dt_secs * 0.5 * (vel_tm1_rmiddle + vel_t_rmiddle)
 
             # print a message if the iteration for the departure point has not converged
             if not converged:
-                msg = "Iterations for the departure point has not converged: delta={}, eps={}"
-                print(msg.format(np.sum((r1 - r_prev) ** 2) ** 0.5, eps))
+                # msg = "Iterations for the departure point has not converged: delta={}, eps={}"
+                # print(msg.format(np.sum((r1 - r_prev) ** 2) ** 0.5, eps))
+                pass
+            else:
+                converged_count += 1
 
             dist, ind_r1 = ktree.query(r1)
             i_r1, j_r1 = i_grid.flatten()[ind_r1], j_grid.flatten()[ind_r1]
@@ -134,7 +159,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
             # 1 if the fetch is from lake, 0 otherwize
             fetch_from_lake_mask[ti, i_r0, j_r0] = lake_mask[ill:iur + 1, jll:jur + 1].sum() > 0.5
 
-
+        print("Converged {} of {} considered points".format(converged_count, len(xa_list)))
         print("Finished {}/{} ".format(ti, nt))
 
     return fetch_from_lake_mask

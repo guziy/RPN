@@ -36,8 +36,10 @@ class DataManager(object):
         self.multipliers = store_config["multiplier_mapping"] if "multiplier_mapping" in store_config else defaultdict(lambda: 1)
 
 
+        # Do the prliminary mappings for faster access ...
         if self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
-            # TODO: implement
+            self.varname_to_file_prefix = store_config["filename_prefix_mapping"]
+            self.init_mappings_samples_folder_crcm_output()
             pass
         elif self.data_source_type == data_source_types.ALL_VARS_IN_A_SINGLE_NETCDF_FILE:
             # TODO: implement
@@ -54,7 +56,30 @@ class DataManager(object):
         pass
 
 
+
+    def init_mappings_samples_folder_crcm_output(self):
+        """
+        maps (year, month) to the folder path with files
+        """
+        base_folder = Path(self.base_folder)
+
+        for f in base_folder.iterdir():
+
+            if not f.is_dir():
+                continue
+
+            tok = f.name.split("_")[-1]
+            try:
+                d = datetime.strptime(tok, "%Y%m")
+                self.yearmonth_to_path[(d.year, d.month)] = f
+            except ValueError:
+                print("Skipping {}".format(f))
+                continue
+
     def init_mappings_all_vars_in_a_folder_of_rpn_files(self):
+        """
+        map (year, month) pairs to the paths for quicker access later
+        """
         base_folder = Path(self.base_folder)
 
         for f in base_folder.iterdir():
@@ -73,6 +98,8 @@ class DataManager(object):
         Read the data for period and varname into memory, and return it as xarray DataArray
         :param period:
         :param varname_internal:
+
+        Note: this method will read everything into memory, please be easy on the period duration for large datasets
         """
         assert isinstance(period, Period)
 
@@ -86,6 +113,7 @@ class DataManager(object):
 
         data = {}
         lons, lats = None, None
+        data_list = None
 
 
         # for each datasource type the following arrays should be defined:
@@ -93,33 +121,63 @@ class DataManager(object):
         if self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_OF_RPN_FILES:
 
 
-            for i, year in enumerate(range(period.start.year, period.end.year + 1)):
-                month_min = 1
-                month_max = 12
+            for month_start in period.range("months"):
+                f = self.yearmonth_to_path[(month_start.year, month_start.month)]
 
-                if year == period.start.year:
-                    month_min = period.start.month
+                r = RPN(str(f))
+                # read the data into memory
+                data1 = r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
+                                                                      level=level, level_kind=level_kind)
 
-                if year == period.end.year:
-                    month_max = period.end.month
+                if lons is None:
+                   lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
+                data.update(data1)
 
-                for m in range(month_min, month_max + 1):
-                    f = self.yearmonth_to_path[(year, m)]
+                r.close()
+
+            dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
+            data_list = [data[d] for d in dates]
+
+        elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
+
+            filename_prefix = self.varname_to_file_prefix[varname_internal]
+            for month_start in period.range("months"):
+
+                year, m = month_start.year, month_start.month
+              
+                print(year, m)
+
+                # Skip years or months that are not available
+                if (year, m) not in self.yearmonth_to_path:
+                    print("Skipping {}-{}".format(year, m))
+                    continue
+
+                month_dir = self.yearmonth_to_path[(year, m)]
+
+                for f in month_dir.iterdir():
+                    # Skip the file for time step 0
+                    if f.name[-9:-1] == "0" * 8:
+                        continue
+
+                    # read only files with the specified prefix
+                    if not f.name.startswith(filename_prefix):
+                        continue
 
                     r = RPN(str(f))
-                    # read the data into memory
-                    data1 = r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal], level=level, level_kind=level_kind)
+
+                    data.update(r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
+                                                                              level=level, level_kind=level_kind))
 
                     if lons is None:
-                        lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
-
-                    data.update(data1)
+                       lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
                     r.close()
 
+
             dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
-            data = [data[d] for d in dates]
+            data_list = [data[d] for d in dates]
+
         else:
             raise NotImplementedError("reading of the layout type {} is not implemented yet.".format(self.data_source_type))
 
@@ -134,7 +192,7 @@ class DataManager(object):
                 "lat": {"dims": ("x", "y"), "data": lats},
             },
             "dims": ("t", "x", "y"),
-            "data": data,
+            "data": data_list,
             "name": varname_internal
         }
 
