@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+import xarray
 from pandas._period import Period
 from rpn.rpn import RPN
 from xarray import DataArray
@@ -10,6 +11,8 @@ from xarray import Dataset
 from lake_effect_snow import data_source_types
 from lake_effect_snow.base_utils import VerticalLevel
 from pendulum import Period
+import numpy as np
+
 
 class DataManager(object):
 
@@ -22,7 +25,9 @@ class DataManager(object):
 
         # mapping date -> data, path
         self.yearmonth_to_path = {}
-        self.min_dt = store_config["min_dt"]
+        if "min_dt" in store_config:
+            self.min_dt = store_config["min_dt"]
+
         self.varname_mapping = store_config["varname_mapping"]
         self.level_mapping = store_config["level_mapping"]
 
@@ -41,7 +46,7 @@ class DataManager(object):
             self.varname_to_file_prefix = store_config["filename_prefix_mapping"]
             self.init_mappings_samples_folder_crcm_output()
             pass
-        elif self.data_source_type == data_source_types.ALL_VARS_IN_A_SINGLE_NETCDF_FILE:
+        elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES:
             # TODO: implement
             # Construct the dictionary {varname: {date range: path}}
             #
@@ -51,9 +56,6 @@ class DataManager(object):
         else:
             raise IOError("Unrecognized input data layout")
 
-
-    def init_mappings_for_all_vars_in_a_single_netcdf_file(self):
-        pass
 
 
 
@@ -114,6 +116,7 @@ class DataManager(object):
         data = {}
         lons, lats = None, None
         data_list = None
+        dates = None
 
 
         # for each datasource type the following arrays should be defined:
@@ -177,6 +180,39 @@ class DataManager(object):
 
             dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
             data_list = [data[d] for d in dates]
+
+        elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES:
+            base_folder = Path(self.base_folder)
+            ds = xarray.open_mfdataset(str(base_folder.joinpath("*")))
+
+            # select the variable by name and time
+            var = ds[self.varname_mapping[varname_internal]].loc[period.start:period.end].squeeze()
+
+            need_to_create_meshgrid = False
+            for cname, cvals in var.coords.items():
+                if "time" in cname.lower():
+                    dates = cvals
+
+                if "lon" in cname.lower():
+                    lons = cvals
+
+                    if lons.ndim == 1:
+                        need_to_create_meshgrid = True
+
+                if "lat" in cname.lower():
+                    lats = cvals
+
+            if need_to_create_meshgrid:
+                lats, lons = np.meshgrid(lats.values, lons.values)
+
+
+            if var.shape > 3:
+                var = var[:, self.level_mapping[varname_internal], :, :]
+
+            if var.shape[-2:] == lons.shape:
+                data_list = var.values
+            else:
+                data_list = np.transpose(var.values, axes=(0, 2, 1))
 
         else:
             raise NotImplementedError("reading of the layout type {} is not implemented yet.".format(self.data_source_type))

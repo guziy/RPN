@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from collections import defaultdict
 from datetime import timedelta, datetime
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from pendulum import Pendulum
 from rpn import level_kinds
 from scipy.spatial import cKDTree as KDTree
 from xarray import DataArray
+
 
 from lake_effect_snow import base_utils
 from lake_effect_snow import common_params
@@ -58,6 +60,43 @@ def calculate_lake_effect_snowfall(label_to_config, period=None):
                                                           out_folder=out_folder)
 
 
+
+def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
+    """
+    Returns the mask of a zone around lakes (excluding lakes) of a given width
+    :type ktree: cKDTree
+    :param ktree:
+    :param lons:
+    :param lats:
+    :param lake_mask:
+    :param dist_km:
+    """
+
+
+    x, y, z = lat_lon.lon_lat_to_cartesian(lons[lake_mask], lats[lake_mask])
+
+    near_lake_zone = np.zeros_like(lons, dtype=bool)
+
+    nlons = lons.shape[0] * lons.shape[1]
+    near_lake_zone.shape = (nlons,)
+
+    for xi, yi, zi in zip(x, y, z):
+        dists, inds = ktree.query([[xi, yi, zi],], k=nlons, distance_upper_bound=dist_km * 1000)
+        near_lake_zone[inds[inds < nlons]] = True
+
+    near_lake_zone.shape = (lons.shape[0], lons.shape[1])
+
+
+    # Remove lake points from the mask
+    near_lake_zone &= ~lake_mask
+
+    plt.figure()
+    plt.pcolormesh(near_lake_zone.T)
+    plt.show()
+
+    return near_lake_zone
+
+
 def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder="."):
     months_of_interest = period.months_of_interest
 
@@ -86,6 +125,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     lats = None
     ktree = None
     lake_mask = None
+    near_lake_100km_zone_mask = None
 
     secs_per_day = timedelta(days=1).total_seconds()
 
@@ -151,6 +191,8 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             ktree = KDTree(data=list(zip(*lat_lon.lon_lat_to_cartesian(lon=lons.flatten(), lat=lats.flatten()))))
 
             # define the 100km near lake zone
+            near_lake_100km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
+                                                                   ktree=ktree, dist_km=100)
 
 
         # check the winds
@@ -174,7 +216,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
         #  Get the accumulation of the lake effect snowfall
         snfl_acc = snfl.sum(dim="time")
-        snfl_acc.values = np.ma.masked_where(~reg_of_interest, snfl_acc)
+        snfl_acc.values = np.ma.masked_where((~reg_of_interest) | (~near_lake_100km_zone_mask), snfl_acc)
 
         lkeff_snow_falls.append(snfl_acc)
 
@@ -264,7 +306,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
     img_file = str(out_folder_p.joinpath(img_file))
     plt.savefig(img_file, bbox_inches="tight")
-    plt.show()
+    # plt.show()
     plt.close(fig)
 
     # plot area-averaged lake-effect snowfall
@@ -286,7 +328,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 def main():
     # First approximation of the lake-effect snow, by looking at the daily snowfall of more than 1 cm/day
     period = Period(
-        datetime(1991, 12, 1), datetime(2002, 3, 1)
+        datetime(1991, 12, 1), datetime(1992, 3, 1)
     )
 
     # should be consequent
@@ -336,7 +378,37 @@ def main():
         }
     )])
 
-    calculate_lake_effect_snowfall(label_to_config=label_to_config, period=period)
+    # for i in range(1, 9):
+    #     label = "ECMWF_CRCM5_FLake_{}".format(i)
+    #     label_to_config_CRCM5[label] = label_to_config_CRCM5[label0]
+    #     label_to_config_CRCM5[label]["out_folder"] = "lake_effect_analysis_{}".format(label)
+
+
+    # ECMWF GCM ensemble member outputs
+    label_ECMWF_GCM = "ECMWF_GCM_1"
+
+    multiplier_map_ECMWF_GCM = defaultdict(lambda: 1)
+    multiplier_map_ECMWF_GCM[default_varname_mappings.TOTAL_PREC] = 1.0e-3 / (24.0 * 3600.0)  # convert to M/S]
+
+    label_to_config_ECMWF_GCM = OrderedDict(
+        [
+            label_ECMWF_GCM, {
+                "base_folder": "/RESCUE/skynet3_rech1/huziy/ens_simulations_links_diro/ECMWF_GCM/ensm_1",
+                "data_source_type": data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES,
+                "out_folder": "lake_effect_analysis_{}".format(label_ECMWF_GCM),
+                "varname_mapping": {
+                    default_varname_mappings.T_AIR_2M: "tas",
+                    default_varname_mappings.TOTAL_PREC: "prlr",
+                    default_varname_mappings.U_WE: "uas",
+                    default_varname_mappings.V_SN: "vas"
+                },
+                "multiplier_mapping": multiplier_map_ECMWF_GCM,
+                "offset_mapping": defaultdict(lambda: 0),
+                "level_mapping": defaultdict(lambda: 0)
+        }]
+    )
+
+    calculate_lake_effect_snowfall(label_to_config=label_to_config_ECMWF_GCM, period=period)
 
 
 if __name__ == '__main__':

@@ -1,9 +1,12 @@
 from datetime import timedelta
 
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree as KDTree
 from util.geo import lat_lon
 import numpy as np
 from geopy.distance import distance
+
+
+import multiprocessing
 
 # maximum number of iterations for backtracking
 N_ITER_MAX_BACKTRACK = 10
@@ -19,12 +22,14 @@ def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
     :param r: vector where the value is needed
     """
 
+    nprocs = max(1, multiprocessing.cpu_count() // 2)
+
     if nneighbours == 1:
-        dist, ind_r = ktree.query(r, k=nneighbours)
+        dist, ind_r = ktree.query(r, k=nneighbours, n_jobs=nprocs)
         i, j = i_grd.flatten()[ind_r], j_grd.flatten()[ind_r]
         return vel_field[:, i, j]
     else:
-        dists, inds_r = ktree.query(r, k=nneighbours)
+        dists, inds_r = ktree.query(r, k=nneighbours, n_jobs=nprocs)
 
         i_arr, j_arr = i_grd.flatten()[inds_r], j_grd.flatten()[inds_r]
 
@@ -94,6 +99,8 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
 
     i_grid, j_grid = np.indices(lons.shape)
 
+    nprocs = max(1, multiprocessing.cpu_count() // 2)
+
     fetch_from_lake_mask = np.zeros_like(u_we, dtype=bool)
 
     print("Start looking if wind blows from lakes for all time steps")
@@ -115,7 +122,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
 
             r_prev = np.zeros_like(r0)
 
-            dist, ind_r0 = ktree.query(r0)
+            dist, ind_r0 = ktree.query(r0, n_jobs=nprocs)
             i_r0, j_r0 = i_grid.flatten()[ind_r0], j_grid.flatten()[ind_r0]
 
 
@@ -147,7 +154,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
             else:
                 converged_count += 1
 
-            dist, ind_r1 = ktree.query(r1)
+            dist, ind_r1 = ktree.query(r1, n_jobs=nprocs)
             i_r1, j_r1 = i_grid.flatten()[ind_r1], j_grid.flatten()[ind_r1]
 
 
@@ -159,7 +166,11 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
             # 1 if the fetch is from lake, 0 otherwize
             fetch_from_lake_mask[ti, i_r0, j_r0] = lake_mask[ill:iur + 1, jll:jur + 1].sum() > 0.5
 
+
         print("Converged {} of {} considered points".format(converged_count, len(xa_list)))
         print("Finished {}/{} ".format(ti, nt))
+
+        if ti == 20:
+            break
 
     return fetch_from_lake_mask
