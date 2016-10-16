@@ -170,7 +170,5 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
         print("Converged {} of {} considered points".format(converged_count, len(xa_list)))
         print("Finished {}/{} ".format(ti, nt))
 
-        if ti == 20:
-            break
 
     return fetch_from_lake_mask

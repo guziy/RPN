@@ -90,10 +90,7 @@ def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
     # Remove lake points from the mask
     near_lake_zone &= ~lake_mask
 
-    plt.figure()
-    plt.pcolormesh(near_lake_zone.T)
-    plt.show()
-
+    
     return near_lake_zone
 
 
@@ -149,7 +146,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             # convert from water depth to snow depth
             snfl *= base_utils.WATER_DENSITY_KG_PER_M3 / rhosn
 
-        except IOError:
+        except (IOError, KeyError):
             print("Could not find snowfall rate in {}".format(data_mngr.base_folder))
             print("Calculating from 2-m air temperature and total precipitation.")
 
@@ -158,13 +155,15 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             precip_m_s = precip_m_s.groupby(day_dates).mean(dim="t")
 
             # Calculate snowfall from the total precipitation and 2-meter air temperature
-            snfl = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values, tair_deg_c=air_temp.values)
+            snfl = precip_m_s.copy()
+            snfl.name = default_varname_mappings.SNOWFALL_RATE
+            snfl.values = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values, tair_deg_c=air_temp.values)
 
         print("===========air temp ranges=======")
         print(air_temp.min(), " .. ", air_temp.max())
 
         print("Snowfall values ranges: ")
-        print(snfl.values.min(), snfl.values.max(), common_params.lower_limit_of_daily_snowfall)
+        print(snfl.min(), snfl.max(), common_params.lower_limit_of_daily_snowfall)
 
         # set to 0 snowfall lower than 1 cm/day
         snfl.values[snfl.values <= common_params.lower_limit_of_daily_snowfall] = 0
@@ -191,8 +190,8 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             ktree = KDTree(data=list(zip(*lat_lon.lon_lat_to_cartesian(lon=lons.flatten(), lat=lats.flatten()))))
 
             # define the 100km near lake zone
-            near_lake_100km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
-                                                                   ktree=ktree, dist_km=100)
+            # near_lake_100km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
+            #                                                       ktree=ktree, dist_km=200)
 
 
         # check the winds
@@ -216,7 +215,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
         #  Get the accumulation of the lake effect snowfall
         snfl_acc = snfl.sum(dim="time")
-        snfl_acc.values = np.ma.masked_where((~reg_of_interest) | (~near_lake_100km_zone_mask), snfl_acc)
+        
+        # takes into account the 100km zone near lakes
+        # snfl_acc.values = np.ma.masked_where((~reg_of_interest) | (~near_lake_100km_zone_mask), snfl_acc)
+        snfl_acc.values = np.ma.masked_where((~reg_of_interest), snfl_acc)
 
         lkeff_snow_falls.append(snfl_acc)
 
@@ -392,7 +394,7 @@ def main():
 
     label_to_config_ECMWF_GCM = OrderedDict(
         [
-            label_ECMWF_GCM, {
+            (label_ECMWF_GCM, {
                 "base_folder": "/RESCUE/skynet3_rech1/huziy/ens_simulations_links_diro/ECMWF_GCM/ensm_1",
                 "data_source_type": data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES,
                 "out_folder": "lake_effect_analysis_{}".format(label_ECMWF_GCM),
@@ -400,12 +402,13 @@ def main():
                     default_varname_mappings.T_AIR_2M: "tas",
                     default_varname_mappings.TOTAL_PREC: "prlr",
                     default_varname_mappings.U_WE: "uas",
-                    default_varname_mappings.V_SN: "vas"
+                    default_varname_mappings.V_SN: "vas",
                 },
                 "multiplier_mapping": multiplier_map_ECMWF_GCM,
                 "offset_mapping": defaultdict(lambda: 0),
-                "level_mapping": defaultdict(lambda: 0)
-        }]
+                "level_mapping": defaultdict(lambda: 0),
+             }),
+        ]
     )
 
     calculate_lake_effect_snowfall(label_to_config=label_to_config_ECMWF_GCM, period=period)

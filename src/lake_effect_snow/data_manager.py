@@ -206,7 +206,7 @@ class DataManager(object):
                 lats, lons = np.meshgrid(lats.values, lons.values)
 
 
-            if var.shape > 3:
+            if var.ndim > 3:
                 var = var[:, self.level_mapping[varname_internal], :, :]
 
             if var.shape[-2:] == lons.shape:
