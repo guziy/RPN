@@ -330,7 +330,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 def main():
     # First approximation of the lake-effect snow, by looking at the daily snowfall of more than 1 cm/day
     period = Period(
-        datetime(1991, 12, 1), datetime(1992, 3, 1)
+        datetime(1991, 12, 1), datetime(2002, 3, 1)
     )
 
     # should be consequent
