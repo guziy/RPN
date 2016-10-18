@@ -130,7 +130,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         p = Period(start, start.add(months=len(months_of_interest) ).subtract(seconds=1))
         print("Processing {} ... {} period".format(p.start, p.end))
 
-        air_temp = data_mngr.read_data_for_period(p, default_varname_mappings.T_AIR_2M)
+        try:
+            air_temp = data_mngr.read_data_for_period(p, default_varname_mappings.T_AIR_2M)
+        except IOError as e:
+            print(e)
+            continue
 
         day_dates = [datetime(d.year, d.month, d.day) for d in pd.to_datetime(air_temp.coords["t"].values)]
         day_dates = DataArray(day_dates, name="time", dims="t")
@@ -222,6 +226,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
         lkeff_snow_falls.append(snfl_acc)
 
+
+    if len(years_index) == 0:
+         print("Nothing to plot, exiting.")
+         return
 
     # concatenate the yearly accumulated snowfall and save the result to a netcdf file
     # select the region of interest before saving calculated fields to the file
@@ -330,7 +338,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 def main():
     # First approximation of the lake-effect snow, by looking at the daily snowfall of more than 1 cm/day
     period = Period(
-        datetime(1991, 12, 1), datetime(2002, 3, 1)
+        datetime(1994, 12, 1), datetime(1995, 3, 1)
     )
 
     # should be consequent
@@ -411,7 +419,7 @@ def main():
         ]
     )
 
-    calculate_lake_effect_snowfall(label_to_config=label_to_config_ECMWF_GCM, period=period)
+    calculate_lake_effect_snowfall(label_to_config=label_to_config_CRCM5, period=period)
 
 
 if __name__ == '__main__':
