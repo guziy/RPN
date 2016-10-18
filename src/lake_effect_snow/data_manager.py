@@ -233,7 +233,7 @@ class DataManager(object):
         }
 
 
-	if len(data_list) == 0:
+        if len(data_list) == 0:
             raise IOError("Could not find any data for the period {}".format(period))
         # Convert units based on supplied mappings
         return self.multipliers[varname_internal] * DataArray.from_dict(vardict) + self.offsets[varname_internal]
