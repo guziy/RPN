@@ -157,7 +157,8 @@ def generate_grid_coordinates(dom_props=None):
 def main():
     out_folder = "nemo_grids"
 
-    config_name = "GLK_452x260_0.1deg"
+    # config_name = "GLK_452x260_0.1deg"
+    config_name = "GLK_210x130_0.1deg"
     dom_props = known_domains[config_name]
     dom_props.config_name = config_name
 
@@ -211,8 +212,7 @@ def main():
     interpolator.interpolate_file("/RESCUE/skynet3_rech1/huziy/GLK_bathymetry_from_EC/bathy_meter.nc",
                                   os.path.join(out_folder, "bathy_meter_{}.nc".format(config_name)))
 
-
-    # Create initial conditions file
+    #  Create initial conditions file
     t_file_name = "IC_T_{}.nc".format(config_name)
     t_var_name = "votemper"
 
