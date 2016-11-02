@@ -46,7 +46,7 @@ known_projections = {
 
 known_domains = {
     "GLK_210x130_0.1deg": Grid(rll=RotatedLatLon(lon1=180., lat1=0., lon2=-84., lat2=1.0),
-                               nx=210, ny=130, iref=105, jref=100, lonref=-84, latref=48),
+                               nx=210, ny=130, iref=105, jref=100, lonref=-84, latref=48, dx=0.1, dy=0.1),
 
     "GLK_440x260_0.1deg": Grid(rll=RotatedLatLon(lon1=180., lat1=0., lon2=-84., lat2=1.0),
                                nx=440, ny=260, iref=135, jref=120, lonref=-84, latref=48, dx=0.1, dy=0.1),
