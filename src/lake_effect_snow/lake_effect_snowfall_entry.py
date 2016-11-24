@@ -1,6 +1,8 @@
+import multiprocessing
 from collections import OrderedDict
 from collections import defaultdict
 from datetime import timedelta, datetime
+from multiprocessing.pool import Pool
 from pathlib import Path
 
 import xarray
@@ -31,6 +33,7 @@ import numpy as np
 
 from pendulum import Period
 
+from lake_effect_snow.default_varname_mappings import T_AIR_2M, SNOWFALL_RATE, TOTAL_PREC, V_SN, U_WE
 from util import plot_utils
 
 from matplotlib import colors
@@ -58,6 +61,78 @@ def calculate_lake_effect_snowfall(label_to_config, period=None):
 
         calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr=data_manager, label=label, period=period,
                                                           out_folder=out_folder)
+
+
+
+
+def enh_lakeffect_snfall_calculator_proc(args):
+
+    """
+    For multiprocessing
+    :param args:
+    """
+    data_manager, label, period, out_folder = args
+
+
+
+    if not isinstance(period, Period):
+        p = Period(start=period[0], end=period[1])
+        p.months_of_interest = period[2]
+        period = p
+
+    print("Start calculations for {} ... {}".format(period.start, period.end))
+
+
+
+
+    calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr=data_manager, label=label, period=period,
+                                                      out_folder=out_folder)
+
+    print("Finish calculations for {} ... {}".format(period.start, period.end))
+
+
+
+def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period=None):
+    """
+    :param label_to_config:
+    :param period:  The period of interest defined by the start and the end year of the period (inclusive)
+    """
+
+    assert hasattr(period, "months_of_interest")
+
+    for label, the_config in label_to_config.items():
+        data_manager = DataManager(store_config=the_config)
+
+
+        print(the_config)
+
+        if "out_folder" in the_config:
+            out_folder = the_config["out_folder"]
+        else:
+            out_folder = "."
+
+
+        # Use a fraction of the available processes
+        nprocs_to_use = max(int(multiprocessing.cpu_count() * 0.75), 1)
+        nprocs_to_use = min(nprocs_to_use, period.in_years())  # No need for more processes than there is of years
+        print("Using {} processes for parallelization".format(nprocs_to_use))
+
+        pool = Pool(processes=nprocs_to_use)
+
+
+        # Construct the input params for each process
+        in_data = []
+
+        for start in period.range("years"):
+            p = Period(start=start, end=start.add(months=len(period.months_of_interest)).subtract(seconds=1))
+            p.months_of_interest = period.months_of_interest
+            in_data.append([data_manager, label, [p.start, p.end, period.months_of_interest], out_folder])
+
+
+        print(in_data)
+
+        pool.map(enh_lakeffect_snfall_calculator_proc, in_data)
+        # enh_lakeffect_snfall_calculator_proc(in_data[0])
 
 
 
@@ -94,8 +169,11 @@ def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
     return near_lake_zone
 
 
+
+
 def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder="."):
     months_of_interest = period.months_of_interest
+
 
     if not isinstance(out_folder, Path):
         out_folder_p = Path(out_folder)
@@ -127,7 +205,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     secs_per_day = timedelta(days=1).total_seconds()
 
     for start in period.range("years"):
-        p = Period(start, start.add(months=len(months_of_interest) ).subtract(seconds=1))
+        p = Period(start, start.add(months=len(months_of_interest)).subtract(seconds=1))
         print("Processing {} ... {} period".format(p.start, p.end))
 
         try:
@@ -312,7 +390,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         ax.set_title("{}".format(y))
 
     fig.tight_layout()
-    img_file = "acc_lakeff_snow_{}-{}.png".format(label, period.start.year, period.end.year - 1)
+    img_file = "{}_acc_lakeff_snow_{}-{}.png".format(label, period.start.year, period.end.year - 1)
 
     img_file = str(out_folder_p.joinpath(img_file))
     plt.savefig(img_file, bbox_inches="tight")
@@ -423,4 +501,10 @@ def main():
 
 
 if __name__ == '__main__':
+    import time
+    t0 = time.clock()
     main()
+    print("Execution time {} seconds".format(time.clock() - t0))
+
+
+

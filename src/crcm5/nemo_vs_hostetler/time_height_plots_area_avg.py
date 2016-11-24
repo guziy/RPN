@@ -31,11 +31,15 @@ def get_nemo_lakes_mask(samples_dir=""):
 
             if fn.startswith("pm") and fn[-9:-1] != 8 * "0":
                 fp = os.path.join(mfolder_path, fn)
+
                 r = RPN(fp)
                 tlake = r.get_first_record_for_name("NEM1")
+                lons_2d, lats_2d = r.get_longitudes_and_latitudes_for_the_last_read_rec()
                 r.close()
 
-                return tlake > 0
+                return tlake > 0, lons_2d, lats_2d
+
+
 
 
 def get_daily_clim_profiles(samples_dir, start_year=-np.Inf, end_year=np.Inf, filename_prefix="dp", varname="", mask=None):

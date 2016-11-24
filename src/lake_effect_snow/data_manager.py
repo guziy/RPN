@@ -45,7 +45,8 @@ class DataManager(object):
         if self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
             self.varname_to_file_prefix = store_config["filename_prefix_mapping"]
             self.init_mappings_samples_folder_crcm_output()
-            pass
+        elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME:
+            self.init_mappings_samples_folder_crcm_output()
         elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES:
             # TODO: implement
             # Construct the dictionary {varname: {date range: path}}
@@ -177,6 +178,39 @@ class DataManager(object):
 
                     r.close()
 
+
+            dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
+            data_list = [data[d] for d in dates]
+
+        elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME:
+            for month_start in period.range("months"):
+
+                year, m = month_start.year, month_start.month
+
+                print(year, m)
+
+                # Skip years or months that are not available
+                if (year, m) not in self.yearmonth_to_path:
+                    print("Skipping {}-{}".format(year, m))
+                    continue
+
+                month_dir = self.yearmonth_to_path[(year, m)]
+
+                for f in month_dir.iterdir():
+                    # read only files containing the variable name in the name, i.e. *TT*.rpn
+                    if not self.varname_mapping[varname_internal] in f.name:
+                        continue
+
+                    r = RPN(str(f))
+
+                    data.update(
+                        r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
+                                                                  level=level, level_kind=level_kind))
+
+                    if lons is None:
+                        lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+
+                    r.close()
 
             dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
             data_list = [data[d] for d in dates]

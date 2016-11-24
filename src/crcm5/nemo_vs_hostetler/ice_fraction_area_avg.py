@@ -10,6 +10,8 @@ from rpn import level_kinds
 from rpn.rpn_multi import MultiRPN
 import os
 
+from scipy.spatial import cKDTree as KDTree
+
 from application_properties import main_decorator
 from crcm5.nemo_vs_hostetler import commons
 
@@ -20,12 +22,13 @@ from data import GL_obs_timeseries
 from netCDF4 import Dataset, MFDataset, num2date
 
 from util import plot_utils
+from util.geo import lat_lon
 
 img_folder = "nemo_vs_hostetler"
 
 def get_area_avg_timeseries(samples_dir, start_year=-np.Inf, end_year=np.Inf, filename_prefix="pm",
                             level=-1, level_kind=level_kinds.ARBITRARY,
-                            varname="", mask=None) -> pd.Series:
+                            varname="", mask=None, mask_lons2d=None, mask_lats2d=None, file_per_var=False) -> pd.Series:
     """
     get the timeseries of area averaged ice fraction
     :rtype : pd.Series
@@ -33,14 +36,26 @@ def get_area_avg_timeseries(samples_dir, start_year=-np.Inf, end_year=np.Inf, fi
 
     yearly_ts = []
 
+
+    lons2d, lats2d = None, None
+    samples_dir_p = Path(samples_dir)
+
+
+    # interpolated mask
+    interpolated_mask = None
+
+
     for y in range(start_year, end_year + 1):
         files_for_year = []
 
-        mfolders = [os.path.join(samples_dir, f) for f in os.listdir(samples_dir) if f[:-2].endswith(str(y))]
+        mfolders = [f for f in samples_dir_p.iterdir() if f.name[:-2].endswith(str(y))]
 
         for mfolder in mfolders:
-            files_for_year += [os.path.join(mfolder, fn) for fn in os.listdir(mfolder) if
-                               fn.startswith(filename_prefix) and fn[-9:-1] != "0" * 8]
+            # Select all files containing the varname in the filename
+            if file_per_var:
+                files_for_year += [str(f) for f in mfolder.iterdir() if varname in f.name]
+            else:
+                files_for_year += [str(f) for f in mfolder.iterdir() if f.name.startswith(filename_prefix) and f.name[-9:-1] != "0" * 8]
 
 
         if len(files_for_year) == 0:
@@ -49,15 +64,32 @@ def get_area_avg_timeseries(samples_dir, start_year=-np.Inf, end_year=np.Inf, fi
         mrpn = MultiRPN(files_for_year)
         data = mrpn.get_all_time_records_for_name_and_level(varname=varname, level=level, level_kind=level_kind)
 
+        if lons2d is None:
+            lons2d, lats2d = mrpn.get_longitudes_and_latitudes_of_the_last_read_rec()
+
+
+        # interpolate the mask using nearest neighbour approach
+        if interpolated_mask is None:
+            xs, ys, zs = lat_lon.lon_lat_to_cartesian(mask_lons2d.flatten(), mask_lats2d.flatten())
+            ktree = KDTree(data=list(zip(xs, ys, zs)))
+
+            xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons2d.flatten(), lats2d.flatten())
+            dists, inds = ktree.query(list(zip(xt, yt, zt)), k=1)
+
+            interpolated_mask = mask.flatten()[inds]
+            interpolated_mask.shape = lons2d.shape
+
+
         for t, field in data.items():
-            data[t] = field[mask].mean()
+            data[t] = field[interpolated_mask].mean()
 
         tlist = [t for t in data.keys()]
         ser = pd.Series(index=tlist, data=[data[t] for t in tlist])
         ser.sort_index(inplace=True)
         yearly_ts.append(ser)
+        mrpn.close()
 
-    return pd.concat(yearly_ts)
+    return pd.concat(yearly_ts), lons2d, lats2d
 
 @main_decorator
 def main():

@@ -1,8 +1,10 @@
 from collections import OrderedDict
+from pathlib import Path
 
 from matplotlib.gridspec import GridSpec
 from netCDF4 import MFDataset, num2date, Dataset
 from rpn import level_kinds
+from scipy.spatial import cKDTree as KDTree
 
 from application_properties import main_decorator
 
@@ -21,14 +23,17 @@ import os
 import pandas as pd
 from datetime import datetime
 
+from util.geo import lat_lon
 
 img_folder = "nemo_vs_hostetler"
 
 
-def get_area_avg_from_erai_data(start_year=-np.Inf, end_year=np.Inf, var_folder="", varname="", mask=None):
+def get_area_avg_from_erai_data(start_year=-np.Inf, end_year=np.Inf, var_folder="", varname="", mask=None, mask_lons=None, mask_lats=None):
 
     """
-    Note mask should be on the same grid as ERA-Interim
+
+    Interpolate the mask to the ERA-Interim grid using nearest neighbour approach
+
     :param start_year:
     :param end_year:
     :param var_folder:
@@ -43,6 +48,11 @@ def get_area_avg_from_erai_data(start_year=-np.Inf, end_year=np.Inf, var_folder=
     flist = [os.path.join(var_folder, fn) for fn in os.listdir(var_folder) if fn.startswith(varname) and (start_year <= _get_year(fn)) and (_get_year(fn) <= end_year)]
     print(flist)
 
+
+    ktree = None
+    mask_interpolated = None
+    lons_target, lats_target = None, None
+
     ser_list = []
     for fp in flist:
 
@@ -53,7 +63,30 @@ def get_area_avg_from_erai_data(start_year=-np.Inf, end_year=np.Inf, var_folder=
 
             print(times[0], times[-1])
 
-            vals = [field.T[mask].mean() for field in ds.variables[varname][:]]
+            # Determine nearest neighbours for interpolation (do it only once)
+            if ktree is None:
+
+                # get lons and lats from the bathymetry file
+                data_folder_p = Path(var_folder).parent
+
+                for f in data_folder_p.iterdir():
+                    if f.name.lower().startswith("bathy_meter"):
+                        with Dataset(str(f)) as ds_bathy:
+                            lons_target, lats_target = [ds_bathy.variables[k][:] for k in ["nav_lon", "nav_lat"]]
+                            break
+
+
+                x, y, z = lat_lon.lon_lat_to_cartesian(mask_lons.flatten(), mask_lats.flatten())
+                xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_target.flatten(), lats_target.flatten())
+                ktree = KDTree(list(zip(x, y, z)))
+
+                dists, inds = ktree.query(list(zip(xt, yt, zt)), k=1)
+
+                mask_interpolated = mask.flatten()[inds]
+                mask_interpolated = mask_interpolated.reshape(lons_target.shape)
+
+
+            vals = [field[mask_interpolated].mean() for field in ds.variables[varname][:]]
             ser = pd.Series(index=times, data=vals)
 
             if varname == "TT":
@@ -75,6 +108,9 @@ def main():
     HL_LABEL = "CRCM5_HL"
     NEMO_LABEL = "CRCM5_NEMO"
 
+
+
+    # Older, shorter [1971 - 1981], smaller domain simulations
     sim_label_to_path = OrderedDict(
         [(HL_LABEL, "/RESCUE/skynet3_rech1/huziy/CNRCWP/C5/2016/2-year-runs/coupled-GL+stfl_oneway/Samples"),
          (NEMO_LABEL, "/HOME/huziy/skynet3_rech1/CNRCWP/C5/2016/2-year-runs/coupled-GL+stfl/Samples")]
@@ -160,15 +196,26 @@ def main():
         coef = 1
         coef_erai = 1
 
+        # plot monthly means for precipitations
         if vname == "PR":
             coef = 24 * 3600 * 1000
             coef_erai = coef / 1000.0 # Already in mm/s
 
-        ts = vname_to_ts_hl[vname].groupby(lambda d: datetime(d.year, d.month, d.day)).mean() * coef
-        ax.plot(ts.index, ts.values, lw=2, color="b", label=HL_LABEL)
 
-        ts = vname_to_ts_nemo[vname].groupby(lambda d: datetime(d.year, d.month, d.day)).mean() * coef
-        ax.plot(ts.index, ts.values, lw=2, color="r", label=NEMO_LABEL)
+            ts = vname_to_ts_hl[vname].groupby(lambda d: datetime(d.year, d.month, 15)).mean() * coef
+            ax.plot(ts.index, ts.values, lw=2, color="b", label=HL_LABEL)
+
+            ts = vname_to_ts_nemo[vname].groupby(lambda d: datetime(d.year, d.month, 15)).mean() * coef
+            ax.plot(ts.index, ts.values, lw=2, color="r", label=NEMO_LABEL)
+
+        else:
+
+            ts = vname_to_ts_hl[vname].groupby(lambda d: datetime(d.year, d.month, d.day)).mean() * coef
+            ax.plot(ts.index, ts.values, lw=2, color="b", label=HL_LABEL)
+
+            ts = vname_to_ts_nemo[vname].groupby(lambda d: datetime(d.year, d.month, d.day)).mean() * coef
+            ax.plot(ts.index, ts.values, lw=2, color="r", label=NEMO_LABEL)
+
 
         ts = vname_to_ts_erai[vname].groupby(lambda d: datetime(d.year, d.month, 15)).mean() * coef_erai
         ax.plot(ts.index, ts.values, lw=2, color="k", label="ERA-Interim")
