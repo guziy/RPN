@@ -11,6 +11,7 @@ from netCDF4 import Dataset
 
 from application_properties import main_decorator
 from crcm5.mh_domains import default_domains
+from crcm5.mh_domains.utils.region_and_mask import get_rectangular_region_from_mask_and_margin
 
 from domains.grid_config import GridConfig
 
@@ -19,7 +20,7 @@ img_folder = "mh"
 
 def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_basins_of_interest=None,
                 directions_file=None, imgfile_prefix="bc-mh", include_buffer=True, ax=None, basin_border_width=1.5,
-                path_to_shape_with_focus_polygons=None):
+                path_to_shape_with_focus_polygons=None, nc_varname_to_show="accumulation_area"):
     assert isinstance(grid_config, GridConfig)
 
     is_subplot = ax is not None
@@ -41,16 +42,18 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
 
     if directions_file is not None:
         with Dataset(directions_file) as ds:
-            lons2d, lats2d, faa = [ds.variables[k][:] for k in ["lon", "lat", "accumulation_area"]]
+            lons2d, lats2d, faa = [ds.variables[k][:] for k in ["lon", "lat", nc_varname_to_show]]
 
         # Focus over the selected watersheds
         data_mask = None
+        mask_margin = 5
+
         if path_to_shape_with_focus_polygons is not None:
             bmp, data_mask = grid_config.get_basemap_using_shape_with_polygons_of_interest(
                 lons2d[margin:-margin, margin:-margin],
                 lats2d[margin:-margin, margin:-margin],
                 shp_path=path_to_shape_with_focus_polygons,
-                mask_margin=5)
+                mask_margin=mask_margin)
 
             bmp.readshapefile(path_to_shape_with_focus_polygons[:-4], "basins", linewidth=2, color="m")
 
@@ -58,13 +61,20 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
 
         data = faa[margin:-margin, margin:-margin]
         if data_mask is not None:
-            data = np.ma.masked_where(data_mask < 0.5, data)
 
-        im = bmp.pcolormesh(xxx, yyy, data, cmap="bone_r", norm=LogNorm())
+            # subset the data for plotting with imshow (not required for contourf)
+            imin, imax, jmin, jmax = get_rectangular_region_from_mask_and_margin(data_mask > 0.5, margin_points=mask_margin)
+            data = np.ma.masked_where(data_mask < 0.5, data)
+            data = data[imin:imax + 1, jmin:jmax + 1]
+
+        if nc_varname_to_show == "lake_fraction":
+            im = bmp.imshow(data.T, cmap="bone_r", interpolation="nearest")
+        else:
+            im = bmp.contourf(xxx, yyy, data, cmap="bone_r", norm=LogNorm())
+
         bmp.colorbar(im)
 
     # bmp.readshapefile(default_domains.MH_BASINS_PATH[:-4], "basin", color="m", linewidth=basin_border_width)
-
 
     if grdc_basins_of_interest is not None:
         # Select which basins to show
@@ -171,6 +181,13 @@ def show_all_domains():
                 directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_440x260_GL+NENA_0.1deg.nc",
                 include_buffer=False)
 
+@main_decorator
+def test_lake_fraction_calculation():
+    show_domain(default_domains.bc_mh_044, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr_test",
+                path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
+                directions_file="/Users/san/Java/ddm/directions_bc-mh_0.44deg.nc", nc_varname_to_show="lake_fraction")
+
+
 
 @main_decorator
 def main():
@@ -205,4 +222,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    test_lake_fraction_calculation()

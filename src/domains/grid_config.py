@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from descartes import PolygonPatch
+from matplotlib.collections import PatchCollection
 from mpl_toolkits.basemap import Basemap
 from pathlib import Path
 
@@ -27,10 +29,8 @@ def gridconfig_from_grid_nml(nml_str):
 
     gc = GridConfig()
 
-
     def get_val_of(par_name, parser_func=float):
         return parser_func(re.search("grd_{}".format(par_name) + "\s*=\s*(-?\s*\d*\.?\d*)", nml_str).group(1))
-
 
     gc.dx = get_val_of("dx")
     gc.dy = get_val_of("dy")
@@ -41,7 +41,6 @@ def gridconfig_from_grid_nml(nml_str):
 
     gc.xref = get_val_of("lonr")
     gc.yref = get_val_of("latr")
-
 
     parnames = ["xlat1", "xlat2", "xlon1", "xlon2"]
     pardict = {pn[1:]: get_val_of(pn) for pn in parnames}
@@ -64,7 +63,6 @@ class GridConfig(object):
 
         # size of the blending zone in grid points
         self.blendig = 10
-
 
         self.rll = None
         if "rll" not in kwargs:
@@ -106,8 +104,6 @@ class GridConfig(object):
 
         return obj
 
-
-
     def export_to_shape(self, shp_folder="", shp_filename="", free_zone_only=True,
                         export_mask=None, shape_fields=None):
         """
@@ -120,10 +116,8 @@ class GridConfig(object):
 
         import shapefile as shp
 
-
         w = shp.Writer(shp.POLYGON)
-        
-        
+
         w.field("i", fieldType="I")
         w.field("j", fieldType="I")
 
@@ -131,11 +125,9 @@ class GridConfig(object):
 
         if shape_fields is not None:
             for field_name, field in shape_fields.items():
-                
                 w.field(field_name, *field.type_of_shp_field)
 
                 field_names_in_order.append(field_name)
-                    
 
         if isinstance(shp_folder, str):
             folder = Path(shp_folder)
@@ -149,7 +141,6 @@ class GridConfig(object):
         lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
         latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
 
-
         margin = 0
         if free_zone_only:
             margin = self.blendig + self.halo
@@ -159,7 +150,6 @@ class GridConfig(object):
 
         end_i = self.ni - margin - 1
         end_j = self.nj - margin - 1
-
 
         if export_mask is None:
             export_mask = np.ones((self.ni, self.nj), dtype=bool)
@@ -177,7 +167,6 @@ class GridConfig(object):
                 p01 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y + self.dy / 2.0)
                 p11 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y + self.dy / 2.0)
                 p10 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y - self.dy / 2.0)
-
 
                 w.poly(parts=[
                     [p00, p01, p11, p10]
@@ -200,7 +189,7 @@ class GridConfig(object):
         w.save(str(folder.joinpath(shp_filename)))
 
     def export_to_shape_fiona(self, shp_folder="", shp_filename="", free_zone_only=True,
-                        export_mask=None, shape_fields=None):
+                              export_mask=None, shape_fields=None):
         """
         export the grid to the shape file
         using fiona since pyshp was not compatible with arcgis
@@ -209,23 +198,24 @@ class GridConfig(object):
         :param shp_folder:
         :param shp_filename:
         """
-
-
-        from fiona.crs import from_epsg
+        from fiona.crs import from_epsg, from_string
         import fiona
 
         proj = from_epsg(4326)
+        # proj = from_epsg(4269)
+        # proj = from_string("+units=m +lon_0=-97.0 +o_lon_p=180.0 +R=6370997.0 +o_proj=longlat +proj=ob_tran +o_lat_p=42.5")
+        print(proj)
+        print(dir(proj))
+        # proj = from_epsg(900913)
 
         if isinstance(shp_folder, str):
             folder = Path(shp_folder)
         else:
             folder = shp_folder
 
-
         # create the directory if does not exist
         if not folder.is_dir():
             folder.mkdir()
-
 
         schema = {
             "geometry": "Polygon",
@@ -234,14 +224,13 @@ class GridConfig(object):
             )
         }
 
-
         if shape_fields is not None:
-
             # additional fields
             for field_name, field in shape_fields.items():
                 schema["properties"][field_name] = field.type_of_shp_field
 
-        with fiona.open(str(folder.joinpath(shp_filename)), mode="w", driver="ESRI Shapefile", crs=proj, schema=schema) as output:
+        with fiona.open(str(folder.joinpath(shp_filename)), mode="w", driver="ESRI Shapefile", crs=proj,
+                        schema=schema) as output:
 
             lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
             latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
@@ -259,6 +248,9 @@ class GridConfig(object):
             if export_mask is None:
                 export_mask = np.ones((self.ni, self.nj), dtype=bool)
 
+            polygons = []
+            lake_fractions = []
+
             for i in range(start_i, end_i + 1):
                 x = lonr[i]
 
@@ -273,16 +265,39 @@ class GridConfig(object):
                     p11 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y + self.dy / 2.0)
                     p10 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y - self.dy / 2.0)
 
+                    # p00 = (x - self.dx / 2.0, y - self.dy / 2.0)
+                    # p01 = (x - self.dx / 2.0, y + self.dy / 2.0)
+                    # p11 = (x + self.dx / 2.0, y + self.dy / 2.0)
+                    # p10 = (x + self.dx / 2.0, y - self.dy / 2.0)
 
-                    poly = Polygon(shell=[p00, p01, p11, p10])
+                    poly = Polygon(shell=[p00, p01, p11, p10, p00])
                     props = OrderedDict([("i", i + 1), ("j", j + 1)])
 
+                    polygons.append(PolygonPatch(poly))
+
+
                     if shape_fields is not None:
+
+                        lake_fractions.append(shape_fields["lkfr"][i, j])
                         for field_name, field in shape_fields.items():
                             converter = float if field.type_of_shp_field in ["float"] else int
                             props[field_name] = converter(field[i, j])
 
                     output.write({"geometry": mapping(poly), "properties": props})
+
+
+
+            # plot the gridcells with basemap
+            # pcol = PatchCollection(polygons, cmap="bone_r")
+            # pcol.set_array(np.array(lake_fractions))
+            # import matplotlib.pyplot as plt
+            # bmp = self.get_basemap_for_free_zone(resolution="l")
+            # fig = plt.figure()
+            # ax = fig.add_subplot(111)
+            # bmp.ax = ax
+            # ax.add_collection(pcol)
+            # bmp.drawcoastlines(ax=ax)
+            # plt.show()
 
 
 
@@ -296,7 +311,6 @@ class GridConfig(object):
         """
 
         from osgeo import ogr, osr
-
 
         folder = Path(shp_folder)
 
@@ -323,7 +337,6 @@ class GridConfig(object):
         layer.CreateField(ogr.FieldDefn("i", ogr.OFTInteger))
         layer.CreateField(ogr.FieldDefn("j", ogr.OFTInteger))
 
-
         lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
         latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
 
@@ -345,7 +358,6 @@ class GridConfig(object):
 
                 # create the feature
                 feature = ogr.Feature(layer.GetLayerDefn())
-
 
                 p00 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y - self.dy / 2.0)
                 p01 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y + self.dy / 2.0)
@@ -366,7 +378,6 @@ class GridConfig(object):
 
                 feature.SetGeometry(poly)
 
-
                 layer.CreateFeature(feature)
                 feature.Destroy()
 
@@ -385,7 +396,6 @@ class GridConfig(object):
 
         from osgeo import ogr, osr
 
-
         folder = Path(shp_folder)
 
         # create the directory if does not exist
@@ -401,23 +411,18 @@ class GridConfig(object):
         # create the data source
         data_source = driver.CreateDataSource(str(folder.joinpath(shp_filename)))
 
-
         # Projection
         srs = osr.SpatialReference()
 
-
-        bmp = self.get_basemap_for_free_zone()  
+        bmp = self.get_basemap_for_free_zone()
         srs.ImportFromProj4(bmp.proj4string)
         print(srs)
         print(srs.ExportToPrettyWkt())
-
-
 
         # create the layer
         layer = data_source.CreateLayer("grid", srs, ogr.wkbPolygon)
         layer.CreateField(ogr.FieldDefn("i", ogr.OFTInteger))
         layer.CreateField(ogr.FieldDefn("j", ogr.OFTInteger))
-
 
         lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
         latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
@@ -441,7 +446,6 @@ class GridConfig(object):
                 # create the feature
                 feature = ogr.Feature(layer.GetLayerDefn())
 
-
                 p00 = (x - self.dx / 2.0, y - self.dy / 2.0)
                 p01 = (x - self.dx / 2.0, y + self.dy / 2.0)
                 p11 = (x + self.dx / 2.0, y + self.dy / 2.0)
@@ -461,7 +465,6 @@ class GridConfig(object):
 
                 feature.SetGeometry(poly)
 
-
                 layer.CreateFeature(feature)
                 feature.Destroy()
 
@@ -469,7 +472,6 @@ class GridConfig(object):
         # w.record(1, 1)
 
         data_source.Destroy()
-
 
     def get_basemap_for_free_zone(self, halo=None, blending=None, **kwargs):
         if halo is None:
@@ -480,7 +482,6 @@ class GridConfig(object):
 
         lons_c, lats_c = self.get_free_zone_corners(halo=halo, blending=blending)
         return self.get_basemap(lons=lons_c, lats=lats_c, **kwargs)
-
 
     def get_basemap_using_shape_with_polygons_of_interest(self, lons, lats, shp_path=None, mask_margin=5, **kwargs):
 
@@ -497,10 +498,9 @@ class GridConfig(object):
         j_min = min(j_list) - mask_margin
         j_max = max(j_list) + mask_margin
 
-        bsmap = self.get_basemap(lons=lons[i_min:i_max + 1, j_min:j_max + 1], lats=lats[i_min:i_max + 1, j_min:j_max + 1])
+        bsmap = self.get_basemap(lons=lons[i_min:i_max + 1, j_min:j_max + 1],
+                                 lats=lats[i_min:i_max + 1, j_min:j_max + 1])
         return bsmap, reg_of_interest
-
-
 
     def get_basemap(self, lons=None, lats=None, **kwargs):
 
@@ -522,14 +522,11 @@ class GridConfig(object):
                     shiftx = -shiftx if i == 0 else shiftx
                     shifty = -shifty if i == 0 else shifty
 
-
                     lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonr[i, j] + shiftx, latr[i, j] + shifty)
 
         return self.get_rot_latlon_proj_obj().get_basemap_object_for_lons_lats(lons2d=lons,
                                                                                lats2d=lats,
                                                                                **kwargs)
-
-
 
     def get_corners_in_proj_coords(self):
 
@@ -547,10 +544,6 @@ class GridConfig(object):
 
         return lonr, latr
 
-
-
-
-
     def get_free_zone_corners(self, halo=10, blending=10):
 
         margin = halo + blending
@@ -562,8 +555,6 @@ class GridConfig(object):
         lons = np.zeros((2, 2))
         lats = np.zeros((2, 2))
 
-
-
         for i in [-1, 0]:
             mulx = -1 if i >= 0 else 1
             shiftx = mulx * self.dx / 2.0
@@ -572,18 +563,12 @@ class GridConfig(object):
                 muly = -1 if j >= 0 else 1
                 shifty = muly * self.dy / 2.0
 
-
                 lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonr[i, j] + shiftx, latr[i, j] + shifty)
 
         return lons, lats
 
-
-
-
     def get_rot_latlon_proj_obj(self):
         return self.rll
-
-
 
     def subgrid(self, i0, j0, di=-1, dj=-1):
 
@@ -594,7 +579,6 @@ class GridConfig(object):
         :param di: number of grid points in i direction
         :param dj: number of grid points in j direction
         """
-
 
         subgr = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref)
 
@@ -608,18 +592,13 @@ class GridConfig(object):
         else:
             subgr.nj = self.nj - j0
 
-
         subgr.iref = self.iref - i0
         subgr.jref = self.jref - j0
 
         return subgr
 
-
-
     def copy(self):
         return self.subgrid(0, 0, di=self.ni, dj=self.nj)
-
-
 
     def double_resolution(self):
         gc = GridConfig(rll=self.rll, dx=self.dx / 2.0, dy=self.dy / 2.0, xref=self.xref, yref=self.yref)
@@ -654,12 +633,10 @@ class GridConfig(object):
         gc.ni = (self.ni - 2 * margin_pts) / factor + 2 * margin_pts
         gc.nj = (self.nj - 2 * margin_pts) / factor + 2 * margin_pts
 
-
         # Change the reference point if the new iref and jref cannot be the same
 
         new_iref = self.iref - margin_pts
         new_jref = self.jref - margin_pts
-
 
         new_iref = new_iref // factor + (new_iref % factor != 0)
         x00 = self.xref + self.dx * (margin_pts + 1 - self.iref) - self.dx / 2.0
@@ -669,17 +646,14 @@ class GridConfig(object):
         y00 = self.yref + self.dy * (margin_pts + 1 - self.jref) - self.dy / 2.0
         new_yref = y00 + new_jref * self.dy * factor - self.dy * factor / 2.0
 
-
         gc.iref = new_iref + margin_pts
         gc.jref = new_jref + margin_pts
 
         gc.xref = new_xref
         gc.yref = new_yref
 
-
         gc.ni = int(gc.ni)
         gc.nj = int(gc.nj)
-
 
         return gc
 
@@ -690,12 +664,11 @@ class GridConfig(object):
         return gc
 
     def expand(self, di=0, dj=0):
-        gc = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref, ni=self.ni + di, nj=self.nj + dj)
+        gc = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref, ni=self.ni + di,
+                        nj=self.nj + dj)
         gc.iref = self.iref
         gc.jref = self.jref
         return gc
-
-
 
     def __str__(self):
         s = """
@@ -751,8 +724,6 @@ def main():
     print(gc)
 
 
-
 if __name__ == "__main__":
     main()
     print("Hello world")
-  

@@ -16,13 +16,9 @@ from util import plot_utils
 img_folder = "mh"
 
 
-
-
-
 def show_multiple_domains(label_to_config):
     # TODO: implement
     pass
-
 
 
 def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GRDC_basins=False):

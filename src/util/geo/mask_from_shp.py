@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from application_properties import main_decorator
 from osgeo import ogr
 import numpy as np
@@ -12,6 +14,9 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
     :rtype : np.ndarray
     The mask is >= 1 for the points inside of the polygons
     """
+
+    assert Path(shp_path).exists()
+
     ds = ogr.Open(shp_path)
     """
     :type : ogr.DataSource
