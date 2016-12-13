@@ -51,7 +51,7 @@ def _get_slope_data(path=""):
     return np.flipud(data)[:100, :100]
 
 
-def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None, missing_value = 255, 
+def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None, missing_value=255,
                                      nrows_total = None, ncols_total = None):
     # with open(path) as f:
     #     lines = f.readlines()[6:][::-1]
@@ -62,36 +62,38 @@ def _get_slope_data_by_cols_and_rows(path="", cols=None, rows=None, missing_valu
     :param path:
     :return: numpy.ndarray
     """
-    imin = min(rows)
+
+    imin = min(rows) if rows is not None else 0
     imax = max(rows)
 
     data = np.genfromtxt(path, skip_header=nrows_total - (imax+1) + 6, 
                          skip_footer = imin,
-                         dtype=np.uint8, usecols=cols, missing_values = missing_value, 
+                         dtype=np.uint8, usecols=cols, missing_values=missing_value,
                          usemask = True)
 
-    if rows is not None:
-        rows = np.asarray(rows)
-        return np.flipud(data)
-
+    data = np.ma.masked_where(data == missing_value, data)
     return np.flipud(data)
 
 
 def fill_missing_values(route_slope, interpolated_slopes,
-                        lons2d = None, lats2d = None):
+                        lons2d=None, lats2d=None):
 
 
     to_fill = (route_slope >= 0) & (interpolated_slopes < 0)
+
+    # Only do the filling if necessary
+    if not np.any(to_fill):
+        return
+
+
+
     correct_slopes = interpolated_slopes >= 0
 
     x, y, z = lat_lon.lon_lat_to_cartesian(lons2d[correct_slopes], lats2d[correct_slopes])
     ktree = cKDTree(list(zip(x, y, z)))
 
-
-
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons2d[to_fill], lats2d[to_fill])
     dists, inds = ktree.query(list(zip(xt, yt, zt)))
-
     interpolated_slopes[to_fill] = interpolated_slopes[correct_slopes][inds]
 
 
@@ -145,7 +147,7 @@ def interpolate_slopes(in_path_template="",
         deet = info["dt_seconds"]
         dateo = info["dateo"]
 
-        #read the coordinate values from
+        # read the coordinate values from
         if info["varname"].strip().lower() == var_name_with_target_coords.lower():
             npas_for_sl = npas
             deet_for_sl = deet
@@ -167,7 +169,7 @@ def interpolate_slopes(in_path_template="",
         i += 1
 
 
-    #check that all fields were copied
+    # check that all fields were copied
     n_recs_in = r_obj_in.get_number_of_records()
     assert i == n_recs_in, "copied {0} records, but should be {1}".format(i, n_recs_in)
 
@@ -176,7 +178,7 @@ def interpolate_slopes(in_path_template="",
     lons2d_target, lats2d_target = r_obj_in.get_longitudes_and_latitudes_for_the_last_read_rec()
     lons2d_target[lons2d_target >= 180] -= 360
 
-    #Interpolate and save interflow slopes
+    # Interpolate and save interflow slopes
     mat = None
     params = None
 
@@ -188,12 +190,12 @@ def interpolate_slopes(in_path_template="",
         if mat is None:
             params, lons1d_source, lats1d_source = _get_source_lon_lat(path=inpath)
             print(params)
-            #build the map of closest indices
+            # build the map of closest indices
             nx, ny = lons2d_target.shape
             for i in range(nx):
-                #if not (100 <= i <= 160): continue
+                # if not (100 <= i <= 160): continue
                 for j in range(ny):
-                    #if not (100 <= j <= 160): continue
+                    # if not (100 <= j <= 160): continue
                     lon_target, lat_target = lons2d_target[i, j], lats2d_target[i, j]
                     dlon1 = np.abs(lons1d_source - lon_target)
                     dlon2 = np.abs(lons1d_source - 360 - lon_target) if lon_target < 0 else \
@@ -204,7 +206,7 @@ def interpolate_slopes(in_path_template="",
                                       (dlon2 < delta_deg))[0]
 
                     inds_j = np.where(dlat < delta_deg)[0]
-                    assert len(inds_i) > 0 and len(inds_j) > 0
+                    # assert len(inds_i) > 0 and len(inds_j) > 0
 
                     imin, jmin = min(imin, inds_i.min()), min(jmin, inds_j.min())
                     imax, jmax = max(imax, inds_i.max()), max(jmax, inds_j.max())
@@ -212,9 +214,9 @@ def interpolate_slopes(in_path_template="",
                     inds_i, inds_j = np.meshgrid(inds_i, inds_j)
 
                     index_map[(i, j)] = [inds_j.flatten(), inds_i.flatten()]
-                    #print i, j
-        #i <-> longitude <-> columns in the file
-        #j <-> latitude <-> rows in the file
+                    # print i, j
+        # i <-> longitude <-> columns in the file
+        # j <-> latitude <-> rows in the file
         tmp_mat = _get_slope_data_by_cols_and_rows(path=inpath,
                                                    cols=list(range(imin, imax + 1)),
                                                    rows=list(range(jmin, jmax + 1)),
@@ -231,10 +233,19 @@ def interpolate_slopes(in_path_template="",
         else:
             mat += med * tmp_mat
 
+
+
     mat /= 100.0
 
 
-    #compare length scales
+    # debug
+    # import matplotlib.pyplot as plt
+    # plt.figure()
+    # plt.pcolormesh(mat)
+    # plt.show()
+
+
+    # compare length scales
     interpolated_slopes = np.zeros_like(lons2d_target)
 
     for ij, inds in index_map.items():
@@ -250,7 +261,7 @@ def interpolate_slopes(in_path_template="",
 
 
     fill_missing_values(route_slope, interpolated_slopes,
-                        lons2d = lons2d_target, lats2d = lats2d_target)
+                        lons2d=lons2d_target, lats2d=lats2d_target)
 
 
 
@@ -311,6 +322,15 @@ if __name__ == "__main__":
     import time
 
     t0 = time.time()
-    interpolate_slopes(in_path_template="/home/huziy/skynet3_rech1/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
-                       in_path_rpn_geophy="/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6")
+    # interpolate_slopes(in_path_template="/home/huziy/skynet3_rech1/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
+    #                    in_path_rpn_geophy="/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_Quebec_0.1deg_260x260_with_dd_v6")
+    #
+
+
+    interpolate_slopes(in_path_template="/RECH2/huziy/Global_terrain_slopes_30s/GloSlopesCl{0}_30as.asc",
+                       in_path_rpn_geophy="/RESCUE/skynet3_rech1/huziy/geof_lake_infl_exp/directions_qc_dx0.4deg.rpn",
+                       delta_deg=0.2)
+
+
+
     print("Execution time is {0} seconds.".format(time.time() - t0))
