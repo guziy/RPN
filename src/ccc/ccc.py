@@ -1,5 +1,8 @@
 """
 module pour traiter des fichiers ccc
+
+Developed by David Huard.
+
 """
 
 import struct
@@ -27,7 +30,7 @@ class champ_ccc :
         """
         methode qui ferme l'unite _u
         """
-        close(self._u)
+        self._u.close()
 
     def _rewind_fichier(self) :
         """
@@ -35,7 +38,8 @@ class champ_ccc :
         """
         self._u.seek(0)
 
-    class _message_fin_fichier : pass
+    class _message_fin_fichier:
+        pass
 
     def _lit_ibuf(self) :
         """
@@ -53,13 +57,13 @@ class champ_ccc :
 
         # si la string lue est vide, le fichier est tout lu
         string_lue = self._u.read(long_rec)
-        if string_lue == '' :
+        if string_lue == '':
             # on rewind le fichier et on envoi une exception
             self._u.seek(0)
             raise self._message_fin_fichier()
         
         # on decode le ibuf
-        ibuf_lu = struct.unpack(format,string_lue)
+        ibuf_lu = struct.unpack(format, string_lue)
         # on attribue les etiquettes lues au ibuf
         for i in range(8) :
             clef = 'ibuf'+str(i+1)
