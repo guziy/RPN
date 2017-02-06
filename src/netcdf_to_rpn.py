@@ -173,6 +173,9 @@ def convert(nc_path='directions_africa_dx0.44deg.nc', out_path=None, gc=None, do
 import application_properties
 
 if __name__ == "__main__":
+
+    from crcm5.uqam_domain import qc_domains
+
     application_properties.set_current_directory()
     # convert(nc_path="directions_qc_dx0.1deg260x260.nc")
     # convert(nc_path="/home/huziy/skynet3_exec1/hydrosheds/directions_qc_dx0.1deg_2.nc")
@@ -247,9 +250,12 @@ if __name__ == "__main__":
     #         gc=default_domains.gc_cordex_na_044)
 
     # PanArctic 0.5 deg
-    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_arctic_0.5deg_Bernardo.nc",
-            gc=default_domains.gc_panarctic_05)
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_arctic_0.5deg_Bernardo.nc",
+    #         gc=default_domains.gc_panarctic_05)
 
+
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_qc_dx0.4deg.nc",
+    #         gc=qc_domains.qc_rll_domain_huziy_thesis_04)
 
     print(default_domains.bc_mh_022)
 
@@ -258,5 +264,7 @@ if __name__ == "__main__":
         convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg.nc", gc=default_domains.bc_mh_022)
         convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc", gc=default_domains.bc_mh_011)
 
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc",
+            gc=default_domains.bc_mh_011)
 
     print("Hello World")

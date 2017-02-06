@@ -1,0 +1,90 @@
+from functools import lru_cache
+import numpy as np
+from scipy.spatial import KDTree
+
+from util.geo import lat_lon
+
+
+import matplotlib.pyplot as plt
+
+
+
+def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall, lake_mask, outer_radius_km=500):
+
+    nonlocal_snfl = snowfall.copy()
+    for i, j in zip(*np.where(region_of_interest)):
+        lon, lat = lons[i, j], lats[i, j]
+
+        the_mask = get_non_local_mask_for_location(lon, lat, kdtree, mask_shape=lons.shape, outer_radius_km=outer_radius_km)
+
+        # ignore lakes and the areas within the lake effect zone
+        # the_mask &= (~region_of_interest)
+        # the_mask &= (~lake_mask)
+
+
+        plt.figure()
+        im = plt.pcolormesh(the_mask.T)
+        plt.colorbar(im)
+
+        plt.title("i={}; j={}".format(i, j))
+        plt.scatter(i, j, c="g", s=100)
+        plt.show()
+
+        if True:
+            raise Exception
+
+
+        print("Size of the nonlocal region is {} cells".format(the_mask.sum()))
+
+        if np.any(the_mask):
+            for t_ind, snfl_current in enumerate(snowfall):
+                nonlocal_snfl[t_ind, i, j] = snfl_current.values[the_mask].mean()
+        else:
+            nonlocal_snfl[:, i, j] = snowfall[:, i, j]
+
+    return nonlocal_snfl
+
+
+@lru_cache(maxsize=None)
+def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, outer_radius_km=500):
+
+    x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lon0, lat0, R=lat_lon.EARTH_RADIUS_METERS)
+
+
+    npoints = len(ktree.data)
+
+    assert npoints == np.product(mask_shape)
+
+    # dists, inds = ktree.query((x0, y0, z0), k=npoints, distance_upper_bound=outer_radius_km * 1000.0)
+    dists, inds = ktree.query((x0, y0, z0), k=npoints)
+
+    result = np.zeros(mask_shape, dtype=bool)
+
+    inds.shape = mask_shape
+    dists.shape = mask_shape
+
+    result[inds < npoints] = True
+
+
+    return dists
+
+
+
+
+if __name__ == '__main__':
+    lons = np.zeros((2,2))
+    lats = np.zeros((2,2))
+
+
+
+    xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
+
+    ktree = KDTree(list(zip(xs, ys, zs)))
+
+
+    print(len(ktree.data))
+
+
+
+    the_mask = get_non_local_mask_for_location(5, 0, ktree, mask_shape=(2, 2))
+    print(the_mask)

@@ -34,13 +34,21 @@ img_folder = "cc-paper-comments"
 
 @main_decorator
 def main():
+    """
+    Everything is aggregated to the CRU resolution before calculating biases
+    """
     season_to_months = DEFAULT_SEASON_TO_MONTHS
     varnames = ["PR", "TT"]
 
     plot_utils.apply_plot_params(font_size=5, width_pt=None, width_cm=15, height_cm=4)
 
-    reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
-                                         start_year=1980, end_year=2010, label="ERAI-CRCM5-L")
+    # reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
+    #                                      start_year=1980, end_year=2010, label="ERAI-CRCM5-L")
+
+    reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.4_crcm5-hcd-rl.hdf5",
+                                         start_year=1980, end_year=2010, label="ERAI-CRCM5-RL_0.4deg")
+
+
 
 
     bmp_info = analysis.get_basemap_info(r_config=reanalysis_driven_config)
@@ -97,12 +105,16 @@ def main():
         biases_with_cru = OrderedDict()
 
 
-        nx_agg = 5
-        ny_agg = 5
+        nx_agg_anusplin = 4
+        ny_agg_anusplin = 4
+
+        nx_agg_model = 1
+        ny_agg_model = 1
+
         season_to_clim_fields_model_agg = OrderedDict()
         for season, field in seasonal_clim_fields_model.items():
             print(field.shape)
-            season_to_clim_fields_model_agg[season] = aggregate_array(field, nagg_x=nx_agg, nagg_y=ny_agg)
+            season_to_clim_fields_model_agg[season] = aggregate_array(field, nagg_x=nx_agg_model, nagg_y=ny_agg_model)
 
             if vname == "PR":
                 season_to_clim_fields_model_agg[season] *= 1.0e3 * 24 * 3600
@@ -110,7 +122,9 @@ def main():
 
             biases_with_cru[season] = season_to_clim_fields_model_agg[season] - season_to_obs_cru[season]
 
-            biases_with_anusplin[season] = season_to_clim_fields_model_agg[season] - aggregate_array(season_to_obs_anusplin[season], nagg_x=nx_agg, nagg_y=ny_agg)
+            biases_with_anusplin[season] = season_to_clim_fields_model_agg[season] - aggregate_array(season_to_obs_anusplin[season],
+                                                                                                     nagg_x=nx_agg_anusplin,
+                                                                                                     nagg_y=ny_agg_anusplin)
 
 
         # Do the plotting
@@ -151,7 +165,9 @@ def main():
         ax.set_title("mm/day" if vname == "PR" else r"${\rm ^\circ C}$")
 
 
-        fig.savefig(os.path.join(img_folder, "comp_anu_and_cru_biases_for_{}.png".format(vname)), bbox_inches="tight", dpi=common_plot_params.FIG_SAVE_DPI)
+        fig.savefig(os.path.join(img_folder, "comp_anu_and_cru_biases_for_{}_{}.png".format(vname, reanalysis_driven_config.label)),
+                    bbox_inches="tight",
+                    dpi=common_plot_params.FIG_SAVE_DPI)
 
 
 

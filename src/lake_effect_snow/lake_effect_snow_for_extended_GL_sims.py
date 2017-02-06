@@ -21,7 +21,7 @@ from lake_effect_snow.default_varname_mappings import T_AIR_2M, U_WE, V_SN, TOTA
 
 def main():
     period = Period(
-        datetime(1979, 12, 1), datetime(1988, 3, 1)
+        datetime(1980, 12, 1), datetime(1981, 3, 1)
     )
 
     # should be consequent
@@ -35,6 +35,7 @@ def main():
         U_WE: VerticalLevel(1, level_kinds.HYBRID),
         V_SN: VerticalLevel(1, level_kinds.HYBRID),
     }
+
 
 
     ERAI_label = "ERA-Interim"
@@ -57,38 +58,54 @@ def main():
         ]
     )
 
-    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config, period=period)
+    import time
+    t0 = time.time()
+    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config, period=period, nprocs_to_use=5)
+    print("Execution time: {} s".format(time.time() - t0))
     # calculate_lake_effect_snowfall(label_to_config=label_to_config, period=period)
 
 
 
     label = "CRCM5_NEMO"
+    vname_map = {}
+    vname_map.update(vname_map_CRCM5)
+    vname_map.update({
+        default_varname_mappings.SNOWFALL_RATE: "U3"
+    })
+
     label_to_config_CRCM5 = OrderedDict([(
         label, {
-            "base_folder": "/RECH2/huziy/coupling/coupled-GL-NEMO1h_30min/Samples",
-            "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
+            "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields",
+            "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
             "min_dt": timedelta(hours=3),
-            "varname_mapping": vname_map_CRCM5,
+            "varname_mapping": vname_map,
             "level_mapping": vname_to_level_erai,
             "offset_mapping": vname_to_offset_CRCM5,
             "multiplier_mapping": vname_to_multiplier_CRCM5,
-            "filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
             "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
         }
     )])
 
-#    calculate_lake_effect_snowfall(label_to_config=label_to_config_CRCM5, period=period)
-    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5, period=period)
+    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
+    #                                                      period=period,
+    #                                                      nprocs_to_use=5)
 
 
 
     label = "CRCM5_Hostetler"
+
+    vname_map = {}
+    vname_map.update(vname_map_CRCM5)
+    vname_map.update({
+        default_varname_mappings.SNOWFALL_RATE: "U3"
+    })
+
     label_to_config_CRCM5 = OrderedDict([(
         label, {
             "base_folder": "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected",
             "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
             "min_dt": timedelta(hours=3),
-            "varname_mapping": vname_map_CRCM5,
+            "varname_mapping": vname_map,
             "level_mapping": vname_to_level_erai,
             "offset_mapping": vname_to_offset_CRCM5,
             "multiplier_mapping": vname_to_multiplier_CRCM5,
@@ -97,8 +114,8 @@ def main():
         }
     )])
 
-    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5, period=period)
-#    calculate_lake_effect_snowfall(label_to_config=label_to_config_CRCM5, period=period)
+    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5, period=period,
+    #                                                      nprocs_to_use=10)
 
 
 if __name__ == '__main__':

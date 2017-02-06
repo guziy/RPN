@@ -282,6 +282,12 @@ class GLERLIceCoverManager(object):
         return [float(tok) for tok in re.findall(".{3}", line)]
 
     def get_data_from_path(self, path, skiplines=6):
+        """
+
+        :param path:
+        :param skiplines:
+        :return: lake ice fraction from 0 to 100
+        """
         data = []
         nrows = None
         nodata_value = -1
@@ -322,6 +328,7 @@ class GLERLIceCoverManager(object):
 
         print("Data shape in file: {}".format(data.shape))
 
+
         return np.ma.masked_where((data == nodata_value) | (data == -1), data).transpose()
 
 
@@ -348,8 +355,7 @@ class GLERLIceCoverManager(object):
         data[data == 99] = 100
         data = np.ma.masked_where(data < 0, data)
 
-        data = np.flipud(data.astype("f4") / 100.0).transpose()
-
+        data = np.flipud(data.astype("f4")).transpose()
         return data
 
 
@@ -362,6 +368,14 @@ class GLERLIceCoverManager(object):
             data = self._parse_nic_cis_data_file(the_path)
         else:
             data = self.get_data_from_path(the_path)
+
+
+
+        # Convert to the 0 to 1 range
+        data /= 100.
+
+
+        assert np.all(data.mask) or (np.ma.max(data) <= 1), "ice cover max value is too high {}".format(np.ma.max(data))
 
         if data.shape != (self.ncols_target, self.ncols_target):
             # The interpolation is needed

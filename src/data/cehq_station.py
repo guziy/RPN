@@ -928,7 +928,7 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
 
     print(list(data[0].keys()))
 
-    print("Fetched the following station: ")
+    print("Fetched the following stations: ")
 
     if natural:
         print("There are {0} non-regulated stations in {1}.".format(len(data), province))
@@ -944,10 +944,10 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
         s.latitude = the_row["LATITUDE"]
         s.id = the_row["STATION_NUMBER"]
         s.name = the_row["STATION_NAME"]
-        s.drainage_km2 = the_row["DRAINAGE_AREA_EFFECT"]
+        s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
 
         if s.drainage_km2 is None:
-            s.drainage_km2 = the_row["DRAINAGE_AREA_GROSS"]
+            s.drainage_km2 = the_row["DRAINAGE_AREA_EFFECT"]
 
 
 
@@ -985,7 +985,12 @@ def load_from_hydat_db(path="/home/huziy/skynet3_rech1/hydat_db/Hydat.sqlite",
     # print the_row[province_field]
     connect.close()
     if len(stations) == 0:
-        print("Warning: could not find acceptable stations for hydat in {0} region".format(province))
+
+        if province is not None:
+            print("Warning: could not find acceptable stations for hydat in {0} region".format(province))
+        else:
+            print("Warning: could not find acceptable stations for hydat")
+
     return stations
     # pickle.dump(stations, open(cache_file, mode="w"))
 

@@ -1,3 +1,9 @@
+import matplotlib
+
+from lake_effect_snow.non_local_mask_for_lake_effect import get_nonlocal_mean_snowfall
+
+# matplotlib.use("Agg")
+
 import multiprocessing
 from collections import OrderedDict
 from collections import defaultdict
@@ -33,7 +39,6 @@ import numpy as np
 
 from pendulum import Period
 
-from lake_effect_snow.default_varname_mappings import T_AIR_2M, SNOWFALL_RATE, TOTAL_PREC, V_SN, U_WE
 from util import plot_utils
 
 from matplotlib import colors
@@ -92,7 +97,7 @@ def enh_lakeffect_snfall_calculator_proc(args):
 
 
 
-def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period=None):
+def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period=None, nprocs_to_use=None):
     """
     :param label_to_config:
     :param period:  The period of interest defined by the start and the end year of the period (inclusive)
@@ -111,28 +116,40 @@ def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period
         else:
             out_folder = "."
 
+        out_folder = Path(out_folder)
 
-        # Use a fraction of the available processes
-        nprocs_to_use = max(int(multiprocessing.cpu_count() * 0.75), 1)
-        nprocs_to_use = min(nprocs_to_use, period.in_years())  # No need for more processes than there is of years
+        # Try to create the output folder if it does not exist
+        if not out_folder.exists():
+            out_folder.mkdir()
+
+
+        if nprocs_to_use is None:
+            # Use a fraction of the available processes
+            nprocs_to_use = max(int(multiprocessing.cpu_count() * 0.75), 1)
+            nprocs_to_use = min(nprocs_to_use, period.in_years())  # No need for more processes than there is of years
+            nprocs_to_use = max(1, nprocs_to_use)  # make sure that nprocs_to_use is not 0
+
         print("Using {} processes for parallelization".format(nprocs_to_use))
-
-        pool = Pool(processes=nprocs_to_use)
-
 
         # Construct the input params for each process
         in_data = []
 
         for start in period.range("years"):
-            p = Period(start=start, end=start.add(months=len(period.months_of_interest)).subtract(seconds=1))
+            end_date = start.add(months=len(period.months_of_interest)).subtract(seconds=1)
+            end_date = min(end_date, period.end)
+            p = Period(start=start, end=end_date)
             p.months_of_interest = period.months_of_interest
             in_data.append([data_manager, label, [p.start, p.end, period.months_of_interest], out_folder])
-
-
         print(in_data)
 
-        pool.map(enh_lakeffect_snfall_calculator_proc, in_data)
-        # enh_lakeffect_snfall_calculator_proc(in_data[0])
+
+        if nprocs_to_use > 1:
+            pool = Pool(processes=nprocs_to_use)
+            pool.map(enh_lakeffect_snfall_calculator_proc, in_data)
+        else:
+            for current_in_data in in_data:
+                enh_lakeffect_snfall_calculator_proc(current_in_data)
+
 
 
 
@@ -171,22 +188,19 @@ def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
 
 
 
-def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder="."):
+def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder: Path=Path(".")):
     months_of_interest = period.months_of_interest
 
 
-    if not isinstance(out_folder, Path):
-        out_folder_p = Path(out_folder)
-    else:
-        out_folder_p = out_folder
-
-    # Try to create the output folder if it does not exist
-    if not out_folder_p.exists():
-        out_folder_p.mkdir()
 
     out_file = "{}_lkeff_snfl_{}-{}_m{}-{}.nc".format(label, period.start.year, period.end.year,
                                                       months_of_interest[0], months_of_interest[-1], out_folder)
-    out_file = str(out_folder_p.joinpath(out_file))
+    out_file = out_folder.joinpath(out_file)
+
+    if out_file.exists():
+        print("{} already exists, won't redo!".format(out_file))
+        plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder)
+        return
 
     # for each period
     #  1. get daily snowfall
@@ -202,10 +216,19 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     lake_mask = None
     near_lake_100km_zone_mask = None
 
+    ktree_for_nonlocal_snowfall_calculations = None
+
     secs_per_day = timedelta(days=1).total_seconds()
 
     for start in period.range("years"):
-        p = Period(start, start.add(months=len(months_of_interest)).subtract(seconds=1))
+
+        end_date = start.add(months=len(months_of_interest)).subtract(seconds=1)
+        end_date = min(period.end, end_date)
+
+        p = Period(start, end_date)
+
+
+
         print("Processing {} ... {} period".format(p.start, p.end))
 
         try:
@@ -214,27 +237,27 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             print(e)
             continue
 
-        day_dates = [datetime(d.year, d.month, d.day) for d in pd.to_datetime(air_temp.coords["t"].values)]
-        day_dates = DataArray(day_dates, name="time", dims="t")
 
-        air_temp = air_temp.groupby(day_dates).mean(dim="t")
+        #
+        print("Calculating daily mean 2-m air temperature")
+        air_temp = air_temp.resample("1D", dim="t", how="mean")
 
         # try to read snowfall if not available, try to calculate from total precip
         try:
             snfl = data_mngr.read_data_for_period(p, default_varname_mappings.SNOWFALL_RATE)
-            snfl = snfl.groupby(day_dates).mean(dim="t")
+            snfl = snfl.resample("1D", dim="t", how="mean")
             rhosn = base_utils.get_snow_density_kg_per_m3(tair_deg_c=air_temp.values)
 
             # convert from water depth to snow depth
             snfl *= base_utils.WATER_DENSITY_KG_PER_M3 / rhosn
 
-        except (IOError, KeyError):
+        except (IOError, KeyError, Exception):
             print("Could not find snowfall rate in {}".format(data_mngr.base_folder))
             print("Calculating from 2-m air temperature and total precipitation.")
 
             # use  daily mean precip (to be consistent with the 2-meter air temperature)
             precip_m_s = data_mngr.read_data_for_period(p, default_varname_mappings.TOTAL_PREC)
-            precip_m_s = precip_m_s.groupby(day_dates).mean(dim="t")
+            precip_m_s = precip_m_s.resample("1D", dim="t", how="mean")
 
             # Calculate snowfall from the total precipitation and 2-meter air temperature
             snfl = precip_m_s.copy()
@@ -257,6 +280,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
         if reg_of_interest is None:
             lons, lats = snfl.coords["lon"].values, snfl.coords["lat"].values
+
+            # convert longitudes to the 0..360 range
+            lons[lons < 0] += 360
+
             reg_of_interest = common_params.great_lakes_limits.get_mask_for_coords(lons, lats)
 
 
@@ -272,31 +299,88 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             ktree = KDTree(data=list(zip(*lat_lon.lon_lat_to_cartesian(lon=lons.flatten(), lat=lats.flatten()))))
 
             # define the 100km near lake zone
-            # near_lake_100km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
-            #                                                       ktree=ktree, dist_km=200)
+            near_lake_100km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
+                                                                   ktree=ktree, dist_km=200)
+
+            reg_of_interest &= near_lake_100km_zone_mask
+
+
 
 
         # check the winds
         print("Reading the winds into memory")
         u_we = data_mngr.read_data_for_period(p, default_varname_mappings.U_WE)
-        u_we = u_we.groupby(day_dates).mean(dim="t")
+        u_we = u_we.resample("1D", dim="t", how="mean")
 
         v_sn = data_mngr.read_data_for_period(p, default_varname_mappings.V_SN)
-        v_sn = v_sn.groupby(day_dates).mean(dim="t")
+        v_sn = v_sn.resample("1D", dim="t", how="mean")
         print("Successfully imported wind components")
 
-        wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask,
-                                                                     ktree=ktree,
-                                                                     region_of_interest=reg_of_interest,
-                                                                     dt_secs=secs_per_day, nneighbours=4)
 
-        snfl = wind_blows_from_lakes * snfl
+        # Try to get the lake ice fractions
+        lake_ice_fraction = None
+        try:
+            lake_ice_fraction = data_mngr.read_data_for_period(p, default_varname_mappings.LAKE_ICE_FRACTION)
+            lake_ice_fraction = lake_ice_fraction.resample("1D", dim="t", how="mean")  # Calculate the daily means
+            lake_ice_fraction = lake_ice_fraction.sel(t=v_sn.coords["t"], method="ffill")
+            lake_ice_fraction = lake_ice_fraction.where(lake_ice_fraction <= 1)
+
+            # at this point shapes of the arrays should be the same
+            assert lake_ice_fraction.shape == u_we.shape
+
+        except Exception as e:
+            print(e)
+            print("WARNING: Could not find lake fraction in {}, diagnosing lake-effect snow without lake ice".format(
+                data_mngr.base_folder))
+
+
+        # take into account the wind direction
+        # wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask,
+        #                                                              ktree=ktree,
+        #                                                              region_of_interest=reg_of_interest,
+        #                                                              dt_secs=secs_per_day, nneighbours=4,
+        #                                                              lake_ice_fraction=lake_ice_fraction)
+        #
+        # snfl = wind_blows_from_lakes * snfl
+
+        # debug
+        plt.figure()
+        snfl.mean(dim="t").plot()
+        plt.title("Snow fall before nonlocal crit")
+
+
+
+        # take into account nonlocal amplification due to lakes
+        if ktree_for_nonlocal_snowfall_calculations is None:
+            xs_nnlc, ys_nnlcl, zs_nnlcl = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
+            ktree_for_nonlocal_snowfall_calculations = KDTree(list(zip(xs_nnlc, ys_nnlcl, zs_nnlcl)))
+
+        snfl_nonlocal = get_nonlocal_mean_snowfall(lons=lons, lats=lats, region_of_interest=reg_of_interest,
+                                                   kdtree=ktree_for_nonlocal_snowfall_calculations,
+                                                   snowfall=snfl, lake_mask=lake_mask, outer_radius_km=500)
+        snfl_amplification_cm_per_day = 4
+        snfl = (snfl > (snfl_amplification_cm_per_day + snfl_nonlocal)).values * snfl
+
+
+        # debug - start
+        print("plot fields")
+        plt.figure()
+        snfl.mean(dim="t").plot()
+        plt.title("Snow fall after nonlocal crit")
+
+
+        plt.figure()
+        snfl_nonlocal.mean(dim="t").plot()
+        plt.title("snowfall_nonlocal")
+
+        plt.show()
+        # debug end
 
         # count the number of days with lake effect snowfall
-        lkeff_snow_fall_days.append((snfl > 0).sum(dim="time"))
+        lkeff_snow_fall_days.append((snfl > 0).sum(dim="t"))
 
         #  Get the accumulation of the lake effect snowfall
-        snfl_acc = snfl.sum(dim="time")
+        snfl_acc = snfl.sum(dim="t")
         
         # takes into account the 100km zone near lakes
         # snfl_acc.values = np.ma.masked_where((~reg_of_interest) | (~near_lake_100km_zone_mask), snfl_acc)
@@ -331,12 +415,26 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     assert isinstance(ds, xarray.Dataset)
     ds["lkeff_snowfall_days"] = (("year", "x", "y"), snfl_days_yearly)
 
-    ds.to_netcdf(out_file)
+    ds.to_netcdf(str(out_file))
 
+    # do the plotting
+    plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder)
+
+
+
+
+def plot_acc_snowfall_map(data_path :Path=None, label="", period :Period=None, out_folder :Path=None):
     # Plot snowfall maps for each year
     clevs_total_snowfall = [0, 10, 50, 90, 130, 170, 210, 250, 400, 500]
-    clevs_lkeff_snowfall = [0, 1, 2, 10, 15, 20, 40, 80, 120, 160]
+    clevs_lkeff_snowfall = [0, 1, 2, 10, 15, 20, 40, 80, 120, 160, 200, 250]
     clevs = clevs_lkeff_snowfall
+
+
+    ds = xarray.open_dataset(str(data_path))
+
+    lkeff_snfl = ds["snow_fall"]
+    years_index, lons, lats = ds["year"].values, ds["lon"].values, ds["lat"].values
+
 
     b = Basemap(lon_0=180,
                 llcrnrlon=common_params.great_lakes_limits.lon_min,
@@ -348,7 +446,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     xx, yy = b(lons, lats)
 
 
-    print("Basemap corners: ", lons[i_min, j_min] - 360, lons[i_max, j_max] - 360)
+    # print("Basemap corners: ", lons[i_min, j_min] - 360, lons[i_max, j_max] - 360)
 
     plot_utils.apply_plot_params(font_size=10)
     fig = plt.figure()
@@ -361,20 +459,22 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     # cmap = cm.get_cmap("nipy_spectral")
 
     cmap, bn = colors.from_levels_and_colors(clevs, ["indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
-                                                     "orange", "red"])
+                                                     "orange", "orangered", "red", "firebrick", ])
 
     area_avg_lkeff_snowfall = []
-    for i, y in enumerate(years_index.values):
+    for i, y in enumerate(years_index):
         col = i % ncols
         row = i // ncols
         ax = fig.add_subplot(gs[row, col])
-        to_plot = np.ma.masked_where(~reg_of_interest, lkeff_snow_falls[i])
+        # to_plot = np.ma.masked_where(~reg_of_interest, lkeff_snfl[i].values)
 
+
+        to_plot = lkeff_snfl[i].to_masked_array()
         print(xx.shape, to_plot.shape)
 
 
         to_plot *= 100  # convert to cm
-        im = b.contourf(xx, yy, to_plot, norm=bn, cmap=cmap, levels=clevs)
+        im = b.contourf(xx, yy, to_plot, norm=bn, cmap=cmap, levels=clevs, extend="max")
 
 
 
@@ -390,27 +490,29 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         ax.set_title("{}".format(y))
 
     fig.tight_layout()
-    img_file = "{}_acc_lakeff_snow_{}-{}.png".format(label, period.start.year, period.end.year - 1)
 
-    img_file = str(out_folder_p.joinpath(img_file))
+    img_file = "{}_acc_lakeff_snow_{}-{}.png".format(label, period.start.year, period.end.year)
+
+    img_file = str(out_folder.joinpath(img_file))
     plt.savefig(img_file, bbox_inches="tight")
     # plt.show()
     plt.close(fig)
 
     # plot area-averaged lake-effect snowfall
-    fig = plt.figure()
-    ax = plt.gca()
-    ax.plot(years_index.values.astype(int), area_avg_lkeff_snowfall, "r", lw=2)
-    ax.set_title("Area averaged annual lake-effect snowfall")
-    sf = ScalarFormatter(useOffset=False)
-    ax.xaxis.set_major_formatter(sf)
-    ax.grid()
+    # fig = plt.figure()
+    # ax = plt.gca()
+    # ax.plot(years_index.values.astype(int), area_avg_lkeff_snowfall, "r", lw=2)
+    # ax.set_title("Area averaged annual lake-effect snowfall")
+    # sf = ScalarFormatter(useOffset=False)
+    # ax.xaxis.set_major_formatter(sf)
+    # ax.grid()
+    #
+    # fig.tight_layout()
+    # img_file = "{}_acc_lakeff_snow_area_avg_{}-{}.png".format(label, period.start.year, period.end.year - 1)
+    # img_file = str(out_folder.joinpath(img_file))
+    # plt.savefig(img_file, bbox_inches="tight")
+    # plt.close(fig)
 
-    fig.tight_layout()
-    img_file = "{}_acc_lakeff_snow_area_avg_{}-{}.png".format(label, period.start.year, period.end.year - 1)
-    img_file = str(out_folder_p.joinpath(img_file))
-    plt.savefig(img_file, bbox_inches="tight")
-    plt.close(fig)
 
 
 def main():

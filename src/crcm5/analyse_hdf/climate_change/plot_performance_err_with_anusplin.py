@@ -1,5 +1,6 @@
 from crcm5.analyse_hdf.climate_change.plot_performance_err_with_cru import plot_seasonal_mean_biases
 from data.anusplin import AnuSplinManager
+from util.array_utils import aggregate_array
 
 __author__ = 'huziy'
 
@@ -19,11 +20,8 @@ import numpy as np
 
 # Plot structural and boundary forcing errors for all seasons in the same figure
 
-img_folder = Path("cc_paper/perf_err_with_anusplin")
-
-
-
 def compare_vars(vname_model, vname_to_obs, r_config, season_to_months, bmp_info_agg, axes_list):
+
     season_to_clim_fields_model = analysis.get_seasonal_climatology_for_runconfig(run_config=r_config,
                                                                                   varname=vname_model, level=0,
                                                                                   season_to_months=season_to_months)
@@ -45,6 +43,7 @@ def compare_vars(vname_model, vname_to_obs, r_config, season_to_months, bmp_info
                                                                        seasonal_clim_fields_obs[season])
 
         season_to_err[season] = season_to_clim_fields_model[season] - seasonal_clim_fields_obs[season]
+
         season_to_err[season] = maskoceans(lons, bmp_info_agg.lats, season_to_err[season], inlands=False)
 
         season_to_err[season] = np.ma.masked_where(np.isnan(season_to_err[season]), season_to_err[season])
@@ -69,7 +68,11 @@ def compare_vars(vname_model, vname_to_obs, r_config, season_to_months, bmp_info
     return cs
 
 
-def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None):
+
+img_folder = Path("cc_paper/perf_err_with_anusplin")
+
+
+def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None, n_agg_x=1, n_agg_y=1):
     """
 
     :param rconfig:
@@ -92,22 +95,28 @@ def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_t
     tmin_obs_manager = AnuSplinManager(variable="stmn", folder_path=obs_path)
 
     if vname == "TT":
-        dates, vals_max = tmax_obs_manager.get_daily_clim_fields_interpolated_to(start_year=rconfig.start_year,
+        dates, vals_max = tmax_obs_manager.get_daily_clim_fields_aggregated_and_interpolated_to(start_year=rconfig.start_year,
                                                                                  end_year=rconfig.end_year,
                                                                                  lons_target=bmp_info.lons,
-                                                                                 lats_target=bmp_info.lats)
+                                                                                 lats_target=bmp_info.lats,
+                                                                                 n_agg_x=n_agg_x,
+                                                                                 n_agg_y=n_agg_y)
 
-        _, vals_min = tmin_obs_manager.get_daily_clim_fields_interpolated_to(start_year=rconfig.start_year,
+        _, vals_min = tmin_obs_manager.get_daily_clim_fields_aggregated_and_interpolated_to(start_year=rconfig.start_year,
                                                                              end_year=rconfig.end_year,
                                                                              lons_target=bmp_info.lons,
-                                                                             lats_target=bmp_info.lats)
+                                                                             lats_target=bmp_info.lats,
+                                                                             n_agg_x=n_agg_x,
+                                                                             n_agg_y=n_agg_y)
 
         daily_obs = (dates, (vals_min + vals_max) * 0.5)
     elif vname == "PR":
-        daily_obs = pcp_obs_manager.get_daily_clim_fields_interpolated_to(start_year=rconfig.start_year,
+        daily_obs = pcp_obs_manager.get_daily_clim_fields_aggregated_and_interpolated_to(start_year=rconfig.start_year,
                                                                           end_year=rconfig.end_year,
                                                                           lons_target=bmp_info.lons,
-                                                                          lats_target=bmp_info.lats)
+                                                                          lats_target=bmp_info.lats,
+                                                                          n_agg_x=n_agg_x,
+                                                                          n_agg_y=n_agg_y)
     else:
         raise Exception("Unknown variable: {}".format(vname))
 

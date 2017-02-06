@@ -47,7 +47,7 @@ def main():
     )
 
     var_name_list = ["TT",
-                     "PR"
+                     "PR",
                      ]
 
     vname_to_level = {

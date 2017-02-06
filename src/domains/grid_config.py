@@ -17,6 +17,27 @@ __author__ = 'huziy'
 import numpy as np
 
 
+
+def gridconfig_from_gemclim_settings_file(fpath=""):
+
+    lines_of_interest = []
+    with open(fpath) as f:
+        record = False
+        for line in f:
+            line = line.lower()
+            if "&grid" in line:
+                record = True
+                continue
+
+            if record and line.strip().startswith("/"):
+                break
+
+            if record:
+                lines_of_interest.append(line)
+
+    return gridconfig_from_grid_nml("\n".join(lines_of_interest))
+
+
 def gridconfig_from_grid_nml(nml_str):
     """
     Parse the copy-pasted string nml_str and construct the gridconfig object
@@ -28,6 +49,7 @@ def gridconfig_from_grid_nml(nml_str):
     nml_str = nml_str.lower()
 
     gc = GridConfig()
+
 
     def get_val_of(par_name, parser_func=float):
         return parser_func(re.search("grd_{}".format(par_name) + "\s*=\s*(-?\s*\d*\.?\d*)", nml_str).group(1))
@@ -72,6 +94,12 @@ class GridConfig(object):
                 self.rll = RotatedLatLon(lon1=self.lon1, lon2=self.lon2, lat1=self.lat1, lat2=self.lat2)
         else:
             self.rll = kwargs.get("rll")
+
+
+        # private fields
+        self._center_lons_2d = None
+        self._center_lats_2d = None
+
 
     @classmethod
     def get_default_for_resolution(cls, res=0.5):
@@ -683,6 +711,34 @@ class GridConfig(object):
                    lat2=self.rll.lat2, lon2=self.rll.lon2)
 
         return s
+
+
+
+    def get_lons_and_lats_of_gridpoint_centers(self):
+        """
+        :return: lons and lats corresponding to the gridpoint centers
+        """
+
+
+        if self._center_lons_2d is not None:
+            return self._center_lons_2d, self._center_lats_2d
+
+
+        lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
+        latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
+
+        lons = np.zeros((self.ni, self.nj))
+        lats = np.zeros_like(lons)
+
+        for i, lonri in enumerate(lonr):
+            for j, latrj in enumerate(latr):
+                lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonri, latrj)
+
+        # Save for re-use
+        self._center_lons_2d = lons
+        self._center_lats_2d = lats
+
+        return lons, lats
 
 
 def get_rotpole_for_na_glaciers():

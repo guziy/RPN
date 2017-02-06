@@ -10,14 +10,19 @@ SNOWFALL_RATE = "snow_fall"
 U_WE = "u_we"
 V_SN = "v_sn"
 
+LAKE_ICE_FRACTION = "lake_ice_fraction"
+SWE = "snow_water_equivalent"
+
 
 # maps the internal variable name to the variable names in files
 vname_map_CRCM5 = {
     T_AIR_2M: "TT",
     TOTAL_PREC: "PR",
-    SNOWFALL_RATE: "SN",
+    SNOWFALL_RATE: "U3",
     U_WE: "UU",
-    V_SN: "VV"
+    V_SN: "VV",
+    LAKE_ICE_FRACTION: "LC",
+    SWE: "I5"
 
 }
 

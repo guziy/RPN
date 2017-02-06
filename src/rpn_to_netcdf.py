@@ -243,6 +243,13 @@ def delete_files_with_nrecords(folder_path='data/CORDEX/Africa/Samples', n_recor
     pass
 
 
+
+
+def extract_lake_fraction():
+    path = "/RESCUE/skynet3_rech1/huziy/geof_lake_infl_exp/geophys_qc_95x95_0.4deg.fst"
+    extract_field(name="VF", level=3, in_file=path)
+
+
 if __name__ == "__main__":
     application_properties.set_current_directory()
     #    extract_sand_and_clay_from_rpn(rpn_path = 'data/CORDEX/NA/NA_CLASS_L03_v3321_195709/pm1957090100_00000000p')
@@ -290,12 +297,14 @@ if __name__ == "__main__":
     # -----------------------------------------
 
     # For offline routing (CORDEX NA 0.22)
-    runoff_to_netcdf_parallel_with_multirpn("/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.22deg_links",
-                                            "/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.22deg_NA_RUNOFF_NC")
+    # runoff_to_netcdf_parallel_with_multirpn("/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.22deg_links",
+    #                                         "/RESCUE/skynet3_rech1/huziy/CORDEX_ERAI_0.22deg_NA_RUNOFF_NC")
+    #
+    # extract_sand_and_clay_from_rpn(
+    #     rpn_path="/HOME/data/Simulations/CRCM5/North_America/NorthAmerica_0.22deg_ERA40-Int0.75_B1/Samples/NorthAmerica_0.22deg_ERA40-Int0.75_B1_195801/pm1958010100_00000000p",
+    #     outpath="/HOME/huziy/skynet3_rech1/water_route_mh_bc_022deg_wc/sand_clay_depth_to_bedrock_0.22_380x360.nc"
+    # )
+    #
+    # print("Hello World")
 
-    extract_sand_and_clay_from_rpn(
-        rpn_path="/HOME/data/Simulations/CRCM5/North_America/NorthAmerica_0.22deg_ERA40-Int0.75_B1/Samples/NorthAmerica_0.22deg_ERA40-Int0.75_B1_195801/pm1958010100_00000000p",
-        outpath="/HOME/huziy/skynet3_rech1/water_route_mh_bc_022deg_wc/sand_clay_depth_to_bedrock_0.22_380x360.nc"
-    )
-
-    print("Hello World")
+    extract_lake_fraction()

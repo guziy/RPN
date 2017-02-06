@@ -13,7 +13,7 @@ from crcm5.mh_domains import default_domains
 from domains.grid_config import GridConfig
 from util import plot_utils
 
-img_folder = "mh"
+default_img_folder = "mh"
 
 
 def show_multiple_domains(label_to_config):
@@ -21,19 +21,25 @@ def show_multiple_domains(label_to_config):
     pass
 
 
-def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GRDC_basins=False):
+def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GRDC_basins=False,
+                show_Churchil_Nelson_basins=True, img_folder=None,
+                domain_label="mh", ax=None):
+
     assert isinstance(grid_config, GridConfig)
 
-    fig = plt.figure()
-    ax = plt.gca()
+    fig = None
+    if ax is None:
+        fig = plt.figure()
+        ax = plt.gca()
+
 
     halo = 10 if halo is None else halo
     blending = 10 if blending is None else blending
 
     bmp = grid_config.get_basemap(resolution="i")
 
-
-    bmp.readshapefile(default_domains.MH_BASINS_PATH[:-4], "basin", color="m", linewidth=2)
+    if show_Churchil_Nelson_basins:
+        bmp.readshapefile(default_domains.MH_BASINS_PATH[:-4], "basin", color="m", linewidth=2)
 
     if show_GRDC_basins:
         # Select which basins to show
@@ -65,17 +71,23 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
     bmp.drawcountries(linewidth=0.3, ax=ax)
 
 
-    p = Path(img_folder)
-    if not p.exists():
-        p.mkdir()
-
 
 
     ax.set_title(
         r"${}".format(grid_config.ni) + r"\times" + "{}$ grid cells, resolution {} $^\circ$".format(grid_config.nj,
                                                                                                     grid_config.dx))
 
-    fig.savefig(str(p.joinpath("mh_dx{}.png".format(grid_config.dx))), bbox_inches="tight", transparent=True)
+
+    if ax is None:
+
+        if img_folder is None:
+            img_folder = default_img_folder
+
+        p = Path(img_folder)
+        if not p.exists():
+            p.mkdir()
+
+        fig.savefig(str(p.joinpath("{}_dx{}.png".format(domain_label, grid_config.dx))), bbox_inches="tight", transparent=True)
 
 
 

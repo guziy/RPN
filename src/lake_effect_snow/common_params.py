@@ -18,6 +18,6 @@ class LatLonLimits(object):
 
 
 
-great_lakes_limits = LatLonLimits(265, 288, 40, 55)
+great_lakes_limits = LatLonLimits(265, 288, 40, 50)
 
 GL_COAST_SHP_PATH = "data/shp/Great_lakes_coast_shape/gl_cst.shp"

@@ -110,6 +110,13 @@ def main():
     # data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl/all_files_in_one_dir"
     # hdf_file_path = "/home/huziy/current_project/PythonProjects/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5"
 
+
+    # Skynet2: crcm5-hcd-rl at 0.4 deg
+    data_folder = "/b1_fs1/huziy/quebec-analysis-driven-crcm5-sims/quebec_0.4deg_crcm5-hcd-rl/all_files_in_one_dir"
+    hdf_file_path = "/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.4_crcm5-hcd-rl.hdf5"
+
+
+
     # Interflow spinup
     # data_folder = "/home/huziy/current_project/Output/quebec_0.1_crcm5-hcd-rl-intfl_spinup_ITFS/all_files_in_one_dir"
     # hdf_file_path = \
@@ -125,8 +132,8 @@ def main():
 
 
     # For debugging on skynet
-    data_folder = "/RESCUE/skynet3_rech1/huziy/test_export_to_hdf/test"
-    hdf_file_path = "/RESCUE/skynet3_rech1/huziy/test_export_to_hdf/test.hdf5"
+    # data_folder = "/RESCUE/skynet3_rech1/huziy/test_export_to_hdf/test"
+    # hdf_file_path = "/RESCUE/skynet3_rech1/huziy/test_export_to_hdf/test.hdf5"
 
 
 
@@ -142,7 +149,7 @@ def main():
 
     dm = Crcm5ModelDataManager(samples_folder_path=data_folder, all_files_in_samples_folder=True)
     var_names = ["STFA", "PR", "TT", "AV", "AH", "TRAF", "TDRA", "I5", "I0", "I1", "I2", "IMAV",
-                 "AS", "INTF", "QQ", "UU", "VV", "WW", "GZ", "HR", "HU", "CLDP", "LC", "LD", "AL", "L1"]
+                 "AS", "QQ", "UU", "VV", "WW", "GZ", "HR", "HU", "CLDP", "LC", "LD", "AL", "L1"]
     # var_names = [ "I0", "I1", "I2", "IMAV"]
     # var_names = ["AS", ]
     # var_names = ["QQ", ]

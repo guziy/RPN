@@ -12,3 +12,7 @@ ALL_VARS_IN_A_FOLDER_OF_RPN_FILES = 3
 #                                                      name in it and it contains the data for this variable
 # i.e. no pm, dm prefixes
 SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME = 4
+
+
+# when xarray.open_mfdataset is not working
+ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY = 5

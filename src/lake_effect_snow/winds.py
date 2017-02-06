@@ -9,7 +9,7 @@ from geopy.distance import distance
 import multiprocessing
 
 # maximum number of iterations for backtracking
-N_ITER_MAX_BACKTRACK = 10
+N_ITER_MAX_BACKTRACK = 5
 
 
 def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
@@ -61,9 +61,8 @@ def get_epsilon(lons2d, lats2d):
     eps = distance((lats2d[1, 1], lons2d[1, 1]), (lats2d[0, 0], lons2d[0, 0])).meters
     return eps
 
-
 def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, region_of_interest=None, dt_secs=None,
-                                   nneighbours=1):
+                                   nneighbours=1, lake_ice_fraction=None):
     """
     Get masks of the regions where wind is blowing from lakes
 
@@ -99,7 +98,6 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
 
     i_grid, j_grid = np.indices(lons.shape)
 
-    nprocs = max(1, multiprocessing.cpu_count() // 2)
 
     fetch_from_lake_mask = np.zeros_like(u_we, dtype=bool)
 
@@ -122,7 +120,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
 
             r_prev = np.zeros_like(r0)
 
-            dist, ind_r0 = ktree.query(r0, n_jobs=nprocs)
+            dist, ind_r0 = ktree.query(r0)
             i_r0, j_r0 = i_grid.flatten()[ind_r0], j_grid.flatten()[ind_r0]
 
 
@@ -154,7 +152,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
             else:
                 converged_count += 1
 
-            dist, ind_r1 = ktree.query(r1, n_jobs=nprocs)
+            dist, ind_r1 = ktree.query(r1)
             i_r1, j_r1 = i_grid.flatten()[ind_r1], j_grid.flatten()[ind_r1]
 
 
@@ -163,8 +161,21 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
             iur = max(i_r0, i_r1)
             jur = max(j_r0, j_r1)
 
-            # 1 if the fetch is from lake, 0 otherwize
-            fetch_from_lake_mask[ti, i_r0, j_r0] = lake_mask[ill:iur + 1, jll:jur + 1].sum() > 0.5
+
+            if lake_ice_fraction is None:
+                # 1 if the fetch is from lake, 0 otherwize
+                fetch_from_lake_mask[ti, i_r0, j_r0] = lake_mask[ill:iur + 1, jll:jur + 1].sum() > 0.5
+            else:
+                # Take into account that lakes can be frozen
+
+                lmask = lake_mask[ill:iur + 1, jll:jur + 1]
+                lice = lake_ice_fraction[ti, ill:iur + 1, jll:jur + 1]
+
+                # Check if the lake cells from which the fetch is occurring together are not 70% frozen
+                if np.any(lmask > 0):
+                    fetch_from_lake_mask[ti, i_r0, j_r0] = (lmask * lice).sum() / lmask.sum() < 0.7
+                else:
+                    fetch_from_lake_mask[ti, i_r0, j_r0] = False
 
 
         print("Converged {} of {} considered points".format(converged_count, len(xa_list)))

@@ -60,18 +60,20 @@ def main():
     start_date = datetime(1973, 1, 1)
     with Dataset(out_path, mode="w") as ds:
         ds.createDimension("time")
-        ds.createDimension("lon", gman.ncols_target)
-        ds.createDimension("lat", gman.ncols_target)
+        ds.createDimension("x", gman.ncols_target)
+        ds.createDimension("y", gman.ncols_target)
 
         tvar = ds.createVariable("time", "i4", ("time", ))
         tvar.units = "days since {:%Y-%m-%d %H:%M:%S}".format(start_date)
         tvar.description = "ice cover data from GLERL"
-        dvar = ds.createVariable("ice_cover", "f4", ("time", "lon", "lat"))
+        assert isinstance(ds, Dataset)
+        dvar = ds.createVariable("ice_cover", "f4", ("time", "x", "y"), zlib=True, least_significant_digit=3)
         dvar.coordinates = "lon lat"
+        dvar.missing_value = 1e20
 
 
-        lon_var = ds.createVariable("lon", "f4", ("lon", "lat"))
-        lat_var = ds.createVariable("lat", "f4", ("lon", "lat"))
+        lon_var = ds.createVariable("lon", "f4", ("x", "y"))
+        lat_var = ds.createVariable("lat", "f4", ("x", "y"))
 
         # save the coordinates
         lon_var[:] = gman.lons2d_target

@@ -5,9 +5,69 @@ from osgeo import ogr
 import numpy as np
 
 
-def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
+import hashlib
+import pickle
+
+mask_cache_folder = Path("mask_caches")
+
+def get_cache_file_path(lons2d, lats2d, shp_path="", polygon_name=None, hints=None):
+
+    if not mask_cache_folder.exists():
+        mask_cache_folder.mkdir()
+
+    coord_tuple = (lons2d.min(), lons2d.max(), lons2d.mean(), lons2d.std(),
+                   lats2d.min(), lats2d.max(), lats2d.mean(), lats2d.std(),)
+
+
+    res_tuple = coord_tuple + (shp_path, )
+
+    if polygon_name is not None:
+        res_tuple += (polygon_name, )
+
+    if hints is not None:
+        for fieldname in sorted(hints):
+            res_tuple += (fieldname, hints[fieldname])
+
+
+    res_tuple = (str(el) for el in res_tuple)
+
+    file_name = hashlib.sha224("".join(list(res_tuple)).encode()).hexdigest()
+
+
+    file_path = mask_cache_folder.joinpath("{}.bin".format(file_name))
+
+    return file_path
+
+
+
+def does_layer_has_att(layer: ogr.Layer, att_name: str):
+    """
+
+    :param layer: layer to look for attributes in
+    :param att_name: the name of the attribute to find
+    :return:
+    """
+    feature_defn = layer.GetLayerDefn()
+    """
+    :type feature_defn: ogr.FeatureDefn
+    """
+
+    for field_index in range(feature_defn.GetFieldCount()):
+        field_defn = feature_defn.GetFieldDefn()
+        """
+        :type field_defn: ogr.FieldDefn
+        """
+        if field_defn.GetName() == att_name:
+            return True
+
+    return False
+
+
+
+def get_mask(lons2d, lats2d, shp_path="", polygon_name=None, hints=None):
     """
     Assumes that the shape file contains polygons in lat lon coordinates
+    :param hints: a dict of {fieldname: fieldvalue} for the polygons, if any of the hints correspond to a polygon, the polygon is treated
     :param lons2d:
     :param lats2d:
     :param shp_path:
@@ -16,6 +76,15 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
     """
 
     assert Path(shp_path).exists()
+
+
+    cache = get_cache_file_path(lons2d=lons2d, lats2d=lats2d, shp_path=shp_path, polygon_name=polygon_name, hints=hints)
+
+    if cache.exists():
+        return pickle.load(cache.open(mode="rb"))
+
+
+
 
     ds = ogr.Open(shp_path)
     """
@@ -40,16 +109,41 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
         :type : ogr.Layer
         """
 
-        for j in range(layer.GetFeatureCount()):
-            feat = layer.GetFeature(j)
+
+        if polygon_name is not None:
+            # check if the file has the name atribute
+            if does_layer_has_att(layer, "name"):
+                layer.SetAttributeFilter("name = '{}'".format(polygon_name))
+
+
+        if hints is not None:
+            filters = []
+            for field_name, field_value in hints.items():
+                if does_layer_has_att(layer, field_name):
+                    filters.append("{} = '{}'".format(field_name, field_value))
+
+
+            print("Attribute filter: {}".format(" or ".join(filters)))
+            layer.SetAttributeFilter(" or ".join(filters))
+
+
+        print(layer.GetFeatureCount())
+
+        feat = layer.GetNextFeature()
+        while feat is not None:
             """
             :type : ogr.Feature
             """
 
-            # Select polygons by the name property
-            if polygon_name is not None:
-                if not feat.GetFieldAsString("name") == polygon_name:
-                    continue
+
+            # for att_i in range(feat.GetFieldCount()):
+            #     field_defn = feat.GetFieldDefnRef(att_i)
+            #     """
+            #     :type field_defn: ogr.FieldDefn
+            #     """
+            #     print("{} = {}".format(field_defn.GetName(), feat.GetField(att_i)))
+
+
 
 
             g = feat.GetGeometryRef()
@@ -58,9 +152,8 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
             :type : ogr.Geometry
             """
 
+
             # assert isinstance(g, ogr.Geometry)
-
-
 
             for pi in range(nx):
                 for pj in range(ny):
@@ -72,6 +165,11 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None):
 
             feature_id += 1
 
+            feat = layer.GetNextFeature()
+
+
+
+    pickle.dump(mask, cache.open(mode="wb"))
     return mask
 
 

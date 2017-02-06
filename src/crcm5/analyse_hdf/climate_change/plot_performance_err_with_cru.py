@@ -30,7 +30,8 @@ BASIN_BOUNDARIES_SHP = quebec_info.BASIN_BOUNDARIES_DERIVED_10km
 import matplotlib.pyplot as plt
 
 
-def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None, obs_path=None):
+def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_to_months=None, obs_path=None,
+                               nx_agg=None, ny_agg=None):
     # Number of points for aggregation
     """
     return aggregated BasemapInfo object corresponding to the CRU resolution
@@ -40,13 +41,14 @@ def get_seasonal_clim_obs_data(rconfig=None, vname="TT", bmp_info=None, season_t
     :param bmp_info: BasemapInfo object for the model field (will be upscaled to the CRU resolution)
     :param season_to_months:
     """
-    nx_agg = 5
-    ny_agg = 5
 
     if bmp_info is None:
         bmp_info = analysis.get_basemap_info_from_hdf(file_path=rconfig.data_path)
 
-    bmp_info_agg = bmp_info.get_aggregated(nagg_x=nx_agg, nagg_y=ny_agg)
+    if nx_agg is not None:
+        bmp_info_agg = bmp_info.get_aggregated(nagg_x=nx_agg, nagg_y=ny_agg)
+    else:
+        bmp_info_agg = bmp_info
 
     # Validate temperature and precip
     model_vars = ["TT", "PR"]
@@ -166,10 +168,10 @@ def plot_seasonal_mean_biases(season_to_error_field=None, varname="", basemap_in
 
 def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
                  season_to_months=None,
-                 obs_path=None, nx_agg=5, ny_agg=5, bmp_info_agg=None,
+                 obs_path=None, nx_agg_model=5, ny_agg_model=5, bmp_info_agg=None,
                  diff_axes_list=None, obs_axes_list=None,
                  model_axes_list=None, bmp_info_model=None,
-                 mask_shape_file=None):
+                 mask_shape_file=None, nx_agg_obs=1, ny_agg_obs=1):
     """
 
     if obs_axes_list is not None, plot observation data in those
@@ -182,8 +184,8 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
     :param r_config:
     :param season_to_months:
     :param obs_path:
-    :param nx_agg:
-    :param ny_agg:
+    :param nx_agg_model:
+    :param ny_agg_model:
     :param bmp_info_agg:
     :param diff_axes_list: if it is None the plots for each variable is done in separate figures
     """
@@ -200,7 +202,7 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
     season_to_clim_fields_model_agg = OrderedDict()
     for season, field in seasonal_clim_fields_model.items():
         print(field.shape)
-        season_to_clim_fields_model_agg[season] = aggregate_array(field, nagg_x=nx_agg, nagg_y=ny_agg)
+        season_to_clim_fields_model_agg[season] = aggregate_array(field, nagg_x=nx_agg_model, nagg_y=ny_agg_model)
         if vname_model == "PR":
             season_to_clim_fields_model_agg[season] *= 1.0e3 * 24 * 3600
 
@@ -226,7 +228,7 @@ def compare_vars(vname_model="TT", vname_obs="tmp", r_config=None,
         obs_field = obs_manager.interpolate_data_to(obs_field,
                                                     lons2d=bmp_info_agg.lons,
                                                     lats2d=bmp_info_agg.lats,
-                                                    nneighbours=1)
+                                                    nneighbours=nx_agg_obs * ny_agg_obs)
 
         obs_field = np.ma.masked_where(the_mask > 0.5, obs_field)
 
@@ -368,7 +370,7 @@ def main():
 
         compare_vars(vname_model=mname, vname_obs=oname, r_config=r_config,
                      season_to_months=season_to_months,
-                     nx_agg=nx_agg, ny_agg=ny_agg, bmp_info_agg=bmp_info_agg,
+                     nx_agg_model=nx_agg, ny_agg_model=ny_agg, bmp_info_agg=bmp_info_agg,
                      obs_path=opath, diff_axes_list=row_axes)
 
         row += 1

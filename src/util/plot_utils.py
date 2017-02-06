@@ -69,7 +69,8 @@ def apply_plot_params(font_size=20, width_pt=1000, aspect_ratio=1, height_cm=Non
         'xtick.labelsize': font_size,
         'ytick.labelsize': font_size,
         'figure.figsize': fig_size,
-        "axes.titlesize": font_size
+        "axes.titlesize": font_size,
+
     }
 
     pylab.rcParams.update(params)

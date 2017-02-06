@@ -4,7 +4,9 @@ from pathlib import Path
 
 import xarray
 from pandas._period import Period
+from pendulum import Pendulum
 from rpn.rpn import RPN
+from scipy.spatial import KDTree
 from xarray import DataArray
 from xarray import Dataset
 
@@ -12,6 +14,10 @@ from lake_effect_snow import data_source_types
 from lake_effect_snow.base_utils import VerticalLevel
 from pendulum import Period
 import numpy as np
+import netCDF4
+
+from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION
+from util.geo import lat_lon
 
 
 class DataManager(object):
@@ -21,6 +27,7 @@ class DataManager(object):
         """
         :param store_config: a dictionary containing the information about the input data layout
          store_config["min_dt"] - is a minimum time step between the data
+         important limitation: All data files should be on the same horizontal grid
         """
 
         # mapping date -> data, path
@@ -41,6 +48,8 @@ class DataManager(object):
         self.multipliers = store_config["multiplier_mapping"] if "multiplier_mapping" in store_config else defaultdict(lambda: 1)
 
 
+        self.varname_to_file_path = None
+
         # Do the prliminary mappings for faster access ...
         if self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
             self.varname_to_file_prefix = store_config["filename_prefix_mapping"]
@@ -48,15 +57,38 @@ class DataManager(object):
         elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME:
             self.init_mappings_samples_folder_crcm_output()
         elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES:
-            # TODO: implement
-            # Construct the dictionary {varname: {date range: path}}
-            #
             pass
         elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_OF_RPN_FILES:
             self.init_mappings_all_vars_in_a_folder_of_rpn_files()
+        elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY:
+            self.init_mappings_all_vars_in_a_folder_in_netcdf_files_open_each_file()
+            pass
         else:
             raise IOError("Unrecognized input data layout")
 
+
+        self.lons, self.lats = None, None
+        self.kdtree = None
+
+
+
+
+
+
+    def init_mappings_all_vars_in_a_folder_in_netcdf_files_open_each_file(self):
+
+        base_folder_p = Path(self.base_folder)
+
+        self.varname_to_file_path = {}
+        for f in base_folder_p.iterdir():
+            if not f.name.endswith(".nc"):
+                continue
+
+            with netCDF4.Dataset(f) as ds:
+                for internal_vname, file_vname in self.varname_mapping.items():
+                    for vname, var in ds.variables.items():
+                        if vname == file_vname:
+                            self.varname_to_file_path[internal_vname] = str(f)
 
 
 
@@ -133,8 +165,8 @@ class DataManager(object):
                 data1 = r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
                                                                       level=level, level_kind=level_kind)
 
-                if lons is None:
-                   lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+                if self.lons is None:
+                   self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
                 data.update(data1)
 
@@ -173,8 +205,8 @@ class DataManager(object):
                     data.update(r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
                                                                               level=level, level_kind=level_kind))
 
-                    if lons is None:
-                       lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+                    if self.lons is None:
+                       self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
                     r.close()
 
@@ -207,48 +239,63 @@ class DataManager(object):
                         r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
                                                                   level=level, level_kind=level_kind))
 
-                    if lons is None:
-                        lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+                    if self.lons is None:
+                        self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
                     r.close()
 
             dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
             data_list = [data[d] for d in dates]
 
-        elif self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES:
-            base_folder = Path(self.base_folder)
-            ds = xarray.open_mfdataset(str(base_folder.joinpath("*")))
+        elif self.data_source_type in [data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES,
+                                       data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY]:
+
+            if self.varname_to_file_path is None:
+                base_folder = Path(self.base_folder)
+                ds = xarray.open_mfdataset(str(base_folder.joinpath("*.nc")))
+            else:
+                ## In the case of very different netcdf files in the folder
+                ## i.e. data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY
+                ds = xarray.open_dataset(self.varname_to_file_path[varname_internal])
 
             # select the variable by name and time
-            var = ds[self.varname_mapping[varname_internal]].loc[period.start:period.end].squeeze()
+            var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start,period.end)).squeeze()
 
-            need_to_create_meshgrid = False
             for cname, cvals in var.coords.items():
                 if "time" in cname.lower():
                     dates = cvals
 
-                if "lon" in cname.lower():
-                    lons = cvals
+            if self.lons is None:
+                need_to_create_meshgrid = False
+                for cname, cvals in var.coords.items():
 
-                    if lons.ndim == 1:
-                        need_to_create_meshgrid = True
+                    if "lon" in cname.lower():
+                        lons = cvals.values
 
-                if "lat" in cname.lower():
-                    lats = cvals
+                        if lons.ndim == 1:
+                            need_to_create_meshgrid = True
 
-            if need_to_create_meshgrid:
-                lats, lons = np.meshgrid(lats.values, lons.values)
+                    if "lat" in cname.lower():
+                        lats = cvals.values
 
+                if need_to_create_meshgrid:
+                    lats, lons = np.meshgrid(lats, lons)
+
+                self.lons, self.lats = lons, lats
 
             if var.ndim > 3:
                 var = var[:, self.level_mapping[varname_internal], :, :]
 
-            if var.shape[-2:] == lons.shape:
+            if var.shape[-2:] == self.lons.shape:
                 data_list = var.values
             else:
                 data_list = np.transpose(var.values, axes=(0, 2, 1))
 
+            # close the dataset
+            ds.close()
+
         else:
+
             raise NotImplementedError("reading of the layout type {} is not implemented yet.".format(self.data_source_type))
 
 
@@ -258,8 +305,8 @@ class DataManager(object):
         vardict = {
             "coords": {
                 "t": {"dims": "t", "data": dates},
-                "lon": {"dims": ("x", "y"), "data": lons},
-                "lat": {"dims": ("x", "y"), "data": lats},
+                "lon": {"dims": ("x", "y"), "data": self.lons},
+                "lat": {"dims": ("x", "y"), "data": self.lats},
             },
             "dims": ("t", "x", "y"),
             "data": data_list,
@@ -274,5 +321,83 @@ class DataManager(object):
 
 
 
+    def get_kdtree(self):
+
+        if self.lons is None:
+            raise Exception("The coordinates (lons and lats) are not yet set for the manager, please read some data first")
+
+        if self.kdtree is None:
+            xs, ys, zs = lat_lon.lon_lat_to_cartesian(self.lons.flatten(), self.lats.flatten())
+            self.kdtree = KDTree(list(zip(xs, ys, zs)))
+
+        return self.kdtree
+
+
+    def get_seasonal_means(self, start_year:int, end_year:int, season_to_months:dict, varname_internal:str):
+
+        """
+        returns a dictionary {season:{year: mean_field}}
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+
+        (order of months in the list of months is important, i.e. for DJF the order should be [12, 1, 2])
+        """
+        result = defaultdict(dict)
+
+
+
+        for season, months in season_to_months.items():
+
+            for y in range(start_year, end_year + 1):
+                d1 = Pendulum(y, months[0], 1)
+                d2 = d1.add(months=len(months)).subtract(seconds=1)
+
+                if d2.year > end_year:
+                    continue
+
+                current_period = Period(d1, d2)
+                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                data = self.read_data_for_period(current_period, varname_internal)
+
+                result[season][y] = data.mean(dim="t").values
+
+        return result
+
+
+    def get_seasonal_maxima(self, start_year:int, end_year:int, season_to_months:dict, varname_internal:str):
+
+        """
+        returns a dictionary {season:{year: field of maxima}}
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+
+        (order of months in the list of months is important, i.e. for DJF the order should be [12, 1, 2])
+        """
+        result = defaultdict(dict)
+
+
+
+        for season, months in season_to_months.items():
+
+            for y in range(start_year, end_year + 1):
+                d1 = Pendulum(y, months[0], 1)
+                d2 = d1.add(months=len(months)).subtract(seconds=1)
+
+                if d2.year > end_year:
+                    continue
+
+                current_period = Period(d1, d2)
+                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                data = self.read_data_for_period(current_period, varname_internal)
+
+                if varname_internal == LAKE_ICE_FRACTION:
+                    result[season][y] = np.ma.masked_where(data.values > 1, data.values).max(axis=0)
+                else:
+                    result[season][y] = data.max(dim="t").values
+
+
+        return result
 
 

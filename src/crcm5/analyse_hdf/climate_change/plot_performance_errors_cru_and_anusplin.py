@@ -54,8 +54,22 @@ def main():
 
     plot_utils.apply_plot_params(font_size=10, width_pt=None, width_cm=20, height_cm=17)
 
-    reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
-                                         start_year=1980, end_year=2010, label="ERAI-CRCM5-L")
+    # reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.1_crcm5-hcd-rl.hdf5",
+    #                                      start_year=1980, end_year=2010, label="ERAI-CRCM5-L")
+    #
+
+    reanalysis_driven_config = RunConfig(data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/quebec_0.4_crcm5-hcd-rl.hdf5",
+                                         start_year=1980, end_year=2010, label="ERAI-CRCM5-L(0.4)")
+
+    nx_agg_model = 1
+    ny_agg_model = 1
+
+    nx_agg_anusplin = 4
+    ny_agg_anusplin = 4
+
+
+
+
 
     gcm_driven_config = RunConfig(
         data_path="/RESCUE/skynet3_rech1/huziy/hdf_store/cc-canesm2-driven/quebec_0.1_crcm5-hcd-rl-cc-canesm2-1980-2010.hdf5",
@@ -90,7 +104,8 @@ def main():
         # get anusplin obs climatology
         season_to_obs_anusplin = plot_performance_err_with_anusplin.get_seasonal_clim_obs_data(
             rconfig=reanalysis_driven_config,
-            vname=vname, season_to_months=season_to_months, bmp_info=bmp_info)
+            vname=vname, season_to_months=season_to_months, bmp_info=bmp_info,
+            n_agg_x=nx_agg_anusplin, n_agg_y=ny_agg_anusplin)
 
         row = 0
 
@@ -164,7 +179,8 @@ def main():
                                                         season_to_months=season_to_months,
                                                         obs_path=vname_to_cru_path[vname],
                                                         bmp_info_agg=bmp_info_agg, diff_axes_list=ax_list,
-                                                        mask_shape_file=os.path.join(GL_SHP_FOLDER, "gl_cst.shp"))
+                                                        mask_shape_file=os.path.join(GL_SHP_FOLDER, "gl_cst.shp"),
+                                                        nx_agg_model=nx_agg_model, ny_agg_model=ny_agg_model)
 
         ax_list[0].set_ylabel("{label}\n--\nCRU".format(label=reanalysis_driven_config.label))
         _format_axes(ax_list, vname=vname)
@@ -205,7 +221,7 @@ def main():
         cb.ax.set_xlabel(infovar.get_units(vname))
 
         # Save the plot
-        img_file = "{vname}_{sy}-{ey}_{sim_label}.eps".format(
+        img_file = "{vname}_{sy}-{ey}_{sim_label}.png".format(
             vname=vname, sy=reanalysis_driven_config.start_year, ey=reanalysis_driven_config.end_year,
             sim_label=reanalysis_driven_config.label)
 
