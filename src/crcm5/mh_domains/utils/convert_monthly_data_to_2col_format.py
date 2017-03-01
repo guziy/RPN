@@ -14,14 +14,17 @@ def main():
     Iput file is a matrix with rows for years and cols for months
     (except the last one, since it is for the total)
     """
-    in_file = "mh/obs_data/Churchill Historic Monthly Apportionable Flow_06EA002.csv.bak.original"
+    # in_file = "mh/obs_data/Churchill Historic Monthly Apportionable Flow_06EA002.csv.bak.original"
+    in_file = "mh/obs_data/streamflow_data_original/Red River NF.csv"
+    factor = 1
+    skiprows = 3
 
     in_file_p = Path(in_file)
 
     out_file = in_file_p.parent.joinpath("2_col_{}.csv".format(in_file_p.name[:in_file_p.name.index(".csv")]))
 
 
-    df_in = pd.read_csv(in_file, skiprows=2)
+    df_in = pd.read_csv(in_file, skiprows=skiprows, usecols=range(13))
 
 
     dates = []
@@ -34,8 +37,12 @@ def main():
             continue
 
 
-        for y, v in zip(df_in.year, df_in[c]):
-            dates.append(datetime.strptime("{}-{}-15".format(y, c), "%Y-%b-%d"))
+        for y, v in zip(df_in.iloc[:, 0], df_in[c]):
+            try:
+                dates.append(datetime.strptime("{}-{}-15".format(y, c), "%Y-%b-%d"))
+            except Exception:
+                dates.append(datetime.strptime("{}-{}-15".format(y, c), "%Y-%B-%d"))
+
             values.append(v)
 
 
@@ -43,7 +50,7 @@ def main():
 
 
     # convert units (dam^3/month -> m^3/s)
-    factor = s_out.index.map(lambda d: 1000.0 * 1. / (calendar.monthrange(d.year, d.month)[1] * 24 * 3600))
+    # factor = s_out.index.map(lambda d: 1000.0 * 1. / (calendar.monthrange(d.year, d.month)[1] * 24 * 3600))
     s_out *= factor
 
 

@@ -21,7 +21,8 @@ field_name_to_shp_name = {
     "lat": "lat",
     "accumulation_area": "accarea",
     "channel_length": "chalen",
-    "slope": "slope"
+    "slope": "slope",
+
 }
 
 
@@ -35,9 +36,12 @@ def main():
 
 
     grid_config_to_dirfile = OrderedDict([
-        (default_domains.bc_mh_044, directions_dir.joinpath("directions_mh_0.44deg.nc")),
-        (default_domains.bc_mh_011, directions_dir.joinpath("directions_mh_0.11deg.nc")),
-        (default_domains.bc_mh_022, directions_dir.joinpath("directions_mh_0.22deg.nc")),
+        # (default_domains.bc_mh_044, directions_dir.joinpath("directions_mh_0.44deg.nc")),
+        # (default_domains.bc_mh_011, directions_dir.joinpath("directions_mh_0.11deg.nc")),
+        # (default_domains.bc_mh_022, directions_dir.joinpath("directions_mh_0.22deg.nc")),
+        # (default_domains.bc_mh_011, directions_dir.joinpath("directions_bc-mh_0.11deg_new.nc")),
+        (default_domains.bc_mh_022, directions_dir.joinpath("directions_bc-mh_0.22deg_new.nc")),
+        (default_domains.bc_mh_044, directions_dir.joinpath("directions_bc-mh_0.44deg_new.nc")),
     ])
 
     for gc, dir_file in grid_config_to_dirfile.items():
@@ -50,6 +54,10 @@ def main():
         fields_to_add = OrderedDict()
         with Dataset(str(dir_file)) as ds:
             for vname, var in ds.variables.items():
+
+                if vname not in field_name_to_shp_name:
+                    continue
+
                 fields_to_add[vname] = var[:].view(MyNdArray)
                 fields_to_add[vname].type_of_shp_field = "float"
                 print("{} ranges from {} to {}".format(vname, fields_to_add[vname].min(), fields_to_add[vname].max()))

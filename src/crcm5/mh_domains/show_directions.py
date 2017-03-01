@@ -62,22 +62,24 @@ def main():
 
 
     # vname = "accumulation_area"
-    vname = LAKE_FRACTION
+    vname = FACC
     basin_border_width = 0.5
 
-    plot_utils.apply_plot_params(width_cm=25, height_cm=10, font_size=8)
+    plot_utils.apply_plot_params(width_cm=25, height_cm=25, font_size=8)
 
     img_folder_path = Path(img_folder)
 
-    fig1 = plt.figure()
-    gs = GridSpec(2, 3, wspace=0.1, hspace=0.0, height_ratios=[1, 0.04])
 
 
     dir_file_to_domain_config =  OrderedDict([
-        ("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.44deg.nc", default_domains.bc_mh_044),
-        ("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.22deg.nc", default_domains.bc_mh_022),
+        #("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.44deg.nc", default_domains.bc_mh_044),
+        # ("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.22deg.nc", default_domains.bc_mh_022),
         ("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.11deg.nc", default_domains.bc_mh_011)
     ])
+
+
+    fig1 = plt.figure()
+    gs = GridSpec(2, len(dir_file_to_domain_config), wspace=0.1, hspace=0.0, height_ratios=[1, 0.04])
 
     for col, (dir_file, domain_config) in enumerate(dir_file_to_domain_config.items()):
 

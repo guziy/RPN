@@ -9,7 +9,10 @@ from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
-matplotlib.use("agg")
+
+from crcm5.mh_domains import constants
+
+# matplotlib.use("agg")
 
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
@@ -21,6 +24,7 @@ from rpn.rpn import RPN
 
 from application_properties import main_decorator
 from crcm5.analyse_hdf.run_config import RunConfig
+from data.cell_manager import CellManager
 from lake_effect_snow import data_source_types
 
 from lake_effect_snow import default_varname_mappings
@@ -34,6 +38,8 @@ import matplotlib.pyplot as plt
 
 from scipy.stats import ttest_ind_from_stats
 
+from crcm5.mh_domains import default_domains
+
 # season name to month list mapping (the order of months is important)
 from util import plot_utils
 from util.geo import lat_lon
@@ -45,7 +51,7 @@ season_to_months = OrderedDict([
     ("SON", [9, 10, 11])
 ])
 
-img_folder = Path("nemo_vs_hostetler")
+img_folder = Path("mh/engage_report/seasonal_biases")
 
 internal_name_to_title = {
     T_AIR_2M: r"2-m air temperature ($^\circ$C)",
@@ -55,18 +61,26 @@ internal_name_to_title = {
 }
 
 internal_name_to_clevs = {
-    T_AIR_2M: np.arange(-30, 30, 2),
+    T_AIR_2M: np.arange(-30, 33, 3),
     T_AIR_2M + "bias": np.arange(-4, 4.2, 0.2),
     T_AIR_2M + "biasdiff": np.arange(-1, 1.1, 0.1),
-    TOTAL_PREC: np.arange(0, 8, 0.5),
-    TOTAL_PREC + "bias": np.arange(-3, 3.2, 0.2),
+    TOTAL_PREC: np.arange(0, 6, 0.5),
+    TOTAL_PREC + "bias": np.arange(-1.2, 1.4, 0.2),
     TOTAL_PREC + "biasdiff": np.arange(-1, 1.1, 0.1),
-    SWE: np.arange(0, 610, 10),
-    SWE + "bias": np.arange(-200, 210, 10),
+    SWE: np.arange(0, 210, 10),
+    SWE + "bias": np.arange(-150, 160, 10),
     SWE + "biasdiff": np.arange(-15, 16, 1),
     LAKE_ICE_FRACTION: np.arange(0, 1.1, 0.1),
     LAKE_ICE_FRACTION + "bias": np.arange(0, 1.1, 0.1),
     LAKE_ICE_FRACTION + "biasdiff": np.arange(0, 1.1, 0.1),
+}
+
+
+
+internal_name_to_cmap = {
+    T_AIR_2M: cm.get_cmap("bwr", len(internal_name_to_clevs[T_AIR_2M]) - 1),
+    TOTAL_PREC: cm.get_cmap("viridis", len(internal_name_to_clevs[TOTAL_PREC]) - 1),
+    SWE: cm.get_cmap("viridis", len(internal_name_to_clevs[SWE]) - 1)
 }
 
 
@@ -77,7 +91,6 @@ def get_clevs(internal_name):
 
 
 internal_name_to_multiplier = defaultdict(lambda : 1)
-internal_name_to_multiplier[TOTAL_PREC] = 1000.0 * 24 * 3600 # Convert precip to mm/day
 
 
 
@@ -140,38 +153,59 @@ def get_land_fraction(run_config: RunConfig):
 
 
 @main_decorator
-def main():
+def main(vars_of_interest=None):
+    # Validation with CRU (temp, precip) and CMC SWE
 
-    obs_data_path = Path("/RESCUE/skynet3_rech1/huziy/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/anusplin+_interpolated_tt_pr.nc")
+    # obs_data_path = Path("/RESCUE/skynet3_rech1/huziy/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/anusplin+_interpolated_tt_pr.nc")
+    obs_data_path = Path("/HOME/huziy/skynet3_rech1/obs_data/mh_churchill_nelson_obs_fields")
+    CRU_PRECIP = True
 
-    start_year = 1980
-    end_year = 2010
-
-    MODEL_LABEL = [
-        "CRCM5 (0.44)"
+    sim_id = "mh_0.44"
+    add_shp_files = [
+        default_domains.MH_BASINS_PATH,
+        constants.upstream_station_boundaries_shp_path[sim_id]
     ]
-    # critical p-value for the ttest aka significance level
-    p_crit = 0.1
 
-    vars_of_interest = [
-        # T_AIR_2M, TOTAL_PREC,
-        SWE,
+
+    start_year = 1981
+    end_year = 2009
+
+    MODEL_LABEL =  "CRCM5 (0.44)"
+    # critical p-value for the ttest aka significance level
+    p_crit = 1
+
+    coastlines_width = 0.3
+
+    vars_of_interest_default = [
+        # T_AIR_2M,
+        TOTAL_PREC,
+        # SWE,
         # LAKE_ICE_FRACTION
     ]
 
+    if vars_of_interest is None:
+        vars_of_interest = vars_of_interest_default
+
 
     vname_to_seasonmonths_map = {
-        SWE: OrderedDict([("N", [11])]),
+        SWE: OrderedDict([("DJF", [12, 1, 2])]),
         T_AIR_2M: season_to_months,
-        TOTAL_PREC: season_to_months
+        TOTAL_PREC: season_to_months,
+
     }
 
     sim_configs = {
 
-        MODEL_LABEL: RunConfig(data_path="/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected",
-                  start_year=start_year, end_year=end_year, label=HL_LABEL),
+        MODEL_LABEL: RunConfig(data_path="/RECH2/huziy/BC-MH/bc_mh_044deg/Samples",
+                  start_year=start_year, end_year=end_year, label=MODEL_LABEL),
 
     }
+
+
+    grid_config = default_domains.bc_mh_044
+
+
+
 
     sim_labels = [MODEL_LABEL, ]
 
@@ -179,13 +213,26 @@ def main():
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
         U_WE: VerticalLevel(1, level_kinds.HYBRID),
         V_SN: VerticalLevel(1, level_kinds.HYBRID),
+        SWE: VerticalLevel(-1, level_kinds.ARBITRARY)
+    }
+
+    vname_map = {
+        default_varname_mappings.TOTAL_PREC: "pre",
+        default_varname_mappings.T_AIR_2M: "tmp",
+        default_varname_mappings.SWE: "SWE"
+    }
+
+    filename_prefix_mapping = {
+        default_varname_mappings.SWE: "pm",
+        default_varname_mappings.TOTAL_PREC: "pm",
+        default_varname_mappings.T_AIR_2M: "dm"
     }
 
 
     # Try to get the land_fraction for masking if necessary
     land_fraction = None
     try:
-        land_fraction = get_land_fraction(sim_configs[HL_LABEL])
+        land_fraction = get_land_fraction(sim_configs[MODEL_LABEL])
     except Exception:
         pass
 
@@ -194,23 +241,33 @@ def main():
     # Calculations
 
     # prepare params for interpolation
-    lons_t, lats_t, bsmap = get_target_lons_lats_basemap(sim_configs[HL_LABEL])
+    lons_t, lats_t, bsmap = get_target_lons_lats_basemap(sim_configs[MODEL_LABEL])
+
+    bsmap, reg_of_interest_mask = grid_config.get_basemap_using_shape_with_polygons_of_interest(lons=lons_t, lats=lats_t,
+                                                                                                shp_path=default_domains.MH_BASINS_PATH,
+                                                                                                mask_margin=2, resolution="i")
+
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_t.flatten(), lats_t.flatten())
 
 
-    vname_map = {}
-    vname_map.update(default_varname_mappings.vname_map_CRCM5)
 
 
+
+
+
+
+
+
+    obs_multipliers = default_varname_mappings.vname_to_multiplier_CRCM5.copy()
 
     # Read and calculate observed seasonal means
     store_config = {
-            "base_folder": obs_data_path.parent,
+            "base_folder": obs_data_path.parent if not obs_data_path.is_dir() else obs_data_path,
             "data_source_type": data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY,
             "varname_mapping": vname_map,
             "level_mapping": vname_to_level,
             "offset_mapping": default_varname_mappings.vname_to_offset_CRCM5,
-            "multiplier_mapping": default_varname_mappings.vname_to_multiplier_CRCM5,
+            "multiplier_mapping": obs_multipliers,
     }
 
     obs_dm = DataManager(store_config=store_config)
@@ -236,7 +293,20 @@ def main():
 
 
 
+
+
         seas_to_clim = {seas: np.array(list(y_to_means.values())).mean(axis=0) for seas, y_to_means in seas_to_year_to_mean.items()}
+
+        # convert precip from mm/month (CRU) to mm/day
+        if vname in [TOTAL_PREC] and CRU_PRECIP:
+            for seas in seas_to_clim:
+                seas_to_clim[seas] *= 1. / (365.25 / 12)
+                seas_to_clim[seas] = np.ma.masked_where(np.isnan(seas_to_clim[seas]), seas_to_clim[seas])
+
+
+                print("{}: min={}, max={}".format(seas, seas_to_clim[seas].min(), seas_to_clim[seas].max()))
+
+
         obs_data[vname] = seas_to_clim
 
         if interp_indices is None:
@@ -256,6 +326,7 @@ def main():
             seas_to_clim[season] = seas_to_clim[season].flatten()[interp_indices].reshape(lons_t.shape)
 
 
+
             # save the yearly means for ttesting
             season_to_std[season] = np.asarray([field.flatten()[interp_indices].reshape(lons_t.shape)
                                                          for field in seas_to_year_to_mean[season].values()]).std(axis=0)
@@ -264,22 +335,28 @@ def main():
             season_to_nobs[season] = np.ones_like(lons_t) * len(seas_to_year_to_mean[season])
 
 
+        plt.show()
+
 
 
     # Read and calculate simulated seasonal mean biases
     mod_label_to_vname_to_season_to_std = {}
     mod_label_to_vname_to_season_to_nobs = {}
 
+    model_data_multipliers = defaultdict(lambda: 1)
+    model_data_multipliers[TOTAL_PREC] = 1000 * 24 * 3600
+
     sim_data = defaultdict(dict)
     for label, r_config in sim_configs.items():
 
         store_config = {
                 "base_folder": r_config.data_path,
-                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
-                "varname_mapping": vname_map,
+                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
+                "varname_mapping": default_varname_mappings.vname_map_CRCM5,
                 "level_mapping": vname_to_level,
                 "offset_mapping": default_varname_mappings.vname_to_offset_CRCM5,
-                "multiplier_mapping": default_varname_mappings.vname_to_multiplier_CRCM5,
+                "multiplier_mapping": model_data_multipliers,
+                "filename_prefix_mapping": filename_prefix_mapping
         }
 
 
@@ -309,6 +386,8 @@ def main():
 
             sim_data[label][vname] = seas_to_clim
 
+
+
             if interp_indices is None:
                 _, interp_indices = dm.get_kdtree().query(list(zip(xt, yt, zt)))
 
@@ -331,23 +410,31 @@ def main():
 
 
 
-    # Plotting: interpolate to the same grid and plot obs and biases
-    plot_utils.apply_plot_params(width_cm=32, height_cm=20, font_size=8)
 
 
 
     xx, yy = bsmap(lons_t, lats_t)
     lons_t[lons_t > 180] -= 360
+
     field_mask = maskoceans(lons_t, lats_t, np.zeros_like(lons_t)).mask
+
 
     for vname in vars_of_interest:
 
+        if vname not in [SWE]:
+            field_mask = np.zeros_like(field_mask, dtype=bool)
+
+
+        # Plotting: interpolate to the same grid and plot obs and biases
+        plot_utils.apply_plot_params(width_cm=32 / 4 * (len(vname_to_seasonmonths_map[vname])),
+                                     height_cm=25 / 3.0 * (len(sim_configs) + 1), font_size=8 * len(vname_to_seasonmonths_map[vname]) / 3)
+
         fig = plt.figure()
 
-        fig.suptitle(internal_name_to_title[vname] + "\n")
+        # fig.suptitle(internal_name_to_title[vname] + "\n")
 
         nrows = len(sim_configs) + 2
-        ncols = len(season_to_months)
+        ncols = len(vname_to_seasonmonths_map[vname])
         gs = GridSpec(nrows=nrows, ncols=ncols)
 
 
@@ -362,16 +449,28 @@ def main():
             to_plot = np.ma.masked_where(field_mask, field) * internal_name_to_multiplier[vname]
             clevs = get_clevs(vname)
 
+            to_plot = np.ma.masked_where(~reg_of_interest_mask, to_plot)
+
             if clevs is not None:
                 bnorm = BoundaryNorm(clevs, len(clevs) - 1)
-                cmap = cm.get_cmap("jet", len(clevs) - 1)
+                cmap = cm.get_cmap("Blues", len(clevs) - 1)
             else:
                 cmap = "jet"
                 bnorm = None
 
-            cs = bsmap.contourf(xx, yy, to_plot, ax=ax, levels=get_clevs(vname), norm=bnorm, cmap=cmap)
-            bsmap.drawcoastlines()
+            bsmap.drawmapboundary(fill_color="0.75")
+
+            # cs = bsmap.contourf(xx, yy, to_plot, ax=ax, levels=get_clevs(vname), norm=bnorm, cmap=cmap)
+            cs = bsmap.pcolormesh(xx, yy, to_plot, ax=ax, norm=bnorm, cmap=internal_name_to_cmap[vname])
+
+            bsmap.drawcoastlines(linewidth=coastlines_width)
+            # bsmap.drawstates(linewidth=0.1)
+            # bsmap.drawcountries(linewidth=0.2)
             bsmap.colorbar(cs, ax=ax)
+
+            i = 0
+            bsmap.readshapefile(str(add_shp_files[i])[:-4], "field_{}".format(i), linewidth=0.5, color="m")
+
 
             if col == 0:
                 ax.set_ylabel("Obs")
@@ -415,10 +514,25 @@ def main():
                 # Mask non-significant differences as given by the ttest
                 to_plot = np.ma.masked_where(p > p_crit, to_plot)
 
+                # only focus on the basins of interest
+                to_plot = np.ma.masked_where(~reg_of_interest_mask, to_plot)
 
-                cs = bsmap.contourf(xx, yy, to_plot, ax=ax, extend="both", levels=get_clevs(vname + "bias"), cmap=cmap, norm=bnorm)
-                bsmap.drawcoastlines()
-                bsmap.colorbar(cs, ax=ax)
+
+                # cs = bsmap.contourf(xx, yy, to_plot, ax=ax, extend="both", levels=get_clevs(vname + "bias"), cmap=cmap, norm=bnorm)
+
+                bsmap.drawmapboundary(fill_color="0.75")
+
+
+                cs = bsmap.pcolormesh(xx, yy, to_plot, ax=ax, cmap=cmap, norm=bnorm)
+                bsmap.drawcoastlines(linewidth=coastlines_width)
+                bsmap.colorbar(cs, ax=ax, extend="both")
+
+
+
+
+
+                for i, shp in enumerate(add_shp_files[1:], start=1):
+                    bsmap.readshapefile(str(shp)[:-4], "field_{}".format(i), linewidth=0.5, color="k")
 
                 if col == 0:
                     ax.set_ylabel("{}\n-\nObs.".format(sim_label))
@@ -428,17 +542,25 @@ def main():
 
         fig.tight_layout()
 
+
+
         # save a figure per variable
         img_file = "seasonal_biases_{}_{}_{}-{}.png".format(vname,
                                                             "-".join([s for s in vname_to_seasonmonths_map[vname]]),
                                                             start_year, end_year)
-        img_file = img_folder.joinpath(img_file)
 
-        fig.savefig(str(img_file))
+
+        if not img_folder.exists():
+            img_folder.mkdir(parents=True)
+
+        img_file = img_folder / img_file
+        fig.savefig(str(img_file), bbox_inches="tight", dpi=300)
 
         plt.close(fig)
 
 
 
 if __name__ == '__main__':
-    main()
+    main(vars_of_interest=[TOTAL_PREC])
+    main(vars_of_interest=[T_AIR_2M])
+    main(vars_of_interest=[SWE])
