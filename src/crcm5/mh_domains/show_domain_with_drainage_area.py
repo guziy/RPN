@@ -41,7 +41,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
     if include_buffer:
         bmp = grid_config.get_basemap(resolution="l")
     else:
-        bmp = grid_config.get_basemap_for_free_zone(resolution="l")
+        bmp = grid_config.get_basemap_for_free_zone(resolution="f")
 
     margin = halo + blending
 
@@ -67,7 +67,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
                 lons2d[margin:-margin, margin:-margin],
                 lats2d[margin:-margin, margin:-margin],
                 shp_path=path_to_shape_with_focus_polygons,
-                mask_margin=mask_margin)
+                mask_margin=mask_margin, resolution="f")
 
             bmp.readshapefile(path_to_shape_with_focus_polygons[:-4], "basins", linewidth=basin_border_width, color="m")
             ncells = (data_mask > 0.5).sum()
@@ -90,11 +90,13 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
             cmap = cm.get_cmap("bone_r", bn.N)
             im = bmp.imshow(data.T, cmap=cmap, interpolation="nearest", norm=bn)
         else:
-            im = bmp.contourf(xxx, yyy, data, cmap="bone_r", norm=LogNorm())
+            # im = bmp.contourf(xxx, yyy, data, cmap="bone_r", norm=LogNorm())
+            im = bmp.imshow(data.T, cmap="bone_r", interpolation="nearest", norm=LogNorm())
 
 
         if draw_colorbar:
-            bmp.colorbar(im, format=ScalarFormatter(useMathText=True, useOffset=False))
+            # bmp.colorbar(im, format=ScalarFormatter(useMathText=True, useOffset=False))
+            bmp.colorbar(im)
 
     # bmp.readshapefile(default_domains.MH_BASINS_PATH[:-4], "basin", color="m", linewidth=basin_border_width)
 
@@ -133,7 +135,9 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
     ax.set_title(r"{} cells, $\Delta x$ = {}$^\circ$".format(ncells, grid_config.dx))
 
     if not is_subplot:
-        fig.savefig(str(p.joinpath("{}_dx{}.png".format(imgfile_prefix, grid_config.dx))), bbox_inches="tight",
+        img_file = p.joinpath("{}_dx{}.png".format(imgfile_prefix, grid_config.dx))
+        print("Saving {}".format(img_file))
+        fig.savefig(str(img_file), bbox_inches="tight",
                     transparent=True, dpi=600)
 
         plt.close(fig)
@@ -236,13 +240,25 @@ def main():
     #             imgfile_prefix="bc-mh_0.22deg",
     #             include_buffer=False)
 
-    show_all_domains()
+    # show_all_domains()
+
+
+    # show_domain(default_domains.bc_mh_044, include_buffer=False, imgfile_prefix="bc-mh",
+    #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc",
+    #             basin_border_width=0.5, grdc_basins_of_interest=default_domains.GRDC_basins_of_interest_NA)
+
+    show_domain(default_domains.gc_GL_and_NENA_01_fft, include_buffer=False, imgfile_prefix="gl_nena_0.1",
+                directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_452x260_GL+NENA_0.1deg.nc",
+                basin_border_width=0.5, grdc_basins_of_interest=default_domains.GRDC_basins_of_interest_NA,
+                draw_rivers=True)
+
 
 
     # show_domain(default_domains.bc_mh_044, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
     #             path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
-    #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc")
-    #
+    #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg.nc",
+    #             basin_border_width=0.5)
+
     # show_domain(default_domains.bc_mh_022, include_buffer=False, imgfile_prefix="mh-focus-zone-lkfr",
     #             path_to_shape_with_focus_polygons=default_domains.MH_BASINS_PATH,
     #             directions_file="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg.nc")

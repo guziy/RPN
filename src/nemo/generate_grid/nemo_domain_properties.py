@@ -1,5 +1,7 @@
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 
+from domains.grid_config import GridConfig
+
 __author__ = 'huziy'
 
 
@@ -37,6 +39,10 @@ class Grid(object):
         self.dx = dx
         self.dy = dy
 
+    def to_gridconfig(self):
+        return GridConfig(rll=self.rll, ni=self.nx, nj=self.ny, iref=self.iref, jref=self.jref,
+                          dx=self.dx, dy=self.dy, xref=self.lonref, yref=self.latref)
+
 
 
 known_projections = {
@@ -54,6 +60,8 @@ known_domains = {
     "GLK_452x260_0.1deg": Grid(rll=RotatedLatLon(lon1=180., lat1=0., lon2=-84., lat2=1.0),
                                nx=452, ny=260, iref=135, jref=120, lonref=-84, latref=48, dx=0.1, dy=0.1)
 }
+
+
 
 
 

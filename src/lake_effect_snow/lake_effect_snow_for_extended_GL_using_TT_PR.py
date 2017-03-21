@@ -66,11 +66,11 @@ def main():
 
 
 
-    label = "CRCM5_NEMO"
+    label = "CRCM5_NEMO_based_on_TT_PR"
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
     vname_map.update({
-        default_varname_mappings.SNOWFALL_RATE: "U3"
+        default_varname_mappings.SNOWFALL_RATE: "XX"
     })
 
     label_to_config_CRCM5 = OrderedDict([(
@@ -86,18 +86,18 @@ def main():
         }
     )])
 
-    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
-    #                                                      period=period,
-    #                                                      nprocs_to_use=16)
+    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
+                                                         period=period,
+                                                         nprocs_to_use=16)
 
 
 
-    label = "CRCM5_Hostetler"
+    label = "CRCM5_Hostetler_based_on_TT_PR"
 
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
     vname_map.update({
-        default_varname_mappings.SNOWFALL_RATE: "U3"
+        default_varname_mappings.SNOWFALL_RATE: "XX"
     })
 
     label_to_config_CRCM5 = OrderedDict([(
@@ -114,9 +114,9 @@ def main():
         }
     )])
 
-    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
-                                                         period=period,
-                                                         nprocs_to_use=20)
+    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
+    #                                                      period=period,
+    #                                                      nprocs_to_use=20)
 
 
 if __name__ == '__main__':

@@ -236,12 +236,19 @@ if __name__ == "__main__":
     #     xref=276.0, yref=48.0
     # )
     # gc_gl_ext = GridConfig(**params_gl_ext)
-    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_452x260_GL+NENA_0.1deg.nc",
-    #         gc=gc_gl_ext, out_path="/HOME/huziy/directions_452x260_GL+NENA_0.1deg.rpn")
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_452x260_GL+NENA_0.1deg_new.nc",
+    #         gc=gc_gl_ext, out_path="/HOME/huziy/directions_452x260_GL+NENA_0.1deg_new.rpn")
+
+
+
 
     # CORDEX NA at 0.44 deg resolution
-    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_na_0.44deg_CORDEX.nc",
-    #         gc=default_domains.gc_cordex_044)
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_new_na_0.44deg_CORDEX.nc",
+    #         gc=default_domains.gc_cordex_na_044)
+
+    # Caio domain
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_new_na_0.22deg_CORDEX_Caio.nc",
+            gc=default_domains.gc_cordex_caio_subdomain)
 
 
 
@@ -251,7 +258,7 @@ if __name__ == "__main__":
 
     # PanArctic 0.5 deg
     # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_arctic_0.5deg_Bernardo.nc",
-    #         gc=default_domains.gc_panarctic_05)
+    #          gc=default_domains.gc_panarctic_05)
 
 
     # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_qc_dx0.4deg.nc",
@@ -264,7 +271,12 @@ if __name__ == "__main__":
         convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg.nc", gc=default_domains.bc_mh_022)
         convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc", gc=default_domains.bc_mh_011)
 
-    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc",
-            gc=default_domains.bc_mh_011)
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg.nc",
+    #         gc=default_domains.bc_mh_011)
+
+
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_bc-mh_0.11deg_new.nc",
+    #         gc=default_domains.bc_mh_011,
+    #         out_path="/RESCUE/skynet3_rech1/huziy/NEI_geophysics/WC_0.11_deg/directions_bc-mh_0.11deg_new.rpn")
 
     print("Hello World")

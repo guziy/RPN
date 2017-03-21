@@ -22,6 +22,7 @@ def get_points_of_interest(path: str = "data/NEI/selected_points.txt") -> pd.Dat
 
     # west longitudes, convert to negative
     pts.iloc[:, -1] *= -1
+
     return pts
 
 
@@ -40,23 +41,36 @@ def save_data_to_csv_files(out_dir="data/NEI/crcm5_hostetler", pts_to_vn_to_vals
 @main_decorator
 def main():
 
-    # in_folder = "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_TT_PR_UU_VV_AD_N4_P0_PN_HR/"
-    in_folder = "/b4_fs1/huziy/from_guillimin_important_sim_results/quebec_0.1_crcm5-hcd-rl-cc/Samples"
+    # in_folder = "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected"
+    # in_folder = "/b4_fs1/huziy/from_guillimin_important_sim_results/quebec_0.1_crcm5-hcd-rl-cc/Samples"
 
+    in_folder = "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields"
     in_folder_p = Path(in_folder)
 
 
-    # vars_of_interest = ["TT", "HR", "P0", "PN", "UU", "VV", "PR", "N4", "AD"]
-    vars_of_interest = ["TT", "HR", "UU", "VV", "PR", "N4", "AD", "GZ"]
+    out_dir = Path("data/NEI/crcm5_glnemo/erai_driven_additional")
+    # create the output directory
+    if not out_dir.is_dir():
+        out_dir.mkdir(parents=True)
+
+
+    vars_of_interest = ["TT", "HR", "P0", "PN", "UU", "VV", "PR", "N4", "AD"]
+    # vars_of_interest = ["TT", "HR", "UU", "VV", "PR", "N4", "AD", "GZ"]
+
+
+    # varname_to_fname_prefix = {
+    #    "TT": "dm",
+    #    "HR": "dm",
+    #    "UU": "dm",
+    #    "VV": "dm",
+    #    "PR": "pm",
+    #    "N4": "pm",
+    #    "AD": "pm",
+    #    "GZ": "dm"
+    #}
+
     varname_to_fname_prefix = {
-        "TT": "dm",
-        "HR": "dm",
-        "UU": "dm",
-        "VV": "dm",
-        "PR": "pm",
-        "N4": "pm",
-        "AD": "pm",
-        "GZ": "dm"
+         k: None for k in vars_of_interest
     }
 
 
@@ -71,13 +85,23 @@ def main():
     # for testing
     # vars_of_interest = vars_of_interest[0:2]
 
-    points = get_points_of_interest()
+    points = get_points_of_interest(
+        path="data/NEI/selected_points_all.txt"
+    )
     print(points.head(15))
 
 
 
-    flist = itt.chain(*[[f for f in monthdir.iterdir()] for monthdir in in_folder_p.iterdir() if monthdir.is_dir()])
+    flist = itt.chain(*[[f for f in monthdir.iterdir() if not f.is_dir()] for monthdir in in_folder_p.iterdir() if monthdir.is_dir()])
     flist = list(flist)
+
+
+
+    for f in flist:
+        assert f.exists()
+        assert not f.is_dir()
+
+        print(f)
 
 
     pts_to_vname_to_vals = {}
@@ -102,18 +126,40 @@ def main():
 
     # Get the path to the file with coordinates
     coord_file = in_folder_p.parent.joinpath("pm1979010100_00000000p")
-    if not coord_file.is_file():
+    print(coord_file.exists())
+    print(flist)
+    if not coord_file.exists():
         for f in flist:
             if f.name.startswith("pm"):
                 coord_file = f
+                print("Using {} as coord file".format(f))
+
                 break
+
+        if not coord_file.exists():
+            coord_file = [f for f in flist if ("PR" in f.name or "TT" in f.name)][0]
 
 
 
 
     # get the corresponding gridpoints for selected positions
     r = RPN(str(coord_file))
-    pr = r.get_first_record_for_name("PR")
+
+    vlist = r.get_list_of_varnames()
+
+    if "PR" in vlist:
+        coord_vname = "PR"
+    elif "TT" in vlist:
+        coord_vname = "TT"
+    elif len([v for v in vlist if v not in [">>", "^^", "HY"]]) > 0:
+        coord_vname = [v for v in vlist if v not in [">>", "^^", "HY"]][0]
+    else:
+        coord_vname = "ML"
+
+
+    print(coord_vname)
+
+    pr = r.get_first_record_for_name(coord_vname)
     lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
     x, y, z = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
     ktree = KDTree(list(zip(x, y, z)))
@@ -124,8 +170,10 @@ def main():
         x0, y0, z0 = lat_lon.lon_lat_to_cartesian(pts_to_lon[pt], pts_to_lat[pt])
         dist, ind = ktree.query((x0, y0, z0))
         pts_to_model_indices[pt] = ind
-        # print("{}: lkfr={} in the model".format(pt, lake_fr.flatten()[ind]))
-
+        if coord_vname == "ML":
+            print("{}: lkfr={} in the model, dist={}".format(pt, pr.flatten()[ind], dist))
+        else:
+            print("{}: dist={}".format(pt, pr.flatten()[ind], dist))
 
     # for each variable
     for vi, vn in enumerate(vars_of_interest):
@@ -142,16 +190,21 @@ def main():
                 if not fp.name.startswith(fname_prefix):
                     continue
 
-            r = RPN(str(fp))
-            print("reading {} ...".format(fp))
-            data = r.get_4d_field(vn)
 
-            for pt in pts_to_vname_to_vals:
+            with RPN(str(fp)) as r:
+                vnames_in_file = list(r.get_list_of_varnames())
 
-                for d, field in data.items():
-                    pts_to_vname_to_vals[pt][vn][d] = list(field.items())[0][1].flatten()[pts_to_model_indices[pt]] * vname_to_multiplier[vn]
+                if vn not in vnames_in_file:
+                    continue
 
-            r.close()
+                print("reading {} ...".format(fp))
+                data = r.get_4d_field(vn)
+
+                for pt in pts_to_vname_to_vals:
+
+                    for d, field in data.items():
+                        pts_to_vname_to_vals[pt][vn][d] = list(field.items())[0][1].flatten()[pts_to_model_indices[pt]] * vname_to_multiplier[vn]
+
 
 
 
@@ -168,12 +221,14 @@ def main():
 
     for pt, vname_to_datevals in pts_to_vname_to_vals.items():
         for vn in vname_to_datevals:
+
             vname_to_datevals[vn] = [vname_to_datevals[vn][d] for d in dates]
 
     # write data in a csv file per point
     # rows -  {date => value}
     # columns - variables
-    save_data_to_csv_files(pts_to_vn_to_vals=pts_to_vname_to_vals, dates=dates, out_dir="data/NEI/crcm5_hostetler/cc_canesm2_rcp85")
+    # save_data_to_csv_files(pts_to_vn_to_vals=pts_to_vname_to_vals, dates=dates, out_dir="data/NEI/crcm5_hostetler/cc_canesm2_rcp85_additional")
+    save_data_to_csv_files(pts_to_vn_to_vals=pts_to_vname_to_vals, dates=dates, out_dir=str(out_dir))
 
 if __name__ == '__main__':
     main()

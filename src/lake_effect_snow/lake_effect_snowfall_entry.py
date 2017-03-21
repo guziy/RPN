@@ -2,7 +2,7 @@ import matplotlib
 
 from lake_effect_snow.non_local_mask_for_lake_effect import get_nonlocal_mean_snowfall
 
-# matplotlib.use("Agg")
+matplotlib.use("Agg")
 
 import multiprocessing
 from collections import OrderedDict
@@ -322,31 +322,31 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         try:
             lake_ice_fraction = data_mngr.read_data_for_period(p, default_varname_mappings.LAKE_ICE_FRACTION)
             lake_ice_fraction = lake_ice_fraction.resample("1D", dim="t", how="mean")  # Calculate the daily means
-            lake_ice_fraction = lake_ice_fraction.sel(t=v_sn.coords["t"], method="ffill")
+            lake_ice_fraction = lake_ice_fraction.sel(t=v_sn.coords["t"], method="nearest")
             lake_ice_fraction = lake_ice_fraction.where(lake_ice_fraction <= 1)
 
             # at this point shapes of the arrays should be the same
             assert lake_ice_fraction.shape == u_we.shape
 
+            print(lake_ice_fraction.coords["t"][0], lake_ice_fraction.coords["t"][-1])
+
         except Exception as e:
+
+
             print(e)
             print("WARNING: Could not find lake fraction in {}, diagnosing lake-effect snow without lake ice".format(
                 data_mngr.base_folder))
+            lake_ice_fraction = None
 
+            raise e
 
         # take into account the wind direction
-        # wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask,
-        #                                                              ktree=ktree,
-        #                                                              region_of_interest=reg_of_interest,
-        #                                                              dt_secs=secs_per_day, nneighbours=4,
-        #                                                              lake_ice_fraction=lake_ice_fraction)
-        #
-        # snfl = wind_blows_from_lakes * snfl
-
-        # debug
-        plt.figure()
-        snfl.mean(dim="t").plot()
-        plt.title("Snow fall before nonlocal crit")
+        wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask,
+                                                                     ktree=ktree,
+                                                                     region_of_interest=reg_of_interest,
+                                                                     dt_secs=secs_per_day, nneighbours=4,
+                                                                     lake_ice_fraction=lake_ice_fraction)
+        snfl = wind_blows_from_lakes * snfl
 
 
 
@@ -358,23 +358,14 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         snfl_nonlocal = get_nonlocal_mean_snowfall(lons=lons, lats=lats, region_of_interest=reg_of_interest,
                                                    kdtree=ktree_for_nonlocal_snowfall_calculations,
                                                    snowfall=snfl, lake_mask=lake_mask, outer_radius_km=500)
-        snfl_amplification_cm_per_day = 4
-        snfl = (snfl > (snfl_amplification_cm_per_day + snfl_nonlocal)).values * snfl
 
 
-        # debug - start
-        print("plot fields")
-        plt.figure()
-        snfl.mean(dim="t").plot()
-        plt.title("Snow fall after nonlocal crit")
 
 
-        plt.figure()
-        snfl_nonlocal.mean(dim="t").plot()
-        plt.title("snowfall_nonlocal")
+        snfl = (snfl > (common_params.snfl_local_amplification_m_per_s + snfl_nonlocal)).values * snfl
 
-        plt.show()
-        # debug end
+
+
 
         # count the number of days with lake effect snowfall
         lkeff_snow_fall_days.append((snfl > 0).sum(dim="t"))
@@ -425,6 +416,13 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
 def plot_acc_snowfall_map(data_path :Path=None, label="", period :Period=None, out_folder :Path=None):
     # Plot snowfall maps for each year
+    """
+    Data is converted from m to cm before plotting
+    :param data_path:
+    :param label:
+    :param period:
+    :param out_folder:
+    """
     clevs_total_snowfall = [0, 10, 50, 90, 130, 170, 210, 250, 400, 500]
     clevs_lkeff_snowfall = [0, 1, 2, 10, 15, 20, 40, 80, 120, 160, 200, 250]
     clevs = clevs_lkeff_snowfall

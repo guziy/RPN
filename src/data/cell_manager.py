@@ -50,6 +50,8 @@ class CellManager:
         self._without_next_mask = np.zeros((nx, ny), dtype=np.int)
         self._wo_next_wo_prev_mask = np.zeros((nx, ny), dtype=np.int)  # mask of the potential outlets
         for i in range(nx):
+            if i % 100 == 0:
+                print("Created {}/{}".format(i, nx))
             for j in range(ny):
                 i_next, j_next = direction_and_value.to_indices(i, j, flow_dirs[i][j])
                 next_cell = None
@@ -229,15 +231,15 @@ class CellManager:
 
 
     def get_model_points_for_stations(self, station_list, lake_fraction=None,
-                                      drainaige_area_reldiff_limit=None, nneighbours=8):
+                                      drainaige_area_reldiff_limit=None, nneighbours=4):
         """
         returns a map {station => modelpoint} for comparison modeled streamflows with observed
         :rtype   dict
         """
 
 
-        if drainaige_area_reldiff_limit is None:
-            drainaige_area_reldiff_limit = self.DEFAULT_DRAINAGE_AREA_RELDIFF_MIN
+        # if drainaige_area_reldiff_limit is None:
+        #     drainaige_area_reldiff_limit = self.DEFAULT_DRAINAGE_AREA_RELDIFF_MIN
 
         # if nneighbours == 1:
         #     raise Exception("Searching over 1 neighbor is not very secure and not implemented yet")
@@ -283,26 +285,24 @@ class CellManager:
                 # ij = np.where(deltaDa2D == deltaDaMin)
                 ix, jy = grid[0].flatten()[inds][imin], grid[1].flatten()[inds][imin]
 
-                # check if it is not global lake cell
-                if lake_fraction is not None and lake_fraction[ix, jy] >= infovar.GLOBAL_LAKE_FRACTION:
-                    continue
+                # check if it is not global lake cell (move downstream if it is)
+                if lake_fraction is not None:
+                    while lake_fraction[ix, jy] >= infovar.GLOBAL_LAKE_FRACTION:
+                        di, dj = direction_and_value.flowdir_values_to_shift(self.flow_directions[ix, jy])
+                        ix, jy = ix + di, jy + dj
+
 
                 # check if the gridcell is not too far from the station
-                if dists[imin] > 2 * self.characteristic_distance:
-                    continue
+                # if dists[imin] > 2 * self.characteristic_distance:
+                #    continue
 
                 # check if difference in drainage areas is not too big less than 10 %
-                if deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
+                if drainaige_area_reldiff_limit is not None and deltaDaMin / s.drainage_km2 > drainaige_area_reldiff_limit:
                     print("Drainage area relative difference is too high, skipping {}.".format(s.id))
                     print(deltaDaMin / s.drainage_km2, deltaDaMin, s.drainage_km2)
                     continue
 
 
-                # check if the accumulation area of the selected model point is of reasonable size
-                if self.accumulation_area_km2[ix, jy] < self.characteristic_distance ** 2 * 1e-12:
-                    print("skipping the station {0}, because the upstream area " \
-                          "for the corresponding model point is too small".format(s.id))
-                    continue
 
             mp = ModelPoint()
             mp.ix = ix

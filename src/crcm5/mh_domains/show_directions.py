@@ -65,16 +65,16 @@ def main():
     vname = FACC
     basin_border_width = 0.5
 
-    plot_utils.apply_plot_params(width_cm=25, height_cm=25, font_size=8)
+    plot_utils.apply_plot_params(width_cm=28, height_cm=10, font_size=8)
 
     img_folder_path = Path(img_folder)
 
 
 
     dir_file_to_domain_config =  OrderedDict([
-        #("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.44deg.nc", default_domains.bc_mh_044),
-        # ("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.22deg.nc", default_domains.bc_mh_022),
-        ("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.11deg.nc", default_domains.bc_mh_011)
+        ("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.44deg_new_hsfix.nc", default_domains.bc_mh_044),
+        ("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.22deg_new_hsfix.nc", default_domains.bc_mh_022),
+        ("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg_new_hsfix.nc", default_domains.bc_mh_011)
     ])
 
 

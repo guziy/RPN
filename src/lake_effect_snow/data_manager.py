@@ -16,7 +16,7 @@ from pendulum import Period
 import numpy as np
 import netCDF4
 
-from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION
+from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION, TOTAL_PREC
 from util.geo import lat_lon
 
 
@@ -257,6 +257,7 @@ class DataManager(object):
                 ## In the case of very different netcdf files in the folder
                 ## i.e. data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY
                 ds = xarray.open_dataset(self.varname_to_file_path[varname_internal])
+                print("reading {} from {}".format(varname_internal, self.varname_to_file_path[varname_internal]))
 
             # select the variable by name and time
             var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start,period.end)).squeeze()
@@ -283,13 +284,32 @@ class DataManager(object):
 
                 self.lons, self.lats = lons, lats
 
+
+            # if still could not find longitudes and latitudes
+            if self.lons is None:
+
+                for vname, ncvar in ds.items():
+                    if "lon" in vname.lower():
+                        self.lons = ncvar.values
+
+                    if "lat" in vname.lower():
+                        self.lats = ncvar.values
+
+
+
             if var.ndim > 3:
                 var = var[:, self.level_mapping[varname_internal], :, :]
 
             if var.shape[-2:] == self.lons.shape:
                 data_list = var.values
             else:
-                data_list = np.transpose(var.values, axes=(0, 2, 1))
+                print(self.lons.shape, var.shape, var.name)
+                if var.ndim == 3:
+                    data_list = np.transpose(var.values, axes=(0, 2, 1))
+                elif var.ndim == 2:
+                    data_list = np.transpose(var.values)
+                else:
+                    raise Exception("{}-dimensional variables are not supported".format(var.ndim))
 
             # close the dataset
             ds.close()
@@ -359,6 +379,7 @@ class DataManager(object):
                 current_period = Period(d1, d2)
                 print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
                 data = self.read_data_for_period(current_period, varname_internal)
+
 
                 result[season][y] = data.mean(dim="t").values
 

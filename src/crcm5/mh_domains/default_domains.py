@@ -14,6 +14,11 @@ gc_cordex_na_044 = GridConfig(rll=default_projection, dx=0.44, dy=0.44, ni=212, 
 
 
 
+
+gc_cordex_caio_subdomain = GridConfig(rll=default_projection, dx=0.22, dy=0.22,
+                                      ni=276, nj=212, iref=35, jref=153, xref=151.51, yref=28.25)
+
+
 cordex_arctic_proj = RotatedLatLon(lon1=180, lat1=83.45, lon2=270, lat2=0.)
 gc_cordex_Arctic_044 = GridConfig(
     rll=cordex_arctic_proj, dx=0.44, dy=0.44, ni=164, nj=180, iref=21, jref=153, xref=157.12, yref=33.88
@@ -53,6 +58,22 @@ gc_GL_and_NENA_01 = gridconfig_from_grid_nml(
     """
 )
 
+gc_GL_and_NENA_01_fft = gridconfig_from_grid_nml(
+    """
+ &grid
+
+  Grd_typ_S     = 'LU'   ,
+  Grd_ni        =   452  ,   Grd_nj          =   260   ,
+  Grd_dx        =    0.1,   Grd_dy          =    0.1 ,
+  Grd_iref      =   135  ,   Grd_jref        =   120   ,
+  Grd_latr      =    48,   Grd_lonr        =  -84 ,
+  Grd_xlat1     =   0,   Grd_xlon1       =  180,
+  Grd_xlat2     =    1.0 ,   Grd_xlon2       =   -84,
+
+ /
+    """
+)
+
 
 MH_BASINS_PATH = "data/shape/Churchill-Nelson Watershed/Churchill-Nelson Watershed.shp"
 
@@ -74,6 +95,7 @@ GRDC_basins_GL = [117]
 bc_mh_011 = gc_cordex_na_011.subgrid(12, 244, di=404, dj=380)
 bc_mh_022 = bc_mh_011.decrease_resolution_keep_free_domain_same(2)
 bc_mh_044 = bc_mh_011.decrease_resolution_keep_free_domain_same(4)
+
 
 
 

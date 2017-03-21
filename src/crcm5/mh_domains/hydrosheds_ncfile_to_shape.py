@@ -16,13 +16,25 @@ def main():
     """
     assumes lon and lat variables are 1d and are inside of the netcdf file
     """
-    in_path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/data/netcdf/NA/na_acc_30s.nc"
-    facc_name = "flow_accumulation"
+
+    # flow accumulation index
+    # in_path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/data/netcdf/NA/na_acc_30s.nc"
+    in_path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/hydrosheds_corrected_mh/na_acc_30s.nc"
+    nc_varname = "flow_accumulation"
+    shp_field_name = "acc"
+    out_dir = "mh/engage_report/hydrosheds_acc_index_30s_test"
+
+    # flow direction
+    # in_path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/data/netcdf/NA/na_dir_30s.nc"
+    # in_path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/hydrosheds_corrected_mh/na_dir_30s.nc"
+    # nc_varname = "flow_direction"
+    # shp_field_name = "dir"
+    # out_dir = "mh/engage_report/hydrosheds_dir_30s_test"
 
     # read the input data
     with Dataset(in_path) as ds:
         lons, lats = [ds.variables[k][:] for k in ["lon", "lat"]]
-        acc_ind = ds.variables[facc_name][:]
+        acc_ind = ds.variables[nc_varname][:]
 
         if hasattr(acc_ind, "mask"):
             acc_ind = np.ma.getdata(acc_ind)
@@ -33,7 +45,7 @@ def main():
     # write the resulting shape file
     proj = from_epsg(4326)
 
-    out_folder = Path("mh/engage_report/hydrosheds_acc_index_30s")
+    out_folder = Path(out_dir)
     shp_filename = ""
     if not out_folder.exists():
         out_folder.mkdir()
@@ -41,7 +53,7 @@ def main():
     schema = {
         "geometry": "Polygon",
         "properties": OrderedDict(
-            [("i", "int"), ("j", "int"), ("lon", "float"), ("lat", "float"), ("acc", "int")]
+            [("i", "int"), ("j", "int"), ("lon", "float"), ("lat", "float"), (shp_field_name, "int")]
         )
     }
 
@@ -61,14 +73,14 @@ def main():
                 print("{} / {}".format(i + 1, nx))
 
             # approximate region of interest (Churchill-Nelson)
-            if not (-120 <= lon <= -70):
+            if not (-100 <= lon <= -95):
                 continue
 
 
             for j, lat in enumerate(lats):
 
 
-                if not (40 <= lat <= 70):
+                if not (55 <= lat <= 60):
                     continue
 
                 p00 = (lon - dx / 2.0, lat - dy / 2.0)

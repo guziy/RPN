@@ -120,7 +120,7 @@ def save_to_shape_file(line_groups, folder_path="data/shape/derived_basins_qc", 
         in_proj = lat_lon
 
     folder = Path(folder_path)
-    if not folder.is_dir():
+    if not folder.exists():
         folder.mkdir(parents=True)
 
     shp = folder / "basin_boundaries_derived.shp"
@@ -141,7 +141,7 @@ def save_to_shape_file(line_groups, folder_path="data/shape/derived_basins_qc", 
             lines = [LineString(np.asarray(transform(p_in, p_out, *edge)).transpose()) for edge in p]
             # poly = polygonize(lines)
             for line in lines:
-                print(line.wkt)
+                # print(line.wkt)
                 output.write({"properties": {"id": i}, "geometry": mapping(line)})
 
 

@@ -59,7 +59,7 @@ def main():
 
     sim_label = "mh_0.44"
 
-    start_year = 1980
+    start_year = 1981
     end_year = 2010
 
     streamflow_internal_name = "streamflow"
@@ -182,7 +182,7 @@ def main():
     nrows += int(not (len(station_to_climatology) % ncols == 0))
 
     axes_list = []
-    plot_utils.apply_plot_params(width_cm=35, height_cm=35, font_size=8)
+    plot_utils.apply_plot_params(width_cm=8 * ncols, height_cm=8 * nrows, font_size=8)
     fig = plt.figure()
     gs = GridSpec(nrows=nrows, ncols=ncols)
 
@@ -216,6 +216,13 @@ def main():
         ax.grid()
 
 
+
+
+
+        ax.annotate(s.get_pp_name(), xy=(1.02, 1), xycoords="axes fraction",
+                    horizontalalignment="left", verticalalignment="top", fontsize=8, rotation=-90)
+
+
         last_date = stamp_dates[-1]
         last_date = last_date.replace(day=calendar.monthrange(last_date.year, last_date.month)[1])
 
@@ -242,6 +249,8 @@ def main():
 
     fig.tight_layout()
     img_file = img_folder / "{}_{}-{}_{}.png".format(sim_label, start_year, end_year, "-".join(sorted(s.id for s in station_to_climatology)))
+
+    print("Saving {}".format(img_file))
     fig.savefig(str(img_file), bbox_inches="tight", dpi=300)
 
 

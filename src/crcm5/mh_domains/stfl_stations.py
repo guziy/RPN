@@ -95,7 +95,7 @@ def load_stations_from_csv(index_file="mh/obs_data/streamflow_data_organized/sta
             except Exception:
                 pass
 
-            st_name = " ".join(toks[5:])
+            st_name = " ".join(toks[5:]).split(",")[0]
 
             s = Station(st_id=st_id, lon=lon, lat=lat, name=st_name)
             s.source_data_units = toks[4].strip()

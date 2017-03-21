@@ -16,11 +16,11 @@ def main():
 
 
     period = Period(
-        datetime(1990, 12, 1), datetime(1990, 12, 3)
+        datetime(1980, 11, 1), datetime(2009, 2, 1)
     )
 
     # should be consequent
-    months_of_interest = [12, ]
+    months_of_interest = [11, 12, 1]
 
     period.months_of_interest = months_of_interest
 
@@ -50,7 +50,7 @@ def main():
         }
     )])
 
-    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config, period=period, nprocs_to_use=1)
+    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config, period=period, nprocs_to_use=15)
 
 
 if __name__ == '__main__':

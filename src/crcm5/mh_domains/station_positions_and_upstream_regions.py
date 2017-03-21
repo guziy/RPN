@@ -99,8 +99,8 @@ def main():
 
     grid_config_to_dir_file = OrderedDict([
         #(default_domains.bc_mh_044, Path("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.44deg.nc")),
-        # (default_domains.bc_mh_022, Path("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.22deg.nc")),
-        (default_domains.bc_mh_011, Path("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_bc-mh_0.11deg_new.nc")),
+        (default_domains.bc_mh_022, Path("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_mh_0.22deg.nc")),
+        # (default_domains.bc_mh_011, Path("/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_bc-mh_0.11deg_new.nc")),
     ])
 
 

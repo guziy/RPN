@@ -172,6 +172,7 @@ def main(vars_of_interest=None):
 
     MODEL_LABEL =  "CRCM5 (0.44)"
     # critical p-value for the ttest aka significance level
+    # p_crit = 0.05
     p_crit = 1
 
     coastlines_width = 0.3
@@ -190,7 +191,7 @@ def main(vars_of_interest=None):
     vname_to_seasonmonths_map = {
         SWE: OrderedDict([("DJF", [12, 1, 2])]),
         T_AIR_2M: season_to_months,
-        TOTAL_PREC: season_to_months,
+        TOTAL_PREC: OrderedDict([("Annual", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])]) # season_to_months,
 
     }
 
@@ -427,7 +428,7 @@ def main(vars_of_interest=None):
 
         # Plotting: interpolate to the same grid and plot obs and biases
         plot_utils.apply_plot_params(width_cm=32 / 4 * (len(vname_to_seasonmonths_map[vname])),
-                                     height_cm=25 / 3.0 * (len(sim_configs) + 1), font_size=8 * len(vname_to_seasonmonths_map[vname]) / 3)
+                                     height_cm=25 / 3.0 * (len(sim_configs) + 1), font_size=8 * len(vname_to_seasonmonths_map[vname]))
 
         fig = plt.figure()
 
@@ -562,5 +563,5 @@ def main(vars_of_interest=None):
 
 if __name__ == '__main__':
     main(vars_of_interest=[TOTAL_PREC])
-    main(vars_of_interest=[T_AIR_2M])
-    main(vars_of_interest=[SWE])
+    # main(vars_of_interest=[T_AIR_2M])
+    # main(vars_of_interest=[SWE])

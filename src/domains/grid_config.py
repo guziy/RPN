@@ -527,7 +527,7 @@ class GridConfig(object):
         j_max = max(j_list) + mask_margin
 
         bsmap = self.get_basemap(lons=lons[i_min:i_max + 1, j_min:j_max + 1],
-                                 lats=lats[i_min:i_max + 1, j_min:j_max + 1])
+                                 lats=lats[i_min:i_max + 1, j_min:j_max + 1], **kwargs)
         return bsmap, reg_of_interest
 
     def get_basemap(self, lons=None, lats=None, **kwargs):
@@ -711,6 +711,16 @@ class GridConfig(object):
                    lat2=self.rll.lat2, lon2=self.rll.lon2)
 
         return s
+
+
+    def __hash__(self):
+        return hash(str(self).lower())
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+
+        return str(self).lower() == str(other).lower()
 
 
 

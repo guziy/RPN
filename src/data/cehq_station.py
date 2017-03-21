@@ -58,6 +58,8 @@ class Station:
         self.river_name = ""
         self._complete_years = None
 
+        self.source_data_units = "m3/s"
+
 
     def copy_metadata(self, other):
         """
@@ -379,16 +381,23 @@ class Station:
                 max_count = count
                 max_year = y
 
+            # print("{} => {}".format(y, count))
+
 
         # Check if the year with max number of records is continuous
         max_year_dates = [d for d in sorted(self.dates) if d.year == max_year]
-        dt = max_year_dates[1] - max_year_dates[0]
+        if len(max_year_dates) > 1:
+            dt = max_year_dates[1] - max_year_dates[0]
 
-        the_max_year_is_ok = True
-        for d1, d2 in zip(max_year_dates[:-1], max_year_dates[1:]):
-            if (d2 - d1) > dt:
-                the_max_year_is_ok = False
-                break
+
+            the_max_year_is_ok = True
+            for d1, d2 in zip(max_year_dates[:-1], max_year_dates[1:]):
+                if (d2 - d1) > dt:
+                    the_max_year_is_ok = False
+                    break
+        else:
+            the_max_year_is_ok = True
+
 
         if not the_max_year_is_ok:
             years = []
@@ -432,9 +441,15 @@ class Station:
 
     def get_daily_climatology_for_complete_years_with_pandas(self, stamp_dates=None, years=None):
         assert stamp_dates is not None
-        assert years is not None
+
+        if years is None:
+            years = self._complete_years
+
 
         df = pandas.DataFrame(data=self.values, index=self.dates, columns=["values", ])
+
+
+        df = df.resample("D", closed="left").mean().ffill()
 
         df["year"] = df.index.map(lambda the_date: the_date.year)
 
@@ -447,15 +462,9 @@ class Station:
 
         daily_clim = df.groupby(by=lambda the_date: datetime(stamp_year, the_date.month, the_date.day)).mean()
 
-        print(daily_clim.head())
-        pickle.dump(daily_clim, open("/home/huziy/daily_clim.bin", "wb"))
-        pickle.dump(stamp_dates, open("/home/huziy/stamp_dates.bin", "wb"))
-
-        print("The type of the first element in stamp_dates is {}".format(type(stamp_dates[0])))
-
         vals = [daily_clim.ix[d, "values"] for d in stamp_dates]
 
-        return stamp_dates, vals
+        return stamp_dates, np.array(vals)
 
     def __str__(self):
         return "Gauge station ({0}): {1} at ({2},{3}), accum. area is {4} km**2".format(self.id, self.name,
@@ -560,12 +569,33 @@ class Station:
         if end_date is not None:
             df = df.select(lambda d: d <= end_date)
 
-        _set_data_from_pandas_timeseries(df, self)
+        set_data_from_pandas_timeseries(df, self)
 
 
-def _set_data_from_pandas_timeseries(ts, the_station):
-    the_station.dates = ts.index
-    the_station.values = ts.values.flatten()
+
+    def get_pp_name(self):
+        if len(self.name) < 60:
+            return self.name
+
+        words = self.name.split()
+        nbreak = len(words) // 2
+        return " ".join(words[:nbreak]) + "\n" + " ".join(words[nbreak:])
+
+
+
+
+def set_data_from_pandas_timeseries(ts, the_station, date_col :int=None):
+    the_station.dates = ts.index if date_col is None else ts.iloc[:, date_col]
+
+    if isinstance(ts, pandas.Series):
+        the_station.values = ts.values.flatten()
+    else:
+        the_station.values = ts.iloc[:, 1].values
+
+    print(the_station.id)
+    print(the_station.values[:10])
+    print(the_station.dates[:10])
+    assert len(the_station.dates) == len(the_station.values)
     the_station.date_to_value = dict(list(zip(the_station.dates, the_station.values)))
 
 

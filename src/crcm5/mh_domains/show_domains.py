@@ -43,7 +43,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
 
     if show_GRDC_basins:
         # Select which basins to show
-        bmp.readshapefile(default_domains.GRDC_BASINS_PATH[:-4], "basin", drawbounds=False)
+        bmp.readshapefile(default_domains.GRDC_BASINS_PATH[:-4], "basin", drawbounds=False, linewidth=0.5)
 
         patches = []
 
@@ -87,7 +87,10 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, show_GR
         if not p.exists():
             p.mkdir()
 
-        fig.savefig(str(p.joinpath("{}_dx{}.png".format(domain_label, grid_config.dx))), bbox_inches="tight", transparent=True)
+        img_file = p.joinpath("{}_dx{}.png".format(domain_label, grid_config.dx))
+
+        print("Saving image ... {}".format(img_file))
+        fig.savefig(str(img_file), bbox_inches="tight", transparent=True)
 
 
 
@@ -125,8 +128,8 @@ def main():
     # show_domain(test_bc_044, draw_rivers=False, show_GRDC_basins=True)
 
 
-    show_domain(default_domains.bc_mh_044)
-    show_domain(default_domains.bc_mh_011)
+    show_domain(default_domains.bc_mh_044, show_GRDC_basins=True, show_Churchil_Nelson_basins=False)
+    # show_domain(default_domains.bc_mh_011)
 
     plt.show()
 

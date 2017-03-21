@@ -18,23 +18,12 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall,
         the_mask = get_non_local_mask_for_location(lon, lat, kdtree, mask_shape=lons.shape, outer_radius_km=outer_radius_km)
 
         # ignore lakes and the areas within the lake effect zone
-        # the_mask &= (~region_of_interest)
-        # the_mask &= (~lake_mask)
+        the_mask &= (~region_of_interest)
+        the_mask &= (~lake_mask)
 
 
-        plt.figure()
-        im = plt.pcolormesh(the_mask.T)
-        plt.colorbar(im)
 
-        plt.title("i={}; j={}".format(i, j))
-        plt.scatter(i, j, c="g", s=100)
-        plt.show()
-
-        if True:
-            raise Exception
-
-
-        print("Size of the nonlocal region is {} cells".format(the_mask.sum()))
+        # print("Size of the nonlocal region is {} cells".format(the_mask.sum()))
 
         if np.any(the_mask):
             for t_ind, snfl_current in enumerate(snowfall):
@@ -50,6 +39,7 @@ def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, 
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lon0, lat0, R=lat_lon.EARTH_RADIUS_METERS)
 
+    METERS_PER_KM = 1000.0
 
     npoints = len(ktree.data)
 
@@ -58,15 +48,13 @@ def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, 
     # dists, inds = ktree.query((x0, y0, z0), k=npoints, distance_upper_bound=outer_radius_km * 1000.0)
     dists, inds = ktree.query((x0, y0, z0), k=npoints)
 
-    result = np.zeros(mask_shape, dtype=bool)
+    result = np.zeros(mask_shape, dtype=bool).flatten()
 
-    inds.shape = mask_shape
-    dists.shape = mask_shape
+    # result[inds] = True
+    result[inds] = (dists <= outer_radius_km * METERS_PER_KM)
+    result.shape = mask_shape
 
-    result[inds < npoints] = True
-
-
-    return dists
+    return result
 
 
 
