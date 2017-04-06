@@ -24,14 +24,18 @@ field_name_to_shp_name = {
     "slope": "slope",
     "sand": "sand",
     "clay": "clay",
-    "dpth_bdrck": "bdrckdp"
+    "dpth_bdrck": "bdrckdp",
+    "gwdelay": "gwdelay",
+    "rmanningbf": "rmanningbf",
+    "chcrosssection": "ccsection",
+    "bankfullvolume": "bfvolume"
 
 }
 
 
 def main():
     # directions_dir = Path("/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro")
-    directions_dir = Path("/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170310/dist")
+    directions_dir = Path("/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170320/dist")
 
     # Create the directory for the shapes
     shp_dir = directions_dir.joinpath("shp_direction_data_shortnames")
@@ -64,11 +68,16 @@ def main():
         with Dataset(str(dir_file)) as ds:
             for vname, var in ds.variables.items():
 
+                vname = vname.lower()
                 if vname not in field_name_to_shp_name:
                     continue
 
                 fields_to_add[vname] = var[:].view(MyNdArray)
-                fields_to_add[vname].type_of_shp_field = "float"
+
+                if vname in ["bankfullvolume"]:
+                    fields_to_add[vname].type_of_shp_field = "float:15.2"
+                else:
+                    fields_to_add[vname].type_of_shp_field = "float"
                 print("{} ranges from {} to {}".format(vname, fields_to_add[vname].min(), fields_to_add[vname].max()))
 
         # Export the cells to a shapefile

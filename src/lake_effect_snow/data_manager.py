@@ -230,7 +230,7 @@ class DataManager(object):
 
                 for f in month_dir.iterdir():
                     # read only files containing the variable name in the name, i.e. *TT*.rpn
-                    if not self.varname_mapping[varname_internal] in f.name:
+                    if not "_" + self.varname_mapping[varname_internal] in f.name:
                         continue
 
                     r = RPN(str(f))
@@ -260,7 +260,7 @@ class DataManager(object):
                 print("reading {} from {}".format(varname_internal, self.varname_to_file_path[varname_internal]))
 
             # select the variable by name and time
-            var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start,period.end)).squeeze()
+            var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start, period.end)).squeeze()
 
             for cname, cvals in var.coords.items():
                 if "time" in cname.lower():
@@ -335,7 +335,9 @@ class DataManager(object):
 
 
         if len(data_list) == 0:
-            raise IOError("Could not find any data for the period {}..{}".format(period.start, period.end))
+            print("retreived dates: {}".format(dates))
+            raise IOError("Could not find any {} data for the period {}..{} in {}".format(self.varname_mapping[varname_internal],
+                                                                                    period.start, period.end, self.base_folder))
         # Convert units based on supplied mappings
         return self.multipliers[varname_internal] * DataArray.from_dict(vardict) + self.offsets[varname_internal]
 

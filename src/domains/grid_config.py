@@ -308,7 +308,7 @@ class GridConfig(object):
 
                         lake_fractions.append(shape_fields["lkfr"][i, j])
                         for field_name, field in shape_fields.items():
-                            converter = float if field.type_of_shp_field in ["float"] else int
+                            converter = float if field.type_of_shp_field.startswith("float") else int
                             props[field_name] = converter(field[i, j])
 
                     output.write({"geometry": mapping(poly), "properties": props})

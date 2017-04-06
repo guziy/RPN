@@ -1,9 +1,9 @@
 import matplotlib
-
-from lake_effect_snow.non_local_mask_for_lake_effect import get_nonlocal_mean_snowfall
+from memory_profiler import profile
 
 matplotlib.use("Agg")
 
+from lake_effect_snow.non_local_mask_for_lake_effect import get_nonlocal_mean_snowfall
 import multiprocessing
 from collections import OrderedDict
 from collections import defaultdict
@@ -69,7 +69,7 @@ def calculate_lake_effect_snowfall(label_to_config, period=None):
 
 
 
-
+@profile
 def enh_lakeffect_snfall_calculator_proc(args):
 
     """
@@ -96,12 +96,16 @@ def enh_lakeffect_snfall_calculator_proc(args):
     print("Finish calculations for {} ... {}".format(period.start, period.end))
 
 
-
-def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period=None, nprocs_to_use=None):
+@profile
+def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period=None, months_of_interest=None, nprocs_to_use=None):
     """
     :param label_to_config:
     :param period:  The period of interest defined by the start and the end year of the period (inclusive)
     """
+
+
+    if months_of_interest is not None:
+        period.months_of_interest = months_of_interest
 
     assert hasattr(period, "months_of_interest")
 
@@ -118,9 +122,17 @@ def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period
 
         out_folder = Path(out_folder)
 
-        # Try to create the output folder if it does not exist
-        if not out_folder.exists():
-            out_folder.mkdir()
+
+
+        try:
+            # Try to create the output folder if it does not exist
+            if not out_folder.exists():
+                out_folder.mkdir()
+
+            print("{}: {} created".format(multiprocessing.current_process().name, out_folder))
+        except FileExistsError:
+            print("{}: {} already exists".format(multiprocessing.current_process().name, out_folder))
+
 
 
         if nprocs_to_use is None:
@@ -149,6 +161,9 @@ def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period
         else:
             for current_in_data in in_data:
                 enh_lakeffect_snfall_calculator_proc(current_in_data)
+
+        del data_manager
+
 
 
 
@@ -187,7 +202,7 @@ def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
 
 
 
-
+@profile
 def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder: Path=Path(".")):
     months_of_interest = period.months_of_interest
 
@@ -199,7 +214,8 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
     if out_file.exists():
         print("{} already exists, won't redo!".format(out_file))
-        plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder)
+        plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder,
+                              months_of_interest=months_of_interest)
         return
 
     # for each period
@@ -207,6 +223,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     #  2. get sum of daily snowfalls
     lkeff_snow_falls = []
     lkeff_snow_fall_days = []
+    lkeff_snow_fall_eventcount = []
     years_index = []
 
     reg_of_interest = None
@@ -338,7 +355,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
                 data_mngr.base_folder))
             lake_ice_fraction = None
 
-            raise e
+            # raise e
 
         # take into account the wind direction
         wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask,
@@ -364,8 +381,14 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
         snfl = (snfl > (common_params.snfl_local_amplification_m_per_s + snfl_nonlocal)).values * snfl
 
+        # count the number of hles events
+        snfl_eventcount = snfl.copy()
+        snfl_eventcount.values[snfl.values > 1e-5] = 1
+        snfl_eventcount.values[snfl.values <= 1e-5] = 0
 
-
+        snfl_eventcount = snfl_eventcount.diff("t", n=1)
+        snfl_eventcount = (snfl_eventcount < 0).sum(dim="t")
+        lkeff_snow_fall_eventcount.append(snfl_eventcount)
 
         # count the number of days with lake effect snowfall
         lkeff_snow_fall_days.append((snfl > 0).sum(dim="t"))
@@ -402,19 +425,31 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
                                      dim=years_index)
     snfl_days_yearly.attrs["units"] = "days"
 
+
+    snfl_eventcounts_yearly = xarray.concat([arr.loc[i_min: i_max + 1, j_min: j_max + 1] for arr in lkeff_snow_fall_eventcount],
+                                     dim=years_index)
+    snfl_eventcounts_yearly.attrs["units"] = "number of events"
+
+
+
+
     ds = snfl_yearly.to_dataset()
     assert isinstance(ds, xarray.Dataset)
     ds["lkeff_snowfall_days"] = (("year", "x", "y"), snfl_days_yearly)
+    ds["lkeff_snowfall_eventcount"] = (("year", "x", "y"), snfl_eventcounts_yearly)
 
     ds.to_netcdf(str(out_file))
 
+    ds.close()
+
     # do the plotting
-    plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder)
+    plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder,
+                          months_of_interest=period.months_of_interest)
 
 
 
-
-def plot_acc_snowfall_map(data_path :Path=None, label="", period :Period=None, out_folder :Path=None):
+@profile
+def plot_acc_snowfall_map(data_path :Path=None, label="", period :Period=None, out_folder :Path=None, months_of_interest:list=None):
     # Plot snowfall maps for each year
     """
     Data is converted from m to cm before plotting
@@ -489,9 +524,13 @@ def plot_acc_snowfall_map(data_path :Path=None, label="", period :Period=None, o
 
     fig.tight_layout()
 
-    img_file = "{}_acc_lakeff_snow_{}-{}.png".format(label, period.start.year, period.end.year)
+
+
+    months_of_interest_str = [str(m) for m in months_of_interest] if months_of_interest is not None else ["unknown_months"]
+    img_file = "{}_acc_lakeff_snow_{}-{}_m{}.png".format(label, period.start.year, period.end.year, "_".join(months_of_interest_str))
 
     img_file = str(out_folder.joinpath(img_file))
+    print("Saving plot to {}".format(img_file))
     plt.savefig(img_file, bbox_inches="tight")
     # plt.show()
     plt.close(fig)

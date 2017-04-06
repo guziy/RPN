@@ -59,10 +59,10 @@ internal_name_to_title = {
 
 internal_name_to_clevs = {
     T_AIR_2M: np.arange(-30, 30, 2),
-    T_AIR_2M + "bias": np.arange(-4.1, 4.2, 0.2),
+    T_AIR_2M + "bias": np.arange(-4.1, 4.2, 0.5),
     T_AIR_2M + "biasdiff": np.arange(-1.05, 1.1, 0.1),
     TOTAL_PREC: np.arange(0, 8, 0.5),
-    TOTAL_PREC + "bias": np.arange(-3.1, 3.2, 0.2),
+    TOTAL_PREC + "bias": np.arange(-3.1, 3.2, 0.5),
     TOTAL_PREC + "biasdiff": np.arange(-1.1, 1.2, 0.2),
     SWE: [0, 0.1, 1, 10, 20, 50, 100, 150, 200, 250, 300, 400],
     SWE + "bias": np.arange(-105, 110, 10),
@@ -132,7 +132,7 @@ def main():
     obs_data_path = Path("/RESCUE/skynet3_rech1/huziy/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/anusplin+_interpolated_tt_pr.nc")
 
     start_year = 1980
-    end_year = 2009
+    end_year = 1981
 
     HL_LABEL = "CRCM5_HL"
     NEMO_LABEL = "CRCM5_NEMO"
@@ -141,9 +141,9 @@ def main():
     p_crit = 0.1
 
     vars_of_interest = [
- #       T_AIR_2M, TOTAL_PREC,
- #       SWE,
-        LAKE_ICE_FRACTION
+        T_AIR_2M, TOTAL_PREC,
+        SWE,
+ #       LAKE_ICE_FRACTION
     ]
 
     coastline_width = 0.3

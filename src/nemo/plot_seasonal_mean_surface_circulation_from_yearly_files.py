@@ -24,8 +24,8 @@ def main():
         ("Fall", (9, 10, 11))
     ])
 
-    start_year = 1979
-    end_year = 1985
+    start_year = 1990
+    end_year = 2010
 
     u_manager = NemoYearlyFilesManager(folder=path_to_folder, suffix="_U.nc")
     v_manager = NemoYearlyFilesManager(folder=path_to_folder, suffix="_V.nc")

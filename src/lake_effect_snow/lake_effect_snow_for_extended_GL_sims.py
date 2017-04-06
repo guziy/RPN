@@ -21,7 +21,7 @@ from lake_effect_snow.default_varname_mappings import T_AIR_2M, U_WE, V_SN, TOTA
 
 def main():
     period = Period(
-        datetime(1980, 12, 1), datetime(2009, 3, 1)
+        datetime(1980, 12, 1), datetime(1985, 3, 1)
     )
 
     # should be consequent
@@ -60,9 +60,9 @@ def main():
 
     import time
     t0 = time.time()
-    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config, period=period, nprocs_to_use=5)
+    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config, period=period, nprocs_to_use=5)
     print("Execution time: {} s".format(time.time() - t0))
-    # calculate_lake_effect_snowfall(label_to_config=label_to_config, period=period)
+    #calculate_lake_effect_snowfall(label_to_config=label_to_config, period=period)
 
 
 
@@ -114,9 +114,9 @@ def main():
         }
     )])
 
-    calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
-                                                         period=period,
-                                                         nprocs_to_use=20)
+    # calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config=label_to_config_CRCM5,
+    #                                                      period=period,
+    #                                                      nprocs_to_use=20)
 
 
 if __name__ == '__main__':

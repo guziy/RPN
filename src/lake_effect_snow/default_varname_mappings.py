@@ -6,6 +6,11 @@ mps_per_knot = 0.514444
 T_AIR_2M = "t_air_2m"
 TOTAL_PREC = "total_prec"
 SNOWFALL_RATE = "snow_fall"
+SENSIBLE_HF = "sensible_heat_flux"
+LATENT_HF = "latent_heat_flux"
+LWRAD_DOWN = "longwave_rad_down"
+SWRAD_DOWN = "shortwave_rad_down"
+
 
 U_WE = "u_we"
 V_SN = "v_sn"
@@ -22,7 +27,11 @@ vname_map_CRCM5 = {
     U_WE: "UU",
     V_SN: "VV",
     LAKE_ICE_FRACTION: "LC",
-    SWE: "I5"
+    SWE: "I5",
+    SENSIBLE_HF: "FC",
+    LATENT_HF: "FV",
+    LWRAD_DOWN: "AD",
+    SWRAD_DOWN: "N4"
 
 }
 

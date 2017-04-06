@@ -24,8 +24,7 @@ def main(path="", reg_of_interest=None):
 
 
 
-    clevs_lkeff_snowfall = [0, 1, 2, 10, 15, 20, 40, 80, 120, 160]
-    clevs = clevs_lkeff_snowfall
+    clevs = common_params.clevs_lkeff_snowfall
 
 
     ds = xr.open_dataset(path)
@@ -81,7 +80,7 @@ def main(path="", reg_of_interest=None):
     # bn = BoundaryNorm(clevs, len(clevs) - 1)
     # cmap = cm.get_cmap("nipy_spectral")
 
-    cmap, bn = colors.from_levels_and_colors(clevs, ["indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
+    cmap, bn = colors.from_levels_and_colors(clevs, ["white", "indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
                                                      "orange", "red"])
 
     area_avg_lkeff_snowfall = []

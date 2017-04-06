@@ -34,9 +34,10 @@ def main():
 
 
     vname = "snow_fall"
-    # vname = "lkeff_snowfall_days"
+    #vname = "lkeff_snowfall_days"
     units = "cm"
 
+    units = "days"
     label_to_y_to_snfl = {}
 
     mask = None

@@ -8,7 +8,7 @@ from matplotlib.patches import Polygon
 from pathlib import Path
 
 from matplotlib.ticker import ScalarFormatter
-from mpl_toolkits.basemap import Basemap
+from mpl_toolkits.basemap import Basemap, maskoceans
 from netCDF4 import Dataset
 
 from application_properties import main_decorator
@@ -85,13 +85,19 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
 
         print("plotting {}, range: {} ... {} ".format(nc_varname_to_show, data.min(), data.max()))
 
+        lon_copy = lons2d.copy()[margin:-margin, margin:-margin]
+        lon_copy[lon_copy > 180] -= 360
+        lat_copy = lats2d.copy()[margin:-margin, margin:-margin]
+        to_plot = maskoceans(lon_copy, lat_copy, data)
+
         if clevels is not None:
             bn = BoundaryNorm(clevels, len(clevels) - 1)
             cmap = cm.get_cmap("bone_r", bn.N)
-            im = bmp.imshow(data.T, cmap=cmap, interpolation="nearest", norm=bn)
+            im = bmp.imshow(to_plot.T, cmap=cmap, interpolation="nearest", norm=bn)
+
         else:
             # im = bmp.contourf(xxx, yyy, data, cmap="bone_r", norm=LogNorm())
-            im = bmp.imshow(data.T, cmap="bone_r", interpolation="nearest", norm=LogNorm())
+            im = bmp.imshow(to_plot.T, cmap="bone_r", interpolation="nearest", norm=LogNorm())
 
 
         if draw_colorbar:
@@ -126,6 +132,8 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
     bmp.drawcoastlines(linewidth=0.3, ax=ax)
     bmp.drawstates(linewidth=0.3, ax=ax)
     bmp.drawcountries(linewidth=0.3, ax=ax)
+    bmp.drawmapboundary(fill_color="aqua")
+
 
     p = Path(img_folder)
     if not p.exists():
@@ -138,7 +146,7 @@ def show_domain(grid_config, halo=None, blending=None, draw_rivers=True, grdc_ba
         img_file = p.joinpath("{}_dx{}.png".format(imgfile_prefix, grid_config.dx))
         print("Saving {}".format(img_file))
         fig.savefig(str(img_file), bbox_inches="tight",
-                    transparent=True, dpi=600)
+                    transparent=False, dpi=300)
 
         plt.close(fig)
 

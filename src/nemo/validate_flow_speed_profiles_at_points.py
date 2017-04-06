@@ -35,7 +35,8 @@ def plot_profiles():
     obs_var_col = AdcpProfileObs.vmag_col
     model_var_name = FLOW_SPEED
 
-    model_folder = "/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012"
+    # model_folder = "/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012"
+    model_folder = "/RESCUE/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_GLK_LIM3_1980/zdf_gls_dt_and_sbc_5min"
 
     manager_nemo_u = NemoYearlyFilesManager(folder=model_folder, suffix="_U.nc")
     manager_nemo_v = NemoYearlyFilesManager(folder=model_folder, suffix="_V.nc")
@@ -120,12 +121,14 @@ def plot_profiles():
             the_ax.xaxis.set_major_locator(MonthLocator())
             the_ax.invert_yaxis()
 
-    img_folder = Path("nemo/adcp")
+    img_folder = Path("nemo/adcp/zdf_gls_dt_and_sbc_5min")
     if not img_folder.is_dir():
         img_folder.mkdir(parents=True)
 
     img_file = img_folder.joinpath("adcp_profiles.pdf")
     fig.tight_layout()
+
+    print("Saving plots to {}".format(img_file))
     fig.savefig(str(img_file), bbox_inches="tight")
 
 

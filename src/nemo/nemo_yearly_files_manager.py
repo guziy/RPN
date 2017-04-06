@@ -1,5 +1,5 @@
 from collections import defaultdict
-from netCDF4 import Dataset, OrderedDict, num2date, date2num
+from netCDF4 import Dataset, OrderedDict, num2date, date2num, MFDataset
 import os
 import pandas as pd
 from matplotlib import cm
@@ -25,13 +25,13 @@ __author__ = 'huziy'
 
 try:
     import iris
-    from iris import coord_categorisation
     from iris import unit as iunit
     from iris.cube import Cube
     from iris.time import PartialDateTime
     import iris.quickplot as qplt
     from iris import analysis as ianalysis
-except ImportError:
+except ImportError as ierr:
+    print(ierr)
     print("Iris is not installed.")
 
 
@@ -98,7 +98,7 @@ class NemoYearlyFilesManager(object):
 
         i_list, j_list = [], []
 
-        if len(dists_from) > 1:
+        if dists_from.ndim > 1:
             for the_lon, the_lat in zip(neighbor_lons, neighbor_lats):
                 i, j = np.where((self.lons == the_lon) & (self.lats == the_lat))
                 i_list.append(i[0])
@@ -117,10 +117,15 @@ class NemoYearlyFilesManager(object):
 
             # cube dimensions (t, z, y, x)
 
-            with Dataset(self.year_to_path[the_year]) as ds:
+            with MFDataset(self.year_to_path[the_year]) as ds:
                 data = ds.variables[var_name]
 
                 time_var = ds.variables["time_counter"]
+
+
+                time_data = time_var[:]
+
+                assert np.all(time_data == np.array(sorted(time_data))), "Time data is not sorted: {}".format(time_data)
 
                 if end_date.hour == 0:
                     end_date += timedelta(days=1)
@@ -181,7 +186,7 @@ class NemoYearlyFilesManager(object):
         dates_num = mdates.date2num(dates)
 
         # mask everything below the model bottom
-        if zlist is None:
+        if zlist is None and False:
             profiles = np.asarray(profiles)
             profiles = profiles[:, np.where(ztarget <= bottom)]
             profiles = profiles.squeeze()
@@ -189,8 +194,9 @@ class NemoYearlyFilesManager(object):
 
         zz, tt = np.meshgrid(ztarget, dates_num)
 
-        print("nemo tt-ranges: ", tt.min(), tt.max())
-        profiles = np.ma.masked_where(zz > bottom, profiles)
+        # print("nemo tt-ranges: ", tt.min(), tt.max())
+        # profiles = np.ma.masked_where(zz > bottom, profiles)
+
 
         # plot for debug
         #
@@ -241,7 +247,7 @@ class NemoYearlyFilesManager(object):
         for y in range(start_year, end_year + 1):
             fpath = self.year_to_path[y]
 
-            with Dataset(fpath) as ds:
+            with MFDataset(fpath) as ds:
 
                 data_var = ds.variables[varname]
 
@@ -308,10 +314,21 @@ class NemoYearlyFilesManager(object):
 
         build the relation {year => data path}
         """
-        self.year_to_path = {
-            int(fn.split("_")[2][:-4]): os.path.join(self.data_folder, fn)
-            for fn in os.listdir(self.data_folder) if fn.endswith(self.suffix)
-        }
+
+        self.year_to_path = defaultdict(list)
+        data_dir = Path(self.data_folder)
+
+        for f in data_dir.iterdir():
+
+            if not f.name.endswith(self.suffix):
+                continue
+
+            y = int(f.name.split("_")[2][:-4])
+            self.year_to_path[y].append(str(f))
+
+
+
+
 
 
     def get_seasonal_mean_sst(self, start_year=None, end_year=None, season_to_months=None):
@@ -324,33 +341,8 @@ class NemoYearlyFilesManager(object):
         :return: dict(year -> season -> field)
         """
 
-        def group_key(c, val):
-            for k, months in season_to_months.items():
-                if val in months:
-                    return k
+        raise NotImplementedError()
 
-        result = {}
-        for the_year in range(start_year, end_year + 1):
-            result[the_year] = {}
-            data_path = self.year_to_path[the_year]
-            cube = iris.load_cube(data_path, "Sea Surface temperature")
-            print(cube)
-            coord_categorisation.add_month_number(cube, "time")
-            coord_categorisation.add_categorised_coord(cube, "season", "month_number", group_key)
-
-            assert isinstance(cube, Cube)
-            seas_mean = cube.aggregated_by(["season"], iris.analysis.MEAN)
-
-            assert isinstance(seas_mean, Cube)
-            assert isinstance(self.basemap, Basemap)
-
-            for the_season in list(season_to_months.keys()):
-                c = iris.Constraint(season=the_season)
-                the_mean = seas_mean.extract(c)
-                assert isinstance(the_mean, Cube)
-                result[the_year][the_season] = the_mean.data.transpose()
-
-        return result
 
     def get_seasonal_mean_lst(self, start_year=None, end_year=None, season_to_months=None):
 
@@ -372,38 +364,40 @@ class NemoYearlyFilesManager(object):
                 month_to_season[the_month] = season
 
 
+        print("months_to_season = {}".format(month_to_season))
+
         result = {}
         for the_year in range(start_year, end_year + 1):
             result[the_year] = {}
             data_path = self.year_to_path[the_year]
-            ds = Dataset(data_path)
+            with MFDataset(data_path) as ds:
+                # sst = ds.variables["isstempe"][:]
+                # ist = ds.variables["isnotem2"][:]
+                # ice_f = ds.variables["iiceconc"][:]
 
-            sst = ds.variables["isstempe"][:]
-            ist = ds.variables["isnotem2"][:]
-            ice_f = ds.variables["iiceconc"][:]
+                # if hasattr(ice_f, "mask"):
+                #     ice_f[ice_f.mask] = 0
 
-            if hasattr(ice_f, "mask"):
-                ice_f[ice_f.mask] = 0
+                # Calculate lake surface temperature
+                # lst = sst * (1.0 - ice_f) + ist * ice_f
 
-            # Calculate lake surface temperature
-            lst = sst * (1.0 - ice_f) + ist * ice_f
+                lst = ds.variables["sosstsst"][:]
 
-            time_var = ds.variables["time_counter"]
-            dates = num2date(time_var[:], time_var.units).tolist()
-            print(dates[:10])
-            print(type(dates[0]))
+                time_var = ds.variables["time_counter"]
+                dates = num2date(time_var[:], time_var.units).tolist()
+                print(", ".join([str(d) for d in dates[:10]]) + ", ..., {}".format(dates[-1]))
+
+                panel = pd.Panel(data=lst, items=dates, major_axis=range(lst.shape[1]), minor_axis=range(lst.shape[2]))
 
 
-            panel = pd.Panel(data=lst, items=dates, major_axis=range(lst.shape[1]), minor_axis=range(lst.shape[2]))
+                seasonal_panel = panel.groupby(
+                    lambda d: month_to_season[d.month], axis="items").mean()
 
-            print(panel.items[0])
+                for the_season in season_to_months:
+                    print(seasonal_panel)
+                    # in the files the dimensions are ordered as (t, y, x) -> hence the transpose below
+                    result[the_year][the_season] = seasonal_panel[the_season, :, :].values.T
 
-            seasonal_panel = panel.groupby(
-                lambda d: month_to_season[d.month], axis="items").mean()
-
-            for the_season in season_to_months:
-                # in the files the dimensions are ordered as (t, y, x) -> hence the transpose below
-                result[the_year][the_season] = seasonal_panel.loc[the_season, :, :].values.transpose()
 
         return result
 
@@ -464,12 +458,12 @@ class NemoYearlyFilesManager(object):
             result[the_year] = {}
             for the_season in list(season_to_months.keys()):
                 the_mean = seasonal_sst.select(lambda item: item == (the_year, the_season), axis="items")
-                result[the_year][the_season] = the_mean.values.flatten()[inds].reshape(self.lons.shape) - 273.15
+                result[the_year][the_season] = the_mean.values.flatten()[inds].reshape(self.lons.shape)
 
         return result
 
 
-    def get_nemo_and_homa_seasonal_mean_sst(self, start_year=None, end_year=None, season_to_months=None):
+    def get_nemo_and_homa_seasonal_mean_sst(self, start_year=None, end_year=None, season_to_months=None, use_noaa_oisst=False):
         """
 
         :param start_year:
@@ -480,10 +474,14 @@ class NemoYearlyFilesManager(object):
         model_data = self.get_seasonal_mean_lst(season_to_months=season_to_months,
                                                 start_year=start_year, end_year=end_year)
 
-        obs_sst_path = os.path.expanduser("~/skynet3_rech1/nemo_obs_for_validation/GreatLakes_2003_5km-2/sst-glk.nc")
 
-        obs_data = self.read_and_interpolate_homa_data(path=obs_sst_path, start_year=start_year, end_year=end_year,
-                                                       season_to_months=season_to_months)
+        obs_data = None
+        if not use_noaa_oisst:
+            obs_sst_path = os.path.expanduser("~/skynet3_rech1/nemo_obs_for_validation/GreatLakes_2003_5km-2/sst-glk.nc")
+
+            obs_data = self.read_and_interpolate_homa_data(path=obs_sst_path, start_year=start_year, end_year=end_year,
+                                                           season_to_months=season_to_months)
+
 
         return model_data, obs_data, self.basemap, self.lons, self.lats
 
@@ -587,7 +585,7 @@ class NemoYearlyFilesManager(object):
         return self.lons, self.lats, self.ccrs
 
 
-    def get_coords_and_basemap(self):
+    def get_coords_and_basemap(self, resolution="c"):
         """
         :return: lons2d, lats2d, basemap [based on the bathymetry file and gemclim_settings.nml]
         """
@@ -595,7 +593,22 @@ class NemoYearlyFilesManager(object):
         # Read longitudes and latitudes and create the basemap only if they are not initialized
         if self.lons is None:
             with Dataset(os.path.join(self.data_folder, self.bathymetry_file)) as ds:
-                self.lons, self.lats = ds.variables["nav_lon"][:].transpose(), ds.variables["nav_lat"][:].transpose()
+
+                if "nav_lon" in ds.variables:
+                    self.lons, self.lats = ds.variables["nav_lon"][:].transpose(), ds.variables["nav_lat"][:].transpose()
+                else:
+                    for vname, v in ds.variables.items():
+                        if "lon" in vname.lower():
+                            self.lons = v[:].T
+                            continue
+
+                        if "lat" in vname.lower():
+                            self.lats = v[:].T
+                            continue
+
+                        if self.lons is not None and self.lats is not None:
+                            break
+
 
                 import re
 
@@ -612,7 +625,7 @@ class NemoYearlyFilesManager(object):
                             lat2, lon2 = [float(s) for s in groups]
 
                 rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
-                self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats)
+                self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats, resolution=resolution)
                 print(lon1, lat1, lon2, lat2)
 
 

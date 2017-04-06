@@ -3,6 +3,7 @@
 lower_limit_of_daily_snowfall = 10.0e-2 / (24.0 * 3600.0)   # i.e. = 10 cm/day (Note: it is in snowfall depth not water equivalent)
 snfl_local_amplification_m_per_s = 4.0e-2 / (24.0 * 3600.0)   # i.e. = 4 cm/day
 
+clevs_lkeff_snowfall = [0, 1, 2, 10, 15, 20, 40, 80, 120, 160]
 
 
 class LatLonLimits(object):

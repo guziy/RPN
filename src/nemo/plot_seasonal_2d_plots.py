@@ -37,7 +37,8 @@ except ImportError:
 
 # EXP_DIR = "/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP00"
 # EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK/exp_0.1deg_from_restart_1958"
-EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Huron"
+# EXP_DIR = "/home/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/1981-2000_Sim_per_lake_100yr_spinup_LIM3/Huron"
+EXP_DIR = "/HOME/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_GLK_LIM3_1980/zdf_gls_dt_and_sbc_5min"
 
 T_FILE_PATH, U_FILE_PATH, V_FILE_PATH = None, None, None
 
@@ -53,7 +54,7 @@ for fname in os.listdir(EXP_DIR):
     elif fname.endswith("_grid_V.nc"):
         V_FILE_PATH = os.path.join(EXP_DIR, fname)
 
-from . import nemo_commons
+from nemo import nemo_commons
 
 EXP_NAME = os.path.basename(EXP_DIR)
 NEMO_IMAGES_DIR = os.path.join("nemo", EXP_NAME)

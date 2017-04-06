@@ -233,7 +233,7 @@ def main():
 
     for gc, rpn_path in gconfig_to_infile.items():
         select_data_to_nc(gc, in_rpn_path=rpn_path, in_directions_path=gconfig_to_dirfile[gc], selection=selection, out_dir=out_dir)
-        break
+
 
 
 

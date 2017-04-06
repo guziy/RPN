@@ -4,9 +4,10 @@ from pathlib import Path
 from eofs.standard import Eof
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
-from mpl_toolkits.basemap import maskoceans
+from mpl_toolkits.basemap import maskoceans, Basemap
 
 from application_properties import main_decorator
+from lake_effect_snow import common_params
 from util import plot_utils
 import matplotlib.pyplot as plt
 from netCDF4 import Dataset
@@ -25,7 +26,8 @@ def main():
         [
          ("Obs", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_1980-2009")),
          ("CRCM5_NEMO", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_1980-2009")),
-         ("CRCM5_HL", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_Hostetler_1980-2009"))
+         ("CRCM5_HL", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_Hostetler_1980-2009")),
+         # ("CRCM5_NEMO_TT_PR", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_based_on_TT_PR_1980-2009"))
         ]
     )
 
@@ -33,13 +35,25 @@ def main():
     label_to_line_style = {
         "Obs": "k.-",
         "CRCM5_NEMO": "r",
-        "CRCM5_HL": "b"
+        "CRCM5_HL": "b",
+        "CRCM5_NEMO_TT_PR": "g"
     }
 
-    vname = "snow_fall"
-    # vname = "lkeff_snowfall_days"
-    units = "cm"
+    #vname = "snow_fall"
+    vname = "lkeff_snowfall_days"
+    units = "days"
     npc = 1
+
+
+
+    b = Basemap(lon_0=180,
+                llcrnrlon=common_params.great_lakes_limits.lon_min,
+                llcrnrlat=common_params.great_lakes_limits.lat_min,
+                urcrnrlon=common_params.great_lakes_limits.lon_max,
+                urcrnrlat=common_params.great_lakes_limits.lat_max,
+                resolution="i")
+
+
 
     label_to_y_to_snfl = {}
     label_to_pc = {}
@@ -55,6 +69,7 @@ def main():
 
     years = None
     lats = None
+    lons = None
     the_mask = None
     for label, folder in label_to_hles_dir.items():
 
@@ -93,8 +108,8 @@ def main():
         solver = Eof(data)
 
 
-        # eof = solver.eofsAsCorrelation(neofs=4)
-        eof = solver.eofs(neofs=4)
+        eof = solver.eofsAsCorrelation()
+        # eof = solver.eofs(neofs=4)
 
         pc = solver.pcs(pcscaling=0)
         label_to_varfraction[label] = solver.varianceFraction()
@@ -108,13 +123,12 @@ def main():
         # save data for Diro
         print(pc.shape)
         df = pd.DataFrame(data=pc, index=years_ord)
-        df.to_csv("{}_pc.csv".format(label))
+        df.to_csv("{}_{}_pc.csv".format(vname, label))
 
 
-        plt.plot(years_ord, pc[0, :].copy(), label_to_line_style[label], linewidth=2,
-                 label=label)
+        plt.plot(years_ord, pc[:, 0].copy(), label_to_line_style[label], linewidth=2, label=label)
 
-    plt.legend(loc="upper right")
+    plt.legend(loc="upper left")
 
     plt.ylabel(units)
     plt.xlabel("Year")
@@ -130,9 +144,10 @@ def main():
     # plot the eofs
 
 
-    plot_utils.apply_plot_params(font_size=12, width_cm=20, height_cm=8)
+    plot_utils.apply_plot_params(font_size=12, width_cm=30, height_cm=6)
 
-
+    lons[lons < 0] += 360
+    xx, yy = b(lons, lats)
     for eof_ind in range(3):
         col = 0
 
@@ -142,15 +157,17 @@ def main():
         for label, eof_field in label_to_eof.items():
 
             ax = fig.add_subplot(gs[0, col])
-            to_plot = eof_field[eof_ind].T.copy()
-            im = plt.pcolormesh(to_plot, cmap=cm.get_cmap("bwr", 10), vmin=-0.025, vmax=0.025)
+            to_plot = eof_field[eof_ind]
+            im = b.pcolormesh(xx, yy, -to_plot, cmap=cm.get_cmap("bwr", 10), vmin=-0.25, vmax=0.25, ax=ax)
             plt.colorbar(im, extend="both")
             ax.set_title("{} (explains {:.2f}$\sigma^2$)".format(label, label_to_varfraction[label][eof_ind]))
 
             col += 1
 
+            b.drawcoastlines(ax=ax)
+
         fig.tight_layout()
-        plt.savefig(str(label_to_hles_dir["Obs"].joinpath("eof_raw_{}_{}.png".format(eof_ind + 1, vname))), bbox_inches="tight")
+        plt.savefig(str(label_to_hles_dir["Obs"].joinpath("eof_raw_{}_{}.png".format(eof_ind + 1, vname))), bbox_inches="tight", dpi=300)
         plt.close(fig)
 
 

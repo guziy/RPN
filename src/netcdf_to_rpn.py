@@ -191,16 +191,17 @@ if __name__ == "__main__":
 
 
     # params taken from gemclim settings
-    params = dict(
-        dx=0.1, dy=0.1,
-        lon1=180, lat1=0.0,
-        lon2=-84, lat2=1.0,
-        iref=105, jref=100,
-        ni=210, nj=130,
-        xref=276.0, yref=48.0
-    )
+    # params = dict(
+    #     dx=0.1, dy=0.1,
+    #     lon1=180, lat1=0.0,
+    #     lon2=-84, lat2=1.0,
+    #     iref=105, jref=100,
+    #     ni=210, nj=130,
+    #     xref=276.0, yref=48.0
+    # )
+    #
+    # gc = GridConfig(**params)
 
-    gc = GridConfig(**params)
     # convert(
     #     nc_path="/skynet3_rech1/huziy/hydrosheds/directions_great_lakes_210_130_0.1deg.nc",
     #     gc=gc, out_path="directions_0.1deg_GL.rpn")
@@ -246,9 +247,12 @@ if __name__ == "__main__":
     # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_new_na_0.44deg_CORDEX.nc",
     #         gc=default_domains.gc_cordex_na_044)
 
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_new_hshedsfix_na_0.44deg_CORDEX.nc",
+    #         gc=default_domains.gc_cordex_na_044)
+
     # Caio domain
-    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_new_na_0.22deg_CORDEX_Caio.nc",
-            gc=default_domains.gc_cordex_caio_subdomain)
+    # convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_new_na_0.22deg_CORDEX_Caio.nc",
+    #         gc=default_domains.gc_cordex_caio_subdomain)
 
 
 
@@ -278,5 +282,8 @@ if __name__ == "__main__":
     # convert(nc_path="/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/directions_bc-mh_0.11deg_new.nc",
     #         gc=default_domains.bc_mh_011,
     #         out_path="/RESCUE/skynet3_rech1/huziy/NEI_geophysics/WC_0.11_deg/directions_bc-mh_0.11deg_new.rpn")
+
+    convert(nc_path="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Java/DDM/directions_bc-mh_0.11deg_new_hsfix.nc",
+            gc=default_domains.bc_mh_011)
 
     print("Hello World")

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from matplotlib import cm
 from matplotlib.dates import DateFormatter
 from matplotlib.font_manager import FontProperties
@@ -29,6 +31,8 @@ def plot_flow_speed_profiles_comparisons():
     pass
 
 
+img_dir = Path("nemo/nemo_coupled")
+
 def main_plot_all_temp_profiles_in_one_figure(
         folder_path="/home/huziy/skynet3_rech1/nemo_obs_for_validation/data_from_Ram_Yerubandi/T-profiles"):
     """
@@ -55,22 +59,27 @@ def main_plot_all_temp_profiles_in_one_figure(
         "08-00T-004A177.106.286"
     ]
 
-    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
+    # nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
+    # nemo_manager = NemoYearlyFilesManager(folder="/RESCUE/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_GLK_LIM3_1980/zdf_gls_dt_and_sbc_5min")
+    nemo_manager = NemoYearlyFilesManager(folder="/BIG1/huziy/CRCM5_NEMO_coupled_sim_nemo_outputs/NEMO")
 
-    plot_utils.apply_plot_params(font_size=16, width_pt=None, width_cm=40, height_cm=30)
+    plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=35, height_cm=30)
     fig = plt.figure()
-    gs = GridSpec(len(temperature_profile_file_prefixes) + 1, 5, width_ratios=[1, 1, 0.05, 1, 0.05],
-                  height_ratios=len(temperature_profile_file_prefixes) * [1.0, ] + [3, ], top=0.90,
-                  wspace=0.4, hspace=0.2)
+    gs = GridSpec(len(temperature_profile_file_prefixes) + 2, 4, width_ratios=[1, 1, 1, 0.05],
+                  height_ratios=len(temperature_profile_file_prefixes) * [1.0, ] + [0.05, 2, ], top=0.90,
+                  wspace=0.2, hspace=0.2)
 
-    color_levels = np.arange(-1, 30, 1)
-    diff_levels = np.arange(-10, 10.5, 0.5)
-    diff_cmap = cm.get_cmap("RdBu_r", len(diff_levels) - 1)
+    color_levels = np.arange(0, 33, 3)
+    diff_levels = np.arange(-7, 8, 2)
+    diff_cmap = cm.get_cmap("bwr", len(diff_levels) - 1)
     axes_list = []
     imvalues = None
     imdiff = None
     titles = ["Obs", "Model", "Model - Obs"]
     labels = ["P{}".format(p) for p in range(len(temperature_profile_file_prefixes))]
+
+
+    nupper_levs_to_plot = 5
 
     obs_point_list = []
     start_date, end_date = None, None
@@ -115,10 +124,10 @@ def main_plot_all_temp_profiles_in_one_figure(
 
 
         # model profile (interpolated to the observation levels) - obs profile
-        ax = fig.add_subplot(gs[row, 3])
+        ax = fig.add_subplot(gs[row, 2])
         diff = model_profile_interp - obs_profile
-        imdiff = ax.contourf(tt, zz, diff, levels=diff_levels, cmap=diff_cmap, extend="both")
-        ax.yaxis.set_ticklabels([])
+        imdiff = ax.contourf(tt[:, :nupper_levs_to_plot], zz[:, :nupper_levs_to_plot], diff[:, :nupper_levs_to_plot], levels=diff_levels, cmap=diff_cmap, extend="both")
+        # ax.yaxis.set_ticklabels([])
         axes_list.append(ax)
 
         if not row:
@@ -132,9 +141,9 @@ def main_plot_all_temp_profiles_in_one_figure(
 
 
     # plot colorbars
-    cb = plt.colorbar(imvalues, cax=fig.add_subplot(gs[:-1, 2]))
+    cb = plt.colorbar(imvalues, cax=fig.add_subplot(gs[len(temperature_profile_file_prefixes), :2]), orientation="horizontal")
 
-    plt.colorbar(imdiff, cax=fig.add_subplot(gs[:-1, 4]))
+    plt.colorbar(imdiff, cax=fig.add_subplot(gs[:len(temperature_profile_file_prefixes), 3]))
 
     # Format dates
     dfmt = DateFormatter("%b")
@@ -149,8 +158,8 @@ def main_plot_all_temp_profiles_in_one_figure(
 
 
     # Plot station positions
-    lons, lats, bmp = nemo_manager.get_coords_and_basemap()
-    ax = fig.add_subplot(gs[len(temperature_profile_file_prefixes), :-2])
+    lons, lats, bmp = nemo_manager.get_coords_and_basemap(resolution="l")
+    ax = fig.add_subplot(gs[len(temperature_profile_file_prefixes) + 1, :-2])
 
     for i, po, label in zip(list(range(len(obs_point_list))), obs_point_list, labels):
         xx, yy = bmp(po.longitude, po.latitude)
@@ -167,10 +176,16 @@ def main_plot_all_temp_profiles_in_one_figure(
                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
 
     bmp.drawcoastlines(linewidth=0.5, ax=ax)
-    # plt.tight_layout()
-    img_path = "nemo/T-profiles.pdf"
+    # fig.tight_layout()
 
-    fig.savefig(img_path, transparent=True, bbox_inches="tight")
+
+    if not img_dir.exists():
+        img_dir.mkdir(parents=True)
+
+    img_path = img_dir / "T-profiles.pdf"
+
+    print("Saving plots to {}".format(img_path))
+    fig.savefig(str(img_path), transparent=True, bbox_inches="tight", dpi=300)
 
 
 if __name__ == '__main__':
