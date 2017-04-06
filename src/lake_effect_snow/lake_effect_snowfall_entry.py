@@ -109,6 +109,8 @@ def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period
 
     assert hasattr(period, "months_of_interest")
 
+
+
     for label, the_config in label_to_config.items():
         data_manager = DataManager(store_config=the_config)
 
@@ -162,7 +164,9 @@ def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period
             for current_in_data in in_data:
                 enh_lakeffect_snfall_calculator_proc(current_in_data)
 
+        del in_data
         del data_manager
+
 
 
 
@@ -214,8 +218,8 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
     if out_file.exists():
         print("{} already exists, won't redo!".format(out_file))
-        plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder,
-                              months_of_interest=months_of_interest)
+        # plot_acc_snowfall_map(data_path=out_file, label=label, period=period, out_folder=out_folder,
+        #                       months_of_interest=months_of_interest)
         return
 
     # for each period
@@ -351,8 +355,9 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
 
             print(e)
-            print("WARNING: Could not find lake fraction in {}, diagnosing lake-effect snow without lake ice".format(
+            print("WARNING: Could not find lake fraction in {}, diagnosing lake-effect snow without lake ice (NOTE: this could be OK for the months when there is no ice usually)".format(
                 data_mngr.base_folder))
+
             lake_ice_fraction = None
 
             # raise e
@@ -401,6 +406,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         snfl_acc.values = np.ma.masked_where((~reg_of_interest), snfl_acc)
 
         lkeff_snow_falls.append(snfl_acc)
+
+
+        del snfl
+        del snfl_nonlocal
 
 
     if len(years_index) == 0:

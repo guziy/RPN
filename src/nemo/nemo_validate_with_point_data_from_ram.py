@@ -69,7 +69,7 @@ def main_plot_all_temp_profiles_in_one_figure(
                   height_ratios=len(temperature_profile_file_prefixes) * [1.0, ] + [0.05, 2, ], top=0.90,
                   wspace=0.2, hspace=0.2)
 
-    color_levels = np.arange(0, 33, 3)
+    color_levels = np.arange(0, 30, 0.5)
     diff_levels = np.arange(-7, 8, 2)
     diff_cmap = cm.get_cmap("bwr", len(diff_levels) - 1)
     axes_list = []
@@ -158,7 +158,7 @@ def main_plot_all_temp_profiles_in_one_figure(
 
 
     # Plot station positions
-    lons, lats, bmp = nemo_manager.get_coords_and_basemap(resolution="l")
+    lons, lats, bmp = nemo_manager.get_coords_and_basemap(resolution="i")
     ax = fig.add_subplot(gs[len(temperature_profile_file_prefixes) + 1, :-2])
 
     for i, po, label in zip(list(range(len(obs_point_list))), obs_point_list, labels):

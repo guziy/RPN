@@ -36,6 +36,7 @@ def main():
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
 
+
     label_to_config = OrderedDict([(
         label, {
             "base_folder": "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260",
@@ -46,7 +47,7 @@ def main():
             "offset_mapping": vname_to_offset_CRCM5,
             "multiplier_mapping": vname_to_multiplier_CRCM5,
             "filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
-            "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
+            "out_folder": "lake_effect_analysis_icefix_{}_{}-{}".format(label, period.start.year, period.end.year)
         }
     )])
 

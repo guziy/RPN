@@ -326,6 +326,10 @@ class NemoYearlyFilesManager(object):
             y = int(f.name.split("_")[2][:-4])
             self.year_to_path[y].append(str(f))
 
+        # sort the files
+        for y in self.year_to_path:
+            self.year_to_path[y] = sorted(self.year_to_path[y])
+
 
 
 
