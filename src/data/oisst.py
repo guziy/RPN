@@ -85,7 +85,8 @@ class OISSTManager(object):
 
 
 
-    def get_seasonal_clim(self, start_year=2002, end_year=2010, season_to_months:dict=None, vname:str= "sst"):
+    def get_seasonal_clim(self, start_year=2002, end_year=2010, season_to_months:dict=None, vname:str= "sst",
+                          skip_months_of_edge_winters=False):
 
         result = OrderedDict()
 
@@ -96,6 +97,17 @@ class OISSTManager(object):
             for y in range(start_year, end_year + 1):
                 # --
                 for month in months:
+
+                    # skip December of the last winter and (Jan, Feb) of the first winter
+                    if skip_months_of_edge_winters:
+                        if sname.lower() in ["winter", "djf"]:
+                            if month == 12 and y == end_year:
+                                continue
+
+                            if (month == 1 or month == 2) and y == start_year:
+                                continue
+
+
                     for day in range(1, calendar.monthrange(y, month)[1] + 1):
                         file_url = self.get_url_for(year=y, month=month, day=day)
                         print("Opening {}".format(file_url))

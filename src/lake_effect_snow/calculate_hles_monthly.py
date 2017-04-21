@@ -8,7 +8,7 @@ from pendulum import Period
 from rpn import level_kinds
 
 from application_properties import main_decorator
-from lake_effect_snow import data_source_types
+from lake_effect_snow import data_source_types, default_varname_mappings
 from lake_effect_snow.base_utils import VerticalLevel
 from lake_effect_snow.default_varname_mappings import vname_map_CRCM5, T_AIR_2M, U_WE, V_SN, vname_to_offset_CRCM5, \
     vname_to_multiplier_CRCM5, vname_to_fname_prefix_CRCM5
@@ -22,7 +22,7 @@ def monthly_func(x):
 
 
 @main_decorator
-def main():
+def main_obs():
     label = "Obs_monthly"
 
 
@@ -79,9 +79,129 @@ def main():
 
 
 
+@main_decorator
+def main_crcm5_nemo():
+    label = "CRCM5_NEMO"
+
+    period = Period(
+        datetime(1980, 1, 1), datetime(2009, 12, 31)
+    )
+
+
+    pool = Pool(processes=10)
+
+    input_params = []
+    for month_start in period.range("months"):
+
+        month_end = month_start.add(months=1).subtract(seconds=1)
+
+        current_month_period = Period(month_start, month_end)
+        current_month_period.months_of_interest = [month_start.month, ]
+
+
+        vname_to_level_erai = {
+            T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
+            U_WE: VerticalLevel(1, level_kinds.HYBRID),
+            V_SN: VerticalLevel(1, level_kinds.HYBRID),
+        }
 
 
 
+        vname_map = {}
+        vname_map.update(vname_map_CRCM5)
+
+        vname_map = {}
+        vname_map.update(vname_map_CRCM5)
+        vname_map.update({
+            default_varname_mappings.SNOWFALL_RATE: "U3"
+        })
+
+        label_to_config = OrderedDict([(
+            label, {
+                "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields",
+                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
+                "min_dt": timedelta(hours=3),
+                "varname_mapping": vname_map,
+                "level_mapping": vname_to_level_erai,
+                "offset_mapping": vname_to_offset_CRCM5,
+                "multiplier_mapping": vname_to_multiplier_CRCM5,
+                "out_folder": "lake_effect_analysis_{}_{}-{}_monthly".format(label, period.start.year, period.end.year)
+            }
+        )])
+
+        kwargs = dict(
+            label_to_config=label_to_config, period=current_month_period, months_of_interest=current_month_period.months_of_interest, nprocs_to_use=1
+        )
+
+        print(current_month_period.months_of_interest)
+        input_params.append(kwargs)
+
+    # execute in parallel
+    pool.map(monthly_func, input_params)
+
+
+
+
+@main_decorator
+def main_crcm5_hl():
+    label = "CRCM5_HL"
+
+    period = Period(
+        datetime(1980, 1, 1), datetime(2009, 12, 31)
+    )
+
+
+    pool = Pool(processes=12)
+
+    input_params = []
+    for month_start in period.range("months"):
+
+        month_end = month_start.add(months=1).subtract(seconds=1)
+
+        current_month_period = Period(month_start, month_end)
+        current_month_period.months_of_interest = [month_start.month, ]
+
+
+        vname_to_level_erai = {
+            T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
+            U_WE: VerticalLevel(1, level_kinds.HYBRID),
+            V_SN: VerticalLevel(1, level_kinds.HYBRID),
+        }
+
+
+
+        vname_map = {}
+        vname_map.update(vname_map_CRCM5)
+
+        vname_map = {}
+        vname_map.update(vname_map_CRCM5)
+        vname_map.update({
+            default_varname_mappings.SNOWFALL_RATE: "U3"
+        })
+
+        label_to_config = OrderedDict([(
+            label, {
+                "base_folder": "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected",
+                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
+                "min_dt": timedelta(hours=3),
+                "varname_mapping": vname_map,
+                "level_mapping": vname_to_level_erai,
+                "offset_mapping": vname_to_offset_CRCM5,
+                "multiplier_mapping": vname_to_multiplier_CRCM5,
+                "out_folder": "lake_effect_analysis_{}_{}-{}_monthly".format(label, period.start.year, period.end.year)
+            }
+        )])
+
+        kwargs = dict(
+            label_to_config=label_to_config, period=current_month_period, months_of_interest=current_month_period.months_of_interest, nprocs_to_use=1
+        )
+
+        print(current_month_period.months_of_interest)
+        input_params.append(kwargs)
+
+    # execute in parallel
+    pool.map(monthly_func, input_params)
 
 if __name__ == '__main__':
-    main()
+    # main_crcm5_nemo()
+    main_crcm5_hl()

@@ -21,7 +21,14 @@ def vname_map(vname):
     return vname
 
 
-def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:str, selection=None, out_dir: Path=None, label="mh"):
+def add_levels(data, levels):
+    multilev = np.zeros(data.shape + (len(levels), ))
+    for ilev, lev in enumerate(levels):
+        multilev[ :, :, ilev] = data
+    return multilev
+
+
+def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:str, selection=None, out_dir: Path=None, label="mh", levels=None):
 
     out_file = Path("{}_sand_clay_dpth_{}x{}_{}.nc".format(label, gconfig.ni, gconfig.nj, gconfig.dx))
 
@@ -49,6 +56,9 @@ def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:s
 
         ds.createDimension("longitude", lon_t.shape[0])
         ds.createDimension("latitude", lon_t.shape[1])
+
+        if levels is not None:
+            ds.createDimension("level", len(levels))
 
         with RPN(in_rpn_path) as r:
             assert isinstance(r, RPN)
@@ -86,8 +96,17 @@ def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:s
 
                 elif vname.lower() in ["sand"]:
                     sand = data
+                    if levels is not None:
+                        sand = add_levels(data, levels)
+                        data = sand
+
+
                 elif vname.lower() in ["clay"]:
                     clay = data
+
+                    if levels is not None:
+                        clay = add_levels(data, levels)
+                        data = clay
 
                     mg = r.get_first_record_for_name("MG").flatten()[inds].reshape(lon_t.shape)
 
@@ -98,8 +117,15 @@ def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:s
         # write the roughness
         manning = -np.ones_like(dpth_to_bedrock)
 
+        if levels is not None:
+            clay0 = clay[:, :, 0]
+            sand0 = sand[:, :, 0]
+        else:
+            clay0 = clay
+            sand0 = sand
+
         # rock or ice
-        manning[(clay < -1) & (clay > -4)] = 0.01
+        manning[(clay0 < -1) & (clay0 > -4)] = 0.01
 
         # ocean =  (np.abs(sand) < 0.1) & (np.abs(clay) < 0.1)
         ocean = (mg < 0.01)
@@ -111,7 +137,11 @@ def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:s
         for vname, data in vname_to_data.items():
             data[ocean] = -1
             # create the variable in the output file
-            v = ds.createVariable(vname_map(vname), "f4", dimensions=("longitude", "latitude"))
+
+            if levels is not None and vname.lower() in ["sand", "clay"]:
+                v = ds.createVariable(vname_map(vname), "f4", dimensions=("longitude", "latitude", "level"))
+            else:
+                v = ds.createVariable(vname_map(vname), "f4", dimensions=("longitude", "latitude"))
             v[:] = data
 
             if vname in ["8L", "DPTH"]:
@@ -119,7 +149,7 @@ def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:s
 
 
 
-        manning[good] = clay[good] * roughness[0] + sand[good] * roughness[2] + (100 - sand[good] - clay[good]) * roughness[1]
+        manning[good] = clay0[good] * roughness[0] + sand0[good] * roughness[2] + (100 - sand0[good] - clay0[good]) * roughness[1]
 
         manning[good] /= 100.0
         manning[ocean] = -1
@@ -133,8 +163,8 @@ def select_data_to_nc(gconfig: GridConfig, in_rpn_path:str, in_directions_path:s
         res_time_days = [10, 30, 60]
         v = ds.createVariable("GWdelay", "f4", dimensions=("longitude", "latitude"))
         restime = -np.ones_like(dpth_to_bedrock)
-        restime[clay < 0] = res_time_days[1]
-        restime[good] = sand[good] * res_time_days[0] + clay[good] * res_time_days[2] + (100 - sand[good] - clay[good]) * res_time_days[2]
+        restime[clay0 < 0] = res_time_days[1]
+        restime[good] = sand0[good] * res_time_days[0] + clay0[good] * res_time_days[2] + (100 - sand0[good] - clay0[good]) * res_time_days[2]
         restime[good] /= 100.0
 
         restime[ocean] = -1
@@ -193,8 +223,8 @@ def main():
 
 
     gconfig_to_infile = OrderedDict([
-        (default_domains.bc_mh_011, "/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/20170320/rpn/geophys_CORDEX_NA_0.11deg_695x680_filled_grDes_barBor_Crop2Gras_peat"),
-        (default_domains.bc_mh_022, "/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/20170320/rpn/geophys_CORDEX_NA_0.22deg_filled_grDes_barBor_Crop2Gras_peat"),
+        # (default_domains.bc_mh_011, "/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/20170320/rpn/geophys_CORDEX_NA_0.11deg_695x680_filled_grDes_barBor_Crop2Gras_peat"),
+        # (default_domains.bc_mh_022, "/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/20170320/rpn/geophys_CORDEX_NA_0.22deg_filled_grDes_barBor_Crop2Gras_peat"),
         (default_domains.bc_mh_044, "/RESCUE/skynet3_rech1/huziy/directions_for_ManitobaHydro/20170320/rpn/geophys_CORDEX_NA_0.44d_filled_grDes_barBor_Crop2Gras_peat"),
     ])
 
@@ -206,14 +236,14 @@ def main():
     # }
 
     gconfig_to_dirfile = {
-        default_domains.bc_mh_011: "/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170310/netcdf/directions_bc-mh_0.11deg_new_hsfix.nc",
-        default_domains.bc_mh_022: "/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170310/netcdf/directions_bc-mh_0.22deg_new_hsfix.nc",
+        # default_domains.bc_mh_011: "/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170310/netcdf/directions_bc-mh_0.11deg_new_hsfix.nc",
+        # default_domains.bc_mh_022: "/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170310/netcdf/directions_bc-mh_0.22deg_new_hsfix.nc",
         default_domains.bc_mh_044: "/HOME/huziy/skynet3_rech1/directions_for_ManitobaHydro/20170310/netcdf/directions_bc-mh_0.44deg_new_hsfix.nc",
 
     }
 
 
-    out_dir = Path("mh/sand_clay_dpth_fields")
+    out_dir = Path("mh/sand_clay_dpth_fields_levels")
     if not out_dir.is_dir():
         out_dir.mkdir(parents=True)
 
@@ -232,7 +262,7 @@ def main():
 
 
     for gc, rpn_path in gconfig_to_infile.items():
-        select_data_to_nc(gc, in_rpn_path=rpn_path, in_directions_path=gconfig_to_dirfile[gc], selection=selection, out_dir=out_dir)
+        select_data_to_nc(gc, in_rpn_path=rpn_path, in_directions_path=gconfig_to_dirfile[gc], selection=selection, out_dir=out_dir, levels=list(range(26)))
 
 
 

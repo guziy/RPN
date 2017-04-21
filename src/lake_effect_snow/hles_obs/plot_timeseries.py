@@ -27,17 +27,26 @@ def main():
 
 
     label_to_line_style = {
-        "Obs": "k.-",
+        "Obs": "k",
+        "CRCM5_NEMO": "r",
+        "CRCM5_HL": "b"
+    }
+
+    label_to_line_color = {
+        "Obs": "k",
         "CRCM5_NEMO": "r",
         "CRCM5_HL": "b"
     }
 
 
+
+
     vname = "snow_fall"
-    #vname = "lkeff_snowfall_days"
     units = "cm"
 
-    units = "days"
+    #vname = "lkeff_snowfall_days"
+    #units = "days"
+
     label_to_y_to_snfl = {}
 
     mask = None
@@ -113,12 +122,32 @@ def main():
 
     plt.grid()
     plt.gcf().autofmt_xdate()
-    plt.savefig(str(label_to_hles_dir["Obs"].joinpath("area_avg_{}.png".format(vname))), bbox_inches="tight")
+    plt.savefig(str(label_to_hles_dir["Obs"].joinpath("area_avg_{}.png".format(vname))), bbox_inches="tight", dpi=400)
+    plt.close()
 
 
+    # boxplot
+    plot_utils.apply_plot_params(width_cm=8, height_cm=4.5, font_size=8)
+    fig = plt.figure()
 
 
+    all_vals = []
+    all_labels = []
+    for label in label_to_hles_dir:
+        y_to_snfl = label_to_y_to_snfl[label]
+        vals = [v for v in y_to_snfl.values()]
+        all_vals.append(vals)
+        all_labels.append(label)
 
+
+    ax = plt.gca()
+    ax.boxplot(all_vals, labels=all_labels)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+
+    plt.savefig(str(label_to_hles_dir["Obs"].joinpath("area_avg_boxplots_{}.png".format(vname))), bbox_inches="tight", dpi=400)
+    plt.close(fig)
 
 if __name__ == '__main__':
     main()

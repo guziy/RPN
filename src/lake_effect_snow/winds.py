@@ -84,7 +84,7 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
     # check if HLES occurs at all at the arival points so they are not checked
     snowfall_occurs_at_all = np.ones_like(region_of_interest, dtype=bool)
     if snowfall is not None:
-        snowfall_occurs_at_all = (snowfall.sum(dim="t") >= common_params.lower_limit_of_daily_snowfall)
+        snowfall_occurs_at_all = (snowfall.sum(dim="t").values >= common_params.lower_limit_of_daily_snowfall)
 
     possible_arrival_points = region_of_interest & (~lake_mask) & snowfall_occurs_at_all
 

@@ -19,7 +19,7 @@ from util import plot_utils
 from util.geo import lat_lon
 import numpy as np
 import matplotlib.dates as mdates
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 __author__ = 'huziy'
 
@@ -49,13 +49,13 @@ class NemoYearlyFilesManager(object):
         self.lats = None
         self.basemap = None
         self.lake_mask = None
-        self.get_coords_and_basemap()
         self.define_lake_mask()
 
         self.year_to_path = None
         self._build_year_to_datapath_map()
 
         self.ccrs = None
+        self.get_coords_and_basemap()
 
 
     def get_tz_crosssection_for_the_point(self, lon=None, lat=None, zlist=None, var_name="",
@@ -117,6 +117,8 @@ class NemoYearlyFilesManager(object):
 
             # cube dimensions (t, z, y, x)
 
+            print("treating the following files: {}".format(", ".join(self.year_to_path[the_year])))
+
             with MFDataset(self.year_to_path[the_year]) as ds:
                 data = ds.variables[var_name]
 
@@ -167,6 +169,9 @@ class NemoYearlyFilesManager(object):
 
                 zweights = zdists / zdists.sum(axis=1)[:, np.newaxis]  # weight1 = d2/(d1 + d2)
 
+
+
+
                 prof = prof[:, zinds[:, 0]] * zweights[np.newaxis, :, 1] + prof[:, zinds[:, 1]] * zweights[np.newaxis, :, 0]
                 profiles.extend(prof)
 
@@ -185,9 +190,9 @@ class NemoYearlyFilesManager(object):
 
         dates_num = mdates.date2num(dates)
 
+        profiles = np.asarray(profiles)
         # mask everything below the model bottom
         if zlist is None and False:
-            profiles = np.asarray(profiles)
             profiles = profiles[:, np.where(ztarget <= bottom)]
             profiles = profiles.squeeze()
             ztarget = ztarget[ztarget <= bottom]
@@ -202,21 +207,124 @@ class NemoYearlyFilesManager(object):
         #
         # plt.figure()
         # ax = plt.gca()
-        # profiles = np.ma.masked_where(zz >= bottom, profiles)
-        # im = ax.contourf(tt, zz, profiles, levels=np.arange(4, 30, 1))
+        #
+        # im = ax.contourf(profiles, levels=np.arange(4, 30, 1))
+        #
+        #
         #
         # xlimits = ax.get_xlim()
         # ax.plot(xlimits, [bottom, bottom], "k-", lw=2)
-        # print bottom
         #
-        # assert isinstance(ax, Axes)
+        #
         # ax.invert_yaxis()
-        # ax.xaxis.set_major_formatter(DateFormatter("%Y\n%b\n%d"))
+        # # ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y\n%b\n%d"))
         #
         # plt.colorbar(im)
         # plt.show()
+        #
+        # if True:
+        #     raise Exception()
 
         return tt, zz, profiles
+
+
+
+
+
+    def get_seasonal_clim_field_for_dates(self, start_year=None, end_year=None, season_to_months=None,
+                                varname="sosstsst", level_index=0, season_to_selected_dates:dict=None):
+
+
+        """
+
+        :param start_year: 
+        :param end_year: 
+        :param season_to_months: 
+        :param varname: 
+        :param level_index: 
+        :param season_to_selected_dates: 
+        :return: {season: (clim, std, nobs)} 
+        """
+
+        # presort selected dates
+        for season in season_to_selected_dates.keys():
+            season_to_selected_dates[season] = sorted(season_to_selected_dates[season])
+
+
+        def __check_if_date_isinlist(d1, dlist):
+            """
+
+            :param d1: 
+            :param dlist: (should be sorted ascending) 
+            :return: 
+            """
+            if d1 < dlist[0] or d1 > dlist[-1]:
+                return False
+
+            return datetime(d1.year, d1.month, d1.day) in dlist
+
+
+        if start_year is None:
+            start_year = min(self.year_to_path.keys())
+
+        if end_year is None:
+            end_year = max(self.year_to_path.keys())
+
+        # Set up month to season relation
+        month_to_season = defaultdict(lambda: "no-season")
+        for m in range(1, 13):
+            for s, months in season_to_months.items():
+                if m in months:
+                    month_to_season[m] = s
+                    break
+
+
+        season_to_field_list = defaultdict(list)
+        for y in range(start_year, end_year + 1):
+            fpath = self.year_to_path[y]
+
+            with MFDataset(fpath) as ds:
+
+                data_var = ds.variables[varname]
+
+                if len(data_var.shape) == 3:
+                    nt, ny, nx = data_var.shape
+                    data = data_var[:]
+                elif len(data_var.shape) == 4:
+                    nt, nz, ny, nx = data_var.shape
+                    data = data_var[:, level_index, :, :]
+                else:
+                    raise Exception("Do not know how to handle {}-dimensional fields".format(len(data_var.shape)))
+
+                time_var = ds.variables["time_counter"]
+
+                dates = num2date(time_var[:], time_var.units)
+
+                panel = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
+
+                seas_mean = panel.groupby(
+                    lambda d: month_to_season[d.month] if __check_if_date_isinlist(d, season_to_selected_dates[month_to_season[d.month]]) else "no-season", axis="items").mean()
+
+                for the_season in seas_mean:
+                    season_to_field_list[the_season].append(seas_mean[the_season].values)
+
+        result = {}
+        for the_season, field_list in season_to_field_list.items():
+            mean_field = np.mean(field_list, axis=0).transpose()
+            std_field = np.std(field_list, axis=0).transpose()
+            nobs = len(field_list)
+
+            print(mean_field.shape)
+
+            result[the_season] = (np.ma.masked_where(~self.lake_mask, mean_field), std_field, nobs)
+
+        return result
+
+
+
+
+
+
 
 
     def get_seasonal_clim_field(self, start_year=None, end_year=None, season_to_months=None,
@@ -304,9 +412,10 @@ class NemoYearlyFilesManager(object):
 
 
     def define_lake_mask(self):
-        c = Dataset(os.path.join(self.data_folder, self.bathymetry_file)).variables["Bathymetry"][:]
-        self.bathymetry = c.transpose()
-        self.lake_mask = self.bathymetry > 0.5
+        with Dataset(os.path.join(self.data_folder, self.bathymetry_file)) as ds:
+            c = ds.variables["Bathymetry"][:]
+            self.bathymetry = c.transpose()
+            self.lake_mask = self.bathymetry > 0.5
 
 
     def _build_year_to_datapath_map(self):
@@ -378,7 +487,7 @@ class NemoYearlyFilesManager(object):
                 # sst = ds.variables["isstempe"][:]
                 # ist = ds.variables["isnotem2"][:]
                 # ice_f = ds.variables["iiceconc"][:]
-
+                #
                 # if hasattr(ice_f, "mask"):
                 #     ice_f[ice_f.mask] = 0
 
@@ -589,13 +698,14 @@ class NemoYearlyFilesManager(object):
         return self.lons, self.lats, self.ccrs
 
 
-    def get_coords_and_basemap(self, resolution="c"):
+    def get_coords_and_basemap(self, subregion=None, reload=True, **basemap_kwargs):
         """
         :return: lons2d, lats2d, basemap [based on the bathymetry file and gemclim_settings.nml]
+        if reload is True, do not use cached arrays even if they are available
         """
 
         # Read longitudes and latitudes and create the basemap only if they are not initialized
-        if self.lons is None:
+        if self.basemap is None or reload:
             with Dataset(os.path.join(self.data_folder, self.bathymetry_file)) as ds:
 
                 if "nav_lon" in ds.variables:
@@ -629,7 +739,16 @@ class NemoYearlyFilesManager(object):
                             lat2, lon2 = [float(s) for s in groups]
 
                 rll = RotatedLatLon(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
-                self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats, resolution=resolution)
+
+
+                nx, ny = self.lons.shape
+                if subregion is not None:
+                    ill, iur, jll, jur = int(nx * subregion[0]), int(nx * subregion[1]), int(ny * subregion[2]), int(ny * subregion[3])
+                else:
+                    ill, iur, jll, jur = 0, self.lons.shape[0], 0, self.lons.shape[1]
+
+                self.basemap = rll.get_basemap_object_for_lons_lats(lons2d=self.lons[ill:iur, jll:jur], lats2d=self.lats[ill:iur, jll:jur],
+                                                                    **basemap_kwargs)
                 print(lon1, lat1, lon2, lat2)
 
 

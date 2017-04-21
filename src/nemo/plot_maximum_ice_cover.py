@@ -21,9 +21,6 @@ column_to_lake_name_glsea = {
 }
 
 
-
-
-
 def main():
 
     img_folder = "nemo/validation_1d/"

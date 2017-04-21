@@ -2,6 +2,7 @@ from functools import lru_cache
 import numpy as np
 from scipy.spatial import KDTree
 
+from lake_effect_snow import common_params
 from util.geo import lat_lon
 
 
@@ -12,7 +13,11 @@ import matplotlib.pyplot as plt
 def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall, lake_mask, outer_radius_km=500):
 
     nonlocal_snfl = snowfall.copy()
-    for i, j in zip(*np.where(region_of_interest)):
+
+    # need non-local snowfall only for points where actual snowfall occurs
+    where_snows_heavy = nonlocal_snfl.sum(dim="t").values >= common_params.lower_limit_of_daily_snowfall
+
+    for i, j in zip(*np.where(region_of_interest & where_snows_heavy)):
         lon, lat = lons[i, j], lats[i, j]
 
         the_mask = get_non_local_mask_for_location(lon, lat, kdtree, mask_shape=lons.shape, outer_radius_km=outer_radius_km)
@@ -34,7 +39,7 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall,
     return nonlocal_snfl
 
 
-@lru_cache(maxsize=None)
+
 def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, outer_radius_km=500):
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lon0, lat0, R=lat_lon.EARTH_RADIUS_METERS)

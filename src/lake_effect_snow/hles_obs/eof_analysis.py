@@ -39,9 +39,10 @@ def main():
         "CRCM5_NEMO_TT_PR": "g"
     }
 
-    #vname = "snow_fall"
-    vname = "lkeff_snowfall_days"
-    units = "days"
+    vname = "snow_fall"
+    units = "cm"
+    #vname = "lkeff_snowfall_days"
+    #units = "days"
     npc = 1
 
 
@@ -115,8 +116,20 @@ def main():
         label_to_varfraction[label] = solver.varianceFraction()
 
         label_to_pc[label] = pc
-
         label_to_eof[label] = eof
+
+
+
+        # change the signs of pcs and eofs
+        if label not in ["CRCM5_HL"]:
+            label_to_pc[label][:, 0] *= -1
+            label_to_eof[label][0, :, :] *= -1
+
+        if label in ["CRCM5_NEMO"]:
+            label_to_pc[label][:, 1:] *= -1
+            label_to_eof[label][1:, :, :] *= -1
+
+
 
 
 
@@ -126,7 +139,7 @@ def main():
         df.to_csv("{}_{}_pc.csv".format(vname, label))
 
 
-        plt.plot(years_ord, pc[:, 0].copy(), label_to_line_style[label], linewidth=2, label=label)
+        plt.plot(years_ord, label_to_pc[label][:, 0].copy(), label_to_line_style[label], linewidth=2, label=label)
 
     plt.legend(loc="upper left")
 
@@ -152,21 +165,22 @@ def main():
         col = 0
 
         fig = plt.figure()
-        gs = GridSpec(1, len(label_to_eof))
+        gs = GridSpec(1, len(label_to_eof), wspace=0.02)
 
         for label, eof_field in label_to_eof.items():
 
             ax = fig.add_subplot(gs[0, col])
             to_plot = eof_field[eof_ind]
-            im = b.pcolormesh(xx, yy, -to_plot, cmap=cm.get_cmap("bwr", 10), vmin=-0.25, vmax=0.25, ax=ax)
-            plt.colorbar(im, extend="both")
+            im = b.pcolormesh(xx, yy, to_plot, cmap=cm.get_cmap("bwr", 10), vmin=-0.25, vmax=0.25, ax=ax)
+            cb = b.colorbar(im, extend="both")
+            cb.ax.set_visible(col == len(label_to_eof) - 1)
             ax.set_title("{} (explains {:.2f}$\sigma^2$)".format(label, label_to_varfraction[label][eof_ind]))
 
             col += 1
 
             b.drawcoastlines(ax=ax)
 
-        fig.tight_layout()
+        # fig.tight_layout()
         plt.savefig(str(label_to_hles_dir["Obs"].joinpath("eof_raw_{}_{}.png".format(eof_ind + 1, vname))), bbox_inches="tight", dpi=300)
         plt.close(fig)
 

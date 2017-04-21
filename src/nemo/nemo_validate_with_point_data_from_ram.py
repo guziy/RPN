@@ -31,7 +31,7 @@ def plot_flow_speed_profiles_comparisons():
     pass
 
 
-img_dir = Path("nemo/nemo_coupled")
+img_dir = Path("nemo/cc_canesm2_nemo_offline_gathered_corrected_from_guillimin")
 
 def main_plot_all_temp_profiles_in_one_figure(
         folder_path="/home/huziy/skynet3_rech1/nemo_obs_for_validation/data_from_Ram_Yerubandi/T-profiles"):
@@ -61,7 +61,21 @@ def main_plot_all_temp_profiles_in_one_figure(
 
     # nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
     # nemo_manager = NemoYearlyFilesManager(folder="/RESCUE/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_GLK_LIM3_1980/zdf_gls_dt_and_sbc_5min")
-    nemo_manager = NemoYearlyFilesManager(folder="/BIG1/huziy/CRCM5_NEMO_coupled_sim_nemo_outputs/NEMO")
+    # nemo_manager = NemoYearlyFilesManager(folder="/BIG1/huziy/CRCM5_NEMO_coupled_sim_nemo_outputs/NEMO")
+    #nemo_manager = NemoYearlyFilesManager(folder="/HOME/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_CC_drivenby_CRCM5_CanESM2_RCP85/EXP00/cc_canesm2_outputs")
+    # nemo_manager = NemoYearlyFilesManager(
+    #     folder="/RESCUE/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_GLK_LIM3_1980/zdf_gls_dt_and_sbc_30min")
+
+    # nemo_manager = NemoYearlyFilesManager(
+    #     folder="/HOME/huziy/skynet3_rech1/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3/EXP_GLK_LIM3_1980/zdf_gls_dt_and_sbc_30min_1980-2010")
+
+
+    nemo_manager = NemoYearlyFilesManager(
+        folder="/HOME/huziy/skynet3_rech1/NEMO_OFFICIAL/Simulations/cc_canesm2_nemo_offline_gathered_corrected_from_guillimin")
+
+    nemo_manager.get_coords_and_basemap(resolution="i")
+
+
 
     plot_utils.apply_plot_params(font_size=12, width_pt=None, width_cm=35, height_cm=30)
     fig = plt.figure()

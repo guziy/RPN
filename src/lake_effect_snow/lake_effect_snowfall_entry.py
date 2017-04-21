@@ -69,7 +69,7 @@ def calculate_lake_effect_snowfall(label_to_config, period=None):
 
 
 
-@profile
+
 def enh_lakeffect_snfall_calculator_proc(args):
 
     """
@@ -96,7 +96,7 @@ def enh_lakeffect_snfall_calculator_proc(args):
     print("Finish calculations for {} ... {}".format(period.start, period.end))
 
 
-@profile
+
 def calculate_lake_effect_snowfall_each_year_in_parallel(label_to_config, period=None, months_of_interest=None, nprocs_to_use=None):
     """
     :param label_to_config:
@@ -206,7 +206,7 @@ def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
 
 
 
-@profile
+
 def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder: Path=Path(".")):
     months_of_interest = period.months_of_interest
 
@@ -457,7 +457,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
 
 
-@profile
+
 def plot_acc_snowfall_map(data_path :Path=None, label="", period :Period=None, out_folder :Path=None, months_of_interest:list=None):
     # Plot snowfall maps for each year
     """

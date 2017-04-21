@@ -9,6 +9,7 @@ from collections import defaultdict
 from pathlib import Path, PurePath
 
 import matplotlib
+from matplotlib.axes import Axes
 
 from rpn_utils.get_coord_data_from_rpn_file import IndexSubspace
 
@@ -42,10 +43,10 @@ from util import plot_utils
 from util.geo import lat_lon
 
 season_to_months = OrderedDict([
-    ("DJF", [12, 1, 2]),
-    ("MAM", [3, 4, 5]),
-    ("JJA", [6, 7, 8]),
-    ("SON", [9, 10, 11])
+    ("Winter", [12, 1, 2]),
+    ("Spring", [3, 4, 5]),
+    ("Summer", [6, 7, 8]),
+    ("Fall", [9, 10, 11])
 ])
 
 img_folder = Path("nemo_vs_hostetler")
@@ -59,16 +60,16 @@ internal_name_to_title = {
 
 internal_name_to_clevs = {
     T_AIR_2M: np.arange(-30, 30, 2),
-    T_AIR_2M + "bias": np.arange(-4.1, 4.2, 0.5),
-    T_AIR_2M + "biasdiff": np.arange(-1.05, 1.1, 0.1),
+    T_AIR_2M + "bias": np.arange(-4.5, 4.6, 1),
+    T_AIR_2M + "biasdiff": np.arange(-4.5, 4.6, 1), # np.arange(-1.05, 1.1, 0.1),
     TOTAL_PREC: np.arange(0, 8, 0.5),
-    TOTAL_PREC + "bias": np.arange(-3.1, 3.2, 0.5),
-    TOTAL_PREC + "biasdiff": np.arange(-1.1, 1.2, 0.2),
+    TOTAL_PREC + "bias": np.arange(-3.25, 3.26, 0.5),
+    TOTAL_PREC + "biasdiff": np.arange(-3.25, 3.26, 0.5), # np.arange(-1.1, 1.2, 0.2),
     SWE: [0, 0.1, 1, 10, 20, 50, 100, 150, 200, 250, 300, 400],
     SWE + "bias": np.arange(-105, 110, 10),
     SWE + "biasdiff": np.arange(-45, 55, 10),
     LAKE_ICE_FRACTION: np.arange(0, 1.1, 0.1),
-    LAKE_ICE_FRACTION + "bias": np.arange(-1.1, 1.2, 0.2),
+    LAKE_ICE_FRACTION + "bias": np.arange(-1.05, 1.06, 0.1),
     LAKE_ICE_FRACTION + "biasdiff": np.arange(-1.1, 1.1, 0.2),
 }
 
@@ -84,7 +85,7 @@ internal_name_to_multiplier[TOTAL_PREC] = 1000.0 * 24 * 3600 # Convert precip to
 
 
 
-def get_target_lons_lats_basemap(run_config: RunConfig=None, sub_space:IndexSubspace=None):
+def get_target_lons_lats_basemap(run_config: RunConfig=None, sub_space:IndexSubspace=None, **basemap_kwargs):
 
     base_dir = Path(run_config.data_path)
 
@@ -109,11 +110,11 @@ def get_target_lons_lats_basemap(run_config: RunConfig=None, sub_space:IndexSubs
                     rll = RotatedLatLon(**r.get_proj_parameters_for_the_last_read_rec())
 
                     if sub_space is None:
-                        basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons, lats2d=lats, resolution="i")
+                        basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons, lats2d=lats, **basemap_kwargs)
                     else:
                         lons_sel = lons[sub_space.get_islice(), sub_space.get_jslice()]
                         lats_sel = lats[sub_space.get_islice(), sub_space.get_jslice()]
-                        basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons_sel, lats2d=lats_sel, resolution="i")
+                        basemap = rll.get_basemap_object_for_lons_lats(lons2d=lons_sel, lats2d=lats_sel, **basemap_kwargs)
 
                     return lons, lats, basemap
 
@@ -132,7 +133,7 @@ def main():
     obs_data_path = Path("/RESCUE/skynet3_rech1/huziy/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/anusplin+_interpolated_tt_pr.nc")
 
     start_year = 1980
-    end_year = 1981
+    end_year = 2010
 
     HL_LABEL = "CRCM5_HL"
     NEMO_LABEL = "CRCM5_NEMO"
@@ -141,9 +142,10 @@ def main():
     p_crit = 0.1
 
     vars_of_interest = [
-        T_AIR_2M, TOTAL_PREC,
-        SWE,
- #       LAKE_ICE_FRACTION
+ #       T_AIR_2M,
+ #       TOTAL_PREC,
+ #       SWE,
+        LAKE_ICE_FRACTION
     ]
 
     coastline_width = 0.3
@@ -154,13 +156,13 @@ def main():
                           ("December", [12]),
                           ("January", [1,])]),
         LAKE_ICE_FRACTION: OrderedDict([
-                          ("December", [12]),
-                          ("January", [1,]),
-                          ("February", [2,]),
-                          ("March", [3,]),
-                          ("April", [4, ])]),
+                         ("February", [2,]),
+                          ("March", [3, ]),]),
         T_AIR_2M: season_to_months,
-        TOTAL_PREC: season_to_months
+        TOTAL_PREC:  OrderedDict([
+            ("Winter", [12, 1, 2]),
+            ("Summer", [6, 7, 8]),
+        ])
     }
 
     sim_configs = {
@@ -200,9 +202,9 @@ def main():
 
     # get a subdomain of the simulation domain
     nx, ny = lons_t.shape
-    iss = IndexSubspace(i_start=0, j_start=0, i_end=nx // 1.5, j_end=ny/1.4)
+    iss = IndexSubspace(i_start=20, j_start=20, i_end=nx // 2, j_end=ny/2)
     # just to change basemap limits
-    lons_t, lats_t, bsmap = get_target_lons_lats_basemap(sim_configs[HL_LABEL], sub_space=iss)
+    lons_t, lats_t, bsmap = get_target_lons_lats_basemap(sim_configs[HL_LABEL], sub_space=iss, resolution="i", area_thresh=2000)
 
 
     xt, yt, zt = lat_lon.lon_lat_to_cartesian(lons_t.flatten(), lats_t.flatten())
@@ -349,29 +351,30 @@ def main():
     lons_t[lons_t > 180] -= 360
 
 
+    draw_only_first_sim_biases = True
     for vname in vars_of_interest:
 
         field_mask = maskoceans(lons_t, lats_t, np.zeros_like(lons_t), inlands=vname in [SWE]).mask
         field_mask_lakes = maskoceans(lons_t, lats_t, np.zeros_like(lons_t), inlands=True).mask
 
-        plot_utils.apply_plot_params(width_cm=11 * len(vname_to_seasonmonths_map[vname]), height_cm=20, font_size=8)
+        nrows = len(sim_configs) + 2 - 1 * int(draw_only_first_sim_biases)
+        ncols = len(vname_to_seasonmonths_map[vname])
 
+        plot_utils.apply_plot_params(width_cm=8 * len(vname_to_seasonmonths_map[vname]), height_cm=4.5 * nrows, font_size=8)
         fig = plt.figure()
 
 
 
-        nrows = len(sim_configs) + 2
-        ncols = len(vname_to_seasonmonths_map[vname])
-        gs = GridSpec(nrows=nrows, ncols=ncols)
+        gs = GridSpec(nrows=nrows, ncols=ncols, hspace=0.2, wspace=0.02)
 
-
+        extend = "both" if vname not in [LAKE_ICE_FRACTION] else "neither"
 
         # Plot the obs fields
         current_row = 0
         for col, season in enumerate(vname_to_seasonmonths_map[vname]):
             field = obs_data[vname][season]
             ax = fig.add_subplot(gs[current_row, col])
-            ax.set_title(season)
+            # ax.set_title(season)
 
 
             the_mask = field_mask_lakes if vname in [T_AIR_2M, TOTAL_PREC, SWE] else field_mask
@@ -385,9 +388,13 @@ def main():
                 cmap = "viridis"
                 bnorm = None
 
-            cs = bsmap.contourf(xx, yy, to_plot, ax=ax, levels=get_clevs(vname), norm=bnorm, cmap=cmap)
+            cs = bsmap.contourf(xx, yy, to_plot, ax=ax, levels=clevs, norm=bnorm, cmap=cmap)
             bsmap.drawcoastlines(linewidth=coastline_width)
-            bsmap.colorbar(cs, ax=ax)
+            cb = bsmap.colorbar(cs, ax=ax, location="bottom")
+
+            ax.set_frame_on(vname not in [LAKE_ICE_FRACTION, ])
+
+            cb.ax.set_visible(col == 0)
 
             if col == 0:
                 ax.set_ylabel("Obs")
@@ -434,12 +441,20 @@ def main():
 
 
                 # temporary plot the actual values
-                cs = bsmap.contourf(xx, yy, to_plot, ax=ax, extend="both", levels=get_clevs(vname + "bias"), cmap=cmap, norm=bnorm)
+
+                cs = bsmap.contourf(xx, yy, to_plot, ax=ax, extend=extend, levels=get_clevs(vname + "bias"), cmap=cmap, norm=bnorm)
                 bsmap.drawcoastlines(linewidth=coastline_width)
-                bsmap.colorbar(cs, ax=ax)
+                cb = bsmap.colorbar(cs, ax=ax, location="bottom")
+
+                ax.set_frame_on(vname not in [LAKE_ICE_FRACTION, ])
+                cb.ax.set_visible(False)
 
                 if col == 0:
                     ax.set_ylabel("{}\n-\nObs.".format(sim_label))
+
+            # draw biases only for the first simulation
+            if draw_only_first_sim_biases:
+                break
 
 
         # plot differences between the biases
@@ -450,7 +465,7 @@ def main():
 
             ax = fig.add_subplot(gs[current_row, col])
 
-            clevs = get_clevs(vname + "biasdiff")
+            clevs = get_clevs(vname + "bias")
             if clevs is not None:
                 bnorm = BoundaryNorm(clevs, len(clevs) - 1)
                 cmap = cm.get_cmap("bwr", len(clevs) - 1)
@@ -489,15 +504,22 @@ def main():
             # print("land fractions for large differences ", land_fraction[to_plot > 30])
 
 
-            cs = bsmap.contourf(xx, yy, to_plot, ax=ax, extend="both", levels=get_clevs(vname + "biasdiff"), cmap=cmap, norm=bnorm)
+            cs = bsmap.contourf(xx, yy, to_plot, ax=ax, extend=extend, levels=clevs, cmap=cmap, norm=bnorm)
             bsmap.drawcoastlines(linewidth=coastline_width)
-            bsmap.colorbar(cs, ax=ax)
+            cb = bsmap.colorbar(cs, ax=ax, location="bottom")
+
+            ax.text(0.99, 1.1, season, va="top", ha="right", fontsize=16, transform=ax.transAxes)
+
+            cb.ax.set_visible(col == 0)
+
+            assert isinstance(ax, Axes)
+            ax.set_frame_on(False)
 
             if col == 0:
                 ax.set_ylabel("{}\n-\n{}".format(NEMO_LABEL, HL_LABEL))
 
 
-        fig.tight_layout()
+        # fig.tight_layout()
 
         # save a figure per variable
         img_file = "seasonal_biases_{}_{}_{}-{}.png".format(vname,
@@ -505,7 +527,7 @@ def main():
                                                             start_year, end_year)
         img_file = img_folder.joinpath(img_file)
 
-        fig.savefig(str(img_file), dpi=300)
+        fig.savefig(str(img_file), dpi=300, bbox_inches="tight")
 
         plt.close(fig)
 

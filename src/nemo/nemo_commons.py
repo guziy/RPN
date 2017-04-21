@@ -1,4 +1,4 @@
-from netCDF4 import Dataset
+from netCDF4 import Dataset, OrderedDict
 from matplotlib import cm
 from mpl_toolkits.basemap import Basemap
 from domains.rotated_lat_lon import RotatedLatLon
@@ -30,6 +30,16 @@ lake_to_folder_with_sim_data_1981_2000_seplakes_exp = {
 
 
 }
+
+
+
+season_to_months_default = OrderedDict([
+    ("Winter", [12, 1, 2]),
+    ("Spring", [3,  4, 5]),
+    ("Summer", [6,  7, 8]),
+    ("Fall",   [9, 10, 11]),
+])
+
 
 
 
@@ -114,3 +124,16 @@ def get_2d_lons_lats_from_nemo(path):
 
     CACHE_COORDINATES[path] = (lons, lats)
     return lons, lats
+
+
+
+shape_file_path_for_lakes = {
+    "great_lakes": "data/shp/Great_lakes_coast_shape/gl_cst.shp",
+    "superior": "data/shp/Superior/superior.shp",
+    "erie": "data/shp/Erie/erie.shp",
+    "huron": "data/shp/Huron/huron.shp",
+    "ontario": "data/shp/Ontario/ontario.shp",
+    "michigan": "data/shp/Michigan/michigan.shp"
+}
+
+

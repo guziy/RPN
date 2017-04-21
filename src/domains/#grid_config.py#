@@ -1,0 +1,659 @@
+from mpl_toolkits.basemap import Basemap
+from pathlib import Path
+
+from application_properties import main_decorator
+from domains.rotated_lat_lon import RotatedLatLon
+from util.geo.mask_from_shp import get_mask
+
+__author__ = 'huziy'
+
+import numpy as np
+
+
+def gridconfig_from_grid_nml(nml_str):
+    """
+    Parse the copy-pasted string nml_str and construct the gridconfig object
+    :param nml_str:
+    """
+
+    import re
+
+    nml_str = nml_str.lower()
+
+    gc = GridConfig()
+
+
+    def get_val_of(par_name, parser_func=float):
+        return parser_func(re.search("grd_{}".format(par_name) + "\s*=\s*(-?\s*\d*\.?\d*)", nml_str).group(1))
+
+
+    gc.dx = get_val_of("dx")
+    gc.dy = get_val_of("dy")
+    gc.ni = get_val_of("ni", int)
+    gc.nj = get_val_of("nj", int)
+    gc.iref = get_val_of("iref", int)
+    gc.jref = get_val_of("jref", int)
+
+    gc.xref = get_val_of("lonr")
+    gc.yref = get_val_of("latr")
+
+
+    parnames = ["xlat1", "xlat2", "xlon1", "xlon2"]
+    pardict = {pn[1:]: get_val_of(pn) for pn in parnames}
+    gc.rll = RotatedLatLon(**pardict)
+    return gc
+
+
+class GridConfig(object):
+    projection = "rotpole"
+
+    def __init__(self, **kwargs):
+        self.dx = self.dy = kwargs.get("dx", -1)
+        self.iref, self.jref = kwargs.get("iref", -1), kwargs.get("jref", -1)
+
+        self.xref, self.yref = kwargs.get("xref", -1), kwargs.get("yref", -1)
+        self.ni, self.nj = kwargs.get("ni", -1), kwargs.get("nj", -1)
+
+        # interpolated driving data (width of the outer band in number of gridpoints)
+        self.halo = 10
+
+        # size of the blending zone in grid points
+        self.blendig = 10
+
+
+        self.rll = None
+        if "rll" not in kwargs:
+            self.lon1, self.lat1 = kwargs.get("lon1", None), kwargs.get("lat1", None)
+            self.lon2, self.lat2 = kwargs.get("lon2", None), kwargs.get("lat2", None)
+            if None not in (self.lon1, self.lon2, self.lat1, self.lat2):
+                self.rll = RotatedLatLon(lon1=self.lon1, lon2=self.lon2, lat1=self.lat1, lat2=self.lat2)
+        else:
+            self.rll = kwargs.get("rll")
+
+    @classmethod
+    def get_default_for_resolution(cls, res=0.5):
+        """
+        :param res:
+        :rtype GridConfig
+        """
+        obj = GridConfig()
+        obj.dx = obj.dy = res
+        if res == 0.5:
+            obj.iref = 46  # starts from 1 not 0!!
+            obj.jref = 42  # starts from 1 not 0!!
+            obj.ni = 86
+            obj.nj = 86
+        elif res == 0.1:
+            obj.iref = 142  # no need to do -1, doing it later in the formulas
+            obj.jref = 122
+            obj.xref = 180  # rotated longitude
+            obj.yref = 0  # rotated latitude
+
+            # projection parameters
+            obj.lon1 = -68.0
+            obj.lat1 = 52.0
+
+            obj.lon2 = 16.65
+            obj.lat2 = 0.0
+
+            obj.ni = 260
+            obj.nj = 260
+
+        return obj
+
+
+
+    def export_to_shape(self, shp_folder="", shp_filename="", free_zone_only=True,
+                        export_mask=None, shape_fields=None):
+        """
+        export the grid to the shape file
+        :param export_mask: Mask to specify exactly which gridcells should be exported
+        :param free_zone_only:
+        :param shp_folder:
+        :param shp_filename:
+        """
+
+        import shapefile as shp
+
+
+        w = shp.Writer(shp.POLYGON)
+        w.field("i", fieldType="I")
+        w.field("j", fieldType="I")
+
+        if shape_fields is not None:
+
+            for field_name, field in shape_fields.items():
+                w.field(field_name, *field.type_of_shp_field)
+
+
+        if isinstance(shp_folder, str):
+            folder = Path(shp_folder)
+        else:
+            folder = shp_folder
+
+        # create the directory if does not exist
+        if not folder.is_dir():
+            folder.mkdir()
+
+        lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
+        latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
+
+
+        margin = 0
+        if free_zone_only:
+            margin = self.blendig + self.halo
+
+        start_i = margin
+        start_j = margin
+
+        end_i = self.ni - margin - 1
+        end_j = self.nj - margin - 1
+
+
+        if export_mask is None:
+            export_mask = np.ones((self.ni, self.nj), dtype=bool)
+
+        for i in range(start_i, end_i + 1):
+            x = lonr[i]
+
+            for j in range(start_j, end_j + 1):
+                y = latr[j]
+
+                if not export_mask[i, j]:
+                    continue
+
+                p00 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y - self.dy / 2.0)
+                p01 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y + self.dy / 2.0)
+                p11 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y + self.dy / 2.0)
+                p10 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y - self.dy / 2.0)
+
+
+                w.poly(parts=[
+                    [p00, p01, p11, p10]
+                ])
+
+                if shape_fields is None:
+                    w.record(i + 1, j + 1)
+                else:
+                    record_fields = {}
+                    record_fields["i"] = i + 1
+                    record_fields["j"] = j + 1
+                    for field_name, field in shape_fields.items():
+                        record_fields[field_namecode()] = field[i, j]
+
+                    w.record(**record_fields)
+
+        # w.poly(parts=[[[-20, -20], [-20, 20], [20, 20], [20, -20]],])
+        # w.record(1, 1)
+
+        w.save(str(folder.joinpath(shp_filename)))
+
+    def export_to_shape_ogr(self, shp_folder="", shp_filename="", free_zone_only=True):
+        """
+        export the grid to the shape file
+        :param free_zone_only:
+        :param shp_folder:
+        :param shp_filename:
+        """
+
+        from osgeo import ogr, osr
+
+
+        folder = Path(shp_folder)
+
+        # create the directory if does not exist
+        if not folder.is_dir():
+            folder.mkdir()
+
+        # set up the shapefile driver
+        driver = ogr.GetDriverByName("ESRI Shapefile")
+
+        if not shp_filename.lower().endswith(".shp"):
+            shp_filename += ".shp"
+
+        # create the data source
+        data_source = driver.CreateDataSource(str(folder.joinpath(shp_filename)))
+
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(osr.SRS_WKT_WGS84)
+        print(srs)
+        print(srs.ExportToPrettyWkt())
+
+        # create the layer
+        layer = data_source.CreateLayer("grid", srs, ogr.wkbPolygon)
+        layer.CreateField(ogr.FieldDefn("i", ogr.OFTInteger))
+        layer.CreateField(ogr.FieldDefn("j", ogr.OFTInteger))
+
+
+        lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
+        latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
+
+        margin = 0
+        if free_zone_only:
+            margin = self.blendig + self.halo
+
+        start_i = margin
+        start_j = margin
+
+        end_i = self.ni - margin - 1
+        end_j = self.nj - margin - 1
+
+        for i in range(start_i, end_i + 1):
+            x = lonr[i]
+
+            for j in range(start_j, end_j + 1):
+                y = latr[j]
+
+                # create the feature
+                feature = ogr.Feature(layer.GetLayerDefn())
+
+
+                p00 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y - self.dy / 2.0)
+                p01 = self.rll.toGeographicLonLat(x - self.dx / 2.0, y + self.dy / 2.0)
+                p11 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y + self.dy / 2.0)
+                p10 = self.rll.toGeographicLonLat(x + self.dx / 2.0, y - self.dy / 2.0)
+
+                ring = ogr.Geometry(ogr.wkbLinearRing)
+                ring.AddPoint(*p00)
+                ring.AddPoint(*p01)
+                ring.AddPoint(*p11)
+                ring.AddPoint(*p10)
+
+                poly = ogr.Geometry(ogr.wkbPolygon)
+                poly.AddGeometry(ring)
+
+                feature.SetField("i", i + 1)
+                feature.SetField("j", j + 1)
+
+                feature.SetGeometry(poly)
+
+
+                layer.CreateFeature(feature)
+                feature.Destroy()
+
+        # w.poly(parts=[[[-20, -20], [-20, 20], [20, 20], [20, -20]],])
+        # w.record(1, 1)
+
+        data_source.Destroy()
+
+    def export_to_shape_native_grid(self, shp_folder="", shp_filename="", free_zone_only=True):
+        """
+        export the grid to the shape file
+        :param free_zone_only:
+        :param shp_folder:
+        :param shp_filename:
+        """
+
+        from osgeo import ogr, osr
+
+
+        folder = Path(shp_folder)
+
+        # create the directory if does not exist
+        if not folder.is_dir():
+            folder.mkdir()
+
+        # set up the shapefile driver
+        driver = ogr.GetDriverByName("ESRI Shapefile")
+
+        if not shp_filename.lower().endswith(".shp"):
+            shp_filename += ".shp"
+
+        # create the data source
+        data_source = driver.CreateDataSource(str(folder.joinpath(shp_filename)))
+
+
+        # Projection
+        srs = osr.SpatialReference()
+
+
+        bmp = self.get_basemap_for_free_zone()  
+        srs.ImportFromProj4(bmp.proj4string)
+        print(srs)
+        print(srs.ExportToPrettyWkt())
+
+
+
+        # create the layer
+        layer = data_source.CreateLayer("grid", srs, ogr.wkbPolygon)
+        layer.CreateField(ogr.FieldDefn("i", ogr.OFTInteger))
+        layer.CreateField(ogr.FieldDefn("j", ogr.OFTInteger))
+
+
+        lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in range(self.ni)]
+        latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in range(self.nj)]
+
+        margin = 0
+        if free_zone_only:
+            margin = self.blendig + self.halo
+
+        start_i = margin
+        start_j = margin
+
+        end_i = self.ni - margin - 1
+        end_j = self.nj - margin - 1
+
+        for i in range(start_i, end_i + 1):
+            x = lonr[i]
+
+            for j in range(start_j, end_j + 1):
+                y = latr[j]
+
+                # create the feature
+                feature = ogr.Feature(layer.GetLayerDefn())
+
+
+                p00 = (x - self.dx / 2.0, y - self.dy / 2.0)
+                p01 = (x - self.dx / 2.0, y + self.dy / 2.0)
+                p11 = (x + self.dx / 2.0, y + self.dy / 2.0)
+                p10 = (x + self.dx / 2.0, y - self.dy / 2.0)
+
+                ring = ogr.Geometry(ogr.wkbLinearRing)
+                ring.AddPoint(*p00)
+                ring.AddPoint(*p01)
+                ring.AddPoint(*p11)
+                ring.AddPoint(*p10)
+
+                poly = ogr.Geometry(ogr.wkbPolygon)
+                poly.AddGeometry(ring)
+
+                feature.SetField("i", i + 1)
+                feature.SetField("j", j + 1)
+
+                feature.SetGeometry(poly)
+
+
+                layer.CreateFeature(feature)
+                feature.Destroy()
+
+        # w.poly(parts=[[[-20, -20], [-20, 20], [20, 20], [20, -20]],])
+        # w.record(1, 1)
+
+        data_source.Destroy()
+
+
+    def get_basemap_for_free_zone(self, halo=None, blending=None, **kwargs):
+        if halo is None:
+            halo = self.halo
+
+        if blending is None:
+            blending = self.blendig
+
+        lons_c, lats_c = self.get_free_zone_corners(halo=halo, blending=blending)
+        return self.get_basemap(lons=lons_c, lats=lats_c, **kwargs)
+
+
+    def get_basemap_using_shape_with_polygons_of_interest(self, lons, lats, shp_path=None, mask_margin=5, **kwargs):
+
+        if shp_path is None:
+            return self.get_basemap(lons=lons, lats=lats, **kwargs)
+
+        reg_of_interest = get_mask(lons, lats, shp_path=shp_path) > 0
+
+        i_list, j_list = np.where(reg_of_interest)
+
+        i_min = min(i_list) - mask_margin
+        i_max = max(i_list) + mask_margin
+
+        j_min = min(j_list) - mask_margin
+        j_max = max(j_list) + mask_margin
+
+        bsmap = self.get_basemap(lons=lons[i_min:i_max + 1, j_min:j_max + 1], lats=lats[i_min:i_max + 1, j_min:j_max + 1])
+        return bsmap, reg_of_interest
+
+
+
+    def get_basemap(self, lons=None, lats=None, **kwargs):
+
+        if lons is None:
+
+            lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in [0, self.ni - 1]]
+            latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in [0, self.nj - 1]]
+
+            latr, lonr = np.meshgrid(latr, lonr)
+
+            lons = np.zeros((2, 2))
+            lats = np.zeros((2, 2))
+
+            for i in [-1, 0]:
+                for j in [-1, 0]:
+                    shiftx = self.dx / 2.0
+                    shifty = self.dy / 2.0
+
+                    shiftx = -shiftx if i == 0 else shiftx
+                    shifty = -shifty if i == 0 else shifty
+
+
+                    lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonr[i, j] + shiftx, latr[i, j] + shifty)
+
+        return self.get_rot_latlon_proj_obj().get_basemap_object_for_lons_lats(lons2d=lons,
+                                                                               lats2d=lats,
+                                                                               **kwargs)
+
+
+
+    def get_corners_in_proj_coords(self):
+
+        """
+        :return: xxcorners, yycorners
+
+             xxcorners = [[xll, xur], [xll, xur]]
+             yycorners = [[yll, yll], [yur, yur]]
+
+        """
+
+        lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in [0, self.ni - 1]]
+        latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in [0, self.nj - 1]]
+        latr, lonr = np.meshgrid(latr, lonr)
+
+        return lonr, latr
+
+
+
+
+
+    def get_free_zone_corners(self, halo=10, blending=10):
+
+        margin = halo + blending
+        lonr = [(i - (self.iref - 1)) * self.dx + self.xref for i in [margin, self.ni - margin - 1]]
+        latr = [(j - (self.jref - 1)) * self.dy + self.yref for j in [margin, self.nj - margin - 1]]
+
+        latr, lonr = np.meshgrid(latr, lonr)
+
+        lons = np.zeros((2, 2))
+        lats = np.zeros((2, 2))
+
+
+
+        for i in [-1, 0]:
+            mulx = -1 if i >= 0 else 1
+            shiftx = mulx * self.dx / 2.0
+
+            for j in [-1, 0]:
+                muly = -1 if j >= 0 else 1
+                shifty = muly * self.dy / 2.0
+
+
+                lons[i, j], lats[i, j] = self.rll.toGeographicLonLat(lonr[i, j] + shiftx, latr[i, j] + shifty)
+
+        return lons, lats
+
+
+
+
+    def get_rot_latlon_proj_obj(self):
+        return self.rll
+
+
+
+    def subgrid(self, i0, j0, di=-1, dj=-1):
+
+        """
+
+        :param i0: 0-based i-index of the lower left corner of the domain
+        :param j0:
+        :param di: number of grid points in i direction
+        :param dj: number of grid points in j direction
+        """
+
+
+        subgr = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref)
+
+        if di > 0:
+            subgr.ni = di
+        else:
+            subgr.ni = self.ni - i0
+
+        if dj > 0:
+            subgr.nj = dj
+        else:
+            subgr.nj = self.nj - j0
+
+
+        subgr.iref = self.iref - i0
+        subgr.jref = self.jref - j0
+
+        return subgr
+
+
+
+    def copy(self):
+        return self.subgrid(0, 0, di=self.ni, dj=self.nj)
+
+
+
+    def double_resolution(self):
+        gc = GridConfig(rll=self.rll, dx=self.dx / 2.0, dy=self.dy / 2.0, xref=self.xref, yref=self.yref)
+        gc.ni = 2 * self.ni
+        gc.nj = 2 * self.nj
+
+        gc.iref = 2 * self.iref
+        gc.jref = 2 * self.jref
+
+        gc.xref -= gc.dx / 2.0
+        gc.yref -= gc.dy / 2.0
+
+        return gc
+
+    def double_resolution_keep_free_domain_same(self, halo_pts=10, blending_pts=10):
+        gc = GridConfig(rll=self.rll, dx=self.dx / 2.0, dy=self.dy / 2.0, xref=self.xref, yref=self.yref)
+        margin_pts = halo_pts + blending_pts
+        gc.ni = 2 * (self.ni - 2 * margin_pts) + 2 * margin_pts
+        gc.nj = 2 * (self.nj - 2 * margin_pts) + 2 * margin_pts
+
+        gc.iref = 2 * (self.iref - margin_pts) + margin_pts
+        gc.jref = 2 * (self.jref - margin_pts) + margin_pts
+
+        gc.xref -= gc.dx / 2.0
+        gc.yref -= gc.dy / 2.0
+
+        return gc
+
+    def decrease_resolution_keep_free_domain_same(self, factor, halo_pts=10, blending_pts=10):
+        gc = GridConfig(rll=self.rll, dx=self.dx * factor, dy=self.dy * factor, xref=self.xref, yref=self.yref)
+        margin_pts = halo_pts + blending_pts
+        gc.ni = (self.ni - 2 * margin_pts) / factor + 2 * margin_pts
+        gc.nj = (self.nj - 2 * margin_pts) / factor + 2 * margin_pts
+
+
+        # Change the reference point if the new iref and jref cannot be the same
+
+        new_iref = self.iref - margin_pts
+        new_jref = self.jref - margin_pts
+
+
+        new_iref = new_iref // factor + (new_iref % factor != 0)
+        x00 = self.xref + self.dx * (margin_pts + 1 - self.iref) - self.dx / 2.0
+        new_xref = x00 + new_iref * self.dx * factor - self.dx * factor / 2.0
+
+        new_jref = new_jref // factor + (new_jref % factor != 0)
+        y00 = self.yref + self.dy * (margin_pts + 1 - self.jref) - self.dy / 2.0
+        new_yref = y00 + new_jref * self.dy * factor - self.dy * factor / 2.0
+
+
+        gc.iref = new_iref + margin_pts
+        gc.jref = new_jref + margin_pts
+
+        gc.xref = new_xref
+        gc.yref = new_yref
+
+
+        gc.ni = int(gc.ni)
+        gc.nj = int(gc.nj)
+
+
+        return gc
+
+    def move(self, di=0, dj=0):
+        gc = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref, ni=self.ni, nj=self.nj)
+        gc.iref -= di
+        gc.jref -= dj
+        return gc
+
+    def expand(self, di=0, dj=0):
+        gc = GridConfig(rll=self.rll, dx=self.dx, dy=self.dy, xref=self.xref, yref=self.yref, ni=self.ni + di, nj=self.nj + dj)
+        gc.iref = self.iref
+        gc.jref = self.jref
+        return gc
+
+
+
+    def __str__(self):
+        s = """
+              Grd_ni        =  {ni}     , Grd_nj         =    {nj}     ,
+              Grd_dx        =  {dx}     , Grd_dy         =    {dy},
+              Grd_iref      =  {iref}     ,  Grd_jref       =   {jref}     ,
+              Grd_latr      =    {latref}   ,  Grd_lonr       =  {lonref}   ,
+              Grd_xlat1     =   {lat1}   ,  Grd_xlon1       = {lon1}    ,
+              Grd_xlat2     =    {lat2}    ,  Grd_xlon2       =  {lon2}    ,
+        """.format(ni=self.ni, nj=self.nj, dx=self.dx, dy=self.dy, iref=self.iref, jref=self.jref,
+                   latref=self.yref, lonref=self.xref, lat1=self.rll.lat1, lon1=self.rll.lon1,
+                   lat2=self.rll.lat2, lon2=self.rll.lon2)
+
+        return s
+
+
+def get_rotpole_for_na_glaciers():
+    """
+    Glacier grid
+      Grd_typ_S     = 'LU'     ,
+      Grd_ni        =  196     ,  Grd_nj          =  140     ,
+      Grd_dx        =    0.1375,  Grd_dy          =    0.1375,
+      Grd_iref      =  106     ,  Grd_jref        =   70     ,
+      Grd_latr      =    0.0   ,  Grd_lonr        =  180.0   ,
+      Grd_xlat1     =   57.5   ,  Grd_xlon1       = -130.    ,
+      Grd_xlat2     =    0.    ,  Grd_xlon2       =  -40.    ,
+    :return:
+    """
+    params = dict(
+        lon1=-130, lat1=57.5,
+        lon2=-40.0, lat2=0.0
+    )
+    return RotatedLatLon(**params)
+
+
+@main_decorator
+def main():
+    GridConfig.get_default_for_resolution(0.1)
+
+    gc = gridconfig_from_grid_nml(
+        """
+        Grd_dx        =   0.5  ,  Grd_dy          = 0.5,
+        Grd_ni        = 212    ,  Grd_nj          = 200,
+        Grd_iref      =  35    ,  Grd_jref        =  48,
+        Grd_lonr      = 144.00 ,  Grd_latr        = -28.25,
+        Grd_xlat1     =  90.   ,  Grd_xlon1       =  60.,
+        Grd_xlat2     =   0.   ,  Grd_xlon2       = -30.,
+        """
+    )
+
+    gc.export_to_shape("data/shape/test_gc_export", shp_filename="test")
+
+    print(gc)
+
+
+
+if __name__ == "__main__":
+    main()
+    print("Hello world")
+  

@@ -15,12 +15,13 @@ def main():
         ("Mar", [3, ]),
         ("Apr", [4, ])])
 
-    start_year = 2003
-    end_year = 2012
+    start_year = 1995
+    end_year = 2010
 
 
-    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
+    # nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
     # nemo_manager = NemoYearlyFilesManager(folder="/Users/san/NEMO/outputs")
+    nemo_manager = NemoYearlyFilesManager(folder="/home/huziy/skynet3_rech1/offline_glk_output_daily_1979-2012")
 
     # glerl_manager = GLERLIceCoverManager(data_folder="/Users/san/NEMO/validation/glerl_ice_data")
     glerl_manager = GLERLIceCoverManager()

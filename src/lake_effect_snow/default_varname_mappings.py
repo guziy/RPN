@@ -10,6 +10,7 @@ SENSIBLE_HF = "sensible_heat_flux"
 LATENT_HF = "latent_heat_flux"
 LWRAD_DOWN = "longwave_rad_down"
 SWRAD_DOWN = "shortwave_rad_down"
+LAKE_WATER_TEMP = "lake_water_temp"
 
 
 U_WE = "u_we"
@@ -31,7 +32,8 @@ vname_map_CRCM5 = {
     SENSIBLE_HF: "FC",
     LATENT_HF: "FV",
     LWRAD_DOWN: "AD",
-    SWRAD_DOWN: "N4"
+    SWRAD_DOWN: "N4",
+    LAKE_WATER_TEMP: "L1"
 
 }
 
