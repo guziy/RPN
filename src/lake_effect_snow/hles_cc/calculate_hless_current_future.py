@@ -46,7 +46,7 @@ def main_current():
 
 
 
-    pool = Pool(processes=10)
+    pool = Pool(processes=20)
 
     input_params = []
     for month_start in period.range("months"):
