@@ -64,6 +64,8 @@ vname_to_offset_CRCM5 = defaultdict(get_default_offset)
 # variable name to the prefix of a file mapping
 vname_to_fname_prefix_CRCM5 = defaultdict(get_default_file_prefix)
 vname_to_fname_prefix_CRCM5[SNOWFALL_RATE] = "pm"
+vname_to_fname_prefix_CRCM5[TOTAL_PREC] = "pm"
+vname_to_fname_prefix_CRCM5[T_AIR_2M] = "dm"
 
 
 vname_map_netcdf = {
