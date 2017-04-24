@@ -177,7 +177,13 @@ class DataManager(object):
 
         elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
 
+
+            assert varname_internal in self.varname_to_file_prefix, "Could not find {} in {}".format(
+                varname_internal, self.varname_to_file_prefix
+            )
+
             filename_prefix = self.varname_to_file_prefix[varname_internal]
+
             for month_start in period.range("months"):
 
                 year, m = month_start.year, month_start.month
