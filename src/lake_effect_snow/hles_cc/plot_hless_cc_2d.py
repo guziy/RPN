@@ -1,5 +1,7 @@
 
 import matplotlib
+from matplotlib.colors import BoundaryNorm
+
 matplotlib.use("Agg")
 
 
@@ -93,7 +95,7 @@ def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: i
                 print(ym_to_path[cy, cm], ds.variables[varname][:].shape)
                 y_to_fields[y].append(ds.variables[varname][:].squeeze())
 
-        y_to_fields[y] = np.ma.mean(y_to_fields[y], axis=0)
+        y_to_fields[y] = np.ma.sum(y_to_fields[y], axis=0)
 
     print(y_to_fields)
 
@@ -131,9 +133,14 @@ def main():
     mycolors = ["white", "indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
                                                      "orange", "orangered", "red", "firebrick", ]
 
+    clevs_lkeff_snowfalldays_diff = np.arange(-4, 4.4, 0.4)
+
+
+
 
 
     clevs = clevs_lkeff_snowfalldays
+    clevs_diff = clevs_lkeff_snowfalldays_diff
     vname = "lkeff_snowfall_days"
     units = "days"
 
@@ -189,6 +196,8 @@ def main():
     cmap, bn = colors.from_levels_and_colors(clevs, mycolors[:len(clevs) - 1])
     cmap.set_over(mycolors[len(clevs) - 2])
 
+    cmap_diff = cm.get_cmap("bwr", len(clevs_diff) - 1)
+    bn_diff = BoundaryNorm(clevs_diff, len(clevs_diff) - 1)
 
 
 
@@ -231,9 +240,9 @@ def main():
     # plot the cc
     ax = fig.add_subplot(gs[0, -1])
     the_mean = label_to_data[label_future][0] - label_to_data[label_current][0]
-    im = b.pcolormesh(xx, yy, the_mean, cmap=cmap, norm=bn, ax=ax)
+
+    im = b.pcolormesh(xx, yy, the_mean, cmap=cmap_diff, norm=bn_diff, ax=ax)
     cb = b.colorbar(im, extend="max")
-    cb.ax.set_visible(False)
     ax.set_title("F - C")
     b.drawcoastlines(ax=ax)
 
