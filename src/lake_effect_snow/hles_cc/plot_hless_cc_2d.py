@@ -133,7 +133,7 @@ def main():
     mycolors = ["white", "indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
                                                      "orange", "orangered", "red", "firebrick", ]
 
-    clevs_lkeff_snowfalldays_diff = np.arange(-4.2, 4.2, 0.4)
+    clevs_lkeff_snowfalldays_diff = np.arange(-4.5, 4.6, 1)
 
 
 
@@ -242,7 +242,7 @@ def main():
     the_mean = label_to_data[label_future][0] - label_to_data[label_current][0]
 
     im = b.pcolormesh(xx, yy, the_mean, cmap=cmap_diff, norm=bn_diff, ax=ax)
-    cb = b.colorbar(im, extend="max", location="bottom")
+    cb = b.colorbar(im, extend="both", location="bottom")
     ax.set_title("F - C")
     b.drawcoastlines(ax=ax)
 
