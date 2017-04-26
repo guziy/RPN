@@ -93,6 +93,8 @@ def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: i
                 print(ym_to_path[cy, cm], ds.variables[varname][:].shape)
                 y_to_fields[y].append(ds.variables[varname][:].squeeze())
 
+        y_to_fields[y] = np.ma.mean([field for field in y_to_fields.values()], axis=0)
+
     print(y_to_fields)
 
     fields3d = np.ma.array([field for field in y_to_fields.values()])
