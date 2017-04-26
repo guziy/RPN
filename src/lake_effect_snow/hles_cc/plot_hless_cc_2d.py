@@ -91,6 +91,7 @@ def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: i
             cm = month % 13 + int(month > 12)
 
             with Dataset(ym_to_path[cy, cm]) as ds:
+                print(ym_to_path[cy, cm], ds.variables[varname][:].shape)
                 y_to_fields[y].append(ds.variables[varname][:])
 
     fields3d = np.array([field for field in year_to_fields.values()])
@@ -203,12 +204,10 @@ def main():
 
     plot_utils.apply_plot_params(font_size=10, width_cm=30, height_cm=8)
 
-
     xx, yy = b(lons, lats)
 
     fig = plt.figure()
     gs = GridSpec(1, len(label_to_hles_dir) + 1, wspace=0)
-
 
     for col, label in enumerate(label_to_hles_dir):
             the_mean, the_std, nobs = label_to_data[label]
