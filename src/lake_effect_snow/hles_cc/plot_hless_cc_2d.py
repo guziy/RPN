@@ -133,7 +133,7 @@ def main():
     mycolors = ["white", "indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
                                                      "orange", "orangered", "red", "firebrick", ]
 
-    clevs_lkeff_snowfalldays_diff = np.arange(-4.5, 4.6, 1)
+    clevs_lkeff_snowfalldays_diff = np.arange(-2.2, 2.4, 0.4)
 
 
 
