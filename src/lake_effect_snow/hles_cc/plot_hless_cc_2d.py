@@ -201,7 +201,7 @@ def main():
 
 
 
-    plot_utils.apply_plot_params(font_size=12)
+    plot_utils.apply_plot_params(font_size=8)
 
     lons, lats = get_lons_and_lats(label_to_hles_dir[label_current])
     lons[lons < 0] += 360
