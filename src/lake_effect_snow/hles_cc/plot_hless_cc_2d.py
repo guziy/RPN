@@ -231,8 +231,8 @@ def main():
 
             ax = fig.add_subplot(gs[0, col])
             im = b.pcolormesh(xx, yy, the_mean, cmap=cmap, norm=bn, ax=ax)
-            cb = b.colorbar(im, extend="max")
-            cb.ax.set_visible(False)
+            cb = b.colorbar(im, extend="max", location="bottom")
+            cb.ax.set_visible(col == 0)
             ax.set_title("{}".format(label))
             b.drawcoastlines(ax=ax)
 
@@ -242,7 +242,7 @@ def main():
     the_mean = label_to_data[label_future][0] - label_to_data[label_current][0]
 
     im = b.pcolormesh(xx, yy, the_mean, cmap=cmap_diff, norm=bn_diff, ax=ax)
-    cb = b.colorbar(im, extend="max")
+    cb = b.colorbar(im, extend="max", location="bottom")
     ax.set_title("F - C")
     b.drawcoastlines(ax=ax)
 
