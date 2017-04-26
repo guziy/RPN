@@ -99,10 +99,14 @@ def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: i
 
 
 def get_lons_and_lats(data_folder:Path):
+
+    lons, lats = None, None
     for f in data_folder.iterdir():
         if f.name.lower().endswith(".nc"):
             with Dataset(str(f)) as ds:
                 lons, lats = [ds.variables[k] for k in ["lons", "lats"]]
+
+    return lons, lats
 
 
 @main_decorator
@@ -129,7 +133,7 @@ def main():
 
     label_current = "CRCM5_NEMO_Current"
     start_year_current = 1989
-    end_year_current = 1995
+    end_year_current = 1994
     period_current = (start_year_current, end_year_current)
 
 
