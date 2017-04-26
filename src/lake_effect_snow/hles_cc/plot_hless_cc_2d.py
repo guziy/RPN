@@ -191,6 +191,7 @@ def main():
 
 
     # plotting ...
+    plot_utils.apply_plot_params(font_size=6, width_cm=30, height_cm=8)
 
 
     cmap, bn = colors.from_levels_and_colors(clevs, mycolors[:len(clevs) - 1])
@@ -201,7 +202,6 @@ def main():
 
 
 
-    plot_utils.apply_plot_params(font_size=8)
 
     lons, lats = get_lons_and_lats(label_to_hles_dir[label_current])
     lons[lons < 0] += 360
@@ -217,7 +217,6 @@ def main():
     # plot the eofs
 
 
-    plot_utils.apply_plot_params(font_size=10, width_cm=30, height_cm=8)
 
     xx, yy = b(lons, lats)
 
