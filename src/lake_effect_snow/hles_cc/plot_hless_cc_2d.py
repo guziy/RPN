@@ -1,4 +1,7 @@
 
+import matplotlib
+matplotlib.use("Agg")
+
 
 from collections import OrderedDict
 from collections import defaultdict
