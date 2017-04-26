@@ -90,7 +90,7 @@ def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: i
             cm = month % 13 + int(month > 12)
 
             with Dataset(ym_to_path[cy, cm]) as ds:
-                #print(ym_to_path[cy, cm], ds.variables[varname][:].shape)
+                print(ym_to_path[cy, cm], ds.variables[varname][:].shape)
                 y_to_fields[y].append(ds.variables[varname][:].squeeze())
 
     fields3d = np.ma.array([field for field in y_to_fields.values()])
