@@ -104,7 +104,7 @@ def get_lons_and_lats(data_folder:Path):
     for f in data_folder.iterdir():
         if f.name.lower().endswith(".nc"):
             with Dataset(str(f)) as ds:
-                lons, lats = [ds.variables[k] for k in ["lons", "lats"]]
+                lons, lats = [ds.variables[k] for k in ["lon", "lat"]]
 
     return lons, lats
 
