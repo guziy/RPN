@@ -258,8 +258,10 @@ class NemoYearlyFilesManager(object):
             :param dlist: (should be sorted ascending) 
             :return: 
             """
-            if d1 < dlist[0] or d1 > dlist[-1]:
-                return False
+
+            if len(dlist) >= 2:
+                if d1 < dlist[0] or d1 > dlist[-1]:
+                    return False
 
             return datetime(d1.year, d1.month, d1.day) in dlist
 
@@ -277,6 +279,16 @@ class NemoYearlyFilesManager(object):
                 if m in months:
                     month_to_season[m] = s
                     break
+
+
+
+        # selection of the dates of interest for a season
+        def __get_selected_dates_for_month(month):
+            aseason = month_to_season[month]
+            if aseason in season_to_selected_dates:
+                return season_to_selected_dates[aseason]
+            return []
+
 
 
         season_to_field_list = defaultdict(list)
@@ -303,7 +315,9 @@ class NemoYearlyFilesManager(object):
                 panel = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
 
                 seas_mean = panel.groupby(
-                    lambda d: month_to_season[d.month] if __check_if_date_isinlist(d, season_to_selected_dates[month_to_season[d.month]]) else "no-season", axis="items").mean()
+                    lambda d: month_to_season[d.month] if __check_if_date_isinlist(d, __get_selected_dates_for_month(d.month)) else "no-season", axis="items").mean()
+
+                print(seas_mean)
 
                 for the_season in seas_mean:
                     season_to_field_list[the_season].append(seas_mean[the_season].values)
@@ -760,6 +774,44 @@ class NemoYearlyFilesManager(object):
         self.lons[self.lons > 180] -= 360
 
         return self.lons, self.lats, self.basemap
+
+
+    def get_area_avg_ts(self, lake_mask, start_year, end_year, varname="soicecov"):
+        # TODO: implement
+
+
+        series_list = []
+
+
+        i_arr, j_arr = np.where(lake_mask)
+
+
+        for y in range(start_year, end_year + 1):
+
+            with MFDataset(self.year_to_path[y]) as ds:
+
+
+                time_var = ds.variables["time_counter"]
+                data_var = ds.variables[varname]
+
+
+
+                time = num2date(time_var[:], time_var.units)
+
+
+
+                data = data_var[:, j_arr, i_arr].mean(axis=1)
+
+                series_list.append(pd.Series(index=time, data=data))
+
+
+
+        series = pd.concat(series_list)
+        assert isinstance(series, pd.Series)
+        return series
+
+
+
 
 
 def main():

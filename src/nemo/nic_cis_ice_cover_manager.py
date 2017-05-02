@@ -70,19 +70,19 @@ class CisNicIceManager(object):
 
 
         # select only data within the year range
-        time_sel_vec = np.where(self.time_data.map(lambda d: (d.year >= start_year) and (d.year <= end_year)))
+        time_sel_vec = np.where(self.time_data.map(lambda d: (d.year >= start_year) and (d.year <= end_year)))[0]
 
         data = data[time_sel_vec, :, :]
+
+        time_data = pd.to_datetime(data.time.values)
 
         # region for which the averaging will happen
         i_arr, j_arr = np.where(mask)
 
+        data = np.ma.masked_where(np.isnan(data), data)
+        data = data[:, i_arr, j_arr].mean(axis=1)
 
-
-
-
-        pass
-
+        return pd.Series(data=data, index=time_data)
 
 
     def get_seasonal_mean_climatologies(self, start_year, end_year, season_to_months:dict=None):

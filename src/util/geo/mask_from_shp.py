@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from numba import jit
+
 from application_properties import main_decorator
 from osgeo import ogr
 import numpy as np
@@ -63,7 +65,7 @@ def does_layer_has_att(layer: ogr.Layer, att_name: str):
     return False
 
 
-
+@jit
 def get_mask(lons2d, lats2d, shp_path="", polygon_name=None, hints=None):
     """
     Assumes that the shape file contains polygons in lat lon coordinates

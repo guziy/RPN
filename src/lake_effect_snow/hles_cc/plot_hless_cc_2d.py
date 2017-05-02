@@ -150,7 +150,7 @@ def main():
 
     label_current = "CRCM5_NEMO_Current"
     start_year_current = 1989
-    end_year_current = 1994
+    end_year_current = 1993
     period_current = (start_year_current, end_year_current)
 
 
@@ -191,7 +191,7 @@ def main():
 
 
     # plotting ...
-    plot_utils.apply_plot_params(font_size=6, width_cm=30, height_cm=8)
+    plot_utils.apply_plot_params(font_size=8, width_cm=30, height_cm=10)
 
 
     cmap, bn = colors.from_levels_and_colors(clevs, mycolors[:len(clevs) - 1])
@@ -221,7 +221,7 @@ def main():
     xx, yy = b(lons, lats)
 
     fig = plt.figure()
-    gs = GridSpec(1, len(label_to_hles_dir) + 1, wspace=0)
+    gs = GridSpec(1, len(label_to_hles_dir) + 1, wspace=0.02)
 
     for col, label in enumerate(label_to_hles_dir):
             the_mean, the_std, nobs = label_to_data[label]
