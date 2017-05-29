@@ -13,6 +13,7 @@ from crcm5.model_point import ModelPoint
 from data.timeseries import TimeSeries
 
 from util.geo import lat_lon
+from util.seasons_info import MonthPeriod
 
 __author__ = 'huziy'
 
@@ -67,6 +68,44 @@ class CRUDataManager:
 
         x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
         self.kdtree = cKDTree(list(zip(x_in, y_in, z_in)))
+
+
+
+
+
+    def get_seasonal_means_with_ttest_stats_interp_to(self, lons2d=None, lats2d=None,
+                                                      season_to_monthperiod=None, start_year=None, end_year=None):
+
+        #TODO: implement
+        pass
+
+
+
+
+
+
+    def get_seasonal_means_with_ttest_stats(self, season_to_monthperiod=None, start_year=None, end_year=None):
+        #TODO: implement, think of a better way to do it.
+
+        """
+
+        :param season_to_monthperiod: 
+        :param start_year: 
+        :param end_year:
+        :return dict(season: (mean, std, nobs))
+        """
+        nt, nx, ny = self.var_data.shape
+        panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)), minor_axis=list(range(ny)))
+        panel = panel.select(lambda d: start_year <= d.year <= end_year)
+
+
+
+
+
+
+
+
+
 
 
     def get_seasonal_means(self, season_name_to_months=None, start_year=None, end_year=None):
