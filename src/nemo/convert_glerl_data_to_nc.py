@@ -1,5 +1,4 @@
-import cartopy
-from cartopy import crs
+from memory_profiler import profile
 from netCDF4 import Dataset
 from mpl_toolkits.basemap import Basemap
 from nemo.glerl_icecov_data2d_interface import GLERLIceCoverManager, get_date_from_nic_cis_filepath
@@ -39,6 +38,7 @@ class GlerlGrid(object):
             return self.known_grids[grid_descriptor]
 
 
+
 def main():
     obs_data_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecover_all_files"
     obs_data_path_1973_2002 = "/HOME/huziy/skynet3_rech1/nemo_obs_for_validation/ice_cover_glk/daily_grids_1973_2002/data"
@@ -54,10 +54,10 @@ def main():
 
     gman = GLERLIceCoverManager(data_folder=obs_data_path)
 
-    out_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecov1.nc"
+    out_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecov1_fix.nc"
 
     # start_date = datetime.strptime(data_files[0].name[1:-3], "%Y%m%d")
-    start_date = datetime(1973, 1, 1)
+    start_date = datetime(1972, 1, 1)
     with Dataset(out_path, mode="w") as ds:
         ds.createDimension("time")
         ds.createDimension("x", gman.ncols_target)

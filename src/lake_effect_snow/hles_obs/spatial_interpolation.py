@@ -341,7 +341,7 @@ def interpolate_ice_fractions(input_file_path: Path=None, out_dir: Path=None, ta
     :param out_dir:
     :param target_grid_config:
     """
-    out_file_name = "cis_nic_glerl_interpolated_lc.nc"
+    out_file_name = "cis_nic_glerl_interpolated_lc_fix.nc"
 
 
     ds_in = Dataset(input_file_path)
@@ -507,6 +507,46 @@ def interpolate_snow_water_equivalent(input_file_path: Path=None, out_dir: Path=
 
 
 
+def main_for_wc_domain():
+    import sys
+
+    # target grid for interpolation
+    nml_path = "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/gemclim_settings.nml"
+    target_grid_config = grid_config.gridconfig_from_gemclim_settings_file(nml_path)
+    print(target_grid_config)
+
+    # the output folder
+    out_folder = Path(nml_path).parent
+
+    interpolate_tt_pr = False
+    interpolate_uu_vv = False
+    interpolate_lc = False
+    interpolate_i5 = False
+
+    if len(sys.argv) > 1:
+        args = [arg.lower() for arg in sys.argv[1:]]
+        interpolate_uu_vv = "wind" in args
+        interpolate_tt_pr = "tt_pr" in args
+        interpolate_lc = "lc" in args
+        interpolate_i5 = "i5" in args
+
+
+    if interpolate_tt_pr:
+        # Source data for precip and temperature
+        # a) Anusplin data manager
+        # b) Additional sources (nldas)
+        data_dir_anusplin = Path("/RESCUE/skynet3_rech1/huziy/anusplin_links")
+        additional_data_sources = {
+            "PR": "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/initial_data/nldas_obs_daily.pr_1980_2010.nc",
+            "TT": "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/initial_data/nldas_met_update.obs.daily.tas_1980_2010.nc"
+        }
+        merge_and_interpolate_temperature_and_precip(data_dir_anusplin=data_dir_anusplin,
+                                                     out_dir=out_folder,
+                                                     target_grid_config=target_grid_config,
+                                                     additional_data_file_paths=additional_data_sources,
+                                                     start_year=1980)
+
+
 def main():
     import sys
 
@@ -548,7 +588,8 @@ def main():
 
     if interpolate_lc:
         # Source for the lake ice
-        ice_fraction_data_file_cis_nic = "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/initial_data/glerl_icecov1.nc"
+        # ice_fraction_data_file_cis_nic = "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/initial_data/glerl_icecov1.nc"
+        ice_fraction_data_file_cis_nic = "/RESCUE/skynet3_rech1/huziy/nemo_obs_for_validation/glerl_icecov1_fix.nc"
 
         interpolate_ice_fractions(input_file_path=Path(ice_fraction_data_file_cis_nic),
                                   out_dir=out_folder,
@@ -574,4 +615,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    main_for_wc_domain()

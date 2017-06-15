@@ -73,6 +73,9 @@ class CRUDataManager:
 
 
 
+
+
+
     def get_seasonal_means_with_ttest_stats_interp_to(self, lons2d=None, lats2d=None,
                                                       season_to_monthperiod=None, start_year=None, end_year=None):
 
@@ -83,27 +86,101 @@ class CRUDataManager:
 
 
 
-
     def get_seasonal_means_with_ttest_stats(self, season_to_monthperiod=None, start_year=None, end_year=None):
-        #TODO: implement, think of a better way to do it.
-
         """
+        Note: the periods of different seasons should not overlap.
+
+
+        precip are converted to mm/day before the mean and std calculations
 
         :param season_to_monthperiod: 
         :param start_year: 
         :param end_year:
-        :return dict(season: (mean, std, nobs))
+        :return dict(season: [mean, std, nobs])
         """
+
         nt, nx, ny = self.var_data.shape
         panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)), minor_axis=list(range(ny)))
         panel = panel.select(lambda d: start_year <= d.year <= end_year)
 
+        # Calculate monthly means, convert precip to mm/day
+        if self.var_name.lower() in ["pre"]:
+            monthly_panel = panel.groupby(lambda d: (d.year, d.month), axis="items").sum()
+
+            monthly_panel = pandas.Panel(data=monthly_panel.values / monthly_panel.items.map(lambda ym: calendar.monthrange(*ym)[1])[:, np.newaxis, np.newaxis],
+                                                         items=monthly_panel.items,
+                                                         minor_axis=monthly_panel.minor_axis,
+                                                         major_axis=monthly_panel.major_axis)
+
+        else:
+            monthly_panel = panel.groupby(lambda d: (d.year, d.month), axis="items").mean()
+
+
+        season_to_res = {}
+
+        for season, month_period in season_to_monthperiod.items():
+            assert isinstance(month_period, MonthPeriod)
+
+            print("{} ------- (months: {}) ".format(season, month_period.months))
+
+            ym_to_period = month_period.get_year_month_to_period_map(start_year=start_year, end_year=end_year)
+            print(ym_to_period)
+
+            # select data for the seasons of interest
+            monthly_panel_tmp = monthly_panel.select(lambda ym: ym[1] and (ym in ym_to_period) in month_period.months)
+
+            days_per_month = monthly_panel_tmp.items.map(lambda ym: calendar.monthrange(*ym)[1])
+
+
+            monthly_panel_tmp = pandas.Panel(data=monthly_panel_tmp.values * days_per_month[:, np.newaxis, np.newaxis],
+                                             major_axis=monthly_panel_tmp.major_axis,
+                                             minor_axis=monthly_panel_tmp.minor_axis,
+                                             items=monthly_panel_tmp.items)
+
+
+            seasonal_groups = monthly_panel_tmp.groupby(lambda ym: (ym_to_period[ym].start,  ym_to_period[ym].end), axis="items")
+
+            nobs = len(seasonal_groups)
+
+
+            seasonal_means = []
+            days_per_season = []
+
+
+            for kv, gv in seasonal_groups:
+                print(kv, "---->", gv)
+
+                # calculate seasonal mean for each year
+                ndays = (kv[1] - kv[0]).days
+                seas_mean = gv.values.sum(axis=0) / ndays
+
+                seasonal_means.append(seas_mean)
+                days_per_season.append(ndays)
 
 
 
+            seasonal_means = np.array(seasonal_means)
+            days_per_season = np.array(days_per_season)
+
+            # calculate climatological mean
+            clim_mean = (seasonal_means * days_per_season[:, np.newaxis, np.newaxis]).sum(axis=0) / days_per_season.sum()
 
 
 
+            # calculate interannual std
+            clim_std = (((seasonal_means - clim_mean) ** 2 * days_per_season[:, np.newaxis, np.newaxis]).sum(axis=0) / days_per_season.sum()) ** 0.5
+
+
+
+            spatial_mask = clim_mean > 1e10
+
+            clim_mean = np.ma.masked_where(spatial_mask, clim_mean)
+            clim_std = np.ma.masked_where(spatial_mask, clim_std)
+
+
+            season_to_res[season] = [clim_mean, clim_std, nobs]
+
+        return season_to_res
 
 
 
@@ -538,10 +615,29 @@ def plot_thawing_index():
     plt.show()
 
 
+
+def test_get_seasonal_means_with_ttest_stats():
+
+    manager = CRUDataManager(path="/HOME/data/Validation/CRU_TS_3.1/Original_files_gzipped/cru_ts_3_10.1901.2009.tmp.dat.nc",
+                             var_name="tmp")
+
+
+    season_to_month_period = OrderedDict([
+        ("DJF", MonthPeriod(12, 3))
+    ])
+
+    res = manager.get_seasonal_means_with_ttest_stats(
+        season_to_monthperiod=season_to_month_period, start_year=1980, end_year=1982)
+
+    pass
+
 if __name__ == "__main__":
     application_properties.set_current_directory()
-    plot_thawing_index()
+    # plot_thawing_index()
     # create_monthly_means()
     # main()
+
+    test_get_seasonal_means_with_ttest_stats()
+
     print("Hello world")
   

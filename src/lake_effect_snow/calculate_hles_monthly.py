@@ -23,7 +23,7 @@ def monthly_func(x):
 
 @main_decorator
 def main_obs():
-    label = "Obs_monthly"
+    label = "Obs_monthly_icefix"
 
 
     period = Period(
@@ -31,7 +31,7 @@ def main_obs():
     )
 
 
-    pool = Pool(processes=10)
+    pool = Pool(processes=20)
 
     input_params = []
     for month_start in period.range("months"):
@@ -55,7 +55,7 @@ def main_obs():
 
         label_to_config = OrderedDict([(
             label, {
-                "base_folder": "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260",
+                "base_folder": "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260_icefix",
                 "data_source_type": data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY,
                 "min_dt": timedelta(hours=3),
                 "varname_mapping": vname_map,
@@ -63,7 +63,7 @@ def main_obs():
                 "offset_mapping": vname_to_offset_CRCM5,
                 "multiplier_mapping": vname_to_multiplier_CRCM5,
                 "filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
-                "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
+                "out_folder": "lake_effect_analysis_daily_{}_{}-{}".format(label, period.start.year, period.end.year)
             }
         )])
 
@@ -204,4 +204,5 @@ def main_crcm5_hl():
 
 if __name__ == '__main__':
     # main_crcm5_nemo()
-    main_crcm5_hl()
+    # main_crcm5_hl()
+    main_obs()

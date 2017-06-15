@@ -7,6 +7,7 @@ import pandas as pd
 
 
 import matplotlib.pyplot as plt
+from memory_profiler import profile
 
 from nemo.nemo_commons import season_to_months_default
 
@@ -63,24 +64,60 @@ class CisNicIceManager(object):
 
         pass
 
-
+    @profile
     def get_area_avg_ts(self, mask=None, start_year=-np.Inf, end_year=np.Inf):
-
-        data = self.ds[self.ice_vname]
 
 
         # select only data within the year range
         time_sel_vec = np.where(self.time_data.map(lambda d: (d.year >= start_year) and (d.year <= end_year)))[0]
 
-        data = data[time_sel_vec, :, :]
-
-        time_data = pd.to_datetime(data.time.values)
-
         # region for which the averaging will happen
         i_arr, j_arr = np.where(mask)
 
-        data = np.ma.masked_where(np.isnan(data), data)
-        data = data[:, i_arr, j_arr].mean(axis=1)
+
+        d_arr = self.ds[self.ice_vname]
+
+        try:
+            data = d_arr[:].values
+
+            data = data[time_sel_vec, :, :]
+            data = data[:, i_arr, j_arr]
+
+            time_data = pd.to_datetime(data.time.values)
+
+            np.ma.masked_where(np.isnan(data), data, copy=False)
+            np.ma.masked_where(data < 0, data, copy=False)
+            np.ma.masked_where(data > 1, data, copy=False)
+
+            data = data.mean(axis=1)
+
+        except MemoryError as me:
+
+            sel_times = []
+            sel_data = []
+
+            for t in time_sel_vec:
+                print(t)
+                print(self.time_data[t])
+                data = d_arr[t].values
+
+                data = data[i_arr, j_arr]
+
+                data = np.ma.masked_where((data > 1) | (data < 0) | np.isnan(data), data)
+
+                print(len(data), data.mean())
+
+
+                the_mean = data.mean()
+
+                # save the mean only if it is not masked
+                if the_mean is not np.ma.masked:
+                    sel_times.append(self.time_data[t])
+                    sel_data.append(the_mean)
+
+            # ----- -------
+            data = sel_data
+            time_data = sel_times
 
         return pd.Series(data=data, index=time_data)
 

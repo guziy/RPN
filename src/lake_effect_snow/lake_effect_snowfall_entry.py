@@ -214,6 +214,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
     out_file = "{}_lkeff_snfl_{}-{}_m{}-{}.nc".format(label, period.start.year, period.end.year,
                                                       months_of_interest[0], months_of_interest[-1], out_folder)
+
+
+
+
     out_file = out_folder.joinpath(out_file)
 
     if out_file.exists():
@@ -249,19 +253,15 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         p = Period(start, end_date)
 
 
+        # build the name of the daily output file
+        out_file_daily = "{}_lkeff_snfl_{}-{}_m{}-{}_daily.nc".format(label, p.start.year, p.end.year,
+                                                                      months_of_interest[0], months_of_interest[-1],
+                                                                      out_folder)
+        out_file_daily = out_folder.joinpath(out_file_daily)
+
 
         print("Processing {} ... {} period".format(p.start, p.end))
 
-        try:
-            air_temp = data_mngr.read_data_for_period(p, default_varname_mappings.T_AIR_2M)
-        except IOError as e:
-            print(e)
-            continue
-
-
-        #
-        print("Calculating daily mean 2-m air temperature")
-        air_temp = air_temp.resample("1D", dim="t", how="mean")
 
         # try to read snowfall if not available, try to calculate from total precip
         try:
@@ -276,6 +276,17 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             print("Could not find snowfall rate in {}".format(data_mngr.base_folder))
             print("Calculating from 2-m air temperature and total precipitation.")
 
+
+            try:
+                air_temp = data_mngr.read_data_for_period(p, default_varname_mappings.T_AIR_2M)
+            except IOError as e:
+                print(e)
+                continue
+
+            #
+            print("Calculating daily mean 2-m air temperature")
+            air_temp = air_temp.resample("1D", dim="t", how="mean")
+
             # use  daily mean precip (to be consistent with the 2-meter air temperature)
             precip_m_s = data_mngr.read_data_for_period(p, default_varname_mappings.TOTAL_PREC)
             precip_m_s = precip_m_s.resample("1D", dim="t", how="mean")
@@ -285,8 +296,9 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             snfl.name = default_varname_mappings.SNOWFALL_RATE
             snfl.values = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values, tair_deg_c=air_temp.values)
 
-        print("===========air temp ranges=======")
-        print(air_temp.min(), " .. ", air_temp.max())
+            print("===========air temp ranges=======")
+            print(air_temp.min(), " .. ", air_temp.max())
+
 
         print("Snowfall values ranges: ")
         print(snfl.min(), snfl.max(), common_params.lower_limit_of_daily_snowfall)
@@ -334,6 +346,9 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         u_we = u_we.resample("1D", dim="t", how="mean")
 
         v_sn = data_mngr.read_data_for_period(p, default_varname_mappings.V_SN)
+
+        assert len(v_sn.t) == len(np.unique(v_sn.t[:]))
+
         v_sn = v_sn.resample("1D", dim="t", how="mean")
         print("Successfully imported wind components")
 
@@ -344,7 +359,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             lake_ice_fraction = data_mngr.read_data_for_period(p, default_varname_mappings.LAKE_ICE_FRACTION)
             lake_ice_fraction = lake_ice_fraction.resample("1D", dim="t", how="mean")  # Calculate the daily means
             lake_ice_fraction = lake_ice_fraction.sel(t=v_sn.coords["t"], method="nearest")
-            lake_ice_fraction = lake_ice_fraction.where(lake_ice_fraction <= 1)
+
+            # update the time coordinates as well
+            lake_ice_fraction.coords["t"] = v_sn.coords["t"][:]
+
+            lake_ice_fraction = lake_ice_fraction.where((lake_ice_fraction <= 1) & (lake_ice_fraction >= 0))
 
             # at this point shapes of the arrays should be the same
             assert lake_ice_fraction.shape == u_we.shape
@@ -358,7 +377,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             print("WARNING: Could not find lake fraction in {}, diagnosing lake-effect snow without lake ice (NOTE: this could be OK for the months when there is no ice usually)".format(
                 data_mngr.base_folder))
 
-            lake_ice_fraction = None
+            lake_ice_fraction = snfl * 0
 
             # raise e
 
@@ -386,6 +405,28 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
         snfl = (snfl > (common_params.snfl_local_amplification_m_per_s + snfl_nonlocal)).values * snfl
 
+
+
+
+        # save daily data to file
+        i_arr, j_arr = np.where(reg_of_interest)
+        i_min, i_max = i_arr.min(), i_arr.max()
+        j_min, j_max = j_arr.min(), j_arr.max()
+
+        ds = snfl.loc[:, i_min:i_max + 1, j_min:j_max + 1].to_dataset(name="hles_snow")
+
+        # import pickle
+        # pickle.dump(lake_ice_fraction, open(str(out_file_daily) + ".bin", "wb"))
+
+        ds["lake_ice_fraction"] = lake_ice_fraction.loc[:, i_min:i_max + 1, j_min:j_max + 1]
+        ds["u_we"] = u_we.loc[:, i_min:i_max + 1, j_min:j_max + 1]
+        ds["v_sn"] = v_sn.loc[:, i_min:i_max + 1, j_min:j_max + 1]
+
+        ds.to_netcdf(str(out_file_daily))
+
+
+
+
         # count the number of hles events
         snfl_eventcount = snfl.copy()
         snfl_eventcount.values[snfl.values > 1e-5] = 1
@@ -406,6 +447,12 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         snfl_acc.values = np.ma.masked_where((~reg_of_interest), snfl_acc)
 
         lkeff_snow_falls.append(snfl_acc)
+
+
+
+
+
+
 
 
         del snfl

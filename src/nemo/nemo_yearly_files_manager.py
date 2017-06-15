@@ -231,6 +231,137 @@ class NemoYearlyFilesManager(object):
 
 
 
+    def get_seasonal_clim_cross_section_with_ttest_data(self, start_year=None, end_year=None, season_to_months=None, varname="votemper",
+                                                        start_point=None, end_point=None):
+        """
+
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+        :param varname:
+        :param start_point:
+        :param end_point:
+        """
+
+
+        if start_year is None:
+            start_year = min(self.year_to_path.keys())
+
+        if end_year is None:
+            end_year = max(self.year_to_path.keys())
+
+        # Set up month to season relation
+        month_to_season = defaultdict(lambda: "no-season")
+        for m in range(1, 13):
+            for s, months in season_to_months.items():
+                if m in months:
+                    month_to_season[m] = s
+                    break
+
+
+        season_to_field_list = defaultdict(list)
+        for y in range(start_year, end_year + 1):
+            fpath = self.year_to_path[y]
+
+            with MFDataset(fpath) as ds:
+
+                data_var = ds.variables[varname]
+
+                assert data_var.ndim == 4
+
+                data = data_var[:]  # (t, z, y, x)
+
+                nt, nz, ny, nx = data.shape
+
+
+                time_var = ds.variables["time_counter"]
+
+                dates = num2date(time_var[:], time_var.units)
+
+                panel = pd.Panel4D(data=data, labels=dates, items=range(nz), major_axis=range(ny), minor_axis=range(nx))
+
+                seas_mean = panel.groupby(lambda d: month_to_season[d.month], axis="labels").mean()
+
+                print(seas_mean)
+
+                for the_season in seas_mean:
+                    season_to_field_list[the_season].append(seas_mean[the_season].values)
+
+        result = {}
+        for the_season, field_list in season_to_field_list.items():
+            mean_field = np.mean(field_list, axis=0).transpose((0, 2, 1))
+            std_field = np.std(field_list, axis=0).transpose((0, 2, 1))
+            nobs = len(field_list)
+
+            print(mean_field.shape)
+
+            result[the_season] = (np.ma.masked_where(~self.lake_mask, mean_field), std_field, nobs)
+
+        return result
+
+
+
+    def get_seasonal_clim_fields_with_ttest_data(self, start_year=None, end_year=None, season_to_months=None,
+                                varname="sosstsst", level_index=0):
+        if start_year is None:
+            start_year = min(self.year_to_path.keys())
+
+        if end_year is None:
+            end_year = max(self.year_to_path.keys())
+
+        # Set up month to season relation
+        month_to_season = defaultdict(lambda: "no-season")
+        for m in range(1, 13):
+            for s, months in season_to_months.items():
+                if m in months:
+                    month_to_season[m] = s
+                    break
+
+
+        season_to_field_list = defaultdict(list)
+        for y in range(start_year, end_year + 1):
+            fpath = self.year_to_path[y]
+
+            with MFDataset(fpath) as ds:
+
+                data_var = ds.variables[varname]
+
+                if len(data_var.shape) == 3:
+                    nt, ny, nx = data_var.shape
+                    data = data_var[:]
+                elif len(data_var.shape) == 4:
+                    nt, nz, ny, nx = data_var.shape
+                    data = data_var[:, level_index, :, :]
+                else:
+                    raise Exception("Do not know how to handle {}-dimensional fields".format(len(data_var.shape)))
+
+                time_var = ds.variables["time_counter"]
+
+                dates = num2date(time_var[:], time_var.units)
+
+                panel = pd.Panel(data=data, items=dates, major_axis=range(ny), minor_axis=range(nx))
+
+                seas_mean = panel.groupby(lambda d: month_to_season[d.month], axis="items").mean()
+
+                print(seas_mean)
+
+                for the_season in seas_mean:
+                    season_to_field_list[the_season].append(seas_mean[the_season].values)
+
+        result = {}
+        for the_season, field_list in season_to_field_list.items():
+            mean_field = np.mean(field_list, axis=0).transpose()
+            std_field = np.std(field_list, axis=0).transpose()
+            nobs = len(field_list)
+
+            print(mean_field.shape)
+
+            result[the_season] = (np.ma.masked_where(~self.lake_mask, mean_field), std_field, nobs)
+
+        return result
+
+
+
     def get_seasonal_clim_field_for_dates(self, start_year=None, end_year=None, season_to_months=None,
                                 varname="sosstsst", level_index=0, season_to_selected_dates:dict=None):
 
@@ -777,9 +908,6 @@ class NemoYearlyFilesManager(object):
 
 
     def get_area_avg_ts(self, lake_mask, start_year, end_year, varname="soicecov"):
-        # TODO: implement
-
-
         series_list = []
 
 
@@ -799,8 +927,8 @@ class NemoYearlyFilesManager(object):
                 time = num2date(time_var[:], time_var.units)
 
 
-
-                data = data_var[:, j_arr, i_arr].mean(axis=1)
+                data = data_var[:]
+                data = data[:, j_arr, i_arr].mean(axis=1)
 
                 series_list.append(pd.Series(index=time, data=data))
 
@@ -808,6 +936,11 @@ class NemoYearlyFilesManager(object):
 
         series = pd.concat(series_list)
         assert isinstance(series, pd.Series)
+
+
+        years = series.index.map(lambda d: d.year)
+        series.drop(series.index[(years > end_year) | (years < start_year)], inplace=True)
+
         return series
 
 

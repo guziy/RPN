@@ -17,6 +17,7 @@ from nemo.nic_cis_ice_cover_manager import CisNicIceManager
 import numpy as np
 import calendar
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 # color levels for ice fraction
@@ -156,6 +157,7 @@ def validate_2d_maps(nemo_managers, obs_manager:CisNicIceManager, start_year=-np
     seasons = "_".join(season_to_months_ordered)
     img_file = img_folder.joinpath("{}_{}_{}-{}.png".format(nemo_labels, seasons, start_year, end_year))
     fig.savefig(str(img_file), bbox_inches="tight", dpi=300)
+    plt.close(fig)
 
 
 
@@ -166,10 +168,10 @@ def __map_date_to_seasonyear(d, s_month_start, s_month_count):
 
     for month in range(s_month_start, s_month_start + s_month_count):
         if month == d.month:
-            return d.year
+            return d.year + 1
 
         if month == d.month + 12:
-            return d.year - 1
+            return d.year
 
     return -1
 
@@ -191,26 +193,44 @@ def validate_areaavg_annual_max(nemo_configs:dict, obs_manager:CisNicIceManager,
     icefr_obs = obs_manager.get_area_avg_ts(lake_mask_obs, start_year=start_year, end_year=end_year)
 
 
-    plot_utils.apply_plot_params(width_cm=8, height_cm=5, font_size=8)
 
-
+    plot_utils.apply_plot_params(width_cm=10, height_cm=8, font_size=8)
 
 
     fig = plt.figure()
 
+    icefr_obs_ann_max = icefr_obs.groupby(lambda d: __map_date_to_seasonyear(d, season_month_start, season_month_count)).max().drop(-1)
 
 
-    ax = icefr_obs.groupby(lambda d: __map_date_to_seasonyear(d, season_month_start, season_month_count)).max().drop(-1).plot(label="Obs.")
+    ax = icefr_obs_ann_max.plot(label="Obs.", marker="o", markersize=0.5, linewidth=0.5)
+
+
+
+
 
     label_to_nemo_ts = OrderedDict()
     for label, nemo_config in nemo_configs.items():
-        label_to_nemo_ts[label] = nemo_config.get_area_avg_ts(lake_mask_obs, start_year=start_year, end_year=end_year)
-        label_to_nemo_ts[label].groupby(lambda d: __map_date_to_seasonyear(d, season_month_start, season_month_count)).max().drop(-1).plot(ax=ax, label=label)
+
+        assert isinstance(nemo_config, NemoYearlyFilesManager)
+
+        lake_mask_mod = get_mask(nemo_config.lons, nemo_config.lats, shp_path=mask_shape_file) > 0.5
+
+        label_to_nemo_ts[label] = nemo_config.get_area_avg_ts(lake_mask_mod, start_year=start_year, end_year=end_year, )
+        annual_max = label_to_nemo_ts[label].groupby(lambda d: __map_date_to_seasonyear(d, season_month_start, season_month_count)).max().drop(-1)
+
+
+        assert isinstance(annual_max, pd.Series)
+
+        annual_max.plot(
+            ax=ax, label=label + " (R = {:.2f})".format(annual_max.corr(icefr_obs_ann_max)), marker="o", markersize=0.5, linewidth=0.5)
 
     ax.legend()
-    img_file = img_folder.joinpath("icefr_area_avg_max_{}-{}.png")
+    ax.grid(True, linewidth=0.2, linestyle="dashed")
+    ax.set_ylim([0, 1])
+    img_file = img_folder.joinpath("icefr_area_avg_max_{}-{}.png".format(start_year, end_year))
 
     fig.savefig(str(img_file), bbox_inches="tight", dpi=300)
+    plt.close(fig)
 
 
 
@@ -218,14 +238,15 @@ def validate_areaavg_annual_max(nemo_configs:dict, obs_manager:CisNicIceManager,
 @main_decorator
 def main():
 
-    obs_data_path = "/RESCUE/skynet3_rech1/huziy/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/cis_nic_glerl_interpolated_lc.nc"
+    # obs_data_path = "/RESCUE/skynet3_rech1/huziy/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/cis_nic_glerl_interpolated_lc.nc"
+    obs_data_path = "/home/huziy/skynet3_rech1/nemo_obs_for_validation/glerl_icecov1_fix.nc"
 
 
-    obs_manager = CisNicIceManager(nc_file_path=obs_data_path)
+    obs_manager = CisNicIceManager(nc_file_path=obs_data_path, ice_varname="ice_cover")
 
 
-    start_year = 1980
-    end_year = 2010
+    start_year = 1973
+    end_year = 2013
 
 
     do_spatial_plots = False
@@ -267,6 +288,9 @@ def main():
 
 
     if do_areaavg_plots:
+
+        nemo_managers = OrderedDict()
+
         # starting December until April
         season_month_start = 12
         season_month_count = 5

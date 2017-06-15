@@ -49,11 +49,11 @@ def get_date_from_nic_cis_filepath(path):
 
     day_of_year = int(p.name[2:5])
 
-    if calendar.isleap(year + 1) and day_of_year > 59:
+    if calendar.isleap(year + 1):
         day_of_year += 1
 
 
-    return datetime(year, 12, 1) + (day_of_year - 101) * timedelta(days=1)
+    return datetime(year - 1, 12, 1) + (day_of_year - 101) * timedelta(days=1)
 
 
 
