@@ -40,7 +40,7 @@ def test_agg_blocks():
 
         print(v.shape, v, v.mask)
 
-        bad = v.mask
+        bad = v.mask | np.isnan(v)
 
         if not np.all(bad):
             return v[~bad].mean()
