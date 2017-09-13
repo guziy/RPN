@@ -1,29 +1,20 @@
-import calendar
-
-from mpl_toolkits.basemap import Basemap
-from netCDF4 import Dataset, num2date
+from collections import OrderedDict
 from pathlib import Path
+
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import MaxNLocator
-from scipy.spatial import KDTree
-from scipy.spatial.ckdtree import cKDTree
 
 from crcm5.analyse_hdf.run_config import RunConfig
-from crcm5.model_data import Crcm5ModelDataManager
 from data.oisst import OISSTManager
 from nemo.nemo_yearly_files_manager import NemoYearlyFilesManager
 from util import plot_utils
 from util.geo import lat_lon
 
-from collections import OrderedDict
-
 __author__ = 'huziy'
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 
 def print_arr_limits(arr, label):
@@ -43,9 +34,9 @@ def get_seasonal_sst_from_crcm5_outputs(sim_label, start_year=1980, end_year=201
     from lake_effect_snow.base_utils import VerticalLevel
     from rpn import level_kinds
     from lake_effect_snow import default_varname_mappings
-    from lake_effect_snow import data_source_types
+    from data.robust import data_source_types
 
-    from lake_effect_snow.data_manager import DataManager
+    from data.robust.data_manager import DataManager
 
 
     sim_configs = {

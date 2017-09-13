@@ -124,6 +124,9 @@ def get_lons_and_lats(data_folder:Path):
 @main_decorator
 def main():
 
+
+    plot_hless_days = False
+
     image_dir = Path("climate_change_hles")
     if not image_dir.exists():
         image_dir.mkdir()
@@ -134,15 +137,25 @@ def main():
                                                      "orange", "orangered", "red", "firebrick", ]
 
     clevs_lkeff_snowfalldays_diff = np.arange(-1.55, 1.6, 0.1)
+    clevs_lkeff_snowfall_diff = np.arange(-0.55, 0.6, 0.1)
 
 
 
+    # hless days
+    if plot_hless_days:
+        clevs = clevs_lkeff_snowfalldays
+        clevs_diff = clevs_lkeff_snowfalldays_diff
+        vname = "lkeff_snowfall_days"
+        units = "days"
+    else:
+
+        # hless amount
+        vname = "snow_fall"
+        clevs = clevs_lkeff_snowfall
+        clevs_diff = clevs_lkeff_snowfall_diff
+        units = "m"
 
 
-    clevs = clevs_lkeff_snowfalldays
-    clevs_diff = clevs_lkeff_snowfalldays_diff
-    vname = "lkeff_snowfall_days"
-    units = "days"
 
     hles_start_month = 11
     hles_nmonths = 3
@@ -242,6 +255,7 @@ def main():
 
     im = b.pcolormesh(xx, yy, the_mean, cmap=cmap_diff, norm=bn_diff, ax=ax)
     cb = b.colorbar(im, extend="both", location="bottom")
+    cb.ax.set_xlabel(units)
     ax.set_title("F - C")
     b.drawcoastlines(ax=ax)
 

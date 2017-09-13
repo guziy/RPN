@@ -511,24 +511,14 @@ def main_for_wc_domain():
     import sys
 
     # target grid for interpolation
-    nml_path = "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260/gemclim_settings.nml"
+    nml_path = "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/sim_configs/NEI_WC0.11deg_Crr1_gemclim_settings.nml"
     target_grid_config = grid_config.gridconfig_from_gemclim_settings_file(nml_path)
     print(target_grid_config)
 
     # the output folder
-    out_folder = Path(nml_path).parent
+    out_folder = Path("/HOME/huziy/skynet3_rech1/obs_data/anuspl_uw_0.11_wc_domain")
 
-    interpolate_tt_pr = False
-    interpolate_uu_vv = False
-    interpolate_lc = False
-    interpolate_i5 = False
-
-    if len(sys.argv) > 1:
-        args = [arg.lower() for arg in sys.argv[1:]]
-        interpolate_uu_vv = "wind" in args
-        interpolate_tt_pr = "tt_pr" in args
-        interpolate_lc = "lc" in args
-        interpolate_i5 = "i5" in args
+    interpolate_tt_pr = True
 
 
     if interpolate_tt_pr:

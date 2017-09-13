@@ -153,6 +153,25 @@ class Crcm5ModelDataManager:
         self._read_static_data()
 
 
+
+    def __init_hint_info(self):
+
+        if not self.all_files_in_one_folder:
+
+            pass
+
+
+
+
+
+
+    def get_percentile_for_each_day_of_year(self, percentile=0.5, start_year=-np.Inf, end_year=np.Inf):
+        pass
+
+
+
+
+
     def get_yearmax_fields(self, var_name="", start_year=None, end_year=None):
         """
         Get maximum value of a field for each year

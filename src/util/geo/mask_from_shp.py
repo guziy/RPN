@@ -128,7 +128,7 @@ def get_mask(lons2d, lats2d, shp_path="", polygon_name=None, hints=None):
             layer.SetAttributeFilter(" or ".join(filters))
 
 
-        print(layer.GetFeatureCount())
+        print("Found {} features in {}".format(layer.GetFeatureCount(), shp_path))
 
         feat = layer.GetNextFeature()
         while feat is not None:

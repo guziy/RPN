@@ -18,7 +18,7 @@ from util.seasons_info import MonthPeriod
 __author__ = 'huziy'
 
 import numpy as np
-from netCDF4 import Dataset, num2date, date2num
+from netCDF4 import Dataset, num2date, date2num, MFDataset
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 
@@ -38,12 +38,30 @@ class CRUDataManager:
         self.lazy = lazy
         self.var_name = var_name
 
-        with Dataset(path) as ds:
-            self._init_fields(ds)
 
-        # Cannot go into with, since it needs to be open
-        self.nc_dataset = Dataset(path)
+
+        try:
+            with Dataset(path) as ds:
+                self._init_fields(ds)
+
+            # Cannot go into with, since it needs to be open
+            self.nc_dataset = Dataset(path)
+
+        except OSError as oserr:
+            with MFDataset(path) as ds:
+                self._init_fields(ds)
+
+            # Cannot go into with, since it needs to be open
+            self.nc_dataset = MFDataset(path)
+
+
         self.nc_vars = ds.variables
+
+
+    def close(self):
+        self.nc_vars = None
+        self.nc_dataset.close()
+        del self
 
 
     def _init_fields(self, nc_dataset):
@@ -51,7 +69,14 @@ class CRUDataManager:
         lons = nc_vars["lon"][:]
         lats = nc_vars["lat"][:]
 
-        lats2d, lons2d = np.meshgrid(lats, lons)
+
+        if lons.ndim == 1:
+            lats2d, lons2d = np.meshgrid(lats, lons)
+        elif lons.ndim == 2:
+            lats2d, lons2d = lats, lons
+        else:
+            raise NotImplementedError("Cannot handle {}-dimensional coordinates".format(lons.ndim))
+
 
         self.lons2d, self.lats2d = lons2d, lats2d
 
@@ -63,8 +88,14 @@ class CRUDataManager:
         else:
             self.times = num2date(self.times_num, self.times_var.units)
 
+
         if not self.lazy:
-            self.var_data = np.transpose(nc_vars[self.var_name][:], axes=[0, 2, 1])
+
+            self.var_data = nc_vars[self.var_name][:]
+            if nc_vars[self.var_name].shape[1:] != self.lons2d.shape:
+                print("nc_vars[self.var_name].shape = {}".format(nc_vars[self.var_name].shape))
+                self.var_data = np.transpose(self.var_data, axes=[0, 2, 1])
+
 
         x_in, y_in, z_in = lat_lon.lon_lat_to_cartesian(self.lons2d.flatten(), self.lats2d.flatten())
         self.kdtree = cKDTree(list(zip(x_in, y_in, z_in)))
@@ -116,7 +147,10 @@ class CRUDataManager:
             monthly_panel = panel.groupby(lambda d: (d.year, d.month), axis="items").mean()
 
 
-        season_to_res = {}
+
+        print("monthly panel: {}".format(monthly_panel))
+
+        season_to_res = OrderedDict()
 
         for season, month_period in season_to_monthperiod.items():
             assert isinstance(month_period, MonthPeriod)
@@ -127,7 +161,9 @@ class CRUDataManager:
             print(ym_to_period)
 
             # select data for the seasons of interest
-            monthly_panel_tmp = monthly_panel.select(lambda ym: ym[1] and (ym in ym_to_period) in month_period.months)
+            monthly_panel_tmp = monthly_panel.select(lambda ym: (ym[1] in month_period.months) and (ym in ym_to_period))
+
+            print("monthly_panel_tmp, afterselect: {}".format(monthly_panel_tmp))
 
             days_per_month = monthly_panel_tmp.items.map(lambda ym: calendar.monthrange(*ym)[1])
 
@@ -143,6 +179,8 @@ class CRUDataManager:
             nobs = len(seasonal_groups)
 
 
+
+
             seasonal_means = []
             days_per_season = []
 
@@ -151,10 +189,16 @@ class CRUDataManager:
                 print(kv, "---->", gv)
 
                 # calculate seasonal mean for each year
-                ndays = (kv[1] - kv[0]).days
-                seas_mean = gv.values.sum(axis=0) / ndays
+                ndays = (kv[1].add(microseconds=1) - kv[0]).total_days() # because the end of each period is 1 microsecond before midnight
+                print(type(gv))
+                seas_mean = gv.sum(axis="items") / ndays
 
-                seasonal_means.append(seas_mean)
+                print(seas_mean.shape)
+
+                seasonal_means.append(seas_mean.values)
+
+                print(seas_mean.values.shape)
+
                 days_per_season.append(ndays)
 
 
@@ -176,6 +220,11 @@ class CRUDataManager:
 
             clim_mean = np.ma.masked_where(spatial_mask, clim_mean)
             clim_std = np.ma.masked_where(spatial_mask, clim_std)
+
+
+            print(season)
+            print("clim_mean.shape={}".format(clim_mean.shape))
+            print("clim_std.shape={}".format(clim_std.shape))
 
 
             season_to_res[season] = [clim_mean, clim_std, nobs]
@@ -209,7 +258,8 @@ class CRUDataManager:
         if self.var_data is None:
             self.var_data = self.nc_dataset.variables[self.var_name][:]
             if self.var_name.lower() not in ["swe"]:
-                self.var_data = np.transpose(self.var_data, axes=[0, 2, 1])
+                if self.var_data.shape != self.lons2d.shape:
+                    self.var_data = np.transpose(self.var_data, axes=[0, 2, 1])
 
         nt, nx, ny = self.var_data.shape
         panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)),

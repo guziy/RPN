@@ -4,19 +4,14 @@ from datetime import datetime, timedelta
 from pendulum import Period
 from rpn import level_kinds
 
-from lake_effect_snow import data_source_types
+from data.robust import data_source_types
 from lake_effect_snow import default_varname_mappings
+from lake_effect_snow.base_utils import VerticalLevel
+from lake_effect_snow.default_varname_mappings import T_AIR_2M, U_WE, V_SN
 from lake_effect_snow.default_varname_mappings import vname_map_CRCM5, vname_to_offset_CRCM5, \
     vname_to_fname_prefix_CRCM5
-
 from lake_effect_snow.default_varname_mappings import vname_to_multiplier_CRCM5
-
-from lake_effect_snow.base_utils import VerticalLevel
-from lake_effect_snow.lake_effect_snowfall_entry import calculate_lake_effect_snowfall, \
-    calculate_lake_effect_snowfall_each_year_in_parallel
-
-
-from lake_effect_snow.default_varname_mappings import T_AIR_2M, U_WE, V_SN, TOTAL_PREC, SNOWFALL_RATE
+from lake_effect_snow.lake_effect_snowfall_entry import calculate_lake_effect_snowfall_each_year_in_parallel
 
 
 def main():

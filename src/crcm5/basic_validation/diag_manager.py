@@ -1,10 +1,12 @@
 import calendar
+from collections import OrderedDict
 from pathlib import Path
 
 from pendulum import Period
 from rpn import level_kinds
 from rpn.rpn import RPN
 
+from lake_effect_snow.base_utils import VerticalLevel
 from util.seasons_info import MonthPeriod
 from util import seasons_info
 
@@ -21,11 +23,20 @@ class DiagCrcmManager(object):
         self.lons = None
         self.lats = None
         self.projection_params = None
+        self.basemap = None
 
         self._init_grid()
 
         self.month_folder_map = {}
         self._detect_month_folders()
+
+
+
+    def get_basemap(self, **kwargs):
+        from rpn.domains.rotated_lat_lon import RotatedLatLon
+
+        rll = RotatedLatLon(**self.projection_params)
+        return rll.get_basemap_object_for_lons_lats(lons2d=self.lons, lats2d=self.lats, **kwargs)
 
 
     def _init_grid(self):
@@ -41,21 +52,13 @@ class DiagCrcmManager(object):
                     continue
 
 
-                print(f)
                 with RPN(str(f)) as r:
                     assert isinstance(r, RPN)
 
                     vnames = r.get_list_of_varnames()
-                    print(vnames)
                     vname = [v for v in vnames if v not in [">>", "^^", "HY", "CONF", "GSET"]][0]
 
-
-
-
-
                     r.get_first_record_for_name(vname)
-
-                    print(r.get_current_info())
 
                     self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
                     self.projection_params = r.get_proj_parameters_for_the_last_read_rec()
@@ -80,7 +83,7 @@ class DiagCrcmManager(object):
             date_s = month_dir.name.split("_")[-1]
             month, year = int(date_s[-2:]), int(date_s[:-2])
 
-            self.month_folder_map[(month, year)] = month_dir
+            self.month_folder_map[year, month] = month_dir
 
 
 
@@ -98,7 +101,7 @@ class DiagCrcmManager(object):
     def get_seasonal_means_with_ttest_stats(self, season_to_monthperiod=None, start_year=None, end_year=None,
                                             vname="",
                                             data_file_prefix=None,
-                                            level_kind=level_kinds.ARBITRARY):
+                                            vertical_level=VerticalLevel(-1, level_type=level_kinds.ARBITRARY)):
         """
         :param season_to_monthperiod:
         :param start_year:
@@ -107,7 +110,7 @@ class DiagCrcmManager(object):
         """
 
 
-        season_to_res = {}
+        season_to_res = OrderedDict()
 
         levels = None
 
@@ -130,6 +133,7 @@ class DiagCrcmManager(object):
 
                 for start in period.range("months"):
                     print(season, start)
+                    print(self.data_dir)
 
                     month_dir = self.month_folder_map[start.year, start.month]
 
@@ -141,19 +145,27 @@ class DiagCrcmManager(object):
                             if not data_file.name.startswith(data_file_prefix):
                                 continue
 
+                        # skip files with the variance
+                        if data_file.name.endswith("_variance"):
+                            continue
+
+
                         try:
                             with RPN(str(data_file)) as r:
                                 assert isinstance(r, RPN)
-                                data = r.get_4d_field(vname, level_kind=level_kind)
+                                data = r.get_4d_field(vname, level_kind=vertical_level.level_type)
 
                                 for t, lev_to_field in data.items():
-                                    levels = sorted(lev_to_field) if levels is None else levels
 
 
-                                    data = np.array([lev_to_field[lev] for lev in levels]).squeeze()
+                                    if vertical_level.value == -1:
+                                        levels = sorted(lev_to_field) if levels is None else levels
+                                        data = np.array([lev_to_field[lev] for lev in levels]).squeeze()
+                                    else:
+                                        data = lev_to_field[vertical_level.value]
 
                                     monthly_means.append(data)
-                                    ndays_per_month.append(calendar.monthrange(start.year, start.month))
+                                    ndays_per_month.append(calendar.monthrange(start.year, start.month)[1])
                                     break
 
 
@@ -167,8 +179,14 @@ class DiagCrcmManager(object):
 
                 # calculate seasonal means
                 ndays_per_season.append(ndays_per_month.sum())
-                seasonal_means.append((monthly_means * ndays_per_month[:, np.newaxis, np.newaxis]).sum(axis=0) / ndays_per_month.sum())
 
+
+                if monthly_means.ndim == 3:
+                    seasonal_means.append((monthly_means * ndays_per_month[:, np.newaxis, np.newaxis]).sum(axis=0) / ndays_per_month.sum())
+                elif monthly_means.ndim == 4:
+                    seasonal_means.append((monthly_means * ndays_per_month[:, np.newaxis, np.newaxis, np.newaxis]).sum(axis=0) / ndays_per_month.sum())
+                else:
+                    raise NotImplementedError("Cannot handle {}-dimensional data".format(monthly_means.ndim))
 
 
             # calculate climatology and ttest params
@@ -189,7 +207,7 @@ class DiagCrcmManager(object):
 
 def test():
     manager = DiagCrcmManager(data_dir="/HOME/huziy/skynet3_rech1/CRCM5_outputs/NEI/diags/NEI_WC0.44deg_default/Diagnostics/")
-    manager.get_seasonal_means_with_ttest_stats(start_year=1980, end_year=2010, season_to_monthperiod=seasons_info.DEFAULT_SEASON_TO_MONTHPERIOD)
+    manager.get_seasonal_means_with_ttest_stats(start_year=1980, end_year=2010, season_to_monthperiod=seasons_info.DEFAULT_SEASON_TO_MONTHPERIOD, vname="TT", data_file_prefix="dm", vertical_level=VerticalLevel(1, level_type=level_kinds.HYBRID))
 
 if __name__ == '__main__':
     test()

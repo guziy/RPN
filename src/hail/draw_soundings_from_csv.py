@@ -28,12 +28,31 @@ def main():
 
     data_dir = Path("/HOME/huziy/skynet3_rech1/hail/soundings_from_erai/")
 
-    dates = [datetime(1991, 9, 7), datetime(1991, 9, 7, 6), datetime(1991, 9, 7, 12), datetime(1991, 9, 7, 18),
-             datetime(1991, 9, 8, 0), datetime(1991, 9, 8, 18)]
+    # dates = [datetime(1991, 9, 7), datetime(1991, 9, 7, 6), datetime(1991, 9, 7, 12), datetime(1991, 9, 7, 18),
+    #          datetime(1991, 9, 8, 0), datetime(1991, 9, 8, 18)]
+    #
+    # dates.extend([datetime(1991, 9, 6, 0), datetime(1991, 9, 6, 6), datetime(1991, 9, 6, 12), datetime(1991, 9, 6, 18)])
+    #
+    # dates = [datetime(1990, 7, 7), datetime(2010, 7, 12), datetime(1991, 9, 8, 0)]
 
-    dates.extend([datetime(1991, 9, 6, 0), datetime(1991, 9, 6, 6), datetime(1991, 9, 6, 12), datetime(1991, 9, 6, 18)])
 
-    dates = [datetime(1990, 7, 7), datetime(2010, 7, 12), datetime(1991, 9, 8, 0)]
+
+    dates_s = """
+- 07/09/1991 12:00
+- 07/09/1991 18:00
+- 08/09/1991 00:00
+- 08/09/1991 06:00
+- 08/09/1991 12:00
+- 13/09/1991 12:00
+- 13/09/1991 18:00
+- 14/09/1991 00:00
+- 14/09/1991 06:00
+- 14/09/1991 12:00
+    """
+
+    dates = [datetime.strptime(line.strip()[1:].strip(), "%d/%m/%Y %H:%M") for line in dates_s.split("\n") if line.strip() != ""]
+
+
 
 
     def __date_parser(s):
@@ -53,7 +72,7 @@ def main():
 
 
 
-    temp_perturbation_degc = 2
+    temp_perturbation_degc = 0
 
     for the_date in dates:
 

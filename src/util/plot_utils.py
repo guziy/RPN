@@ -63,7 +63,7 @@ def apply_plot_params(font_size=20, width_pt=1000, aspect_ratio=1, height_cm=Non
         fig_size = [width_cm * inches_per_cm, height_cm * inches_per_cm]
 
     params = {
-        'axes.labelsize': font_size * 1.5,
+        'axes.labelsize': font_size,
         "axes.titlesize": font_size * 1.5,
         'font.size': font_size,
         'legend.fontsize': font_size,

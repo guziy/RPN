@@ -1,5 +1,4 @@
 import matplotlib
-from memory_profiler import profile
 
 matplotlib.use("Agg")
 
@@ -12,13 +11,8 @@ from multiprocessing.pool import Pool
 from pathlib import Path
 
 import xarray
-from matplotlib import cm
-from matplotlib.axes import Axes
-from matplotlib.colors import LogNorm, BoundaryNorm, LinearSegmentedColormap
 from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import ScalarFormatter
 from mpl_toolkits.basemap import Basemap
-from pendulum import Pendulum
 from rpn import level_kinds
 from scipy.spatial import cKDTree as KDTree
 from xarray import DataArray
@@ -26,14 +20,12 @@ from xarray import DataArray
 
 from lake_effect_snow import base_utils
 from lake_effect_snow import common_params
-from lake_effect_snow import data_source_types
+from data.robust import data_source_types
 from lake_effect_snow import default_varname_mappings
 from lake_effect_snow import winds
 from lake_effect_snow.base_utils import VerticalLevel
-from lake_effect_snow.data_manager import DataManager
+from data.robust.data_manager import DataManager
 import matplotlib.pyplot as plt
-import pandas as pd
-from mpl_toolkits.basemap import maskoceans
 
 import numpy as np
 

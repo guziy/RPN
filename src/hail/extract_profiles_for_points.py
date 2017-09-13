@@ -31,14 +31,22 @@ def get_multiplier(vname):
     return 1
 
 
-def main(in_dir="/HOME/data/Driving_data/Pilots/ERA-Interim_0.75/Pilots", out_dir="/HOME/huziy/skynet3_rech1/hail/soundings_from_erai"):
+def main(in_dir="/HOME/data/Driving_data/Pilots/ERA-Interim_0.75/Pilots",
+         out_dir="/HOME/huziy/skynet3_rech1/hail/soundings_from_erai", npoints=1,
+         var_list=None):
 
     # var_list = ["TT", "HU", "UU", "VV"]
     # var_list = ["HU", ]
 
-    var_list = ["GZ"]
+    if var_list is None:
+        var_list = ["TT", "HU", "UU", "VV", "GZ"]
 
     out_dir_p = Path(out_dir)
+
+
+    if not out_dir_p.exists():
+        out_dir_p.mkdir(parents=True)
+
 
     in_dir_p = Path(in_dir)
 
@@ -85,7 +93,7 @@ def main(in_dir="/HOME/data/Driving_data/Pilots/ERA-Interim_0.75/Pilots", out_di
 
                     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lon0, lat0)
 
-                    dist, spatial_ind = ktree.query((x0, y0, z0))
+                    dist, spatial_ind = ktree.query((x0, y0, z0), k=npoints)
 
 
 
@@ -94,7 +102,7 @@ def main(in_dir="/HOME/data/Driving_data/Pilots/ERA-Interim_0.75/Pilots", out_di
                 dates = sorted([d for d in data])
                 vertical_levels = sorted([lev for lev in data[dates[0]]])
 
-                values = np.array([[data[d][lev].flatten()[spatial_ind] for lev in vertical_levels] for d in dates])
+                values = np.array([[data[d][lev].flatten()[spatial_ind].mean() for lev in vertical_levels] for d in dates])
 
                 print("levels={}".format(vertical_levels))
                 print("date range={}...{}".format(dates[0], dates[-1]))
@@ -127,5 +135,11 @@ def main(in_dir="/HOME/data/Driving_data/Pilots/ERA-Interim_0.75/Pilots", out_di
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     # main(in_dir="/HOME/data/Driving_data/Offline/ERA-Interim_0.75/6h_Analysis.PR0")
+    main(in_dir="/HOME/data/Driving_data/Offline/ERA-Interim_0.75/3h_Forecast",
+         out_dir="/HOME/huziy/skynet3_rech1/hail/soundings_from_erai/3h",
+         var_list=["PR"])
+
+    main(out_dir="/HOME/huziy/skynet3_rech1/hail/soundings_from_erai/4points_mean",
+         var_list=["TT", "HU", "UU", "VV", "GZ"], npoints=4)

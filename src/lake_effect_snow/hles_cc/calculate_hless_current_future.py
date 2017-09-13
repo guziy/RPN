@@ -4,14 +4,14 @@ matplotlib.use("Agg")
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
-from multiprocessing import Process
 from multiprocessing.pool import Pool
 
 from pendulum import Period
 from rpn import level_kinds
 
 from application_properties import main_decorator
-from lake_effect_snow import data_source_types, default_varname_mappings
+from lake_effect_snow import default_varname_mappings
+from data.robust import data_source_types
 from lake_effect_snow.base_utils import VerticalLevel
 from lake_effect_snow.default_varname_mappings import vname_map_CRCM5, T_AIR_2M, U_WE, V_SN, vname_to_offset_CRCM5, \
     vname_to_multiplier_CRCM5, vname_to_fname_prefix_CRCM5
@@ -28,7 +28,7 @@ def monthly_func(x):
 def main_current():
 
     period = Period(
-        datetime(1989, 1, 1), datetime(1995, 12, 31)
+        datetime(1989, 1, 1), datetime(2010, 12, 31)
     )
 
     label = "CRCM5_NEMO_CanESM2_RCP85_{}-{}".format(period.start.year, period.end.year)
@@ -58,14 +58,15 @@ def main_current():
 
         label_to_config = OrderedDict([(
             label, {
-                "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-current_CanESM2/Samples",
+                #"base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-current_CanESM2/Samples",
+                "base_folder": "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-current_CanESM2/Samples",
                 "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
                 "min_dt": timedelta(hours=3),
                 "varname_mapping": vname_map,
                 "level_mapping": vname_to_level_erai,
                 "offset_mapping": vname_to_offset_CRCM5,
                 "multiplier_mapping": vname_to_multiplier_CRCM5,
-                "filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
+                "varname_to_filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
             }
         )])
@@ -86,7 +87,7 @@ def main_current():
 def main_future():
 
     period = Period(
-        datetime(2079, 1, 1), datetime(2084, 12, 31)
+        datetime(2079, 1, 1), datetime(2100, 12, 31)
     )
 
     label = "CRCM5_NEMO_CanESM2_RCP85_{}-{}".format(period.start.year, period.end.year)
@@ -116,14 +117,15 @@ def main_future():
 
         label_to_config = OrderedDict([(
             label, {
-                "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-future_CanESM2/Samples",
+                # "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-future_CanESM2/Samples",
+                "base_folder": "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples",
                 "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
                 "min_dt": timedelta(hours=3),
                 "varname_mapping": vname_map,
                 "level_mapping": vname_to_level_erai,
                 "offset_mapping": vname_to_offset_CRCM5,
                 "multiplier_mapping": vname_to_multiplier_CRCM5,
-                "filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
+                "varname_to_filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
             }
         )])
@@ -142,4 +144,5 @@ def main_future():
 
 
 if __name__ == '__main__':
-    main_current()
+    # main_current()
+    main_future()

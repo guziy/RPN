@@ -4,36 +4,30 @@ from collections import defaultdict
 from datetime import timedelta, datetime
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import xarray as xr
 from matplotlib.axes import Axes
 from matplotlib.dates import DateFormatter, MonthLocator
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FuncFormatter
-from mpl_toolkits.basemap import Basemap
 from pendulum import Pendulum
 from pendulum import Period
 from rpn import level_kinds
 from rpn.rpn import RPN
 
 from application_properties import main_decorator
-from crcm5.mh_domains import default_domains
+from crcm5.mh_domains import constants
 from crcm5.mh_domains import stfl_stations
 from crcm5.model_point import ModelPoint
 from data.cehq_station import Station
-import matplotlib.pyplot as plt
-
 from data.cell_manager import CellManager
-from domains.grid_config import GridConfig
-from lake_effect_snow import data_source_types
+from data.robust import data_source_types
+from data.robust.data_manager import DataManager
 from lake_effect_snow.base_utils import VerticalLevel
-from lake_effect_snow.data_manager import DataManager
 from lake_effect_snow.default_varname_mappings import vname_to_offset_CRCM5
 from util import pandas_utils
 from util import plot_utils
-
-from crcm5.mh_domains import constants
-import xarray as xr
-import pandas as pd
-
 
 img_folder = Path("mh/engage_report/station_data_plots")
 

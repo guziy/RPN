@@ -2,21 +2,18 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+import netCDF4
+import numpy as np
 import xarray
-from pandas._period import Period
 from pendulum import Pendulum
+from pendulum import Period
 from rpn.rpn import RPN
 from scipy.spatial import KDTree
 from xarray import DataArray
-from xarray import Dataset
 
-from lake_effect_snow import data_source_types
+from data.robust import data_source_types
 from lake_effect_snow.base_utils import VerticalLevel
-from pendulum import Period
-import numpy as np
-import netCDF4
-
-from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION, TOTAL_PREC
+from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION
 from util.geo import lat_lon
 
 
@@ -52,7 +49,7 @@ class DataManager(object):
 
         # Do the prliminary mappings for faster access ...
         if self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
-            self.varname_to_file_prefix = store_config["filename_prefix_mapping"]
+            self.varname_to_file_prefix = store_config["varname_to_filename_prefix_mapping"]
             self.init_mappings_samples_folder_crcm_output()
         elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME:
             self.init_mappings_samples_folder_crcm_output()
@@ -156,6 +153,7 @@ class DataManager(object):
         #       data(t, x, y), dates(t), lons(x, y), lats(x, y)
         if self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_OF_RPN_FILES:
 
+            assert isinstance(period, Period)
 
             for month_start in period.range("months"):
                 f = self.yearmonth_to_path[(month_start.year, month_start.month)]
@@ -428,5 +426,172 @@ class DataManager(object):
 
 
         return result
+
+
+
+    def get_min_max_avg_for_short_period(self, start_time:Pendulum, end_time:Pendulum, varname_internal:str):
+        """
+        The short period means that all the data from the period fits into RAM
+        :param start_time:
+        :param end_time:
+        :param varname_internal:
+        :return:
+        """
+        p = Period(start_time, end_time)
+        data = self.read_data_for_period(p, varname_internal=varname_internal)
+
+
+        min_current = data.min(dim="t").values
+        max_current = data.max(dim="t").values
+        avg_current = data.mean(dim="t").values
+
+
+        min_dates = _get_dates_for_extremes(min_current, data)
+        min_dates.name = "min_dates"
+
+        max_dates = _get_dates_for_extremes(max_current, data)
+        max_dates.name = "max_dates"
+
+
+
+        # assign names
+        min_vals = xarray.DataArray(name="min_{}".format(varname_internal), data=min_current, dims=("x", "y"))
+        max_vals = xarray.DataArray(name="max_{}".format(varname_internal), data=max_current, dims=("x", "y"))
+        avg_vals = xarray.DataArray(name = "avg_{}".format(varname_internal), data=avg_current, dims=("x", "y"))
+
+
+        result = {
+            min_vals.name: min_vals,
+            min_dates.name: min_dates,
+            max_vals.name: max_vals,
+            max_dates.name: max_dates,
+            avg_vals.name: avg_vals
+        }
+
+        return result
+
+
+    def get_min_max_avg_for_period(self, start_year:int, end_year:int, varname_internal:str):
+        """
+
+        :param start_year:
+        :param end_year:
+        :param varname_internal:
+        """
+
+        min_vals = None
+        max_vals = None
+        avg_vals = None
+
+        min_dates = None
+        max_dates = None
+
+
+        avg_n = 0
+
+
+        for y in range(start_year, end_year + 1):
+
+            p_start = Pendulum(y, 1, 1)
+            p_end = Pendulum(y + 1, 1, 1).subtract(microseconds=1)
+            p = Period(p_start, p_end)
+            data = self.read_data_for_period(p, varname_internal=varname_internal)
+
+
+            min_current = data.min(dim="t").values
+            max_current = data.max(dim="t").values
+            avg_current = data.mean(dim="t").values
+
+
+
+            # Find extremes and dates when they are occurring
+            if min_vals is None:
+                min_vals = min_current
+            else:
+                min_vals = np.where(min_vals <= min_current, min_vals, min_current)
+
+
+            if max_vals is None:
+                max_vals = max_current
+            else:
+                max_vals = np.where(max_vals >= max_current, max_vals, max_current)
+
+            min_dates = _get_dates_for_extremes(min_vals, data, min_dates)
+
+            assert min_dates is not None
+
+            max_dates = _get_dates_for_extremes(max_vals, data, max_dates)
+
+
+            # calculate the mean
+            if avg_vals is None:
+                avg_vals = avg_current
+                avg_n = data.shape[0]
+            else:
+                incr = data.shape[0]
+                # calculate the mean incrementally to avoid overflow
+                avg_vals = avg_vals * (avg_n / (avg_n + incr)) + (incr / (avg_n + incr)) * avg_current
+
+
+
+        # assign names
+        min_vals = xarray.DataArray(name="min_{}".format(varname_internal), data=min_vals, dims=("x", "y"))
+        min_dates.name = "min_dates"
+
+        max_vals = xarray.DataArray(name="max_{}".format(varname_internal), data=max_vals, dims=("x", "y"))
+        max_dates.name = "max_dates"
+
+        avg_vals = xarray.DataArray(name = "avg_{}".format(varname_internal), data=avg_vals, dims=("x", "y"))
+
+
+
+
+        result = {
+            min_vals.name: min_vals,
+            min_dates.name: min_dates,
+            max_vals.name: max_vals,
+            max_dates.name: max_dates,
+            avg_vals.name: avg_vals
+        }
+
+        return result
+
+
+
+def _get_dates_for_extremes(extr_vals: xarray.DataArray, current_data_chunk: xarray.DataArray, extr_dates:xarray.DataArray=None):
+
+    """
+    Helper method to determine the times when the extreme values are occurring
+    :param extr_vals:
+    :param current_data_chunk:
+    :param result_dates:
+    """
+    t3d, _ = xarray.broadcast(current_data_chunk.t, current_data_chunk)
+
+    if extr_dates is None:
+        result_dates = t3d[0, :, :].copy()
+    else:
+        result_dates = extr_dates
+
+
+    tis, xis, yis = np.where(extr_vals == current_data_chunk)
+
+
+    npvals = t3d.values
+    # for ti, xi, yi in zip(tis, xis, yis):
+    #     result_dates[xi, yi] = npvals[ti, xi, yi]
+
+    result_dates.values[xis, yis] = npvals[tis, xis, yis]
+
+    # debug
+
+
+    return result_dates
+
+
+
+
+
+
 
 

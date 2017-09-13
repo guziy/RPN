@@ -25,11 +25,11 @@ from rpn.rpn import RPN
 
 from application_properties import main_decorator
 from crcm5.analyse_hdf.run_config import RunConfig
-from lake_effect_snow import data_source_types
+from data.robust import data_source_types
 
 from lake_effect_snow import default_varname_mappings
 from lake_effect_snow.base_utils import VerticalLevel
-from lake_effect_snow.data_manager import DataManager
+from data.robust.data_manager import DataManager
 from lake_effect_snow.default_varname_mappings import T_AIR_2M, U_WE, V_SN, TOTAL_PREC, SWE, LAKE_ICE_FRACTION
 
 import numpy as np

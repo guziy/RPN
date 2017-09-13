@@ -2,6 +2,8 @@ from collections import OrderedDict
 from collections import defaultdict
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
@@ -14,17 +16,13 @@ from application_properties import main_decorator
 from crcm5.analyse_hdf.run_config import RunConfig
 from crcm5.nemo_vs_hostetler.validate_seasonal_temperature_and_precip_fields import get_land_fraction, \
     get_target_lons_lats_basemap, season_to_months
-from lake_effect_snow import data_source_types
+from data.robust import data_source_types
+from data.robust.data_manager import DataManager
 from lake_effect_snow import default_varname_mappings
 from lake_effect_snow.base_utils import VerticalLevel
-from lake_effect_snow.data_manager import DataManager
 from lake_effect_snow.default_varname_mappings import T_AIR_2M, TOTAL_PREC, SWE, LAKE_ICE_FRACTION, U_WE, V_SN
 from rpn_utils.get_coord_data_from_rpn_file import IndexSubspace
-
-import numpy as np
-
 from util import plot_utils
-import matplotlib.pyplot as plt
 
 img_folder = Path("nemo_vs_hostetler")
 

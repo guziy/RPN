@@ -8,12 +8,8 @@ from collections import OrderedDict
 from collections import defaultdict
 from pathlib import Path
 
-import matplotlib
-
-from crcm5.mh_domains import constants
-
-# matplotlib.use("agg")
-
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
 from matplotlib.gridspec import GridSpec
@@ -21,28 +17,22 @@ from mpl_toolkits.basemap import maskoceans
 from rpn import level_kinds
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
+from scipy.stats import ttest_ind_from_stats
 
 from application_properties import main_decorator
 from crcm5.analyse_hdf.run_config import RunConfig
-from data.cell_manager import CellManager
-from lake_effect_snow import data_source_types
-
+from crcm5.mh_domains import constants
+from crcm5.mh_domains import default_domains
+from data.robust import data_source_types
+from data.robust.data_manager import DataManager
 from lake_effect_snow import default_varname_mappings
 from lake_effect_snow.base_utils import VerticalLevel
-from lake_effect_snow.data_manager import DataManager
 from lake_effect_snow.default_varname_mappings import T_AIR_2M, U_WE, V_SN, TOTAL_PREC, SWE, LAKE_ICE_FRACTION
-
-import numpy as np
-
-import matplotlib.pyplot as plt
-
-from scipy.stats import ttest_ind_from_stats
-
-from crcm5.mh_domains import default_domains
-
 # season name to month list mapping (the order of months is important)
 from util import plot_utils
 from util.geo import lat_lon
+
+# matplotlib.use("agg")
 
 season_to_months = OrderedDict([
     ("DJF", [12, 1, 2]),
