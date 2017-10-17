@@ -6,11 +6,15 @@ from multiprocessing.pool import ThreadPool
 
 import dask
 import matplotlib
+import xarray
 from memory_profiler import profile
+from rpn.rpn import RPN
 from scipy.stats import ttest_ind_from_stats
 
 from crcm5.basic_validation.plot_area_averages import plot_area_avg
+from crcm5.basic_validation.plot_meridional_mean import plot_meridional_mean
 from crcm5.basic_validation.plot_monthly_panels_from_daily_clim_xarray import plot_monthly_panels
+from crcm5.basic_validation.select_subregion import SubRegionByLonLatCorners
 from data.robust import data_source_types
 from data.robust.data_manager import DataManager
 from lake_effect_snow import default_varname_mappings
@@ -31,8 +35,6 @@ from data.highres_data_manager import HighResDataManager
 from lake_effect_snow.base_utils import VerticalLevel
 from util import plot_utils
 from util.seasons_info import MonthPeriod
-
-from matplotlib import colors
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -89,52 +91,58 @@ var_name_to_mul_default = {
 area_thresh_km2 = 5000
 
 
-def _plot_seasonal_deltas(seas_data: dict, data_label="", vname="", img_dir: Path = Path(), map: Basemap = None,
-                          lons=None, lats=None,
-                          var_name_to_mul=var_name_to_mul_default):
-    xx, yy = map(lons, lats)
 
-    print("lons.shape = {}".format(lons.shape))
-    for para_index, param in enumerate(["mean", "std"]):
+def get_meridional_avg_elevation(geo_path_dict: dict, subregion: SubRegionByLonLatCorners, elev_field_name="ME") -> dict:
+    """
+    :return the meridional avg elevation for the given subregion
+    :param geo_path_dict:
+    :param subregion:
+    :param elev_field_name:
+    :return: dictionary of xarray.DataArray objects as values for meridional means
+    """
+    result = {}
 
-        # plot the mean
-        fig = plt.figure()
+    field_level = 0
 
-        color_levels = clevs[param][vname]
+    #
+    for label, path in geo_path_dict.items():
+        with RPN(path) as r:
+            field = r.get_first_record_for_name_and_level(varname=elev_field_name, level=field_level)
+            lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
 
-        norm = BoundaryNorm(color_levels, len(color_levels) - 1)
-        cmap = cm.get_cmap(cmaps[param][vname], len(color_levels) - 1)
+            mask, ll, ur = subregion.to_mask(lons_2d_grid=lons, lats_2d_grid=lats)
 
-        gs = GridSpec(1, len(seas_data), wspace=0.01)
-        for col, (season, data) in enumerate(seas_data.items()):
-            ax = fig.add_subplot(gs[0, col])
-            ax.set_title(season)
+            # calculate the meridional mean
+            meridional_mean_elev = field[ll[0]:ur[0] + 1, ll[1]:ur[1] + 1].mean(axis=1)
+            meridional_mean_lons = lons[ll[0]:ur[0] + 1, ll[1]:ur[1] + 1].mean(axis=1)
 
-            to_plot = maskoceans(np.where(lons <= 180, lons, np.subtract(lons, 360.)), lats,
-                                 data[para_index] * var_name_to_mul[vname])
+            arr = xarray.DataArray(meridional_mean_elev, coords={"lon": meridional_mean_lons}, dims=["lon"])
+            result[label] = arr
 
-            im = map.pcolormesh(xx, yy, to_plot, norm=norm, cmap=cmap, ax=ax)
-            cb = map.colorbar(im, location="bottom", ticks=color_levels)
-            map.drawcoastlines(linewidth=0.5)
 
-            cb.ax.set_visible(col == 0)
+    return result
 
-            if col == 0:
-                ax.set_ylabel("{}({})".format(vname, param))
 
-            if col == 1:
-                ax.set_xlabel(r"$\Delta$" + data_label, ha="left")
 
-        img_path = "deltas_{}_{}_{}.png".format(data_label, vname, param)
-        img_path = img_dir / img_path
-        fig.savefig(str(img_path), bbox_inches="tight", dpi=400)
-        plt.close(fig)
+def get_topo_map(geo_path: str, elev_field_name: str="ME"):
+    field_level = 0
+    with RPN(geo_path) as r:
+
+        field = r.get_first_record_for_name_and_level(varname=elev_field_name, level=field_level)
+        lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+
+        dims = ("lon", "lat")
+        arr = xarray.DataArray(
+            field, coords={"lons": (dims, lons), "lats": (dims, lats)}, dims=dims
+        )
+
+    return arr
 
 
 # @profile
 def main():
     # dask.set_options(pool=ThreadPool(20))
-    img_folder = Path("nei_validation")
+    img_folder = Path("nei_validation/meridional_avg")
     img_folder.mkdir(parents=True, exist_ok=True)
 
     pval_crit = 0.1
@@ -142,6 +150,16 @@ def main():
     start_year = 1980
     end_year = 1998
 
+
+    subregion = SubRegionByLonLatCorners(lleft={"lon": -128, "lat": 46}, uright={"lon": -113, "lat": 55})
+
+
+    season_to_months = {
+        "DJF": [12, 1, 2],
+        "MAM": range(3, 6),
+        "JJA": range(6, 9),
+        "SON": range(9, 12)
+    }
 
     # TT_min and TT_max mean daily min and maximum temperatures
     var_names = [
@@ -171,6 +189,13 @@ def main():
     }
 
 
+    var_name_to_display_units = {
+        default_varname_mappings.TOTAL_PREC: "mm/day",
+        default_varname_mappings.T_AIR_2M_DAILY_MAX: r"$^\circ$C",
+        default_varname_mappings.T_AIR_2M_DAILY_MIN: r"$^\circ$C",
+        default_varname_mappings.T_AIR_2M_DAILY_AVG: r"$^\circ$C"
+    }
+
 
 
     model_vname_to_multiplier = {
@@ -186,6 +211,12 @@ def main():
     sim_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples")
     sim_paths[WC_044_DEFAULT_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/Samples")
     sim_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/Samples")
+
+
+    elevation_paths = OrderedDict()
+    elevation_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/nei_geophy_wc_011.rpn"
+    elevation_paths[WC_044_DEFAULT_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_newdirs"
+    elevation_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_dirs_hshedsfix_CTEM_FRAC_GlVolFix"
 
 
     mod_spatial_scales = OrderedDict([
@@ -233,6 +264,7 @@ def main():
     data_dict = {vn: {} for vn in varnames_list}
     bias_dict = {vn: {} for vn in varnames_list}
 
+    bmap = None
     # calculate the percentiles for each simulation and obs data (obs data interpolated to the model grid)
     for model_label, base_dir in sim_paths.items():
         # model outputs manager
@@ -309,60 +341,60 @@ def main():
             data_source_diff = f"{model_label}vsDAYMET_ndrw{nd_rw}_q{q}_vn{vname_daymet}_{start_year}-{end_year}"
 
 
+
+            mask, ij_ll, ij_ur = subregion.to_mask(mod.coords["lon"].values, mod.coords["lat"].values)
+
+            mod = mod[:, ij_ll[0]:ij_ur[0] + 1, ij_ll[1]:ij_ur[1] + 1]
+            obs = obs[:, ij_ll[0]:ij_ur[0] + 1, ij_ll[1]:ij_ur[1] + 1]
+
+            # set the units to display them during pltting
+            mod.attrs["units"] = var_name_to_display_units[vname_daymet]
+            obs.attrs["units"] = var_name_to_display_units[vname_daymet]
+
+
             # save data for line plots
             data_dict[vname_daymet][data_source_mod] = mod
             data_dict[vname_daymet][data_source_obs] = obs
             bias_dict[vname_daymet][data_source_mod] = mod - obs
 
 
-            bmap = dm.get_basemap(varname_internal=vname_model, resolution="i", area_thresh=area_thresh_km2)
 
 
-            # plot model data
-            plot_monthly_panels(mod, bmap, img_dir=str(img_folder), data_label=data_source_mod,
-                                color_levels=clevs["mean"][vname_model], cmap=cmaps["mean"][vname_model])
-
+            if bmap is None:
+                bmap = dm.get_basemap(varname_internal=vname_model, resolution="i", area_thresh=area_thresh_km2)
 
 
 
+    # Just here what the graphs mean
+    vn_to_title = {
+        default_varname_mappings.TOTAL_PREC: "PR90",
+        default_varname_mappings.T_AIR_2M_DAILY_MIN: "TN90",
+        default_varname_mappings.T_AIR_2M_DAILY_MAX: "TX10"
+    }
 
 
-            # plot obs data
-            plot_monthly_panels(obs, bmap, img_dir=str(img_folder), data_label=data_source_obs,
-                                color_levels=clevs["mean"][vname_model], cmap=cmaps["mean"][vname_model])
+    elev_field_name = "ME"
+    meridional_mean_elev_dict = get_meridional_avg_elevation(geo_path_dict=elevation_paths,
+                                                             subregion=subregion,
+                                                             elev_field_name=elev_field_name)
 
-
-            color_levels = clevs["mean"][vname_model + "diff"]
-            cmap = cm.get_cmap(cmaps["mean"][vname_model + "diff"], len(color_levels) - 1)
-
-            # modify the cmap for differences (make it lighter)
-            modify_cmap_for = [
-                "TT",
-                default_varname_mappings.T_AIR_2M_DAILY_MAX,
-                default_varname_mappings.T_AIR_2M_DAILY_MIN,
-                default_varname_mappings.T_AIR_2M,
-                default_varname_mappings.T_AIR_2M_DAILY_AVG
-            ]
-            if vname_model in modify_cmap_for:
-                cmap = colors.LinearSegmentedColormap.from_list("bwr_cut", cmap(np.arange(0.2, 0.9, 0.1)),
-                                                                N=len(color_levels) - 1)
-
-            plot_monthly_panels(mod - obs, bmap,
-                                img_dir=str(img_folder),
-                                data_label=data_source_diff,
-                                color_levels=color_levels,
-                                cmap=cmap)
-
-
-
-
+    topo_map = get_topo_map(geo_path=elevation_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL], elev_field_name=elev_field_name)
 
     for vn in data_dict:
 
         if len(data_dict[vn]) == 0:
             continue
 
-        plot_area_avg(data_dict[vn], bias_dict[vn], panel_titles=(vn, ""), img_dir=img_folder / "extremes_1d")
+        plot_meridional_mean(data_dict[vn], bias_dict[vn], panel_titles=(vn_to_title[vn] + " (annual)", ""),
+                             img_dir=img_folder, bmap=bmap, meridional_elev_dict=meridional_mean_elev_dict,
+                             map_topo=topo_map)
+
+        for sname, months in season_to_months.items():
+            plot_meridional_mean(data_dict[vn], bias_dict[vn], panel_titles=(vn_to_title[vn] + f" ({sname})", ""),
+                                 img_dir=img_folder, bmap=bmap,
+                                 months=months, season_name=sname,
+                                 meridional_elev_dict=meridional_mean_elev_dict,
+                                 map_topo=topo_map)
 
 
 

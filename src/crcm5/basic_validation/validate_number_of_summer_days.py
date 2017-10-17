@@ -1,8 +1,4 @@
-# compare 90percentile of Tmin and 10th percentile of
-# preprocess data
-# For Tmin and Tmax - 5-day moving window centered on each calendar day
-# For PR - 29-day moving window
-from multiprocessing.pool import ThreadPool
+# annual number of summer days (i.e. the number of days when TX > 25C)
 
 import dask
 import matplotlib
@@ -31,8 +27,6 @@ from data.highres_data_manager import HighResDataManager
 from lake_effect_snow.base_utils import VerticalLevel
 from util import plot_utils
 from util.seasons_info import MonthPeriod
-
-from matplotlib import colors
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -89,49 +83,7 @@ var_name_to_mul_default = {
 area_thresh_km2 = 5000
 
 
-def _plot_seasonal_deltas(seas_data: dict, data_label="", vname="", img_dir: Path = Path(), map: Basemap = None,
-                          lons=None, lats=None,
-                          var_name_to_mul=var_name_to_mul_default):
-    xx, yy = map(lons, lats)
 
-    print("lons.shape = {}".format(lons.shape))
-    for para_index, param in enumerate(["mean", "std"]):
-
-        # plot the mean
-        fig = plt.figure()
-
-        color_levels = clevs[param][vname]
-
-        norm = BoundaryNorm(color_levels, len(color_levels) - 1)
-        cmap = cm.get_cmap(cmaps[param][vname], len(color_levels) - 1)
-
-        gs = GridSpec(1, len(seas_data), wspace=0.01)
-        for col, (season, data) in enumerate(seas_data.items()):
-            ax = fig.add_subplot(gs[0, col])
-            ax.set_title(season)
-
-            to_plot = maskoceans(np.where(lons <= 180, lons, np.subtract(lons, 360.)), lats,
-                                 data[para_index] * var_name_to_mul[vname])
-
-            im = map.pcolormesh(xx, yy, to_plot, norm=norm, cmap=cmap, ax=ax)
-            cb = map.colorbar(im, location="bottom", ticks=color_levels)
-            map.drawcoastlines(linewidth=0.5)
-
-            cb.ax.set_visible(col == 0)
-
-            if col == 0:
-                ax.set_ylabel("{}({})".format(vname, param))
-
-            if col == 1:
-                ax.set_xlabel(r"$\Delta$" + data_label, ha="left")
-
-        img_path = "deltas_{}_{}_{}.png".format(data_label, vname, param)
-        img_path = img_dir / img_path
-        fig.savefig(str(img_path), bbox_inches="tight", dpi=400)
-        plt.close(fig)
-
-
-# @profile
 def main():
     # dask.set_options(pool=ThreadPool(20))
     img_folder = Path("nei_validation")
@@ -270,6 +222,7 @@ def main():
 
 
             # model data
+            # TODO: change for the number of summer days
             mod = dm.compute_climatological_quantiles(start_year=start_year, end_year=end_year,
                                                       daily_agg_func=daily_agg_func,
                                                       rolling_mean_window_days=nd_rw,
@@ -332,26 +285,8 @@ def main():
                                 color_levels=clevs["mean"][vname_model], cmap=cmaps["mean"][vname_model])
 
 
-            color_levels = clevs["mean"][vname_model + "diff"]
-            cmap = cm.get_cmap(cmaps["mean"][vname_model + "diff"], len(color_levels) - 1)
-
-            # modify the cmap for differences (make it lighter)
-            modify_cmap_for = [
-                "TT",
-                default_varname_mappings.T_AIR_2M_DAILY_MAX,
-                default_varname_mappings.T_AIR_2M_DAILY_MIN,
-                default_varname_mappings.T_AIR_2M,
-                default_varname_mappings.T_AIR_2M_DAILY_AVG
-            ]
-            if vname_model in modify_cmap_for:
-                cmap = colors.LinearSegmentedColormap.from_list("bwr_cut", cmap(np.arange(0.2, 0.9, 0.1)),
-                                                                N=len(color_levels) - 1)
-
-            plot_monthly_panels(mod - obs, bmap,
-                                img_dir=str(img_folder),
-                                data_label=data_source_diff,
-                                color_levels=color_levels,
-                                cmap=cmap)
+            plot_monthly_panels(mod - obs, bmap, img_dir=str(img_folder), data_label=data_source_diff,
+                                color_levels=clevs["mean"][vname_model + "diff"], cmap=cmaps["mean"][vname_model + "diff"])
 
 
 
@@ -363,6 +298,7 @@ def main():
             continue
 
         plot_area_avg(data_dict[vn], bias_dict[vn], panel_titles=(vn, ""), img_dir=img_folder / "extremes_1d")
+
 
 
 
