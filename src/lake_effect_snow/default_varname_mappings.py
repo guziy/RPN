@@ -1,9 +1,16 @@
 from collections import defaultdict
 
+from rpn import level_kinds
+
+from lake_effect_snow.base_utils import VerticalLevel
 
 mps_per_knot = 0.514444
 
 T_AIR_2M = "t_air_2m"
+T_AIR_2M_DAILY_MAX = "t_air_2m_daily_max"
+T_AIR_2M_DAILY_MIN = "t_air_2m_daily_min"
+T_AIR_2M_DAILY_AVG = "t_air_2m_daily_avg"
+
 TOTAL_PREC = "total_prec"
 SNOWFALL_RATE = "snow_fall"
 SENSIBLE_HF = "sensible_heat_flux"
@@ -33,7 +40,8 @@ vname_map_CRCM5 = {
     LATENT_HF: "FV",
     LWRAD_DOWN: "AD",
     SWRAD_DOWN: "N4",
-    LAKE_WATER_TEMP: "L1"
+    LAKE_WATER_TEMP: "L1",
+
 
 }
 
@@ -75,5 +83,17 @@ vname_map_netcdf = {
 
 }
 
+vname_to_level_map = {
+    T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
+    U_WE: VerticalLevel(1, level_kinds.HYBRID),
+    V_SN: VerticalLevel(1, level_kinds.HYBRID),
+    TOTAL_PREC: VerticalLevel(0, level_type=level_kinds.PRESSURE)
+}
 
-
+# For daymet obs dataset
+daymet_vname_mapping = {
+    TOTAL_PREC: "prcp",
+    T_AIR_2M_DAILY_AVG: "tavg",
+    T_AIR_2M_DAILY_MIN: "tmin",
+    T_AIR_2M_DAILY_MAX: "tmax"
+}

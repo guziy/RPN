@@ -7,6 +7,7 @@ from rpn import level_kinds
 
 from application_properties import main_decorator
 from data.robust import data_source_types
+from data.robust.data_manager import DataManager
 from lake_effect_snow import default_varname_mappings
 from lake_effect_snow.base_utils import VerticalLevel
 from lake_effect_snow.default_varname_mappings import vname_map_CRCM5, T_AIR_2M, U_WE, V_SN, vname_to_offset_CRCM5, \
@@ -17,21 +18,20 @@ from lake_effect_snow.lake_effect_snowfall_entry import calculate_lake_effect_sn
 # Calculate monthly HLES
 
 def monthly_func(x):
-    print(x)
     return calculate_lake_effect_snowfall_each_year_in_parallel(**x)
 
 
 @main_decorator
 def main_obs():
-    label = "Obs_monthly_icefix"
+    label = "Obs_monthly_icefix_test2_1proc_speedtest_2"
 
 
     period = Period(
-        datetime(1980, 1, 1), datetime(2009, 12, 31)
+        datetime(1981, 1, 1), datetime(1981, 1, 31)
     )
 
 
-    pool = Pool(processes=20)
+    pool = Pool(processes=1)
 
     input_params = []
     for month_start in period.range("months"):
@@ -48,21 +48,18 @@ def main_obs():
             V_SN: VerticalLevel(1, level_kinds.HYBRID),
         }
 
-
-
         vname_map = {}
         vname_map.update(vname_map_CRCM5)
 
         label_to_config = OrderedDict([(
             label, {
-                "base_folder": "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260_icefix",
-                "data_source_type": data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY,
-                "min_dt": timedelta(hours=3),
-                "varname_mapping": vname_map,
-                "level_mapping": vname_to_level_erai,
-                "offset_mapping": vname_to_offset_CRCM5,
-                "multiplier_mapping": vname_to_multiplier_CRCM5,
-                "filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
+                DataManager.SP_BASE_FOLDER: "/HOME/huziy/skynet3_rech1/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260_icefix",
+                DataManager.SP_DATASOURCE_TYPE: data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY,
+                DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
+                DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
+                DataManager.SP_OFFSET_MAPPING: vname_to_offset_CRCM5,
+                DataManager.SP_MULTIPLIER_MAPPING: vname_to_multiplier_CRCM5,
+                DataManager.SP_VARNAME_TO_FILENAME_PREFIX_MAPPING: vname_to_fname_prefix_CRCM5,
                 "out_folder": "lake_effect_analysis_daily_{}_{}-{}".format(label, period.start.year, period.end.year)
             }
         )])
@@ -76,7 +73,6 @@ def main_obs():
 
     # execute in parallel
     pool.map(monthly_func, input_params)
-
 
 
 @main_decorator
@@ -118,13 +114,12 @@ def main_crcm5_nemo():
 
         label_to_config = OrderedDict([(
             label, {
-                "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields",
-                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
-                "min_dt": timedelta(hours=3),
-                "varname_mapping": vname_map,
-                "level_mapping": vname_to_level_erai,
-                "offset_mapping": vname_to_offset_CRCM5,
-                "multiplier_mapping": vname_to_multiplier_CRCM5,
+                DataManager.SP_BASE_FOLDER: "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields",
+                DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
+                DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
+                DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
+                DataManager.SP_OFFSET_MAPPING: vname_to_offset_CRCM5,
+                DataManager.SP_MULTIPLIER_MAPPING: vname_to_multiplier_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}_monthly".format(label, period.start.year, period.end.year)
             }
         )])
@@ -168,8 +163,6 @@ def main_crcm5_hl():
             V_SN: VerticalLevel(1, level_kinds.HYBRID),
         }
 
-
-
         vname_map = {}
         vname_map.update(vname_map_CRCM5)
 
@@ -181,19 +174,21 @@ def main_crcm5_hl():
 
         label_to_config = OrderedDict([(
             label, {
-                "base_folder": "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected",
-                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
-                "min_dt": timedelta(hours=3),
-                "varname_mapping": vname_map,
-                "level_mapping": vname_to_level_erai,
-                "offset_mapping": vname_to_offset_CRCM5,
-                "multiplier_mapping": vname_to_multiplier_CRCM5,
+                DataManager.SP_BASE_FOLDER: "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected",
+                DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
+                DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
+                DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
+                DataManager.SP_OFFSET_MAPPING: vname_to_offset_CRCM5,
+                DataManager.SP_MULTIPLIER_MAPPING: vname_to_multiplier_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}_monthly".format(label, period.start.year, period.end.year)
             }
         )])
 
         kwargs = dict(
-            label_to_config=label_to_config, period=current_month_period, months_of_interest=current_month_period.months_of_interest, nprocs_to_use=1
+            label_to_config=label_to_config,
+            period=current_month_period,
+            months_of_interest=current_month_period.months_of_interest,
+            nprocs_to_use=1
         )
 
         print(current_month_period.months_of_interest)
@@ -202,7 +197,11 @@ def main_crcm5_hl():
     # execute in parallel
     pool.map(monthly_func, input_params)
 
+
 if __name__ == '__main__':
+    import time
     # main_crcm5_nemo()
     # main_crcm5_hl()
+    t0 = time.clock()
     main_obs()
+    print(f"Elapsed time: {time.clock() - t0} (s)")

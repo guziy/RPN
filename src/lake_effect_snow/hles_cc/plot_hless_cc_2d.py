@@ -47,17 +47,30 @@ def _get_year_and_month_from_filename(fname:str):
     return y1, m1
 
 
-def get_year_month_to_filepath_map(data_dir: Path):
+def get_year_month_to_filepath_map(data_dir: Path, skip_tokens=("_daily", )):
 
     ym_to_path = {}
 
     for f in data_dir.iterdir():
+
+
         if not f.name.lower().endswith(".nc"):
             continue
 
+        # skip the daily files or whatever files that might appear in the output folder
+        skip = False
+        for token in skip_tokens:
+            if token in f.name.lower():
+                skip = True
+                break
+
+        if skip:
+            continue
+
+
 
         y, m = _get_year_and_month_from_filename(f.name)
-
+        print("{}/{:02d} => {}".format(y, m, f))
         ym_to_path[y, m] = str(f)
 
     return ym_to_path
@@ -67,7 +80,7 @@ def get_year_month_to_filepath_map(data_dir: Path):
 
 
 def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: int, end_year: int,
-                                  start_month:int, nmonths:int=1) -> tuple:
+                                  start_month:int, nmonths:int=1, skip_tokens_in_fname=("_daily",)) -> tuple:
 
 
     """
@@ -81,7 +94,7 @@ def read_var_from_hles_alg_output(folder_path: Path, varname: str, start_year: i
     :return:
     """
 
-    ym_to_path = get_year_month_to_filepath_map(folder_path)
+    ym_to_path = get_year_month_to_filepath_map(folder_path, skip_tokens=skip_tokens_in_fname)
 
     y_to_fields = defaultdict(list)
 
@@ -125,7 +138,7 @@ def get_lons_and_lats(data_folder:Path):
 def main():
 
 
-    plot_hless_days = False
+    plot_hless_days = True
 
     image_dir = Path("climate_change_hles")
     if not image_dir.exists():
@@ -163,21 +176,28 @@ def main():
 
     label_current = "CRCM5_NEMO_Current"
     start_year_current = 1989
-    end_year_current = 1993
+    end_year_current = 2009
     period_current = (start_year_current, end_year_current)
 
 
 
     label_future = "CRCM5_NEMO_Future"
     start_year_future = 2079
-    end_year_future = 2083
+    end_year_future = 2099
     period_future = (start_year_future, end_year_future)
 
 
+    # label_to_hles_dir = OrderedDict(
+    #     [
+    #      (label_current, Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-1995_1989-1995")),
+    #      (label_future, Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2084_2079-2084")),
+    #     ]
+    # )
+
     label_to_hles_dir = OrderedDict(
         [
-         (label_current, Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-1995_1989-1995")),
-         (label_future, Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2084_2079-2084")),
+         (label_current, Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010")),
+         (label_future, Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100")),
         ]
     )
 

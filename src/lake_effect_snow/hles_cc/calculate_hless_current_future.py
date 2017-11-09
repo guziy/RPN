@@ -1,4 +1,7 @@
 import matplotlib
+
+from data.robust.data_manager import DataManager
+
 matplotlib.use("Agg")
 
 from collections import OrderedDict
@@ -58,15 +61,13 @@ def main_current():
 
         label_to_config = OrderedDict([(
             label, {
-                #"base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-current_CanESM2/Samples",
-                "base_folder": "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-current_CanESM2/Samples",
-                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
-                "min_dt": timedelta(hours=3),
-                "varname_mapping": vname_map,
-                "level_mapping": vname_to_level_erai,
-                "offset_mapping": vname_to_offset_CRCM5,
-                "multiplier_mapping": vname_to_multiplier_CRCM5,
-                "varname_to_filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
+                DataManager.SP_BASE_FOLDER: "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-current_CanESM2/Samples",
+                DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
+                DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
+                DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
+                DataManager.SP_OFFSET_MAPPING: vname_to_offset_CRCM5,
+                DataManager.SP_MULTIPLIER_MAPPING: vname_to_multiplier_CRCM5,
+                DataManager.SP_VARNAME_TO_FILENAME_PREFIX_MAPPING: vname_to_fname_prefix_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
             }
         )])
@@ -118,14 +119,13 @@ def main_future():
         label_to_config = OrderedDict([(
             label, {
                 # "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-future_CanESM2/Samples",
-                "base_folder": "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples",
-                "data_source_type": data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
-                "min_dt": timedelta(hours=3),
-                "varname_mapping": vname_map,
-                "level_mapping": vname_to_level_erai,
-                "offset_mapping": vname_to_offset_CRCM5,
-                "multiplier_mapping": vname_to_multiplier_CRCM5,
-                "varname_to_filename_prefix_mapping": vname_to_fname_prefix_CRCM5,
+                DataManager.SP_BASE_FOLDER: "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples",
+                DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
+                DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
+                DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
+                DataManager.SP_OFFSET_MAPPING: vname_to_offset_CRCM5,
+                DataManager.SP_MULTIPLIER_MAPPING: vname_to_multiplier_CRCM5,
+                DataManager.SP_VARNAME_TO_FILENAME_PREFIX_MAPPING: vname_to_fname_prefix_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}".format(label, period.start.year, period.end.year)
             }
         )])

@@ -1,6 +1,9 @@
 from datetime import timedelta
 
+from numba import jit
 from scipy.spatial import cKDTree as KDTree
+# from pyresample.kd_tree import KDTree
+
 
 from lake_effect_snow import common_params
 from util.geo import lat_lon
@@ -8,12 +11,10 @@ import numpy as np
 from geopy.distance import distance
 
 
-import multiprocessing
-
 # maximum number of iterations for backtracking
 N_ITER_MAX_BACKTRACK = 5
 
-
+@jit
 def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
     """
     :type ktree: KDTree
@@ -24,14 +25,13 @@ def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
     :param r: vector where the value is needed
     """
 
-    nprocs = max(1, multiprocessing.cpu_count() // 2)
 
     if nneighbours == 1:
-        dist, ind_r = ktree.query(r, k=nneighbours, n_jobs=nprocs)
+        dist, ind_r = ktree.query(r, k=nneighbours)
         i, j = i_grd.flatten()[ind_r], j_grd.flatten()[ind_r]
         return vel_field[:, i, j]
     else:
-        dists, inds_r = ktree.query(r, k=nneighbours, n_jobs=nprocs)
+        dists, inds_r = ktree.query(r, k=nneighbours)
 
         i_arr, j_arr = i_grd.flatten()[inds_r], j_grd.flatten()[inds_r]
 
@@ -52,6 +52,7 @@ def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
         return vel_mean / w_total
 
 
+@jit
 def get_epsilon(lons2d, lats2d):
     """
     Get the minimum displacement of the starting point to be able to declare convergence
@@ -63,7 +64,9 @@ def get_epsilon(lons2d, lats2d):
     eps = distance((lats2d[1, 1], lons2d[1, 1]), (lats2d[0, 0], lons2d[0, 0])).meters
     return eps
 
-def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, region_of_interest=None, dt_secs=None,
+@jit
+def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree,
+                                   region_of_interest=None, dt_secs=None,
                                    nneighbours=1, lake_ice_fraction=None, snowfall=None):
     """
     Get masks of the regions where wind is blowing from lakes
@@ -88,6 +91,15 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
 
     possible_arrival_points = region_of_interest & (~lake_mask) & snowfall_occurs_at_all
 
+
+    fetch_from_lake_mask = np.zeros_like(u_we, dtype=bool)
+
+    # if there is no points wi
+    if not np.any(possible_arrival_points):
+        return fetch_from_lake_mask
+
+
+
     nt = u_we.shape[0]
 
 
@@ -101,12 +113,8 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree, reg
     print("epsilon = {}".format(eps))
 
     xa_list, ya_list, za_list = lat_lon.lon_lat_to_cartesian(lons[possible_arrival_points], lats[possible_arrival_points])
-
-
     i_grid, j_grid = np.indices(lons.shape)
 
-
-    fetch_from_lake_mask = np.zeros_like(u_we, dtype=bool)
 
     print("Start looking if wind blows from lakes for all time steps")
     print("Number of points of interest: {}".format(np.sum(region_of_interest)))
