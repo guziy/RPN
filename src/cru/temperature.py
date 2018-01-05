@@ -5,6 +5,7 @@ import collections
 from matplotlib import gridspec
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import pandas
+from pendulum import Pendulum, pendulum
 from scipy.spatial.ckdtree import cKDTree
 from scipy.spatial.kdtree import KDTree
 import application_properties
@@ -131,24 +132,22 @@ class CRUDataManager:
         """
 
         nt, nx, ny = self.var_data.shape
-        panel = pandas.Panel(data=self.var_data, items=self.times, major_axis=list(range(nx)), minor_axis=list(range(ny)))
-        panel = panel.select(lambda d: start_year <= d.year <= end_year)
+        panel = pandas.DataFrame(data=self.var_data.reshape(nt, -1), index=self.times)
+        panel = panel[(panel.index.year >= start_year) & (panel.index.year <= end_year)]
 
         # Calculate monthly means, convert precip to mm/day
         if self.var_name.lower() in ["pre"]:
-            monthly_panel = panel.groupby(lambda d: (d.year, d.month), axis="items").sum()
+            monthly_panel = panel.groupby([panel.index.year, panel.index.month]).sum()
 
-            monthly_panel = pandas.Panel(data=monthly_panel.values / monthly_panel.items.map(lambda ym: calendar.monthrange(*ym)[1])[:, np.newaxis, np.newaxis],
-                                                         items=monthly_panel.items,
-                                                         minor_axis=monthly_panel.minor_axis,
-                                                         major_axis=monthly_panel.major_axis)
+            monthly_panel = monthly_panel / monthly_panel.index.map(lambda ym: calendar.monthrange(*ym)[1])[:, np.newaxis]
 
         else:
-            monthly_panel = panel.groupby(lambda d: (d.year, d.month), axis="items").mean()
+            monthly_panel = panel.groupby([panel.index.year, panel.index.month]).mean()
 
 
 
-        print("monthly panel: {}".format(monthly_panel))
+        print("monthly panel:")
+        print(monthly_panel.describe())
 
         season_to_res = OrderedDict()
 
@@ -158,23 +157,19 @@ class CRUDataManager:
             print("{} ------- (months: {}) ".format(season, month_period.months))
 
             ym_to_period = month_period.get_year_month_to_period_map(start_year=start_year, end_year=end_year)
-            print(ym_to_period)
+            # print(ym_to_period)
 
             # select data for the seasons of interest
             monthly_panel_tmp = monthly_panel.select(lambda ym: (ym[1] in month_period.months) and (ym in ym_to_period))
 
-            print("monthly_panel_tmp, afterselect: {}".format(monthly_panel_tmp))
+            # print("monthly_panel_tmp, afterselect: {}".format(monthly_panel_tmp))
 
-            days_per_month = monthly_panel_tmp.items.map(lambda ym: calendar.monthrange(*ym)[1])
-
-
-            monthly_panel_tmp = pandas.Panel(data=monthly_panel_tmp.values * days_per_month[:, np.newaxis, np.newaxis],
-                                             major_axis=monthly_panel_tmp.major_axis,
-                                             minor_axis=monthly_panel_tmp.minor_axis,
-                                             items=monthly_panel_tmp.items)
+            days_per_month = monthly_panel_tmp.index.map(lambda ym: calendar.monthrange(*ym)[1])
 
 
-            seasonal_groups = monthly_panel_tmp.groupby(lambda ym: (ym_to_period[ym].start,  ym_to_period[ym].end), axis="items")
+            monthly_panel_tmp = monthly_panel_tmp * days_per_month[:, np.newaxis]
+
+            seasonal_groups = monthly_panel_tmp.groupby(lambda ym: (ym_to_period[ym].start,  ym_to_period[ym].end))
 
             nobs = len(seasonal_groups)
 
@@ -186,19 +181,13 @@ class CRUDataManager:
 
 
             for kv, gv in seasonal_groups:
-                print(kv, "---->", gv)
+                # print(kv, "---->", gv)
 
                 # calculate seasonal mean for each year
-                ndays = (kv[1].add(microseconds=1) - kv[0]).total_days() # because the end of each period is 1 microsecond before midnight
-                print(type(gv))
-                seas_mean = gv.sum(axis="items") / ndays
-
-                print(seas_mean.shape)
+                ndays = (Pendulum.instance(kv[1]).add(microseconds=1) - Pendulum.instance(kv[0])).total_days()  # because the end of each period is 1 microsecond before midnight
+                seas_mean = gv.sum(axis=0) / ndays
 
                 seasonal_means.append(seas_mean.values)
-
-                print(seas_mean.values.shape)
-
                 days_per_season.append(ndays)
 
 
@@ -207,16 +196,23 @@ class CRUDataManager:
             days_per_season = np.array(days_per_season)
 
             # calculate climatological mean
-            clim_mean = (seasonal_means * days_per_season[:, np.newaxis, np.newaxis]).sum(axis=0) / days_per_season.sum()
+            clim_mean = (seasonal_means * days_per_season[:, np.newaxis]).sum(axis=0) / days_per_season.sum()
 
 
 
             # calculate interannual std
-            clim_std = (((seasonal_means - clim_mean) ** 2 * days_per_season[:, np.newaxis, np.newaxis]).sum(axis=0) / days_per_season.sum()) ** 0.5
+            clim_std = (((seasonal_means - clim_mean) ** 2 * days_per_season[:, np.newaxis]).sum(axis=0) / days_per_season.sum()) ** 0.5
 
 
+            # reshape back to the 2d field
+            clim_mean = clim_mean.reshape(nx, ny)
+            clim_std = clim_std.reshape(nx, ny)
 
-            spatial_mask = clim_mean > 1e10
+            spatial_mask = (self.var_data[0] > 1e10) | np.isnan(self.var_data[0])
+
+            if hasattr(self.var_data, "mask"):
+                spatial_mask = spatial_mask | self.var_data[0].mask
+
 
             clim_mean = np.ma.masked_where(spatial_mask, clim_mean)
             clim_std = np.ma.masked_where(spatial_mask, clim_std)

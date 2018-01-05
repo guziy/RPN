@@ -20,8 +20,6 @@ import pandas as pd
 
 @main_decorator
 def main():
-    folder_path = "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_1980-2009"
-
     clevs_lkeff_snowfalldays = [0, 0.1, 0.8, 1.6, 2.4, 3.2, 4.0, 5]
     clevs_lkeff_snowfall = [0, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5, 10]
     mycolors = ["white", "indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
@@ -35,7 +33,7 @@ def main():
 
     label_to_hles_dir = OrderedDict(
         [
-         ("Obs", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_1980-2009")),
+         ("Obs", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_icefix_1980-2009")),
          ("CRCM5_NEMO", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_1980-2009")),
          ("CRCM5_HL", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_Hostetler_1980-2009")),
          # ("CRCM5_NEMO_TT_PR", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_based_on_TT_PR_1980-2009"))
@@ -85,7 +83,7 @@ def main():
     for label, folder in label_to_hles_dir.items():
 
         y_to_snfl = {}
-        y_to_snfldays = {}
+
 
         for the_file in folder.iterdir():
             if not the_file.name.endswith(".nc"):
@@ -102,8 +100,7 @@ def main():
                     mask = maskoceans(lons, lats, lons, inlands=True, resolution="i")
 
 
-
-                if  start_year <= year_current[0] <= end_year:
+                if start_year <= year_current[0] <= end_year:
                     y_to_snfl[year_current[0]] = snfl[0]
 
 

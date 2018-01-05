@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import Basemap
 from scipy.spatial import KDTree
 
@@ -13,6 +14,7 @@ from util.geo import lat_lon
 from util.geo.mask_from_shp import get_mask
 
 import matplotlib.pyplot as plt
+from matplotlib import colors
 
 
 def main(path="", reg_of_interest=None):

@@ -140,7 +140,7 @@ def main():
     pval_crit = 0.1
 
     start_year = 1980
-    end_year = 1998
+    end_year = 2010
 
 
     # TT_min and TT_max mean daily min and maximum temperatures

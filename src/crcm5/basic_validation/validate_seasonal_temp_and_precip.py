@@ -65,17 +65,13 @@ var_name_to_mul_default = {
 area_thresh_km2 = 5000
 
 
-
 def _plot_seasonal_data(seas_data: dict, data_label="", vname="", img_dir: Path = Path(),
                         map: Basemap = None, lons=None, lats=None,
                         var_name_to_mul=var_name_to_mul_default):
-
-
     xx, yy = map(np.where(lons < 0, lons + 360, lons), lats)
 
     print("lons.shape = {}".format(lons.shape))
     print("vname_to_mult: {}".format(var_name_to_mul))
-
 
     not_plot_reg = ((xx < map.xmin) | (xx > map.xmax) | (yy < map.ymin) | (yy > map.ymax))
 
@@ -89,12 +85,10 @@ def _plot_seasonal_data(seas_data: dict, data_label="", vname="", img_dir: Path 
         norm = BoundaryNorm(color_levels, len(color_levels) - 1)
         cmap = cm.get_cmap(cmaps[param][vname], len(color_levels) - 1)
 
-
         gs = GridSpec(1, len(seas_data))
         for col, (season, data) in enumerate(seas_data.items()):
             ax = fig.add_subplot(gs[0, col])
             ax.set_title(season)
-
 
             to_plot = np.ma.masked_where(not_plot_reg, data[para_index]) * var_name_to_mul[vname]
 
@@ -135,7 +129,7 @@ def main():
     sim_paths = OrderedDict()
 
     start_year = 1980
-    end_year = 1998
+    end_year = 2008
 
     sim_paths["WC_0.44deg_default"] = Path \
         ("/HOME/huziy/skynet3_rech1/CRCM5_outputs/NEI/diags/NEI_WC0.44deg_default/Diagnostics")
@@ -150,7 +144,7 @@ def main():
 
     plot_cru_data = True
     plot_model_data = True
-    plot_naobs_data = False
+    plot_naobs_data = True
     plot_daymet_data = True
 
     plot_utils.apply_plot_params(font_size=14)
@@ -200,7 +194,6 @@ def main():
 
         manager.close()
 
-
         _plot_seasonal_data(
             seas_data=seas_to_clim, data_label="{}_{}-{}".format("CRU", start_year, end_year),
             img_dir=img_folder, map=basemap_for_obs,
@@ -226,14 +219,12 @@ def main():
             start_year=start_year, end_year=end_year
         )
 
-
         # mask no data points
         for s, data in seas_to_clim.items():
             for i in [0, 1]:
                 data[i] = np.ma.masked_where(manager.lats2d > 60, data[i])
                 data[i] = np.ma.masked_where(manager.lons2d < -150, data[i])
                 data[i] = maskoceans(manager.lons2d, manager.lats2d, datain=data[i])
-
 
         _plot_seasonal_data(
             seas_data=seas_to_clim, data_label="{}_{}-{}".format("NAOBS", start_year, end_year),

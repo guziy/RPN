@@ -181,7 +181,7 @@ def get_zone_around_lakes_mask(lons, lats, lake_mask, ktree=None, dist_km=100):
 def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", period=None, out_folder: Path = Path(".")):
     months_of_interest = period.months_of_interest
 
-    out_file = "{}_lkeff_snfl_{}-{}_m{}-{}.nc".format(label, period.start.year, period.end.year,
+    out_file = "{}_lkeff_snfl_{}-{}_m{:02d}-{:02d}.nc".format(label, period.start.year, period.end.year,
                                                       months_of_interest[0], months_of_interest[-1], out_folder)
 
     lake_effect_zone_radius = DEFAULT_LAKE_EFFECT_ZONE_RADIUS_KM
@@ -205,6 +205,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
     reg_of_interest = None
     lons = None
     lats = None
+
+    lons_rad = None
+    lats_rad = None
+
     ktree = None
     lake_mask = None
     near_lake_x_km_zone_mask = None
@@ -215,8 +219,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
     for start in period.range("years"):
 
-        end_date = start.add(months=len(months_of_interest)).subtract(seconds=1)
+        end_date = start.add(months=len(months_of_interest))
         end_date = min(period.end, end_date)
+        end_date = end_date.subtract(seconds=1)
+        print("start_date={}, end_date={}, period.end={}, months_of_interest={}".format(start, end_date, period.end, months_of_interest))
 
         p = Period(start, end_date)
 
@@ -227,7 +233,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
                                                                               out_folder)
         out_file_daily = out_folder.joinpath(out_file_daily)
 
-        print("Processing {} ... {} period".format(p.start, p.end))
+        print(f"Processing {p.start} ... {p.end} period")
 
         # try to read snowfall if not available, try to calculate from total precip
         try:
@@ -239,7 +245,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             snfl *= base_utils.WATER_DENSITY_KG_PER_M3 / rhosn
 
         except (IOError, KeyError, Exception):
-            print("Could not find snowfall rate in {}".format(data_mngr.base_folder))
+            print(f"Could not find snowfall rate in {data_mngr.base_folder}")
             print("Calculating from 2-m air temperature and total precipitation.")
 
             try:
@@ -305,7 +311,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             near_lake_x_km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
                                                                   ktree=ktree, dist_km=lake_effect_zone_radius)
 
+
             reg_of_interest &= near_lake_x_km_zone_mask
+
+            lons_rad = np.radians(lons)
+            lats_rad = np.radians(lats)
 
         # check the winds
         print("Reading the winds into memory")
@@ -313,11 +323,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         u_we = u_we.resample("1D", dim="t", how="mean")
 
         v_sn = data_mngr.read_data_for_period(p, default_varname_mappings.V_SN)
+        v_sn = v_sn.resample("1D", dim="t", how="mean")
+        print("Successfully imported wind components")
 
         assert len(v_sn.t) == len(np.unique(v_sn.t[:]))
 
-        v_sn = v_sn.resample("1D", dim="t", how="mean")
-        print("Successfully imported wind components")
 
         # Try to get the lake ice fractions
         lake_ice_fraction = None
@@ -347,12 +357,23 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
             # raise e
 
+
+
+
+
         # take into account the wind direction
         wind_blows_from_lakes = winds.get_wind_blows_from_lakes_mask(lons, lats, u_we.values, v_sn.values, lake_mask,
                                                                      ktree=ktree,
                                                                      region_of_interest=reg_of_interest,
                                                                      dt_secs=secs_per_day, nneighbours=4,
-                                                                     lake_ice_fraction=lake_ice_fraction)
+                                                                     lake_ice_fraction=lake_ice_fraction,
+                                                                     lons_rad=lons_rad, lats_rad=lats_rad)
+
+
+        print("wind_blows_from_lakes.shape = ", wind_blows_from_lakes.shape)
+        print("snfl.shape = ", snfl.shape)
+
+
         snfl = wind_blows_from_lakes * snfl
 
         # take into account nonlocal amplification due to lakes

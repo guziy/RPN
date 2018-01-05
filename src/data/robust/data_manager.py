@@ -100,8 +100,9 @@ class DataManager(object):
         self.basemap_info_of_the_last_imported_field = {}
 
 
+
     def export_to_netcdf(self, output_dir_path=None, field_names=None, label="",
-                         start_year=1980, end_year=2014, metadata=None):
+                         start_year=1980, end_year=2014, field_metadata=None, global_metadata=None):
         """
 
         :param output_dir_path:
@@ -109,7 +110,7 @@ class DataManager(object):
         :param label:
         :param start_year:
         :param end_year:
-        :param metadata: {field_name: {"units": "mm/day"}, ...} -
+        :param field_metadata: {field_name: {"units": "mm/day"}, ...} -
                          things you want to attach to the converted netcdf variable
         """
         # TODO: implement getting all the fields, when the argument is None
@@ -121,20 +122,28 @@ class DataManager(object):
             output_dir_path.mkdir(parents=True, exist_ok=True)
 
         print(field_names)
+        default_io_settings = {
+                "zlib": True, "dtype": "f4"
+        }
 
 
         for vname in field_names:
 
             out_file = output_dir_path / f"{label}_{vname}_{start_year}-{end_year}.nc"
 
+            if out_file.exists():
+                print(f"Nothing to do for {out_file}, skipping ...")
+                continue
+
 
             tmp_files = []
+            read_at_least_once = False  # need to read the input data at least once to get the coordinates information
             for y in range(start_year, end_year + 1):
 
                 chunk_out_file = output_dir_path / f"{label}_{vname}_{start_year}-{end_year}_{y}.nc"
                 tmp_files.append(str(chunk_out_file))
 
-                if chunk_out_file.exists():
+                if chunk_out_file.exists() and read_at_least_once:
                     print(f"{chunk_out_file} already exists, skipping {y}")
                     continue
 
@@ -147,29 +156,41 @@ class DataManager(object):
                 da = da.rename(vname)
 
                 # attach some info to the variable
-                if metadata is not None and y == start_year:
-                    da.attrs.update(metadata[vname])
+                if field_metadata is not None and y == start_year:
+                    da.attrs.update(field_metadata[vname])
 
                 da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
+                read_at_least_once = True
 
-            with xarray.open_mfdataset(tmp_files) as ds_in:
+            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 500}) as ds_in:
+
                 if len(self.basemap_info_of_the_last_imported_field) > 0:
-                    da = xarray.DataArray({})
+                    da = xarray.DataArray(data=0)
 
                     if "rlon" in self.basemap_info_of_the_last_imported_field:
-                        rlon = xarray.DataArray({"rlon": self.basemap_info_of_the_last_imported_field["rlon"], "dims": "x", "dtype": "f4"})
-                        rlat = xarray.DataArray({"rlon": self.basemap_info_of_the_last_imported_field["rlat"], "dims": "y", "dtype": "f4"})
+                        rlon = xarray.DataArray(data=self.basemap_info_of_the_last_imported_field["rlon"], dims=("x",), name="rlon")
+                        rlat = xarray.DataArray(data=self.basemap_info_of_the_last_imported_field["rlat"], dims=("y",), name="rlat")
 
                         ds_in["rlon"] = rlon
                         ds_in["rlat"] = rlat
 
                     da.attrs.update(
                         {k: v for k, v in self.basemap_info_of_the_last_imported_field.items() if k not in ["rlon", "rlat"]})
+
+                    da.attrs["description"] = ""
+
                     ds_in["projection"] = da
 
 
 
-                ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding={vname: {"zlib": True, "dtype": "f4"}})
+                encoding = {v: default_io_settings.copy() for v in ["rlon", "rlat", vname]}
+
+                # add some global attrs
+                if global_metadata is not None:
+                    ds_in.attrs.update(global_metadata)
+
+
+                ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
 
             # cleanup, remove temporary files
             for f in tmp_files:
@@ -424,7 +445,22 @@ class DataManager(object):
         return data_res
 
 
+    def __update_bmp_info_from_rpnfile_obj(self, r):
+        # save projection paarams for a possible re-use in the future
+        proj_params = r.get_proj_parameters_for_the_last_read_rec()
+        self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
+        rlons, rlats = r.get_tictacs_for_the_last_read_record()
 
+        rll = RotatedLatLon(**proj_params)
+        bmp = rll.get_basemap_object_for_lons_lats(self.lons, self.lats)
+
+        assert isinstance(bmp, Basemap)
+
+        self.basemap_info_of_the_last_imported_field = {
+            "rlon": rlons,
+            "rlat": rlats,
+        }
+        self.basemap_info_of_the_last_imported_field.update(bmp.projparams)
 
     def read_data_for_period(self, period: Period, varname_internal: str) -> DataArray:
 
@@ -464,18 +500,7 @@ class DataManager(object):
                                                                   level=level, level_kind=level_kind)
 
                 if self.lons is None:
-                    # save projection paarams for a possible re-use in the future
-                    proj_params = r.get_proj_parameters_for_the_last_read_rec()
-                    self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
-                    rlons, rlats = r.get_tictacs_for_the_last_read_record()
-
-                    rll = RotatedLatLon(**proj_params)
-                    bmp = rll.get_basemap_object_for_lons_lats(self.lons, self.lats)
-
-                    assert isinstance(bmp, Basemap)
-                    print(bmp.projection)
-                    raise NotImplementedError
-
+                    self.__update_bmp_info_from_rpnfile_obj(r)
 
 
                 data.update(data1)
@@ -522,23 +547,7 @@ class DataManager(object):
                                                                   level=level, level_kind=level_kind))
 
                     if self.lons is None:
-                        # save projection paarams for a possible re-use in the future
-                        proj_params = r.get_proj_parameters_for_the_last_read_rec()
-                        self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
-                        rlons, rlats = r.get_tictacs_for_the_last_read_record()
-
-                        rll = RotatedLatLon(**proj_params)
-                        bmp = rll.get_basemap_object_for_lons_lats(self.lons, self.lats)
-
-                        # TODO: finish this one
-                        assert isinstance(bmp, Basemap)
-                        print(bmp.projparams)
-
-                        self.basemap_info_of_the_last_imported_field = {
-                            "rlon": rlons,
-                            "rlat": rlats,
-                        }
-                        self.basemap_info_of_the_last_imported_field.update(bmp.projparams)
+                        self.__update_bmp_info_from_rpnfile_obj(r)
 
                     r.close()
 

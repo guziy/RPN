@@ -1,19 +1,20 @@
 import calendar
+from collections import OrderedDict
 from collections import defaultdict
 
 import biggus
 import dask
 import dask.array as da
 import numpy as np
+import pandas as pd
+import xarray
 from dask.local import get_sync
 from netCDF4 import Dataset, MFDataset, num2date
 from rpn.domains import lat_lon
 from scipy.spatial import KDTree
 
-from collections import OrderedDict
-
 from util.seasons_info import MonthPeriod
-import pandas as pd
+from util.stat_helpers import clim_day_percentile_calculator
 
 dask.set_options(get=get_sync)  # use single-threaded scheduler by default
 
@@ -40,8 +41,14 @@ class HighResDataManager(object):
             self.data = [da.from_array(Dataset(p).variables[vname], self.chunks, lock=True) for p in path_list]
             self.data = da.concatenate(self.data)
 
+            try:
+                self.__ds = MFDataset(path_list)
+            except ValueError as verr:
+                print("Warning: Could not use MFDataset from netCDF4, trying xarray")
 
-            self.__ds = MFDataset(path_list)
+
+                self.__ds = xarray.concat([xarray.open_dataset(p, chunks={"time": 100}) for p in sorted(path_list)], data_vars="minimal", dim="time")
+
 
 
 
@@ -49,6 +56,8 @@ class HighResDataManager(object):
 
         if hasattr(self.__ds.variables[vname], "missing_value"):
             self.missing_value = self.__ds.variables[vname].missing_value
+        else:
+            self.missing_value = np.nan
 
 
 
@@ -186,7 +195,12 @@ class HighResDataManager(object):
 
         # mask the resulting fields
         epsilon = 1.0e-5
-        mask = np.less_equal(np.abs(data[0, :, :] - self.missing_value), epsilon)
+
+        print("missing_value = {}, isnan(..) = {}".format(self.missing_value, np.isnan(self.missing_value)))
+        if not np.isnan(self.missing_value):
+            mask = np.less_equal(np.abs(data[0, :, :] - self.missing_value), epsilon)
+        else:
+            mask = np.isnan(data[0, :, :].compute())
 
 
         data_sel, time_sel = data, self.time
@@ -196,13 +210,15 @@ class HighResDataManager(object):
 
 
         print("start rechunking")
+
+        initial_chunks = tuple(data_sel.chunks)
         data_sel = data_sel.rechunk((len(time_sel),) + data_sel.chunks[1:])
-        print("finish rechunking")
+        print("finish rechunking: {} ---> {}".format(initial_chunks, data_sel.chunks))
 
 
-        perc = data_sel.map_blocks(percentile_calculator, time_sel, dtype=np.float32,
+        perc = data_sel.map_blocks(clim_day_percentile_calculator, time_sel, dtype=np.float32,
                                    rolling_mean_window_days=rolling_mean_window_days, percentile=percentile,
-                                   start_year=start_year, end_year=end_year)
+                                   start_year=start_year, end_year=end_year, missing_value=self.missing_value)
 
         return perc, mask
 
@@ -285,28 +301,61 @@ class HighResDataManager(object):
 
 
 
-
-
-
-
-
     def __read_coordinates_and_time(self):
+
+        coord_name_tokens = ["lon", "lat", "time"]
+
         for nc_vname, nc_var in self.__ds.variables.items():
             vname_lc = nc_vname.lower()
 
+            print(vname_lc, type(vname_lc))
+
+            print(nc_var)
+
+            skip = False
+            # avoid loading large variables
+            if nc_var.ndim > 2:
+                skip = True
+
+            print(nc_var.ndim, nc_var.shape)
+
+            # avoid variables which do not contain lon, lat or time
+            if not skip:
+                present = False
+                for t in coord_name_tokens:
+                    present = present or (t in vname_lc)
+
+                skip = not present
+
+
+            if skip:
+                print("Skipping {}".format(vname_lc))
+                continue
+
+
+
+
+            # make sure that this is really a numpy array
+            data = nc_var[:]
+            if hasattr(data, "values"):
+                data = data.values
+
+
             if "lon" in vname_lc:
-                self.lons = nc_var[:]
+                self.lons = data
             elif "lat" in vname_lc:
-                self.lats = nc_var[:]
+                self.lats = data
 
             elif "time" in vname_lc and "bnds" not in vname_lc:
-                if not hasattr(nc_var, "calendar"):
-                    self.time = num2date(nc_var[:], nc_var.units)
+                # check if the time data are already in some kind of date objects
+                if isinstance(nc_var, xarray.IndexVariable):
+                    self.time = data
                 else:
-                    print("Found the calendar attribute, using calendar={}".format(nc_var.calendar))
-                    self.time = num2date(nc_var[:], nc_var.units, calendar=nc_var.calendar)
-
-
+                    if not hasattr(nc_var, "calendar"):
+                        self.time = num2date(data, nc_var.units)
+                    else:
+                        print("Found the calendar attribute, using calendar={}".format(nc_var.calendar))
+                        self.time = num2date(data, nc_var.units, calendar=nc_var.calendar)
 
 
         if self.lons.ndim == 1:
@@ -314,7 +363,12 @@ class HighResDataManager(object):
 
 
         if self.lons.shape != self.data.shape[1:]:
-            self.data = self.data.transpose(axis=[0, 2, 1])
+            print("Transposing data, since self.lons.shape={} and self.data.shape={}".format(
+                self.lons.shape, self.data.shape
+            ))
+
+            print(type(self.data))
+            self.data = self.data.transpose(axes=[0, 2, 1])
 
 
 
@@ -541,39 +595,9 @@ class HighResDataManager(object):
         del self
 
 
-# function applied at each gridcell to calculate the percentiles
-def percentile_calculator(block, time_sel, missing_value, rolling_mean_window_days=None, percentile=0.5,
-                          start_year=-np.Inf, end_year=np.Inf):
-
-    # return the masked array if all the values for the point are masked
-    """
-
-    :param rolling_mean_window_days:
-    :param percentile:
-    :param time_sel: times corresponding to the first dimension of block
-    :param block: 3D field (nt, nx, ny)
-    :param missing_value:
-    :return:
-    """
-    if np.all(np.less(np.abs(block[0] - missing_value), 1e-5)):
-        new_shape = (365, ) + block.shape[1:]
-        return missing_value * dask.array.ones(new_shape, chunks=new_shape)
 
 
-    s = pd.DataFrame(data=block.reshape((len(time_sel), -1)), index=time_sel)
 
-    s = s.select(lambda d: (not (d.month == 2 and d.day == 29)) and (start_year <= d.year <= end_year))
-    assert isinstance(s, pd.DataFrame)
-
-    if rolling_mean_window_days is not None:
-        s = s.rolling(rolling_mean_window_days, center=True).mean().bfill().ffill()
-
-
-    # Each group is a dataframe with the rows(axis=0) for a day of different years
-    grouped = s.groupby([s.index.month, s.index.day])
-    daily_perc = grouped.quantile(q=percentile)
-
-    return daily_perc.values.reshape((-1,) + block.shape[1:])  # <- Should be (365, nx, ny)
 
 
 

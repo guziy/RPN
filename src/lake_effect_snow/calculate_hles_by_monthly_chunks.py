@@ -23,15 +23,15 @@ def monthly_func(x):
 
 @main_decorator
 def main_obs():
-    label = "Obs_monthly_icefix_test2_1proc_speedtest_2"
+    label = "Obs_monthly_icefix_test2_1proc_speedtest_3"
 
 
     period = Period(
-        datetime(1981, 1, 1), datetime(1981, 1, 31)
+        datetime(1980, 1, 1), datetime(2010, 12, 31)
     )
 
 
-    pool = Pool(processes=1)
+    pool = Pool(processes=20)
 
     input_params = []
     for month_start in period.range("months"):
@@ -80,7 +80,7 @@ def main_crcm5_nemo():
     label = "CRCM5_NEMO"
 
     period = Period(
-        datetime(1980, 1, 1), datetime(2009, 12, 31)
+        datetime(1980, 1, 1), datetime(2015, 12, 31)
     )
 
 
@@ -109,17 +109,18 @@ def main_crcm5_nemo():
         vname_map = {}
         vname_map.update(vname_map_CRCM5)
         vname_map.update({
-            default_varname_mappings.SNOWFALL_RATE: "U3"
+            default_varname_mappings.SNOWFALL_RATE: "SN"
         })
 
         label_to_config = OrderedDict([(
             label, {
-                DataManager.SP_BASE_FOLDER: "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields",
-                DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT_VNAME_IN_FNAME,
+                DataManager.SP_BASE_FOLDER: "/snow3/huziy/NEI/GL/erai0.75deg_driven/GL_with_NEMO_dtN_1h_and_30min/Samples",
+                DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
                 DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
                 DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
                 DataManager.SP_OFFSET_MAPPING: vname_to_offset_CRCM5,
                 DataManager.SP_MULTIPLIER_MAPPING: vname_to_multiplier_CRCM5,
+                DataManager.SP_VARNAME_TO_FILENAME_PREFIX_MAPPING: default_varname_mappings.vname_to_fname_prefix_CRCM5,
                 "out_folder": "lake_effect_analysis_{}_{}-{}_monthly".format(label, period.start.year, period.end.year)
             }
         )])

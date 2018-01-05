@@ -80,6 +80,8 @@ MH_BASINS_PATH = "data/shape/Churchill-Nelson Watershed/Churchill-Nelson Watersh
 GRDC_BASINS_PATH = "data/shape/GIS_dataset_BAFG_GRDC/GRDC_405_basins_from_mouth.shp"
 
 
+GL_BASINS_FROM_MUSIC_BILJANA_PATH = "data/shp/glbasins_gen/glbasins_gen.shp"
+
 # For selecting basins from the shape file
 GRDC_basins_of_interest = [19, 16, 88, 107, 83, 72]
 
@@ -88,6 +90,8 @@ GRDC_basins_of_interest_NA = GRDC_basins_of_interest + [122, 138, 117]
 GRDC_basins_of_interest_Panarctic = [19, 25, 5, 7, 138]
 
 GRDC_basins_GL = [117]
+
+
 
 
 

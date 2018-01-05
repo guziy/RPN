@@ -59,11 +59,12 @@ def main(varname="snow_fall"):
     # series = get_monthly_accumulations_area_avg(data_dir="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_HL_1980-2009_monthly",
     #                                             varname=varname)
 
-    selected_months = [11, 12, 1]
+    selected_months = [9, 10, 11, 12, 1, 2, 3, 4, 5]
 
 
     label_to_datapath = OrderedDict([
-        ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
+        #("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
+        ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
         ("CRCM5_NEMO", "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_1980-2009_monthly"),
         ("CRCM5_HL", "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_HL_1980-2009_monthly"),
     ])
@@ -95,7 +96,8 @@ def main(varname="snow_fall"):
 
     start_date = datetime(2001, 10, 1)
 
-    dates = [start_date.replace(month=(start_date.month + i) % 13 + int((start_date.month + i) % 13 == 0), year=start_date.year + (start_date.month + i) // 13) for i in range(13)]
+    dates = [start_date.replace(month=(start_date.month + i) % 13 + int((start_date.month + i) % 13 == 0),
+                                year=start_date.year + (start_date.month + i) // 13) for i in range(13)]
 
 
     for d in dates:
@@ -112,6 +114,7 @@ def main(varname="snow_fall"):
     # calculate bar widths
     dates_num = date2num(dates)
     width = np.diff(dates_num) / (len(label_to_series) * 1.5)
+    width = np.array([width[0] for _ in width])
 
 
     # select the months
@@ -127,7 +130,11 @@ def main(varname="snow_fall"):
         values_sum = sum(values)
         values = [v / values_sum * 100 for v in values]
 
-        ax.bar(dates_num + i * width, values, width=width, align="edge", linewidth=0.5, edgecolor="k", facecolor=label_to_color[label], label=label)
+        print(label, values)
+        print(f"sum(values) = {sum(values)}")
+
+        ax.bar(dates_num + i * width, values, width=width, align="edge", linewidth=0.5,
+               edgecolor="k", facecolor=label_to_color[label], label=label)
 
 
 
@@ -135,14 +142,18 @@ def main(varname="snow_fall"):
     #ax.set_xlabel("Month")
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
-    ax.xaxis.set_major_locator(MonthLocator(bymonthday=int(sum(width) / 2 + 0.5)))
+    ax.xaxis.set_major_locator(MonthLocator(bymonthday=int(sum(width[:len(label_to_series)]) / 2.) + 1))
     ax.legend(bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=2)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
 
-    #ax.grid()
-    fig.savefig("hles_histo_all_m{}.png".format("_".join([str(m) for m in selected_months])), bbox_inches="tight", dpi=400)
+    print(width[:len(label_to_series)])
+
+    # ax.grid()
+    img_file = "hles_histo_all_m{}.png".format("_".join([str(m) for m in selected_months]))
+    print(f"Saving plot to {img_file}")
+    fig.savefig(img_file, bbox_inches="tight", dpi=400)
 
 
 

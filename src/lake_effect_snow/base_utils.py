@@ -30,9 +30,11 @@ def get_snow_density_kg_per_m3(tair_deg_c):
     """
     rhos = np.zeros_like(tair_deg_c)
 
-    rhos[tair_deg_c < -15] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3
+    valid = ~np.isnan(tair_deg_c)
 
-    where_not_very_cold = tair_deg_c >= -15
+    rhos[valid & (tair_deg_c < -15)] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3
+
+    where_not_very_cold = valid & (tair_deg_c >= -15)
     if np.any(where_not_very_cold):
         rhos[where_not_very_cold] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3 + 1.7 * (tair_deg_c[where_not_very_cold] + 15) ** 1.5
 

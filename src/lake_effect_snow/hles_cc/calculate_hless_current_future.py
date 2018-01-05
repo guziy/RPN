@@ -34,7 +34,7 @@ def main_current():
         datetime(1989, 1, 1), datetime(2010, 12, 31)
     )
 
-    label = "CRCM5_NEMO_CanESM2_RCP85_{}-{}".format(period.start.year, period.end.year)
+    label = "CRCM5_NEMO_CanESM2_RCP85_{}-{}_monthly".format(period.start.year, period.end.year)
 
     vname_to_level_erai = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
@@ -91,7 +91,7 @@ def main_future():
         datetime(2079, 1, 1), datetime(2100, 12, 31)
     )
 
-    label = "CRCM5_NEMO_CanESM2_RCP85_{}-{}".format(period.start.year, period.end.year)
+    label = "CRCM5_NEMO_CanESM2_RCP85_{}-{}_monthly".format(period.start.year, period.end.year)
 
     vname_to_level_erai = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),

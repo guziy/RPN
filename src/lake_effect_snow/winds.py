@@ -67,7 +67,8 @@ def get_epsilon(lons2d, lats2d):
 @jit
 def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree,
                                    region_of_interest=None, dt_secs=None,
-                                   nneighbours=1, lake_ice_fraction=None, snowfall=None):
+                                   nneighbours=1, lake_ice_fraction=None, snowfall=None,
+                                   lons_rad=None, lats_rad=None):
     """
     Get masks of the regions where wind is blowing from lakes
 
@@ -96,14 +97,13 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree,
 
     # if there is no points wi
     if not np.any(possible_arrival_points):
+        print("No possible arrival points, skipping ...")
         return fetch_from_lake_mask
-
-
 
     nt = u_we.shape[0]
 
-
-    lons_rad, lats_rad = np.radians(lons), np.radians(lats)
+    if lons_rad is None:
+        lons_rad, lats_rad = np.radians(lons), np.radians(lats)
 
     # velocity shape: (3, t, x, y)
     velocity = lat_lon.geo_uv_to_cartesian_velocity(u_we=u_we, v_sn=v_sn, lons_rad=lons_rad, lats_rad=lats_rad)
@@ -187,14 +187,14 @@ def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree,
                 lice = lake_ice_fraction[ti, ill:iur + 1, jll:jur + 1]
 
                 # Check if the lake cells from which the fetch is occurring together are not 70% frozen
-                if np.any(lmask > 0):
+                if np.any(lmask > 0.5):
                     fetch_from_lake_mask[ti, i_r0, j_r0] = (lmask * lice).sum() / lmask.sum() < 0.7
                 else:
                     fetch_from_lake_mask[ti, i_r0, j_r0] = False
 
 
         print("Converged {} of {} considered points".format(converged_count, len(xa_list)))
-        print("Finished {}/{} ".format(ti, nt))
+        print("Finished {}/{} ".format(ti + 1, nt))
 
 
     return fetch_from_lake_mask

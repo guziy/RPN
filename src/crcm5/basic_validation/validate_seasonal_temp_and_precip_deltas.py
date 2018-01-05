@@ -181,9 +181,9 @@ def main():
 
 
     start_year = 1980
-    end_year = 1998
+    end_year = 2010
 
-    # sim_paths["WC_0.44deg_default"] = Path("/HOME/huziy/skynet3_rech1/CRCM5_outputs/NEI/diags/NEI_WC0.44deg_default/Diagnostics")
+    sim_paths["WC_0.44deg_default"] = Path("/HOME/huziy/skynet3_rech1/CRCM5_outputs/NEI/diags/NEI_WC0.44deg_default/Diagnostics")
     sim_paths["WC_0.44deg_ctem+frsoil+dyngla"] = Path("/HOME/huziy/skynet3_rech1/CRCM5_outputs/NEI/diags/debug_NEI_WC0.44deg_Crr1/Diagnostics")
     sim_paths["WC_0.11deg_ctem+frsoil+dyngla"] = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Diagnostics")
 

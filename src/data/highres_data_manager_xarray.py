@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from multiprocessing.pool import Pool
 from pathlib import Path
 
 import dask.array as da
@@ -8,8 +9,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from memory_profiler import profile
+from numba import jit
 
-from util.agg_blocks import agg_blocks
+from util.agg_blocks import agg_blocks_skimage_improved
 
 
 class HighResDataManagerXarray(object):
@@ -25,12 +27,6 @@ class HighResDataManagerXarray(object):
         # Create the caching directory for a variable
         self.cache_dir = Path("Daymet_cache") / vname
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-
-
-
-
-
-
 
 
 
@@ -256,6 +252,9 @@ def spatial_aggregate_daymet_data(source_dir, dest_dir, block_shape: tuple=(10, 
     Note:
     """
 
+    import dask
+    dask.set_options(get=dask.local.get_sync)  # turn off threads globally
+
     out_dir = Path(dest_dir) / "daymet_spatial_agg_{}_{}x{}".format(vname, block_shape[0], block_shape[1])
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -271,97 +270,116 @@ def spatial_aggregate_daymet_data(source_dir, dest_dir, block_shape: tuple=(10, 
     file_list = [f for f in source_dir.iterdir() if f.name.startswith(filename_prefix)]
 
     # static data
-    ds_base = xarray.open_dataset(str(file_list[0]))
+    ds_base = xarray.open_dataset(str(file_list[0]), lock=True)
 
 
-    const_varnames = ["x", "y", "lon", "lat", "lambert_conformal_conic"]
+    print(ds_base)
+
+    coord_varnames = ["x", "y", "lon", "lat"]
+    const_varnames = coord_varnames + ["lambert_conformal_conic", ]
     const_vars = {k: ds_base[k] for k in const_varnames}
 
-    from skimage.measure import block_reduce
 
     # aggregate if required
     for const_vname in const_vars:
-        if const_vname == "lambert_conformal_conic":
+
+        if const_vname in ["lambert_conformal_conic"]:
             continue
+
+
+        const_var_in = const_vars[const_vname]
 
 
         if const_vname == "x":
-            data = block_reduce(const_vars[const_vname].values, block_size=(block_shape[1],), func=np.mean)
+            data = agg_blocks_skimage_improved(const_var_in.values, block_shape=(block_shape[1],), func=np.nanmean)
         elif const_vname == "y":
-            data = block_reduce(const_vars[const_vname].values, block_size=(block_shape[0],), func=np.mean)
+            data = agg_blocks_skimage_improved(const_var_in.values, block_shape=(block_shape[0],), func=np.nanmean)
         else:
-            data = block_reduce(const_vars[const_vname].values, block_size=block_shape, func=np.mean)
+            data = agg_blocks_skimage_improved(const_var_in.values, block_shape=block_shape, func=np.nanmean)
 
-        darr = xarray.DataArray(data, name=const_vname)
-        darr.assign_attrs(const_vars[const_vname].attrs)
+        darr = xarray.DataArray(data, name=const_vname, dims=const_var_in.dims)
+        darr.attrs = const_var_in.attrs
         const_vars[const_vname] = darr
 
 
+    input_count = len(file_list)
+    input_list = list(zip(file_list, [out_dir] * input_count, [vname] * input_count, [const_vars] * input_count, [coord_varnames] * input_count, [block_shape, ] * input_count))
 
-    print(ds_base[vname].attrs)
-
-
-    def __agg_masked(data):
-        print(type(data), data.shape)
-        if not np.all(data.mask):
-            return data[~data.mask].mean()[None, None]
-        else:
-            return np.ma.masked_all((1,))[None, None]
-
-
-    for f in file_list:
-        ds_in = xarray.open_dataset(str(f))
-
-        f_out = dest_dir / f.name
-
-        print("{} => {}".format(f, f_out))
-
-        if f_out.exists():
-            print("{} exists, won't redo!".format(f_out))
-            continue
-
-        ds_out = xarray.Dataset()
-        ds_out["time"] = ds_in["time"]
-        ds_out["time_bnds"] = ds_in["time_bnds"]
-
-        arr_in = ds_in[vname]
-
-        all_data = []
-
-        for ti in range(arr_in.shape[0]):
-
-            assert isinstance(arr_in, xarray.DataArray)
-
-            masked_arr_in = arr_in[ti, :, :].to_masked_array()
-
-
-
-            all_data.append(agg_blocks())
-
-        arr_out = xarray.DataArray(all_data, name=vname)
-
-        arr_out.assign_attrs(arr_in.attrs)
-
-        coords = dict({const_vars}).update({"time": ds_in["time"]})
-        arr_out.assign_coords(coords)
-
-        ds_out[vname] = arr_out
-
-        # save the output data to disk
-        ds_out.assign_attrs(ds_in.attrs)
-        ds_out.to_netcdf(str(f), unlimited_dims=("time"))
-
-        ds_in.close()
-
-        if True:
-            return
+    # do the aggregation in parallel
+    pool = Pool(processes=15)
+    pool.map(aggregate_file_wrap, input_list)
 
     ds_base.close()
 
 
 
+def aggregate_file_wrap(args):
+    f_in, out_dir, vname, const_vars, coord_varnames, block_shape = args
+    return aggregate_file(f_in, out_dir, vname, const_vars, coord_varnames, block_shape)
 
 
+
+def aggregate_file(f_in:Path, out_dir: Path, vname:str, const_vars, coord_varnames, block_shape:tuple):
+    """
+    For parallel aggregation of files
+    :param fPath:
+    """
+
+    ds_in = xarray.open_dataset(str(f_in), lock=True)
+
+    f_out = out_dir / f_in.name
+
+    print("{} => {}".format(f_in, f_out))
+
+    if f_out.exists():
+        print("{} exists, won't redo!".format(f_out))
+        return
+
+    ds_out = xarray.Dataset()
+    arr_in = ds_in[vname]
+
+    all_data = []
+
+    for ti in range(arr_in.shape[0]):
+        masked_arr_in = arr_in[ti, :, :]
+
+        all_data.append(agg_blocks_skimage_improved(masked_arr_in, block_shape=block_shape, func=np.nanmean))
+        print("{}/{}".format(ti, arr_in.shape[0]))
+
+    coords = dict({vn: const_vars[vn] for vn in coord_varnames}).update({"time": ds_in["time"]})
+    arr_out = xarray.DataArray(all_data, name=vname, dims=arr_in.dims, coords=coords)
+
+
+
+
+    arr_out.attrs = arr_in.attrs
+
+    ds_out[vname] = arr_out
+    ds_out.update({vn: const_vars[vn] for vn in coord_varnames})
+    ds_out["lambert_conformal_conic"] = ds_in["lambert_conformal_conic"]
+    ds_out["time"] = ds_in["time"]
+
+
+    # save the output data to disk
+    ds_out.assign_attrs(ds_in.attrs)
+    ds_out.to_netcdf(str(f_out), unlimited_dims=("time",))
+
+    ds_in.close()
+    print("Finihsed {}: {}".format(vname, f_out))
+
+
+def __agg_masked(data):
+
+    print(data.shape)
+    good = ~np.isnan(data)
+
+    if hasattr(data, "mask"):
+        good = good & (~data.mask)
+
+    if not np.any(good):
+        return data[good].mean()
+    else:
+        return np.nan
 
 
 
@@ -372,7 +390,10 @@ def test():
         path="/snow3/huziy/Daymet_daily/daymet_v3_prcp_*_na.nc4",
         vname="prcp")
 
-    manager.calculate_daily_percentile_for_period(rolling_window_days=None, start_year=1980, end_year=2016, max_space_slice_size=500)
+    manager.calculate_daily_percentile_for_period(rolling_window_days=None,
+                                                  start_year=1980,
+                                                  end_year=2016,
+                                                  max_space_slice_size=500)
     manager.close()
 
 
@@ -381,14 +402,17 @@ def test_collect_file_parts():
         path="/snow3/huziy/Daymet_daily/daymet_v3_prcp_*_na.nc4",
         vname="prcp")
 
-    manager.collect_file_parts(rolling_window_days=None, percentile=0.5, start_year=1980, end_year=2016)
+    manager.collect_file_parts(rolling_window_days=None, percentile=0.5,
+                               start_year=1980, end_year=2016)
     manager.close()
 
 
 def test_spatial_aggregate():
+    source_dir = Path("/snow3/huziy/Daymet_daily")
+    # source_dir = Path("/RECH/data/Validation/Daymet/Daily")
     spatial_aggregate_daymet_data(
-        source_dir=Path("/snow3/huziy/Daymet_daily"), dest_dir=Path("/snow3/huziy/Daymet_daily_derivatives"), block_shape=(10, 10),
-        vname="prcp"
+        source_dir=source_dir, dest_dir=Path("/snow3/huziy/Daymet_daily_derivatives"), block_shape=(10, 10),
+        vname="tavg"
     )
 
 

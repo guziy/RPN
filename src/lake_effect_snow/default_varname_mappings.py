@@ -18,6 +18,7 @@ LATENT_HF = "latent_heat_flux"
 LWRAD_DOWN = "longwave_rad_down"
 SWRAD_DOWN = "shortwave_rad_down"
 LAKE_WATER_TEMP = "lake_water_temp"
+STREAMFLOW = "streamflow"
 
 
 U_WE = "u_we"
@@ -41,7 +42,7 @@ vname_map_CRCM5 = {
     LWRAD_DOWN: "AD",
     SWRAD_DOWN: "N4",
     LAKE_WATER_TEMP: "L1",
-
+    STREAMFLOW: "STFL"
 
 }
 
@@ -77,6 +78,7 @@ vname_to_fname_prefix_CRCM5[T_AIR_2M] = "dm"
 vname_to_fname_prefix_CRCM5[LAKE_ICE_FRACTION] = "pm"
 vname_to_fname_prefix_CRCM5[U_WE] = "dm"
 vname_to_fname_prefix_CRCM5[V_SN] = "dm"
+vname_to_fname_prefix_CRCM5[STREAMFLOW] = "pm"
 
 
 vname_map_netcdf = {

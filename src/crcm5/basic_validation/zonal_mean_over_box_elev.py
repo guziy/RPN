@@ -148,7 +148,7 @@ def main():
     pval_crit = 0.1
 
     start_year = 1980
-    end_year = 1998
+    end_year = 2010
 
 
     subregion = SubRegionByLonLatCorners(lleft={"lon": -128, "lat": 46}, uright={"lon": -113, "lat": 55})
