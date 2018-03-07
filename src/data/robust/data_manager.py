@@ -553,7 +553,7 @@ class DataManager(object):
 
 
         if vert_level_units is not None:
-            vardict["lev"]["coords"].update({"attrs": {"units": vert_level_units}})
+            vardict["coords"]["lev"].update({"attrs": {"units": vert_level_units}})
 
         if len(data_list) == 0:
             print("retreived dates: {}".format(dates))
