@@ -44,34 +44,36 @@ def main():
     # in_folder = "/RECH2/huziy/coupling/GL_440x260_0.1deg_GL_with_Hostetler/Samples_selected"
     # in_folder = "/b4_fs1/huziy/from_guillimin_important_sim_results/quebec_0.1_crcm5-hcd-rl-cc/Samples"
 
-    in_folder = "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields"
+    # in_folder = "/HOME/huziy/skynet3_rech1/CRCM5_outputs/coupled-GL-NEMO1h/selected_fields"
+
+    in_folder = "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples"
     in_folder_p = Path(in_folder)
 
 
-    out_dir = Path("data/NEI/crcm5_glnemo/erai_driven_additional")
+    out_dir = Path("data/NEI/crcm5_glnemo/canesm2_driven_additional_2018/" + in_folder_p.parent.name)
     # create the output directory
     if not out_dir.is_dir():
         out_dir.mkdir(parents=True)
 
 
-    vars_of_interest = ["TT", "HR", "P0", "PN", "UU", "VV", "PR", "N4", "AD"]
-    # vars_of_interest = ["TT", "HR", "UU", "VV", "PR", "N4", "AD", "GZ"]
+    # vars_of_interest = ["TT", "HR", "P0", "PN", "UU", "VV", "PR", "N4", "AD"]
+    vars_of_interest = ["TT", "HR", "UU", "VV", "PR", "N4", "AD", "GZ"]
 
-
-    # varname_to_fname_prefix = {
-    #    "TT": "dm",
-    #    "HR": "dm",
-    #    "UU": "dm",
-    #    "VV": "dm",
-    #    "PR": "pm",
-    #    "N4": "pm",
-    #    "AD": "pm",
-    #    "GZ": "dm"
-    #}
 
     varname_to_fname_prefix = {
-         k: None for k in vars_of_interest
+       "TT": "dm",
+       "HR": "dm",
+       "UU": "dm",
+       "VV": "dm",
+       "PR": "pm",
+       "N4": "pm",
+       "AD": "pm",
+       "GZ": "dm"
     }
+
+    # varname_to_fname_prefix = {
+    #      k: None for k in vars_of_interest
+    # }
 
 
     vname_to_multiplier = defaultdict(lambda: 1)
@@ -86,7 +88,7 @@ def main():
     # vars_of_interest = vars_of_interest[0:2]
 
     points = get_points_of_interest(
-        path="data/NEI/selected_points_all.txt"
+        path="data/NEI/selected_points_201801.csv"
     )
     print(points.head(15))
 

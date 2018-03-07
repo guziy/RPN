@@ -8,6 +8,7 @@ import xarray
 from mpl_toolkits.basemap import Basemap
 from pendulum import Pendulum
 from pendulum import Period
+from rpn import rpn
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
 from scipy.spatial import KDTree
@@ -102,7 +103,8 @@ class DataManager(object):
 
 
     def export_to_netcdf(self, output_dir_path=None, field_names=None, label="",
-                         start_year=1980, end_year=2014, field_metadata=None, global_metadata=None):
+                         start_year=1980, end_year=2014, field_metadata=None, global_metadata=None,
+                         field_to_soil_layers=None):
         """
 
         :param output_dir_path:
@@ -147,7 +149,7 @@ class DataManager(object):
                     print(f"{chunk_out_file} already exists, skipping {y}")
                     continue
 
-                da = self.read_data_for_period(_get_period_for_year(y), vname)
+                da = self.read_data_for_period(_get_period_for_year(y), vname, ndims=4)
 
                 print(f"{_get_period_for_year(y)}")
 
@@ -162,7 +164,7 @@ class DataManager(object):
                 da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
                 read_at_least_once = True
 
-            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 500}) as ds_in:
+            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 100, "z": 10}) as ds_in:
 
                 if len(self.basemap_info_of_the_last_imported_field) > 0:
                     da = xarray.DataArray(data=0)
@@ -177,10 +179,11 @@ class DataManager(object):
                     da.attrs.update(
                         {k: v for k, v in self.basemap_info_of_the_last_imported_field.items() if k not in ["rlon", "rlat"]})
 
-                    da.attrs["description"] = ""
+                    if vname in field_metadata:
+                        da.attrs["description"] = field_metadata[vname]["description"]
+                        da.attrs["coordinates"] = "lat lon"
 
                     ds_in["projection"] = da
-
 
 
                 encoding = {v: default_io_settings.copy() for v in ["rlon", "rlat", vname]}
@@ -188,6 +191,13 @@ class DataManager(object):
                 # add some global attrs
                 if global_metadata is not None:
                     ds_in.attrs.update(global_metadata)
+
+
+                # record limits of soil layers if required
+                if field_to_soil_layers is not None:
+                    if vname in field_to_soil_layers:
+                        for k, vals in field_to_soil_layers[vname].items():
+                            ds_in[k] = xarray.DataArray(data=vals, name=k, dims=("z", ), attrs={"units": "m"})
 
 
                 ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
@@ -422,8 +432,6 @@ class DataManager(object):
         else:
             raise ValueError(f"nneigbours should be >= 1, not {nneighbors}")
 
-
-
         print(lons_target.shape)
 
 
@@ -462,10 +470,107 @@ class DataManager(object):
         }
         self.basemap_info_of_the_last_imported_field.update(bmp.projparams)
 
-    def read_data_for_period(self, period: Period, varname_internal: str) -> DataArray:
+
+
+
+    def read_data_for_period_3d(self, period: Period, varname_internal: str) -> DataArray:
+        """
+        Read 3D fields
+        :param period:
+        :param varname_internal:
+        """
+        data_list = []
+        dates = []
+        vert_levels = None
+        vert_level_units = None
+
+        if self.data_source_type == data_source_types.ALL_VARS_IN_A_FOLDER_OF_RPN_FILES:
+            raise NotImplementedError()
+        elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
+            assert varname_internal in self.varname_to_file_prefix, f"Could not find {varname_internal} in {self.varname_to_file_prefix}"
+
+            filename_prefix = self.varname_to_file_prefix[varname_internal]
+
+            if filename_prefix in ["dp", ]:
+                vert_level_units = "mb"
+
+            for month_start in period.range("months"):
+
+                year, m = month_start.year, month_start.month
+
+
+                # Skip years or months that are not available
+                if (year, m) not in self.yearmonth_to_path:
+                    print(f"Skipping {year}-{m}")
+                    continue
+
+                month_dir = self.yearmonth_to_path[(year, m)]
+
+                for f in month_dir.iterdir():
+                    # Skip the file for time step 0
+                    if f.name[-9:-1] == "0" * 8:
+                        continue
+
+                    # read only files with the specified prefix
+                    if not f.name.startswith(filename_prefix):
+                        continue
+
+                    with RPN(str(f)) as r:
+
+                        data_rvar = r.variables[self.varname_mapping[varname_internal]]
+
+                        assert isinstance(data_rvar, rpn.RPNVariable)
+
+                        dates.extend(data_rvar.sorted_dates)
+                        if vert_levels is None:
+                            vert_levels = data_rvar.sorted_levels
+
+                        data_list.append(data_rvar[:])
+
+                        if self.lons is None:
+                            self.__update_bmp_info_from_rpnfile_obj(r)
+
+        else:
+            raise NotImplementedError()
+
+
+        data_list = np.concatenate(data_list, axis=0)
+        print(f"data_list.shape={data_list.shape}, var_name={varname_internal}")
+        # data_list = np.transpose(data_list, axes=(0, 2, 3, 1))
+
+        # Construct a dictionary for xarray.DataArray ...
+        vardict = {
+            "coords": {
+                "t": {"dims": "t", "data": dates},
+                "lon": {"dims": ("x", "y"), "data": self.lons},
+                "lat": {"dims": ("x", "y"), "data": self.lats},
+                "lev": {"dims": ("z",), "data": vert_levels}
+            },
+            "dims": ("t", "z", "x", "y"),
+            "data": data_list,
+            "name": varname_internal
+        }
+
+
+        if vert_level_units is not None:
+            vardict["lev"]["coords"].update({"attrs": {"units": vert_level_units}})
+
+        if len(data_list) == 0:
+            print("retreived dates: {}".format(dates))
+            raise IOError(
+                "Could not find any {} data for the period {}..{} in {}".format(self.varname_mapping[varname_internal],
+                                                                                period.start, period.end,
+                                                                                self.base_folder))
+        # Convert units based on supplied mappings
+        return self.multipliers[varname_internal] * DataArray.from_dict(vardict) + self.offsets[varname_internal]
+
+
+
+    def read_data_for_period(self, period: Period, varname_internal: str, ndims=3) -> DataArray:
 
         """
         Read the data for period and varname into memory, and return it as xarray DataArray
+        :param ndims: number of dimensions ndims=3 for (t, x, y)[default] and ndims=4 for (t, x, y, z)
         :param period:
         :param varname_internal:
 
@@ -494,29 +599,29 @@ class DataManager(object):
             for month_start in period.range("months"):
                 f = self.yearmonth_to_path[(month_start.year, month_start.month)]
 
-                r = RPN(str(f))
-                # read the data into memory
-                data1 = r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
-                                                                  level=level, level_kind=level_kind)
+                with RPN(str(f)) as r:
+                    # read the data into memory
 
-                if self.lons is None:
-                    self.__update_bmp_info_from_rpnfile_obj(r)
+                    data1 = r.get_all_time_records_for_name_and_level(varname=self.varname_mapping[varname_internal],
+                                                                      level=level, level_kind=level_kind)
 
+                    if self.lons is None:
+                        self.__update_bmp_info_from_rpnfile_obj(r)
 
-                data.update(data1)
-
-                r.close()
+                    data.update(data1)
 
             dates = list(sorted(data))[:-1]  # Ignore the last date because it is from the next month
             data_list = [data[d] for d in dates]
 
         elif self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
 
-            assert varname_internal in self.varname_to_file_prefix, "Could not find {} in {}".format(
-                varname_internal, self.varname_to_file_prefix
-            )
+            assert varname_internal in self.varname_to_file_prefix, f"Could not find {varname_internal} in {self.varname_to_file_prefix}"
 
             filename_prefix = self.varname_to_file_prefix[varname_internal]
+
+            # handle 3d variables
+            if ndims == 4:
+                return self.read_data_for_period_3d(period, varname_internal=varname_internal)
 
             for month_start in period.range("months"):
 

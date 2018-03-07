@@ -25,14 +25,14 @@ img_folder = "misc_plots"
 
 @main_decorator
 def main():
-    plot_permafrost = False
-    plot_glaciers = False
+    plot_permafrost = True
+    plot_glaciers = True
 
     if not os.path.isdir(img_folder):
         print(os.mkdir(img_folder))
 
 
-    geophy_file = "/BIG1/skynet1_exec1/winger/Floods/Geophys/geophys_CORDEX_NA_0.11deg_695x680_filled_grDes_barBor_Crop2Gras_peat"
+    geophy_file = "misc_plots/geophys_CORDEX_NA_0.11deg_695x680_filled_grDes_barBor_Crop2Gras_peat_with_directions"
 
     # Save the permafrost mask to file
     pfmask_file = os.path.join(img_folder, "pf_mask_na_0.11deg.nc")
@@ -95,8 +95,8 @@ def main():
 
     if plot_glaciers:
         cs = bmp.pcolormesh(xx, yy, glac, cmap="Greys", alpha=0.7, vmin=0, vmax=1)
-        #bmp.readshapefile(os.path.join(img_folder, "sasha_glaciers/sasha_glaciers"), "glacier_poly", color=cmap(glval))
-        plt.legend([Rectangle((0, 0), 5, 5, fc=cmap(glval)), ], ["Glaciers", ], loc=3)
+        
+        #plt.legend([Rectangle((0, 0), 5, 5, fc=cmap(glval)), ], ["Glaciers", ], loc=3)
 
 
 
@@ -136,14 +136,14 @@ def main():
 
         if plot_permafrost:
             bmp.pcolormesh(xx, yy, pf_mask1, norm=norm, cmap=cmap, alpha=alpha)
-            plt.legend([Rectangle((0, 0), 5, 5, fc=cmap(0), alpha=alpha), ], ["Permafrost",], loc=3)
+            # plt.legend([Rectangle((0, 0), 5, 5, fc=cmap(0), alpha=alpha), ], ["Permafrost",], loc=3)
 
 
 
 
     # tree line
-    # bmp.readshapefile(os.path.join(img_folder, "Bernardo/treeline_current"), "treeline", linewidth=0.5, color="orange")
-    # bmp.readshapefile(os.path.join(img_folder, "Bernardo/treeline_future"), "treeline", linewidth=0.5, color="orange")
+    bmp.readshapefile(os.path.join(img_folder, "Bernardo/treeline_current"), "treeline", linewidth=0.5, color="orange")
+    bmp.readshapefile(os.path.join(img_folder, "Bernardo/treeline_future"), "treeline", linewidth=0.5, color="red")
 
 
     print(os.path.join(img_folder, "lakes_glaciers_pf_veg.png"))

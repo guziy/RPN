@@ -1,73 +1,19 @@
-import calendar
-import glob
-from collections import OrderedDict
-from datetime import datetime
 
-import xarray as xr
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.dates import num2date, date2num, DateLocator, MonthLocator
+
+# plot monthly histograms for the CanESM2-driven simulations future vs current
+from collections import OrderedDict
+
+from datetime import datetime
+from matplotlib.dates import MonthLocator, num2date, date2num
 from matplotlib.ticker import FuncFormatter
 
+from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg
 from util import plot_utils
+import matplotlib.pyplot as plt
+import numpy as np
 
 
-def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
-                                       varname="snow_fall", fname_suffix=".nc"):
-
-
-
-    month_to_accumulations = {}
-
-    months_of_interest = list(range(1, 13))
-
-    for month in months_of_interest:
-
-        files = glob.glob(f"{data_dir}/*m{month:02d}-{month:02d}{fname_suffix}")
-        if len(files) == 0:
-            files = glob.glob(f"{data_dir}/*m{month}-{month}{fname_suffix}")
-
-
-        print(f"Trying to read data from {files}")
-        with xr.open_mfdataset(files) as ds:
-
-            da = ds[varname]
-
-            print(da.shape)
-            print("---" * 10)
-
-            if "year" in da.dims:
-                da2d = da.mean(dim="year").values
-            else:
-                da2d = da.mean(dim="t").values
-
-
-            plt.figure()
-            im = plt.pcolormesh(da2d.T)
-            plt.colorbar(im)
-            plt.show()
-
-            month_to_accumulations[month] = da2d[~np.isnan(da2d)].mean()
-
-
-    series = pd.Series(data=[month_to_accumulations[m] for m in months_of_interest], index=months_of_interest)
-
-
-    # convert to percentages
-    # series /= series.sum()
-    # series *= 100
-
-    return series
-
-
-
-
-
-
-def main(varname="snow_fall"):
-
-
+def main(varname=""):
     plot_utils.apply_plot_params(width_cm=8, height_cm=5.5, font_size=8)
     # series = get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
     #                                             varname=varname)
@@ -82,22 +28,21 @@ def main(varname="snow_fall"):
 
 
     label_to_datapath = OrderedDict([
-        #("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
-        ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
-        ("CRCM5_NEMO", "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_1980-2009_monthly"),
-        ("CRCM5_HL", "/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_HL_1980-2009_monthly"),
+        # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
+        # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
+        ("CRCM5_NEMOc", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010"),
+        ("CRCM5_NEMOf", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100"),
     ])
 
 
     label_to_series = OrderedDict()
     label_to_color = {
-        "Obs": "skyblue",
-        "CRCM5_HL": "yellowgreen",
-        "CRCM5_NEMO": "salmon"
+        "CRCM5_NEMOc": "skyblue",
+        "CRCM5_NEMOf": "salmon"
 
     }
     for label, datapath in label_to_datapath.items():
-        series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname)
+        series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname, fname_suffix="_daily.nc")
 
         label_to_series[label] = series
 
@@ -155,10 +100,8 @@ def main(varname="snow_fall"):
         ax.bar(dates_num + i * width, values, width=width, align="edge", linewidth=0.5,
                edgecolor="k", facecolor=label_to_color[label], label=label)
 
-
-
     ax.set_ylabel("%")
-    #ax.set_xlabel("Month")
+
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
     ax.xaxis.set_major_locator(MonthLocator(bymonthday=int(sum(width[:len(label_to_series)]) / 2.) + 1))
@@ -170,12 +113,12 @@ def main(varname="snow_fall"):
     print(width[:len(label_to_series)])
 
     # ax.grid()
-    img_file = "hles_histo_all_m{}.png".format("_".join([str(m) for m in selected_months]))
+    sel_months_str = "_".join([str(m) for m in selected_months])
+    img_file = f"{varname}_histo_cc_m{sel_months_str}.png"
     print(f"Saving plot to {img_file}")
     fig.savefig(img_file, bbox_inches="tight", dpi=400)
 
 
-
-
 if __name__ == '__main__':
-    main()
+    # main(varname="hles_snow")
+    main(varname="lake_ice_fraction")
