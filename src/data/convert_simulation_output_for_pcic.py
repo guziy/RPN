@@ -213,4 +213,5 @@ def main(field_list=None, start_year=1980, end_year=2010):
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    parallel_conversion_entry()
