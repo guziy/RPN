@@ -25,7 +25,43 @@ def get_tops_and_bots_of_soil_layers(layer_widths):
     return {"z_top": tops, "z_bot": bots}
 
 
-def main():
+
+
+def parallel_conversion_entry():
+
+    fields = ["PR", "AD", "AV", "GIAC",
+                      "GIML", "GLD", "GLF", "GSAB",
+                      "GSAC", "GSML", "GVOL", "GWDI",
+                      "GWST", "GZ", "HR", "HU", "I1", "I2", "I4",
+                      "I5", "MS", "N3", "N4", "P0", "PN", "PR", "S6", "SD",
+                      "STFL", "SWSL", "SWSR", "T5", "T9", "TDRA", "TJ", "TRAF", "UD", "VD"]
+
+
+
+    start_year = 1980
+    end_year = 1981
+
+    input = [[start_year, end_year, fname] for fname in fields]
+
+    from multiprocessing import Pool
+
+    p = Pool(processes=10)
+
+    # do the conversion in parallel
+    p.map(main_for_parallel_processing, input)
+
+
+
+def main_for_parallel_processing(params):
+    """
+    :param params: list [start_year, end_year, field_name]
+    """
+    ys, ye, field_name = params
+    main(field_list=[field_name], start_year=ys, end_year=ye)
+
+
+
+def main(field_list=None, start_year=1980, end_year=2010):
     global_metadata = OrderedDict([
         ("source_dir", ""),
         ("project", "CNRCWP, NEI"),
@@ -33,12 +69,14 @@ def main():
         ("converted_on", Pendulum.now().to_day_datetime_string()),
     ])
 
-    field_list = ["PR", "AD", "AV", "GIAC",
-                  "GIML", "GLD", "GLF", "GSAB",
-                  "GSAC", "GSML", "GVOL", "GWDI",
-                  "GWST", "GZ", "HR", "HU", "I1", "I2", "I4",
-                  "I5", "MS", "N3", "N4", "P0", "PN", "PR", "S6", "SD",
-                  "STFL", "SWSL", "SWSR", "T5", "T9", "TDRA", "TJ", "TRAF", "UD", "VD"]
+
+    if field_list is None:
+        field_list = ["PR", "AD", "AV", "GIAC",
+                      "GIML", "GLD", "GLF", "GSAB",
+                      "GSAC", "GSML", "GVOL", "GWDI",
+                      "GWST", "GZ", "HR", "HU", "I1", "I2", "I4",
+                      "I5", "MS", "N3", "N4", "P0", "PN", "PR", "S6", "SD",
+                      "STFL", "SWSL", "SWSR", "T5", "T9", "TDRA", "TJ", "TRAF", "UD", "VD"]
 
     fields_4d = field_list
 
@@ -137,8 +175,6 @@ def main():
         if vn not in vname_to_fname_prefix:
             vname_to_fname_prefix[vn] = "pm"
 
-    start_year = 1980
-    end_year = 2010
 
     vname_to_level = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
