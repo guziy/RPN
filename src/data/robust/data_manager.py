@@ -158,8 +158,11 @@ class DataManager(object):
                 da = da.rename(vname)
 
                 # attach some info to the variable
-                if field_metadata is not None and y == start_year:
-                    da.attrs.update(field_metadata[vname])
+                if field_metadata is not None:
+                    if vname in field_metadata:
+                        da.attrs.update(field_metadata[vname])
+                        da.attrs["coordinates"] = "lat lon"
+
 
                 da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
                 read_at_least_once = True
@@ -179,9 +182,6 @@ class DataManager(object):
                     da.attrs.update(
                         {k: v for k, v in self.basemap_info_of_the_last_imported_field.items() if k not in ["rlon", "rlat"]})
 
-                    if vname in field_metadata:
-                        da.attrs["description"] = field_metadata[vname]["description"]
-                        da.attrs["coordinates"] = "lat lon"
 
                     ds_in["projection"] = da
 

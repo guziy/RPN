@@ -36,8 +36,6 @@ def parallel_conversion_entry():
                       "I5", "MS", "N3", "N4", "P0", "PN", "PR", "S6", "SD",
                       "STFL", "SWSL", "SWSR", "T5", "T9", "TDRA", "TJ", "TRAF", "UD", "VD"]
 
-
-
     start_year = 1980
     end_year = 1981
 
