@@ -161,7 +161,7 @@ class DataManager(object):
                 if field_metadata is not None:
                     if vname in field_metadata:
                         da.attrs.update(field_metadata[vname])
-                        da.attrs["coordinates"] = "lat lon"
+                        # da.attrs["coordinates"] = "lat lon"
 
 
                 da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
