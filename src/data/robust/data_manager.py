@@ -512,7 +512,7 @@ class DataManager(object):
 
                 month_dir = self.yearmonth_to_path[(year, m)]
 
-                for f in month_dir.iterdir():
+                for f in sorted(month_dir.iterdir()):
                     # Skip the file for time step 0
                     if f.name[-9:-1] == "0" * 8:
                         continue
