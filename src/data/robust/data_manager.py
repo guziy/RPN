@@ -28,6 +28,11 @@ def _get_period_for_year(y):
     end = Pendulum(y + 1, 1, 1).subtract(microseconds=1)
     return Period(start, end)
 
+def _get_period_for_ym(year, month):
+    start = Pendulum(year, month, 1)
+    end = start.add(months=1).subtract(microseconds=1)
+    return Period(start, end)
+
 
 class DataManager(object):
     # Names of the storage properties
@@ -141,31 +146,32 @@ class DataManager(object):
             tmp_files = []
             read_at_least_once = False  # need to read the input data at least once to get the coordinates information
             for y in range(start_year, end_year + 1):
+                for m in range(1, 13):
 
-                chunk_out_file = output_dir_path / f"{label}_{vname}_{start_year}-{end_year}_{y}.nc"
-                tmp_files.append(str(chunk_out_file))
+                    chunk_out_file = output_dir_path / f"{label}_{vname}_{start_year}-{end_year}_{y}{m:02d}.nc"
+                    tmp_files.append(str(chunk_out_file))
 
-                if chunk_out_file.exists() and read_at_least_once:
-                    print(f"{chunk_out_file} already exists, skipping {y}")
-                    continue
+                    if chunk_out_file.exists() and read_at_least_once:
+                        print(f"{chunk_out_file} already exists, skipping {y}")
+                        continue
 
-                da = self.read_data_for_period(_get_period_for_year(y), vname, ndims=4)
+                    da = self.read_data_for_period(_get_period_for_ym(year=y, month=m), vname, ndims=4)
 
-                print(f"{_get_period_for_year(y)}")
+                    print(f"{_get_period_for_year(y)}")
 
-                assert isinstance(da, xarray.DataArray)
+                    assert isinstance(da, xarray.DataArray)
 
-                da = da.rename(vname)
+                    da = da.rename(vname)
 
-                # attach some info to the variable
-                if field_metadata is not None:
-                    if vname in field_metadata:
-                        da.attrs.update(field_metadata[vname])
-                        # da.attrs["coordinates"] = "lat lon"
+                    # attach some info to the variable
+                    if field_metadata is not None:
+                        if vname in field_metadata:
+                            da.attrs.update(field_metadata[vname])
+                            # da.attrs["coordinates"] = "lat lon"
 
 
-                da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
-                read_at_least_once = True
+                    da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
+                    read_at_least_once = True
 
             with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 100, "z": 10}) as ds_in:
 
