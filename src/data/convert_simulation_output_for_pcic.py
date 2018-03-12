@@ -58,7 +58,6 @@ def main_for_parallel_processing(params):
     main(field_list=[field_name], start_year=ys, end_year=ye)
 
 
-
 def main(field_list=None, start_year=1980, end_year=2010):
     global_metadata = OrderedDict([
         ("source_dir", ""),
@@ -73,7 +72,7 @@ def main(field_list=None, start_year=1980, end_year=2010):
                       "GIML", "GLD", "GLF", "GSAB",
                       "GSAC", "GSML", "GVOL", "GWDI",
                       "GWST", "GZ", "HR", "HU", "I1", "I2", "I4",
-                      "I5", "MS", "N3", "N4", "P0", "PN", "PR", "S6", "SD",
+                      "I5", "MS", "N3", "N4", "P0", "PN", "S6", "SD",
                       "STFL", "SWSL", "SWSR", "T5", "T9", "TDRA", "TJ", "TRAF", "UD", "VD"]
 
     fields_4d = field_list
