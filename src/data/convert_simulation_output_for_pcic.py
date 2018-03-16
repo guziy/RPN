@@ -54,11 +54,19 @@ def main_for_parallel_processing(params):
     """
     :param params: list [start_year, end_year, field_name]
     """
-    ys, ye, field_name = params
-    main(field_list=[field_name], start_year=ys, end_year=ye)
+
+    label_to_simpath = None
+    if len(params) == 3:
+        ys, ye, field_name = params
+    elif len(params) == 4:
+        ys, ye, field_name, label_to_simpath = params
+    else:
+        raise ValueError(f"Incorrect number of params passed to main_for_parallel_processing: {len(params)}")
+
+    main(field_list=[field_name], start_year=ys, end_year=ye, label_to_simpath=label_to_simpath)
 
 
-def main(field_list=None, start_year=1980, end_year=2010):
+def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None):
     global_metadata = OrderedDict([
         ("source_dir", ""),
         ("project", "CNRCWP, NEI"),
@@ -185,9 +193,10 @@ def main(field_list=None, start_year=1980, end_year=2010):
     for vn in field_list:
         vname_map[vn] = vn
 
-    label_to_simpath = OrderedDict()
-    label_to_simpath["WC044_modified"] = "/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/Samples"
-    #label_to_simpath["WC011_modified"] = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples"
+    if label_to_simpath is None:
+        label_to_simpath = OrderedDict()
+        label_to_simpath["WC044_modified"] = "/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/Samples"
+        #label_to_simpath["WC011_modified"] = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples"
 
     for label, simpath in label_to_simpath.items():
         global_metadata["source_dir"] = simpath
