@@ -170,7 +170,10 @@ class DataManager(object):
                             # da.attrs["coordinates"] = "lat lon"
 
 
-                    da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
+                    # No need to rewrite if the file already exists.
+                    if not chunk_out_file.exists():
+                        da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
+
                     read_at_least_once = True
 
             with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 100, "z": 10}) as ds_in:
@@ -521,8 +524,10 @@ class DataManager(object):
                     if not f.name.startswith(filename_prefix):
                         continue
 
-                    with RPN(str(f)) as r:
 
+                    with RPN(str(f)) as r:
+                        
+                        print(f"Reading {self.varname_mapping[varname_internal]} from {f}")
                         data_rvar = r.variables[self.varname_mapping[varname_internal]]
 
                         assert isinstance(data_rvar, rpn.RPNVariable)

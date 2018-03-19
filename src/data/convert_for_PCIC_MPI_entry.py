@@ -18,12 +18,12 @@ def parallel_conversion_entry():
     end_year = 2050
 
     label_to_simpath = OrderedDict()
-    label_to_simpath["MPI_WC011_modified"] = "/scratch/huziy/NEI/NEI_WC0.11deg_Crr1_CC_MPI_RCP85"
+    label_to_simpath["MPI_WC011_modified"] = "/scratch/huziy/NEI/NEI_WC0.11deg_Crr1_CC_MPI_RCP85/Samples"
 
     input = [[start_year, end_year, fname, label_to_simpath] for fname in fields]
 
 
-    nprocs = multiprocessing.cpu_count()
+    nprocs = min(multiprocessing.cpu_count(), 10)
     p = Pool(processes=min(nprocs, len(fields)))
 
     # do the conversion in parallel
