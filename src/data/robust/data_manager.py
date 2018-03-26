@@ -21,6 +21,7 @@ from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION
 from util.geo import lat_lon
 from lake_effect_snow import default_varname_mappings
 import pandas as pd
+import os
 
 
 def _get_period_for_year(y):
@@ -176,7 +177,7 @@ class DataManager(object):
 
                     read_at_least_once = True
 
-            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 100, "z": 10}) as ds_in:
+            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 10, "z": 10}) as ds_in:
 
                 if len(self.basemap_info_of_the_last_imported_field) > 0:
                     da = xarray.DataArray(data=0)
@@ -208,8 +209,13 @@ class DataManager(object):
                         for k, vals in field_to_soil_layers[vname].items():
                             ds_in[k] = xarray.DataArray(data=vals, name=k, dims=("z", ), attrs={"units": "m"})
 
-
-                ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
+                try:
+                    ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
+                except Exception as exc:
+                    print(f"Error occurred while creating {out_file}")
+                    print(exc)
+                    if out_file.exists():
+                        os.remove()
 
             # cleanup, remove temporary files
             for f in tmp_files:
