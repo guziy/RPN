@@ -149,6 +149,7 @@ def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None)
         "TRAF": {"units": "kg/(m**2 * s)", "description": "ACCUM. OF TOTAL SURFACE RUNOFF"},
         "UD": {"units": "knots", "description": "SCREEN LEVEL X-COMPONENT OF WIND"},
         "VD": {"units": "knots", "description": "SCREEN LEVEL Y-COMPONENT OF WIND"},
+        "TT": {"units": "degC", "description": "Air temperature"}
     }
 
 
@@ -173,7 +174,8 @@ def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None)
         "HR": "dp",
         "GZ": "dp",
         "P0": "dm",
-        "PN": "dm"
+        "PN": "dm",
+        "TT": "dm"
     })
 
     for vn in field_list:
