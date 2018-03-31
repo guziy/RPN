@@ -21,7 +21,6 @@ from lake_effect_snow.default_varname_mappings import LAKE_ICE_FRACTION
 from util.geo import lat_lon
 from lake_effect_snow import default_varname_mappings
 import pandas as pd
-import os
 
 
 def _get_period_for_year(y):
@@ -29,11 +28,41 @@ def _get_period_for_year(y):
     end = Pendulum(y + 1, 1, 1).subtract(microseconds=1)
     return Period(start, end)
 
+
 def _get_period_for_ym(year, month):
     start = Pendulum(year, month, 1)
     end = start.add(months=1).subtract(microseconds=1)
     return Period(start, end)
 
+
+def _get_chunk_outfilepath(current_year=1980, current_month=1,
+                           start_year=1980, end_year=2010,
+                           output_dir_path: Path=None, label="", vname="TT"):
+    """
+    Used for netcdf export chunking
+    :param current_year:
+    :param current_month:
+    :param start_year:
+    :param end_year:
+    :param output_dir_path:
+    :param label:
+    :param vname:
+    :return:
+    """
+    return output_dir_path / f"{label}_{vname}_{start_year}-{end_year}_{current_year}{current_month:02d}.nc"
+
+
+def _get_chunk_outfilepaths(start_year=1980, end_year=2010, output_dir_path: Path=None, label="", vname="TT"):
+    res = []
+    for y in range(start_year, end_year + 1):
+        for m in range(1, 13):
+            chunk_out_file = _get_chunk_outfilepath(current_year=y, current_month=m,
+                                                    start_year=start_year, end_year=end_year,
+                                                    output_dir_path=output_dir_path,
+                                                    label=label, vname=vname)
+            res.append(chunk_out_file)
+
+    return res
 
 class DataManager(object):
     # Names of the storage properties
@@ -106,8 +135,6 @@ class DataManager(object):
         # {rlon: rlon, rlat: rlat, }
         self.basemap_info_of_the_last_imported_field = {}
 
-
-
     def export_to_netcdf(self, output_dir_path=None, field_names=None, label="",
                          start_year=1980, end_year=2014, field_metadata=None, global_metadata=None,
                          field_to_soil_layers=None):
@@ -131,28 +158,44 @@ class DataManager(object):
 
         print(field_names)
         default_io_settings = {
-                "zlib": True, "dtype": "f4"
+            "zlib": True, "dtype": "f4"
         }
-
 
         for vname in field_names:
 
             out_file = output_dir_path / f"{label}_{vname}_{start_year}-{end_year}.nc"
 
             if out_file.exists():
-                print(f"Nothing to do for {out_file}, skipping ...")
-                continue
+
+                # Check if the chunks are still there, if yes then merging should be redone
+                error_occurred_during_merge = False
+                for chunk in _get_chunk_outfilepaths(start_year=start_year, end_year=end_year,
+                                                     output_dir_path=output_dir_path, label=label, vname=vname):
+                    if chunk.exists():
+                        error_occurred_during_merge = True
+                        break
+
+                if not error_occurred_during_merge:
+                    print(f"Nothing to do for {out_file}, skipping ...")
+                    continue
+                else:
+                    print(f"Chunk files are not deleted: deleting {out_file} to redo merging.")
+                    out_file.unlink()
 
 
             tmp_files = []
-            read_at_least_once = False  # need to read the input data at least once to get the coordinates information
+            have_read_at_least_once = False  # need to read the input data at least once to get the coordinates information
             for y in range(start_year, end_year + 1):
                 for m in range(1, 13):
 
-                    chunk_out_file = output_dir_path / f"{label}_{vname}_{start_year}-{end_year}_{y}{m:02d}.nc"
+                    chunk_out_file = _get_chunk_outfilepath(current_year=y, current_month=m,
+                                                            start_year=start_year, end_year=end_year,
+                                                            output_dir_path=output_dir_path, label=label,
+                                                            vname=vname)
+
                     tmp_files.append(str(chunk_out_file))
 
-                    if chunk_out_file.exists() and read_at_least_once:
+                    if chunk_out_file.exists() and have_read_at_least_once:
                         print(f"{chunk_out_file} already exists, skipping {y}")
                         continue
 
@@ -170,31 +213,32 @@ class DataManager(object):
                             da.attrs.update(field_metadata[vname])
                             # da.attrs["coordinates"] = "lat lon"
 
-
                     # No need to rewrite if the file already exists.
                     if not chunk_out_file.exists():
                         da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
 
-                    read_at_least_once = True
+                    have_read_at_least_once = True
 
-            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal", chunks={"t": 10, "z": 10}) as ds_in:
+            with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal",
+                                       chunks={"t": 10, "z": 10}) as ds_in:
 
                 if len(self.basemap_info_of_the_last_imported_field) > 0:
                     da = xarray.DataArray(data=0)
 
                     if "rlon" in self.basemap_info_of_the_last_imported_field:
-                        rlon = xarray.DataArray(data=self.basemap_info_of_the_last_imported_field["rlon"], dims=("x",), name="rlon")
-                        rlat = xarray.DataArray(data=self.basemap_info_of_the_last_imported_field["rlat"], dims=("y",), name="rlat")
+                        rlon = xarray.DataArray(data=self.basemap_info_of_the_last_imported_field["rlon"], dims=("x",),
+                                                name="rlon")
+                        rlat = xarray.DataArray(data=self.basemap_info_of_the_last_imported_field["rlat"], dims=("y",),
+                                                name="rlat")
 
                         ds_in["rlon"] = rlon
                         ds_in["rlat"] = rlat
 
                     da.attrs.update(
-                        {k: v for k, v in self.basemap_info_of_the_last_imported_field.items() if k not in ["rlon", "rlat"]})
-
+                        {k: v for k, v in self.basemap_info_of_the_last_imported_field.items() if
+                         k not in ["rlon", "rlat"]})
 
                     ds_in["projection"] = da
-
 
                 encoding = {v: default_io_settings.copy() for v in ["rlon", "rlat", vname]}
 
@@ -202,12 +246,11 @@ class DataManager(object):
                 if global_metadata is not None:
                     ds_in.attrs.update(global_metadata)
 
-
                 # record limits of soil layers if required
                 if field_to_soil_layers is not None:
                     if vname in field_to_soil_layers:
                         for k, vals in field_to_soil_layers[vname].items():
-                            ds_in[k] = xarray.DataArray(data=vals, name=k, dims=("z", ), attrs={"units": "m"})
+                            ds_in[k] = xarray.DataArray(data=vals, name=k, dims=("z",), attrs={"units": "m"})
 
                 try:
                     ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
@@ -215,14 +258,11 @@ class DataManager(object):
                     print(f"Error occurred while creating {out_file}")
                     print(exc)
                     if out_file.exists():
-                        os.remove()
+                        out_file.unlink()
 
             # cleanup, remove temporary files
             for f in tmp_files:
                 Path(f).unlink()
-
-
-
 
     def get_basemap(self, varname_internal, **bmap_kwargs):
         if self.data_source_type == data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT:
@@ -249,14 +289,9 @@ class DataManager(object):
         else:
             raise NotImplementedError("Not impelmented for the data_source_type = {}".format(self.data_source_type))
 
-
-
-
-    def compute_annual_number_of_summer_days(self, temp_treshold_degC=25, start_year: int = 1980, end_year: int=1998,
+    def compute_annual_number_of_summer_days(self, temp_treshold_degC=25, start_year: int = 1980, end_year: int = 1998,
                                              lons_target=None, lats_target=None, nneighbors=1):
         pass
-
-
 
     def compute_climatological_quantiles(self, q: float = 0.5, rolling_mean_window_days=5,
                                          varname_internal=default_varname_mappings.TOTAL_PREC,
@@ -303,17 +338,17 @@ class DataManager(object):
                                                  nneighbors=nneighbors)
 
         daily_perc_ma = util.stat_helpers.clim_day_percentile_calculator(daily_data.values, daily_data.t,
-                                                                      np.nan,
-                                                                      rolling_mean_window_days=rolling_mean_window_days,
-                                                                      percentile=q, start_year=start_year,
-                                                                      end_year=end_year)
+                                                                         np.nan,
+                                                                         rolling_mean_window_days=rolling_mean_window_days,
+                                                                         percentile=q, start_year=start_year,
+                                                                         end_year=end_year)
 
         new_coords = {cn: ca for cn, ca in daily_data.coords.items() if cn != "t"}
         t_out = pd.date_range(start="2001-01-01", end="2001-12-31", freq="D")
         new_coords.update({"t": t_out})
 
-
-        print("calculated percentile shape: {}, n={} masked points".format(daily_perc_ma.shape, daily_perc_ma.mask.sum()))
+        print(
+            "calculated percentile shape: {}, n={} masked points".format(daily_perc_ma.shape, daily_perc_ma.mask.sum()))
 
         daily_perc = xarray.DataArray(daily_perc_ma, dims=daily_data.dims, name=out_var_name, attrs=daily_data.attrs,
                                       coords=new_coords)
@@ -323,8 +358,6 @@ class DataManager(object):
         daily_perc.to_netcdf(str(cache_file))
 
         return daily_perc
-
-
 
     def __get_daily_aggregates(self, varname_internal=default_varname_mappings.TOTAL_PREC, start_year: int = 1980,
                                end_year: int = 2016, agg_func=np.mean, lons_target=None, lats_target=None,
@@ -349,7 +382,6 @@ class DataManager(object):
             p_end = Pendulum(p_start.year + 1, 1, 1).subtract(microseconds=1)
             p = Period(p_start, p_end)
             print("reading {} data for {} -- {}".format(varname_internal, p.start, p.end))
-
 
             if lons_target is not None:
                 data = self.read_data_for_period_and_interpolate(period=p,
@@ -413,7 +445,6 @@ class DataManager(object):
                 print("Skipping {}".format(f))
                 continue
 
-
     def read_data_for_period_and_interpolate(self, period: Period, varname_internal: str,
                                              lons_target, lats_target, ktree=None, nneighbors=1) -> DataArray:
         """
@@ -424,8 +455,6 @@ class DataManager(object):
         :param lons_target: longitudes to where the nn interpolation will be done
         :param lats_target:
         """
-
-
 
         data = self.read_data_for_period(period, varname_internal)
 
@@ -438,7 +467,6 @@ class DataManager(object):
 
         dists, inds = ktree.query(list(zip(x_t, y_t, z_t)), k=nneighbors)
 
-
         if nneighbors > 1:
             data_res = data.values.reshape(data.shape[0], -1)[:, inds]
             data_res = np.nanmean(data_res, axis=-1).reshape((-1,) + lons_target.shape)
@@ -449,14 +477,12 @@ class DataManager(object):
 
         print(lons_target.shape)
 
-
         while lons_target.ndim < len(data.coords["lon"].dims):
-            lons_target.shape = lons_target.shape + (1, )
-            lats_target.shape = lats_target.shape + (1, )
-            data_res.shape = data_res.shape + (1, )
+            lons_target.shape = lons_target.shape + (1,)
+            lats_target.shape = lats_target.shape + (1,)
+            data_res.shape = data_res.shape + (1,)
 
-
-        new_coords = {cn: ca for cn, ca in data.coords.items() if cn in ["t",]}
+        new_coords = {cn: ca for cn, ca in data.coords.items() if cn in ["t", ]}
         new_coords["lon"] = (data.coords["lon"].dims, lons_target)
         new_coords["lat"] = (data.coords["lat"].dims, lats_target)
 
@@ -466,7 +492,6 @@ class DataManager(object):
         data_res = xarray.DataArray(data_res, dims=data.dims, name=data.name, attrs=data.attrs, coords=new_coords)
 
         return data_res
-
 
     def __update_bmp_info_from_rpnfile_obj(self, r):
         # save projection paarams for a possible re-use in the future
@@ -484,9 +509,6 @@ class DataManager(object):
             "rlat": rlats,
         }
         self.basemap_info_of_the_last_imported_field.update(bmp.projparams)
-
-
-
 
     def read_data_for_period_3d(self, period: Period, varname_internal: str) -> DataArray:
         """
@@ -513,7 +535,6 @@ class DataManager(object):
 
                 year, m = month_start.year, month_start.month
 
-
                 # Skip years or months that are not available
                 if (year, m) not in self.yearmonth_to_path:
                     print(f"Skipping {year}-{m}")
@@ -530,9 +551,8 @@ class DataManager(object):
                     if not f.name.startswith(filename_prefix):
                         continue
 
-
                     with RPN(str(f)) as r:
-                        
+
                         print(f"Reading {self.varname_mapping[varname_internal]} from {f}")
                         data_rvar = r.variables[self.varname_mapping[varname_internal]]
 
@@ -549,7 +569,6 @@ class DataManager(object):
 
         else:
             raise NotImplementedError()
-
 
         data_list = np.concatenate(data_list, axis=0)
         print(f"data_list.shape={data_list.shape}, var_name={varname_internal}")
@@ -568,7 +587,6 @@ class DataManager(object):
             "name": varname_internal
         }
 
-
         if vert_level_units is not None:
             vardict["coords"]["lev"].update({"attrs": {"units": vert_level_units}})
 
@@ -580,8 +598,6 @@ class DataManager(object):
                                                                                 self.base_folder))
         # Convert units based on supplied mappings
         return self.multipliers[varname_internal] * DataArray.from_dict(vardict) + self.offsets[varname_internal]
-
-
 
     def read_data_for_period(self, period: Period, varname_internal: str, ndims=3) -> DataArray:
 
@@ -815,7 +831,6 @@ class DataManager(object):
             lons = self.lons
             lats = self.lats
 
-
         if lons is None:
             raise Exception(
                 "The coordinates (lons and lats) are not yet set for the manager, please read some data first")
@@ -1026,7 +1041,6 @@ def _get_dates_for_extremes(extr_vals: xarray.DataArray, current_data_chunk: xar
     result_dates.values[xis, yis] = npvals[tis, xis, yis]
 
     # debug
-
 
     return result_dates
 
