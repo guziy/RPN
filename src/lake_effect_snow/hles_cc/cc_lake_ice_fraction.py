@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from datetime import datetime
-from pendulum import Period
+from pathlib import Path
+
 
 import xarray
 
@@ -60,22 +60,16 @@ def get_quantile_for_months(data_array: xarray.DataArray, months_of_interest=Non
 
 def main():
 
-    cur_st_date = datetime(1989, 1, 1)
-    cur_en_date = datetime(2011, 1, 1)  # end date not inclusive
+    from lake_effect_snow.hles_cc import common_params
 
-    fut_st_date = datetime(2079, 1, 1)
-    fut_en_date = datetime(2101, 1, 1)  # end date not inclusive
-
-    cur_period = Period(cur_st_date, cur_en_date)
-    fut_period = Period(fut_st_date, fut_en_date)
-
+    data_root = common_params.data_root
 
     cur_climate_label2path = OrderedDict(
-        ("CRCM5_NEMOc", "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010")
+        ("CRCM5_NEMOc", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010")
     )
 
     fut_climate_label2path = OrderedDict(
-        ("CRCM5_NEMOf", "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100")
+        ("CRCM5_NEMOf", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100")
     )
 
 

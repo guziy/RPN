@@ -43,10 +43,10 @@ def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbe
                 da2d = da.mean(dim="t").values
 
 
-            plt.figure()
-            im = plt.pcolormesh(da2d.T)
-            plt.colorbar(im)
-            plt.show()
+            # plt.figure()
+            # im = plt.pcolormesh(da2d.T)
+            # plt.colorbar(im)
+            # plt.show()
 
             month_to_accumulations[month] = da2d[~np.isnan(da2d)].mean()
 

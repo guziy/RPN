@@ -7,12 +7,15 @@ from datetime import datetime
 from matplotlib.dates import MonthLocator, num2date, date2num
 from matplotlib.ticker import FuncFormatter
 
+from application_properties import main_decorator
+from lake_effect_snow.hles_cc import common_params
 from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg
 from util import plot_utils
 import matplotlib.pyplot as plt
 import numpy as np
 
 
+@main_decorator
 def main(varname=""):
     plot_utils.apply_plot_params(width_cm=8, height_cm=5.5, font_size=8)
     # series = get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
@@ -27,11 +30,14 @@ def main(varname=""):
     selected_months = [9, 10, 11, 12, 1, 2, 3, 4, 5]
 
 
+
+    data_root = common_params.data_root
+
     label_to_datapath = OrderedDict([
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
-        ("CRCM5_NEMOc", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010"),
-        ("CRCM5_NEMOf", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100"),
+        ("CRCM5_NEMOc", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010"),
+        ("CRCM5_NEMOf", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100"),
     ])
 
 
@@ -62,11 +68,6 @@ def main(varname=""):
 
     dates = [start_date.replace(month=(start_date.month + i) % 13 + int((start_date.month + i) % 13 == 0),
                                 year=start_date.year + (start_date.month + i) // 13) for i in range(13)]
-
-
-    for d in dates:
-        print(d)
-
 
 
     def format_month_label(x, pos):
@@ -108,17 +109,22 @@ def main(varname=""):
     ax.legend(bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=2)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
+    ax.set_title(common_params.varname_to_display_name[varname])
 
 
     print(width[:len(label_to_series)])
 
     # ax.grid()
     sel_months_str = "_".join([str(m) for m in selected_months])
-    img_file = f"{varname}_histo_cc_m{sel_months_str}.png"
+
+    common_params.img_folder.mkdir(exist_ok=True)
+    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}.png"
     print(f"Saving plot to {img_file}")
-    fig.savefig(img_file, bbox_inches="tight", dpi=400)
+    fig.savefig(img_file, bbox_inches="tight", dpi=300)
 
 
 if __name__ == '__main__':
     # main(varname="hles_snow")
-    main(varname="lake_ice_fraction")
+
+    for varname in ["hles_snow", "lake_ice_fraction"]:
+        main(varname=varname)
