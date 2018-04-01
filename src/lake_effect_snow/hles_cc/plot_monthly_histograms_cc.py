@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from datetime import datetime
 from matplotlib.dates import MonthLocator, num2date, date2num
+from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FuncFormatter
 
 from application_properties import main_decorator
@@ -17,7 +18,7 @@ import numpy as np
 
 @main_decorator
 def main(varname=""):
-    plot_utils.apply_plot_params(width_cm=8, height_cm=5.5, font_size=8)
+    plot_utils.apply_plot_params(width_cm=18, height_cm=5.5, font_size=8)
     # series = get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
     #                                             varname=varname)
 
@@ -43,8 +44,8 @@ def main(varname=""):
 
     label_to_series = OrderedDict()
     label_to_color = {
-        "CRCM5_NEMOc": "skyblue",
-        "CRCM5_NEMOf": "salmon"
+        common_params.crcm_nemo_cur_label: "skyblue",
+        common_params.crcm_nemo_fut_label: "salmon"
 
     }
     for label, datapath in label_to_datapath.items():
@@ -61,8 +62,10 @@ def main(varname=""):
     # ax.set_ylabel("%")
     # ax.set_xlabel("Month")
 
+    gs = GridSpec(1, 2, wspace=0.4)
+
     fig = plt.figure()
-    ax = plt.gca()
+    ax = fig.add_subplot(gs[0, 0])
 
     start_date = datetime(2001, 10, 1)
 
@@ -88,6 +91,7 @@ def main(varname=""):
     dates_num = date2num(dates)
 
 
+    label_to_handle = OrderedDict()
     for i, (label, series) in enumerate(label_to_series.items()):
         values = [series[d.month] for d in dates]
 
@@ -98,21 +102,47 @@ def main(varname=""):
         print(label, values)
         print(f"sum(values) = {sum(values)}")
 
-        ax.bar(dates_num + i * width, values, width=width, align="edge", linewidth=0.5,
-               edgecolor="k", facecolor=label_to_color[label], label=label)
+        h = ax.bar(dates_num + i * width, values, width=width, align="edge", linewidth=0.5,
+               edgecolor="k", facecolor=label_to_color[label], label=label, zorder=10)
+        label_to_handle[label] = h
 
-    ax.set_ylabel("%")
+    ax.set_ylabel("% of total annual HLES")
 
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
     ax.xaxis.set_major_locator(MonthLocator(bymonthday=int(sum(width[:len(label_to_series)]) / 2.) + 1))
-    ax.legend(bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=2)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    ax.set_title(common_params.varname_to_display_name[varname])
+    # ax.set_title(common_params.varname_to_display_name[varname])
+    ax.yaxis.grid(True, linestyle="--", linewidth=0.5)
+    ax.text(1, 1, "(a)", fontdict=dict(weight="bold"), transform=ax.transAxes, va="top", ha="right")
+    ax_with_legend = ax
 
 
     print(width[:len(label_to_series)])
+
+
+    # plot HLES amount changes for each month
+    ax = fig.add_subplot(gs[0, 1], sharex=ax)
+    cur_data = label_to_series[common_params.crcm_nemo_cur_label]
+    fut_data = label_to_series[common_params.crcm_nemo_fut_label]
+
+    perc_change = (fut_data - cur_data) / cur_data * 100.0
+    perc_change_sel = [perc_change[d.month] for d in dates]
+    h = ax.bar(dates_num + width, perc_change_sel, edgecolor="k", linewidth=0.5, facecolor="orange",
+           width=10, align="center", zorder=10)
+    label_to_handle[r"$\Delta$ (f-c)"] = h
+    ax.set_ylabel("% of current HLES")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.yaxis.grid(True, linestyle="--", linewidth=0.5)
+    ax.text(1, 1, "(b)", fontdict=dict(weight="bold"), transform=ax.transAxes, va="top", ha="right")
+
+
+    # Add a common legend
+    labels = list(label_to_handle)
+    handles = [label_to_handle[l] for l in labels]
+    ax_with_legend.legend(handles, labels, bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=3)
 
     # ax.grid()
     sel_months_str = "_".join([str(m) for m in selected_months])
@@ -120,11 +150,11 @@ def main(varname=""):
     common_params.img_folder.mkdir(exist_ok=True)
     img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}.png"
     print(f"Saving plot to {img_file}")
-    fig.savefig(img_file, bbox_inches="tight", dpi=300)
+    fig.savefig(img_file, **common_params.image_file_options)
 
 
 if __name__ == '__main__':
     # main(varname="hles_snow")
 
-    for varname in ["hles_snow", "lake_ice_fraction"]:
+    for varname in ["hles_snow", ]:
         main(varname=varname)

@@ -65,15 +65,15 @@ def main():
     data_root = common_params.data_root
 
     cur_climate_label2path = OrderedDict(
-        ("CRCM5_NEMOc", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010")
+        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010")
     )
 
     fut_climate_label2path = OrderedDict(
-        ("CRCM5_NEMOf", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100")
+        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100")
     )
 
 
-    months_of_interest = [1, 12]
+    months_of_interest = [1, 4]
 
     # ---
 
