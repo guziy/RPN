@@ -618,6 +618,7 @@ class DataManager(object):
             assert isinstance(lvl, VerticalLevel)
             level, level_kind = lvl.get_value_and_kind()
 
+
         data = {}
         lons, lats = None, None
         data_list = None
@@ -738,12 +739,17 @@ class DataManager(object):
                 print("reading {} from {}".format(varname_internal, self.varname_to_file_path[varname_internal]))
 
             # select the variable by name and time
-            print(period.start, period.end)
-            print(ds[self.varname_mapping[varname_internal]])
-            var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start, period.end)).squeeze()
+            # print(period.start, period.end)
+            # print(ds[self.varname_mapping[varname_internal]])
+
+            # try both time and t
+            try:
+                var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start, period.end)).squeeze()
+            except ValueError:
+                var = ds[self.varname_mapping[varname_internal]].sel(t=slice(period.start, period.end)).squeeze()
 
             for cname, cvals in var.coords.items():
-                if "time" in cname.lower():
+                if "time" in cname.lower() or "t" == cname.lower():
                     dates = cvals
 
             if self.lons is None:
@@ -774,13 +780,16 @@ class DataManager(object):
                     if "lat" in vname.lower():
                         self.lats = ncvar.values
 
-            if var.ndim > 3:
-                var = var[:, self.level_mapping[varname_internal], :, :]
+            # if still could not find => raise an exception
+            if self.lons is None:
+                raise IOError(f"Could not find lon/lat fields in the\n {ds}")
 
+            if var.ndim > 3:
+                var = var[:, self.level_mapping[varname_internal].value, :, :]
             if var.shape[-2:] == self.lons.shape:
                 data_list = var.values
+
             else:
-                print(self.lons.shape, var.shape, var.name)
                 if var.ndim == 3:
                     data_list = np.transpose(var.values, axes=(0, 2, 1))
                 elif var.ndim == 2:
