@@ -21,7 +21,7 @@ def parallel_conversion_entry():
     """
 
 
-    fields = ["TT", ]
+    fields = ["TT", "PR", "N3", "AV", "GZ", "P0"]
 
     start_year = 1989
     end_year = 2010
