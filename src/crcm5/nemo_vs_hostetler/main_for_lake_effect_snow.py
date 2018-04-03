@@ -325,7 +325,9 @@ def main():
 
                 # add a condition on the wind fetch from lakes and ice fraction.
                 wind_blows_from_lake = get_wind_blows_from_lake_mask(lake_mask, lake_effect_regions, u_var[ti, :, :], v_var[ti, :, :],
-                                                                    dx=dx, dy=dy, lake_ice_frac=lkice_manager.get_lake_fraction_for_date(the_date=t), lats_rot=lats_rot)
+                                                                    dx=dx, dy=dy,
+                                                                     lake_ice_frac=lkice_manager.get_lake_fraction_for_date(the_date=t),
+                                                                     lats_rot=lats_rot)
 
 
 

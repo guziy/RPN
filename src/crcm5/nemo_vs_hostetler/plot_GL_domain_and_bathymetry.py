@@ -44,8 +44,6 @@ def main():
         bmap = rll.get_basemap_object_for_lons_lats(lons2d=lons, lats2d=lats, resolution="i")
 
 
-
-
     xx, yy = bmap(lons, lats)
 
     plt.figure()

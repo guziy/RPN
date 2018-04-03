@@ -14,9 +14,8 @@ from util import plot_utils
 
 
 def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
-                                       varname="snow_fall", fname_suffix=".nc"):
-
-
+                                       varname="snow_fall", fname_suffix=".nc",
+                                       region_of_interest_mask=None):
 
     month_to_accumulations = {}
 
@@ -48,7 +47,11 @@ def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbe
             # plt.colorbar(im)
             # plt.show()
 
-            month_to_accumulations[month] = da2d[~np.isnan(da2d)].mean()
+
+            if region_of_interest_mask is None:
+                month_to_accumulations[month] = da2d[~np.isnan(da2d)].mean()
+            else:
+                month_to_accumulations[month] = da2d[region_of_interest_mask]
 
 
     series = pd.Series(data=[month_to_accumulations[m] for m in months_of_interest], index=months_of_interest)

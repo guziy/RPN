@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from numba import jit
 
 from application_properties import main_decorator
 from osgeo import ogr
