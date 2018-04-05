@@ -197,7 +197,7 @@ class DataManager(object):
                     tmp_files.append(str(chunk_out_file))
 
                     if chunk_out_file.exists() and have_read_at_least_once:
-                        print(f"{chunk_out_file} already exists, skipping {y}")
+                        print(f"{chunk_out_file} already exists, skipping {y}{m:02}")
                         continue
 
                     da = self.read_data_for_period(_get_period_for_ym(year=y, month=m), vname, ndims=4)
