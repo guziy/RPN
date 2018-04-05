@@ -1,3 +1,4 @@
+import pickle
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -253,7 +254,9 @@ class DataManager(object):
                             ds_in[k] = xarray.DataArray(data=vals, name=k, dims=("z",), attrs={"units": "m"})
 
                 try:
+                    print(f"Start merging into {out_file}")
                     ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
+                    print(f"Successfully merged data into: {out_file}")
                 except Exception as exc:
                     print(f"Error occurred while creating {out_file}")
                     print(exc)
@@ -855,6 +858,120 @@ class DataManager(object):
 
         return kdtree
 
+
+
+    def get_mean_number_of_hles_days(self, start_year: int, end_year: int, season_to_months: dict, hles_vname: str):
+        result = defaultdict(dict)
+
+        cache_dir = Path(self.base_folder) / "cache"
+        cache_dir.mkdir(exist_ok=True)
+        seasons_str = "-".join(season_to_months)
+        cache_file = cache_dir / f"get_mean_number_of_hles_days_{start_year}-{end_year}_m{seasons_str}_{hles_vname}.bin"
+
+        if cache_file.exists():
+            return pickle.load(cache_file.open("rb"))
+
+        for season, months in season_to_months.items():
+
+            for y in range(start_year, end_year + 1):
+                d1 = Pendulum(y, months[0], 1)
+                d2 = d1.add(months=len(months)).subtract(seconds=1)
+
+                if d2.year > end_year:
+                    continue
+
+                current_period = Period(d1, d2)
+                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                data = self.read_data_for_period(current_period, hles_vname)
+
+                # calculate number of hles days
+
+                data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t")
+
+                result[season][y] = (data_daily.values >= 0.1).sum(axis=0)
+
+
+        pickle.dump(result, cache_file.open("wb"))
+        return result
+
+    def get_mean_number_of_cao_days(self, start_year: int, end_year: int, season_to_months: dict, temperature_vname: str):
+        """
+        calculate mean number of CAO days for each season and year {season: {year: field}}
+        Calculation following Wheeler et al 2011
+        :param self:
+        :param start_year:
+        :param end_year:
+        :param season_to_months:
+        :param temperature_vname:
+        """
+        season_to_year_to_std = defaultdict(dict)
+        season_to_year_to_data = defaultdict(dict)
+        season_to_year_to_rolling_mean = defaultdict(dict)
+        season_to_n_cao_days = {}
+
+
+        cache_dir = Path(self.base_folder) / "cache"
+        cache_dir.mkdir(exist_ok=True)
+        seasons_str = "-".join(season_to_months)
+        cache_file = cache_dir / f"get_mean_number_of_cao_days_{start_year}-{end_year}_m{seasons_str}_{temperature_vname}.bin"
+
+        if cache_file.exists():
+            return pickle.load(cache_file.open("rb"))
+
+        for season, months in season_to_months.items():
+
+            for y in range(start_year, end_year + 1):
+                d1 = Pendulum(y, months[0], 1)
+                d2 = d1.add(months=len(months)).subtract(seconds=1)
+
+                if d2.year > end_year:
+                    continue
+
+                current_period = Period(d1, d2)
+                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                data = self.read_data_for_period(current_period, temperature_vname)
+
+                # calculate daily means
+                data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t")
+                assert isinstance(data_daily, xarray.DataArray)
+
+                # save the data for reuse below
+                season_to_year_to_data[season][y] = data_daily.values
+                season_to_year_to_std[season][y] = data_daily.std(dim="t").values
+                season_to_year_to_rolling_mean[season][y] = data_daily.rolling(center=True, t=31).mean(dim="t").values
+
+        #  Calculate climatological std and rolling mean
+        season_to_std_clim = {
+            s: np.mean([f for f in y_to_std.values()], axis=0) for s, y_to_std in season_to_year_to_std.items()
+        }
+
+        season_to_rolling_clim = {
+            s: np.mean([f for f in y_to_rolling.values()], axis=0) for s, y_to_rolling in season_to_year_to_rolling_mean.items()
+        }
+
+        #  calculate number of CAO days
+        for season, std_clim in season_to_std_clim.items():
+            for y in range(start_year, end_year + 1):
+
+                t31_rolling = season_to_rolling_clim[season]
+
+                n_cao_days = (np.array(season_to_year_to_data[season][y]) <= t31_rolling - 1.5 * std_clim).sum(axis=0)
+
+                # initialize
+                if y == start_year:
+                    season_to_n_cao_days[season] = n_cao_days
+                else:
+                    season_to_n_cao_days[season] += n_cao_days
+
+            # divide by the number of years
+            season_to_n_cao_days[season] /= end_year - start_year + 1
+
+
+        pickle.dump(season_to_n_cao_days, cache_file.open("wb"))
+        return season_to_n_cao_days
+
+
+
     def get_seasonal_means(self, start_year: int, end_year: int, season_to_months: dict, varname_internal: str):
 
         """
@@ -866,6 +983,14 @@ class DataManager(object):
         (order of months in the list of months is important, i.e. for DJF the order should be [12, 1, 2])
         """
         result = defaultdict(dict)
+
+        cache_dir = Path(self.base_folder) / "cache"
+        cache_dir.mkdir(exist_ok=True)
+        seasons_str = "-".join(season_to_months)
+        cache_file = cache_dir / f"get_seasonal_means_{start_year}-{end_year}_m{seasons_str}_{varname_internal}.bin"
+
+        if cache_file.exists():
+            return pickle.load(cache_file.open("rb"))
 
         for season, months in season_to_months.items():
 
@@ -882,6 +1007,7 @@ class DataManager(object):
 
                 result[season][y] = data.mean(dim="t").values
 
+        pickle.dump(result, cache_file.open("wb"))
         return result
 
     def get_seasonal_maxima(self, start_year: int, end_year: int, season_to_months: dict, varname_internal: str):
