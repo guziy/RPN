@@ -78,13 +78,15 @@ def entry_for_cc_canesm2_gl():
         ("MA", [3, 4])
     ])
 
-    varnames = ["hles_snow", "lake_ice_fraction", "TT", "PR"]
+    varnames = ["hles_snow", "lake_ice_fraction", "TT", "PR", ]
 
     var_display_names = {
         "hles_snow": "HLES",
+        "hles_snow_days": "HLES freq",
         "lake_ice_fraction": "Lake ice fraction",
         "TT": "2m air\n temperature",
-        "PR": "total\nprecipitation"
+        "PR": "total\nprecipitation",
+        "cao_days": "CAO freq"
     }
 
     plot_utils.apply_plot_params(width_cm=18, height_cm=20, font_size=8)
@@ -100,6 +102,23 @@ def entry_for_cc_canesm2_gl():
             "vmax": 2,
             "accumulation": True,
             "mask": ~the_mask
+        },
+        "hles_snow_days": {
+            # convert to mm/day
+            "multiplier": 1,
+            "display_units": "days",
+            "offset": 0,
+            "vmin": -1,
+            "vmax": 1,
+            "mask": ~the_mask
+        },
+        "cao_days": {
+            # convert to mm/day
+            "multiplier": 1,
+            "display_units": "days",
+            "offset": 0,
+            "vmin": -1,
+            "vmax": 1,
         },
         "lake_ice_fraction": {
             "multiplier": 1,
@@ -225,6 +244,37 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
         var_to_season_to_data[vname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
 
 
+    # add hles days
+    hles_days_varname = "hles_snow_days"
+    varnames.insert(1, hles_days_varname)
+    cur_means = cur_dm.get_mean_number_of_hles_days(start_year=cur_start_yr, end_year=cur_end_year,
+                                                    season_to_months=season_to_months,
+                                                    hles_vname="hles_snow")
+
+
+    fut_means = fut_dm.get_mean_number_of_hles_days(start_year=fut_start_yr, end_year=fut_end_year,
+                                                     season_to_months=season_to_months,
+                                                     hles_vname="hles_snow")
+
+    var_to_season_to_data[hles_days_varname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
+
+
+    # add CAO days
+    cao_ndays_varname = "cao_days"
+    varnames.append(cao_ndays_varname)
+
+    cur_means = cur_dm.get_mean_number_of_cao_days(start_year=cur_start_yr, end_year=cur_end_year,
+                                                    season_to_months=season_to_months,
+                                                    temperature_vname="TT")
+
+
+    fut_means = fut_dm.get_mean_number_of_cao_days(start_year=fut_start_yr, end_year=fut_end_year,
+                                                     season_to_months=season_to_months,
+                                                     temperature_vname="TT")
+
+    var_to_season_to_data[cao_ndays_varname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
+
+
 
     # Plotting
     # panel grid dimensions
@@ -247,7 +297,11 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
             if col == 0:
                 ax.set_ylabel(vname_display_names.get(vname, vname))
 
-            to_plot = var_to_season_to_data[vname][seas_name][0]
+
+            cc, pv = var_to_season_to_data[vname][seas_name]
+            to_plot = cc
+
+            print(f"Plotting {vname} for {seas_name}.")
 
             vmin = None
             vmax = None
@@ -267,6 +321,13 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
             ax.set_facecolor("0.75")
             im = ax.pcolormesh(to_plot.T, cmap=cm.get_cmap("bwr", 11), vmin=vmin, vmax=vmax)
             cb = plt.colorbar(im, extend="both")
+
+            # if hasattr(to_plot, "mask"):
+            #     to_plot = np.ma.masked_where(to_plot.mask, pv)
+            # else:
+            #     to_plot = pv
+            # ax.contour(to_plot.T, levels=(pval_crit, ))
+
             if col < ncols - 1:
                 cb.ax.set_visible(False)
 

@@ -138,7 +138,7 @@ class DataManager(object):
 
     def export_to_netcdf(self, output_dir_path=None, field_names=None, label="",
                          start_year=1980, end_year=2014, field_metadata=None, global_metadata=None,
-                         field_to_soil_layers=None):
+                         field_to_soil_layers=None, merge_chunks=False):
         """
 
         :param output_dir_path:
@@ -219,6 +219,10 @@ class DataManager(object):
                         da.to_netcdf(str(chunk_out_file), unlimited_dims=["t"])
 
                     have_read_at_least_once = True
+
+            # do not do merging and skip the rest of the loop
+            if not merge_chunks:
+                continue
 
             with xarray.open_mfdataset(tmp_files, data_vars="minimal", coords="minimal",
                                        chunks={"t": 10, "z": 10}) as ds_in:
@@ -894,7 +898,8 @@ class DataManager(object):
         pickle.dump(result, cache_file.open("wb"))
         return result
 
-    def get_mean_number_of_cao_days(self, start_year: int, end_year: int, season_to_months: dict, temperature_vname: str):
+    def get_mean_number_of_cao_days(self, start_year: int, end_year: int, season_to_months: dict,
+                                    temperature_vname: str, min_cao_width_cells=5):
         """
         calculate mean number of CAO days for each season and year {season: {year: field}}
         Calculation following Wheeler et al 2011
@@ -907,7 +912,7 @@ class DataManager(object):
         season_to_year_to_std = defaultdict(dict)
         season_to_year_to_data = defaultdict(dict)
         season_to_year_to_rolling_mean = defaultdict(dict)
-        season_to_n_cao_days = {}
+        season_to_year_to_n_cao_days = defaultdict(dict)
 
 
         cache_dir = Path(self.base_folder) / "cache"
@@ -915,7 +920,7 @@ class DataManager(object):
         seasons_str = "-".join(season_to_months)
         cache_file = cache_dir / f"get_mean_number_of_cao_days_{start_year}-{end_year}_m{seasons_str}_{temperature_vname}.bin"
 
-        if cache_file.exists():
+        if cache_file.exists() and False:
             return pickle.load(cache_file.open("rb"))
 
         for season, months in season_to_months.items():
@@ -932,7 +937,10 @@ class DataManager(object):
                 data = self.read_data_for_period(current_period, temperature_vname)
 
                 # calculate daily means
-                data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t")
+                data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t").dropna(dim="t")
+
+
+
                 assert isinstance(data_daily, xarray.DataArray)
 
                 # save the data for reuse below
@@ -955,20 +963,16 @@ class DataManager(object):
 
                 t31_rolling = season_to_rolling_clim[season]
 
-                n_cao_days = (np.array(season_to_year_to_data[season][y]) <= t31_rolling - 1.5 * std_clim).sum(axis=0)
+                cao_suspect = (np.array(season_to_year_to_data[season][y]) <= t31_rolling - 1.5 * std_clim) & (std_clim > 2)
+                
 
-                # initialize
-                if y == start_year:
-                    season_to_n_cao_days[season] = n_cao_days
-                else:
-                    season_to_n_cao_days[season] += n_cao_days
+                n_cao_days = cao_suspect.sum(axis=0)
 
-            # divide by the number of years
-            season_to_n_cao_days[season] /= end_year - start_year + 1
+                season_to_year_to_n_cao_days[season][y] = n_cao_days
 
 
-        pickle.dump(season_to_n_cao_days, cache_file.open("wb"))
-        return season_to_n_cao_days
+        pickle.dump(season_to_year_to_n_cao_days, cache_file.open("wb"))
+        return season_to_year_to_n_cao_days
 
 
 

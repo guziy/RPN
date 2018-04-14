@@ -7,7 +7,7 @@ import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.dates import num2date, date2num, DateLocator, MonthLocator
+from matplotlib.dates import num2date, date2num, MonthLocator
 from matplotlib.ticker import FuncFormatter
 
 from util import plot_utils
@@ -42,16 +42,11 @@ def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbe
                 da2d = da.mean(dim="t").values
 
 
-            # plt.figure()
-            # im = plt.pcolormesh(da2d.T)
-            # plt.colorbar(im)
-            # plt.show()
-
-
             if region_of_interest_mask is None:
                 month_to_accumulations[month] = da2d[~np.isnan(da2d)].mean()
             else:
-                month_to_accumulations[month] = da2d[region_of_interest_mask]
+                month_to_accumulations[month] = da2d[region_of_interest_mask].mean()
+
 
 
     series = pd.Series(data=[month_to_accumulations[m] for m in months_of_interest], index=months_of_interest)

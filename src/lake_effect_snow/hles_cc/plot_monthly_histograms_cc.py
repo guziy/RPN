@@ -9,7 +9,9 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FuncFormatter
 
 from application_properties import main_decorator
+from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points_near_lakes
 from lake_effect_snow.hles_cc import common_params
+from lake_effect_snow.hles_cc.plot_cc_2d_all_variables_for_all_periods import get_gl_mask
 from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg
 from util import plot_utils
 import matplotlib.pyplot as plt
@@ -37,8 +39,8 @@ def main(varname=""):
     label_to_datapath = OrderedDict([
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
-        ("CRCM5_NEMOc", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010"),
-        ("CRCM5_NEMOf", data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100"),
+        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010"),
+        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100"),
     ])
 
 
@@ -48,9 +50,13 @@ def main(varname=""):
         common_params.crcm_nemo_fut_label: "salmon"
 
     }
-    for label, datapath in label_to_datapath.items():
-        series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname, fname_suffix="_daily.nc")
 
+    gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label] / "merged")
+    hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=10)
+
+    for label, datapath in label_to_datapath.items():
+        series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname, fname_suffix="_daily.nc",
+                                                    region_of_interest_mask=hles_region_mask)
         label_to_series[label] = series
 
 
@@ -92,11 +98,19 @@ def main(varname=""):
 
 
     label_to_handle = OrderedDict()
+
+
+    label_to_annual_hles = OrderedDict()
+
     for i, (label, series) in enumerate(label_to_series.items()):
         values = [series[d.month] for d in dates]
 
         # convert to percentages
         values_sum = sum(values)
+
+        # save the total annual hles for later reuse
+        label_to_annual_hles[label] = values_sum
+
         values = [v / values_sum * 100 for v in values]
 
         print(label, values)
@@ -106,7 +120,7 @@ def main(varname=""):
                edgecolor="k", facecolor=label_to_color[label], label=label, zorder=10)
         label_to_handle[label] = h
 
-    ax.set_ylabel("% of total annual HLES")
+    ax.set_ylabel("% of total HLES")
 
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
@@ -117,6 +131,18 @@ def main(varname=""):
     ax.yaxis.grid(True, linestyle="--", linewidth=0.5)
     ax.text(1, 1, "(a)", fontdict=dict(weight="bold"), transform=ax.transAxes, va="top", ha="right")
     ax_with_legend = ax
+
+    # area average annual total HLES
+    text_align_props = dict(transform=ax.transAxes, va="bottom", ha="right")
+
+    cur_hles_annual = label_to_annual_hles[common_params.crcm_nemo_cur_label]
+    fut_hles_annual = label_to_annual_hles[common_params.crcm_nemo_fut_label]
+
+    ax.text(1, 0.2, r"$\Delta_{\rm total}$" + f"({(fut_hles_annual - cur_hles_annual) / cur_hles_annual * 100:.1f}%)",
+            **text_align_props, fontdict=dict(size=6))
+
+
+
 
 
     print(width[:len(label_to_series)])
@@ -131,7 +157,7 @@ def main(varname=""):
     perc_change_sel = [perc_change[d.month] for d in dates]
     h = ax.bar(dates_num + width, perc_change_sel, edgecolor="k", linewidth=0.5, facecolor="orange",
            width=10, align="center", zorder=10)
-    label_to_handle[r"$\Delta$ (f-c)"] = h
+    label_to_handle[r"CRCM5_NEMO(f-c)"] = h
     ax.set_ylabel("% of current HLES")
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -139,10 +165,13 @@ def main(varname=""):
     ax.text(1, 1, "(b)", fontdict=dict(weight="bold"), transform=ax.transAxes, va="top", ha="right")
 
 
+
+
+
     # Add a common legend
     labels = list(label_to_handle)
     handles = [label_to_handle[l] for l in labels]
-    ax_with_legend.legend(handles, labels, bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=3)
+    ax_with_legend.legend(handles, labels, bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=1)
 
     # ax.grid()
     sel_months_str = "_".join([str(m) for m in selected_months])
