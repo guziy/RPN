@@ -55,18 +55,23 @@ def main_for_parallel_processing(params):
     :param params: list [start_year, end_year, field_name]
     """
 
+    merge_chunks = False
     label_to_simpath = None
     if len(params) == 3:
         ys, ye, field_name = params
     elif len(params) == 4:
         ys, ye, field_name, label_to_simpath = params
+    elif len(params) == 5:
+        ys, ye, field_name, label_to_simpath, merge_chunks = params
     else:
         raise ValueError(f"Incorrect number of params passed to main_for_parallel_processing: {len(params)}")
 
-    main(field_list=[field_name], start_year=ys, end_year=ye, label_to_simpath=label_to_simpath)
+    main(field_list=[field_name], start_year=ys, end_year=ye, label_to_simpath=label_to_simpath,
+         merge_chunks=merge_chunks)
 
 
-def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None):
+def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None,
+         merge_chunks=False):
     global_metadata = OrderedDict([
         ("source_dir", ""),
         ("project", "CNRCWP, NEI"),
@@ -218,8 +223,8 @@ def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None)
         dm.export_to_netcdf(start_year=start_year, end_year=end_year,
                             field_names=field_list, label=label,
                             field_metadata=metadata, global_metadata=global_metadata,
-                            field_to_soil_layers=vname_to_soil_layers
-                            )
+                            field_to_soil_layers=vname_to_soil_layers,
+                            merge_chunks=merge_chunks)
 
 
 if __name__ == '__main__':
