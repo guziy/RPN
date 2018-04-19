@@ -33,7 +33,7 @@ def main():
                 t_prev = ti
 
             if not not_ok:
-                print("{nf} is OK")
+                print(f"{nf} is OK")
 
 
 
