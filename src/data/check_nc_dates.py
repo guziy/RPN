@@ -42,17 +42,20 @@ def main():
 
             if not not_ok:
                 print(f"{nf} is OK")
-                files_not_ok.append(str(nf))
             else:
-                print(f"All files in {data_dir} are OK!")
+                files_not_ok.append(str(nf))
+
 
 
 
     print(f"Summary: {len(files_not_ok)} have problems with time axis")
-    print("Found problems in: ")
-    for f in files_not_ok:
-        print(f)
 
+    if len(files_not_ok) > 1:
+        print("Found problems in: ")
+        for f in files_not_ok:
+            print(f)
+    else:
+        print(f"All files in {data_dir} are OK!")
 
 
 if __name__ == '__main__':
