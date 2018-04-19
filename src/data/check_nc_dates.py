@@ -30,6 +30,7 @@ def main():
                     print(f"ERROR: decreasing time values encountered in {nf}(t={ti}; tprev={t_prev})")
                     not_ok = True
                     break
+                t_prev = ti
 
             if not not_ok:
                 print("{nf} is OK")
