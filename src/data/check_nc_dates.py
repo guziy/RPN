@@ -6,6 +6,8 @@ import numpy as np
 def main():
     data_dir = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Netcdf_exports_WC011_modified")
 
+
+    files_not_ok = []
     for nf in data_dir.iterdir():
         if not nf.name.endswith(".nc"):
             continue
@@ -34,7 +36,13 @@ def main():
 
             if not not_ok:
                 print(f"{nf} is OK")
+                files_not_ok.append(str(nf))
 
+
+    print(f"Summary: {len(files_not_ok)} have problems with time axis")
+    print("Found problems in: ")
+    for f in files_not_ok:
+        print(f)
 
 
 
