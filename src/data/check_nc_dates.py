@@ -3,9 +3,15 @@ from netCDF4 import Dataset
 
 import numpy as np
 
-def main():
-    data_dir = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Netcdf_exports_WC011_modified")
+import sys
 
+def main():
+
+    p = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Netcdf_exports_WC011_modified"
+    if len(sys.argv) > 1:
+        p = sys.argv[1]
+
+    data_dir = Path(p)
 
     files_not_ok = []
     for nf in data_dir.iterdir():
@@ -37,6 +43,9 @@ def main():
             if not not_ok:
                 print(f"{nf} is OK")
                 files_not_ok.append(str(nf))
+            else:
+                print(f"All files in {data_dir} are OK!")
+
 
 
     print(f"Summary: {len(files_not_ok)} have problems with time axis")
