@@ -1,5 +1,4 @@
-
-
+from pathlib import Path
 
 from netCDF4 import Dataset
 from scipy.spatial import KDTree
@@ -89,7 +88,22 @@ def main(in_file="", out_file=None, target_grid: GridConfig=None):
     dsin.close()
 
 
-if __name__ == '__main__':
+
+def interpolate_for_CanESM2_driven_coupled_GL011():
+    # the grid is the same for the current and the future slices
+    target_grid = known_domains["GLK_452x260_0.1deg_shift"].to_gridconfig()
+
+    in_folder_current = "/RESCUE/skynet3_rech1/huziy/restarts_for_coupled_simulations_correct/19881231/"
+    for f in Path(in_folder_current).iterdir():
+        main(in_file=str(f), target_grid=target_grid)
+
+    in_folder_future = "/RESCUE/skynet3_rech1/huziy/restarts_for_coupled_simulations_correct/20781231/"
+    for f in Path(in_folder_future).iterdir():
+        main(in_file=str(f), target_grid=target_grid)
+
+
+
+def interpolate_old_main():
     # main(in_file="/RESCUE/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_CC_drivenby_CRCM5_CanESM2_RCP85/EXP00/restarts_for_coupled_simulation/GLK_00157680_restart.nc",
     #      target_grid=known_domains["GLK_452x260_0.1deg"].to_gridconfig())
 
@@ -103,3 +117,11 @@ if __name__ == '__main__':
 
     main(in_file="/RESCUE/skynet3_rech1/huziy/NEMO_OFFICIAL/dev_v3_4_STABLE_2012/NEMOGCM/CONFIG/GLK_LIM3_CC_drivenby_CRCM5_CanESM2_RCP85/EXP00/restarts_for_coupled_simulation/GLK_01734480_restart_ice.nc",
          target_grid=known_domains["GLK_452x260_0.1deg"].to_gridconfig())
+
+
+
+if __name__ == '__main__':
+    interpolate_for_CanESM2_driven_coupled_GL011()
+
+
+
