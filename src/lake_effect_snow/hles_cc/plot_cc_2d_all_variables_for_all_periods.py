@@ -12,6 +12,7 @@ from pathlib import Path
 import xarray
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import NullLocator
 from scipy.stats import ttest_ind
 
 from application_properties import main_decorator
@@ -89,7 +90,7 @@ def entry_for_cc_canesm2_gl():
         "cao_days": "CAO freq"
     }
 
-    plot_utils.apply_plot_params(width_cm=18, height_cm=20, font_size=8)
+    plot_utils.apply_plot_params(width_cm=18, height_cm=23, font_size=8)
 
     the_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     vars_info = {
@@ -281,7 +282,7 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
     ncols = len(season_to_months)
     nrows = len(varnames)
 
-    gs = GridSpec(nrows, ncols)
+    gs = GridSpec(nrows, ncols, wspace=0)
     fig = plt.figure()
 
     for col, seas_name in enumerate(season_to_months):
@@ -319,6 +320,12 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
 
 
             ax.set_facecolor("0.75")
+
+            # hide the ticks
+            ax.xaxis.set_major_locator(NullLocator())
+            ax.yaxis.set_major_locator(NullLocator())
+
+
             im = ax.pcolormesh(to_plot.T, cmap=cm.get_cmap("bwr", 11), vmin=vmin, vmax=vmax)
             cb = plt.colorbar(im, extend="both")
 

@@ -4,6 +4,7 @@ from datetime import datetime
 from eofs.standard import Eof
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import NullLocator
 from pendulum import Period
 
 from application_properties import main_decorator
@@ -252,6 +253,11 @@ def main(label_to_data_path: dict, var_pairs: list,
                 r[np.isnan(r)] = 0
                 r = np.ma.masked_where(~hles_region_mask, r)
                 ax.set_facecolor("0.75")
+
+                # hide the ticks
+                ax.xaxis.set_major_locator(NullLocator())
+                ax.yaxis.set_major_locator(NullLocator())
+
                 im = ax.pcolormesh(r.T, cmap=cm.get_cmap("bwr", 11), vmin=-1, vmax=1)
 
                 # add 0 deg line
