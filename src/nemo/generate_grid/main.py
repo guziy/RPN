@@ -158,7 +158,8 @@ def main():
     out_folder = "nemo_grids"
 
     # config_name = "GLK_452x260_0.1deg"
-    config_name = "GLK_210x130_0.1deg"
+    #config_name = "GLK_210x130_0.1deg"
+    config_name = "GLK_452x260_0.1deg_shift"
     dom_props = known_domains[config_name]
     dom_props.config_name = config_name
 
@@ -209,7 +210,7 @@ def main():
 
     # interpolate bathymetry
     interpolator = Interpolator(coord_file=out_path)
-    interpolator.interpolate_file("/RESCUE/skynet3_rech1/huziy/GLK_bathymetry_from_EC/bathy_meter.nc",
+    interpolator.interpolate_file("/RESCUE/skynet3_rech1/huziy/GLK_bathymetry/GLK_bathymetry_from_EC/bathy_meter.nc",
                                   os.path.join(out_folder, "bathy_meter_{}.nc".format(config_name)))
 
     #  Create initial conditions file
