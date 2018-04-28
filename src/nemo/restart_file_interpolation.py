@@ -91,7 +91,7 @@ def main(in_file="", out_file=None, target_grid: GridConfig=None):
 
 def interpolate_for_CanESM2_driven_coupled_GL011():
     # the grid is the same for the current and the future slices
-    target_grid = known_domains["GLK_452x260_0.1deg_shift"].to_gridconfig()
+    target_grid = known_domains["GLK_452x260_0.1deg"].to_gridconfig()
 
     in_folder_current = "/RESCUE/skynet3_rech1/huziy/restarts_for_coupled_simulations_correct/19881231/"
     for f in Path(in_folder_current).iterdir():
