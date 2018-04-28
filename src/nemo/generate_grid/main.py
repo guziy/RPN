@@ -157,9 +157,9 @@ def generate_grid_coordinates(dom_props=None):
 def main():
     out_folder = "nemo_grids"
 
-    # config_name = "GLK_452x260_0.1deg"
+    config_name = "GLK_452x260_0.1deg"
     #config_name = "GLK_210x130_0.1deg"
-    config_name = "GLK_452x260_0.1deg_shift"
+    #config_name = "GLK_452x260_0.1deg_shift"
     dom_props = known_domains[config_name]
     dom_props.config_name = config_name
 
