@@ -47,7 +47,7 @@ def main_current():
     vname_map.update(vname_map_CRCM5)
     vname_map[default_varname_mappings.SNOWFALL_RATE] = "SN"
 
-    base_folder = "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-current_CanESM2/Samples"
+    base_folder = "/scratch/huziy/NEI/GL_samples_only/GL_CC_CanESM2_RCP85/HL-GL-current_CanESM2/Samples"
 
     pool = Pool(processes=20)
 
@@ -99,6 +99,7 @@ def main_future():
         V_SN: VerticalLevel(1, level_kinds.HYBRID),
     }
 
+    base_folder = "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples"
 
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
@@ -119,7 +120,7 @@ def main_future():
         label_to_config = OrderedDict([(
             label, {
                 # "base_folder": "/HOME/huziy/skynet3_rech1/CRCM5_outputs/cc_canesm2_rcp85_gl/coupled-GL-future_CanESM2/Samples",
-                DataManager.SP_BASE_FOLDER: "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples",
+                DataManager.SP_BASE_FOLDER: base_folder,
                 DataManager.SP_DATASOURCE_TYPE: data_source_types.SAMPLES_FOLDER_FROM_CRCM_OUTPUT,
                 DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
                 DataManager.SP_LEVEL_MAPPING: vname_to_level_erai,
@@ -141,8 +142,12 @@ def main_future():
     pool.map(monthly_func, input_params)
 
 
-
-
 if __name__ == '__main__':
-    # main_current()
-    main_future()
+    import sys
+    if len(sys.argv) > 1:
+        if sys.argv[1].strip().lower() == "future":
+            main_future()
+        else:
+            main_current()
+    else:
+        main_current()
