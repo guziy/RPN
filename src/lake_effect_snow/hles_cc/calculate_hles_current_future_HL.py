@@ -28,7 +28,7 @@ def monthly_func(x):
 
 
 @main_decorator
-def main_current():
+def main_current(nprocs=20):
 
     period = Period(
         datetime(1989, 1, 1), datetime(2010, 12, 31)
@@ -49,7 +49,7 @@ def main_current():
 
     base_folder = "/scratch/huziy/NEI/GL_samples_only/GL_CC_CanESM2_RCP85/HL-GL-current_CanESM2/Samples"
 
-    pool = Pool(processes=20)
+    pool = Pool(processes=nprocs)
 
     input_params = []
     for month_start in period.range("months"):
@@ -85,7 +85,7 @@ def main_current():
 
 
 @main_decorator
-def main_future():
+def main_future(nprocs=20):
 
     period = Period(
         datetime(2079, 1, 1), datetime(2100, 12, 31)
@@ -107,7 +107,7 @@ def main_future():
 
 
 
-    pool = Pool(processes=20)
+    pool = Pool(processes=nprocs)
 
     input_params = []
     for month_start in period.range("months"):
@@ -145,9 +145,14 @@ def main_future():
 if __name__ == '__main__':
     import sys
     if len(sys.argv) > 1:
+
+        nprocs = 20
+        if len(sys.argv) > 2:
+           nprocs = int(sys.argv[2])
+
         if sys.argv[1].strip().lower() == "future":
-            main_future()
+            main_future(nprocs=nprocs)
         else:
-            main_current()
+            main_current(nprocs=nprocs)
     else:
         main_current()
