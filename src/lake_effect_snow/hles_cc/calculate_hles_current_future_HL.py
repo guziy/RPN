@@ -99,7 +99,7 @@ def main_future(nprocs=20):
         V_SN: VerticalLevel(1, level_kinds.HYBRID),
     }
 
-    base_folder = "/snow3/huziy/NEI/GL/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Samples"
+    base_folder = "/scratch/huziy/NEI/GL_samples_only/GL_CC_CanESM2_RCP85/HL-GL-current_CanESM2/Samples"
 
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
