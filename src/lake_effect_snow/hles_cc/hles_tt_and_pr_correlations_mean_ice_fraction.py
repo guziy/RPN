@@ -59,7 +59,7 @@ def entry_for_cc_canesm2_gl():
 
     var_display_names = {
         "hles_snow": "HLES",
-        "lake_ice_fraction": "(PC1) Lake ice \nfraction",
+        "lake_ice_fraction": "Mean Lake ice \nfraction",
         "TT": "2m air\n temperature",
         "PR": "total\nprecipitation"
     }
@@ -117,19 +117,12 @@ def calculate_correlations_and_pvalues(var_pairs, label_to_vname_to_season_to_ye
 
                     v_lake_ice = v_lake_ice[:, positions_lakes]
                     # calculate anomalies
-                    v_lake_ice = v_lake_ice - v_lake_ice.mean(axis=0)
-
-                    weights = np.cos(np.deg2rad(lats.flatten()[positions_lakes])) ** 0.5
-
-                    solver = Eof(v_lake_ice, weights=weights[..., np.newaxis])
-                    print(label, solver.varianceFraction(neigs=10))
-
-                    pc1_ice = solver.pcs(npcs=1)[:, 0]
+                    area_avg_lake_ice = (v_lake_ice - v_lake_ice.mean(axis=0)[np.newaxis, :]).mean(axis=1)
 
 
                     # print(positions)
                     for i in positions_hles_region:
-                        r[i], p[i] = pearsonr(v1[:, i], pc1_ice)
+                        r[i], p[i] = pearsonr(v1[:, i], area_avg_lake_ice)
 
                 else:
 
@@ -294,7 +287,7 @@ def main(label_to_data_path: dict, var_pairs: list,
     img_dir = common_params.img_folder
     img_dir.mkdir(exist_ok=True)
 
-    img_file = img_dir / "hles_tt_pr_correlation_fields_cur_and_fut.png"
+    img_file = img_dir / "hles_tt_pr_correlation_fields_cur_and_fut_mean_ice_fraction.png"
     fig.savefig(str(img_file), **common_params.image_file_options)
 
 
