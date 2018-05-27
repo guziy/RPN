@@ -4,6 +4,8 @@
 from collections import OrderedDict
 
 from datetime import datetime
+
+import xarray
 from matplotlib.dates import MonthLocator, num2date, date2num
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FuncFormatter
@@ -12,6 +14,7 @@ from application_properties import main_decorator
 from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points_near_lakes
 from lake_effect_snow.hles_cc import common_params
 from lake_effect_snow.hles_cc.plot_cc_2d_all_variables_for_all_periods import get_gl_mask
+from lake_effect_snow.hles_cc.plot_domain_from_ncfile_using_cartopy import plot_domain_and_interest_region
 from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg
 from util import plot_utils
 import matplotlib.pyplot as plt
@@ -20,7 +23,7 @@ import numpy as np
 
 @main_decorator
 def main(varname=""):
-    plot_utils.apply_plot_params(width_cm=18, height_cm=5.5, font_size=8)
+    plot_utils.apply_plot_params(width_cm=22, height_cm=5, font_size=8)
     # series = get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
     #                                             varname=varname)
 
@@ -52,7 +55,15 @@ def main(varname=""):
     }
 
     gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label] / "merged")
-    hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=10)
+    hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
+
+    # select a file from the directory
+    sel_file = None
+    for f in label_to_datapath[common_params.crcm_nemo_cur_label].iterdir():
+        sel_file = f
+
+    with xarray.open_dataset(sel_file) as ds:
+        hles_region_mask_lons, hles_region_mask_lats = [ds[k].values for k in ["lon", "lat"]]
 
     for label, datapath in label_to_datapath.items():
         series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname,
@@ -69,10 +80,10 @@ def main(varname=""):
     # ax.set_ylabel("%")
     # ax.set_xlabel("Month")
 
-    gs = GridSpec(1, 2, wspace=0.4)
+    gs = GridSpec(1, 2, wspace=0.)
 
     fig = plt.figure()
-    ax = fig.add_subplot(gs[0, 0])
+    ax = fig.add_subplot(gs[0, 1])
 
     start_date = datetime(2001, 10, 1)
 
@@ -122,6 +133,7 @@ def main(varname=""):
         label_to_handle[label] = h
 
     ax.set_ylabel("% of total HLES")
+    ax.set_title("(b) Monthly HLES distribution")
 
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
@@ -130,7 +142,7 @@ def main(varname=""):
     ax.spines['top'].set_visible(False)
     # ax.set_title(common_params.varname_to_display_name[varname])
     ax.yaxis.grid(True, linestyle="--", linewidth=0.5)
-    ax.text(1, 1, "(a)", fontdict=dict(weight="bold"), transform=ax.transAxes, va="top", ha="right")
+    # ax.text(1, 1, "(a)", fontdict=dict(weight="bold"), transform=ax.transAxes, va="top", ha="right")
     ax_with_legend = ax
 
     # area average annual total HLES
@@ -143,24 +155,22 @@ def main(varname=""):
             **text_align_props, fontdict=dict(size=6))
 
     # Plot the domain and the HLES region of interest
-    ax = fig.add_subplot(gs[0, 1])
-
-
-    #TODO
-
-
+    ax = fig.add_subplot(gs[0, 0])
+    topo_nc_file = data_root / "geophys_452x260_me.nc"
+    ax = plot_domain_and_interest_region(ax, topo_nc_file)
+    ax.set_title("(a) Experimental domain")
 
 
     # Add a common legend
     labels = list(label_to_handle)
     handles = [label_to_handle[l] for l in labels]
-    ax_with_legend.legend(handles, labels, bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=1)
+    ax_with_legend.legend(handles, labels, bbox_to_anchor=(0, -0.18), loc="upper left", borderaxespad=0., ncol=2)
 
     # ax.grid()
     sel_months_str = "_".join([str(m) for m in selected_months])
 
     common_params.img_folder.mkdir(exist_ok=True)
-    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}.png"
+    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}_domain.png"
     print(f"Saving plot to {img_file}")
     fig.savefig(img_file, **common_params.image_file_options)
 

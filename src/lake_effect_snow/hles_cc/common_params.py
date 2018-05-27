@@ -1,9 +1,9 @@
-
+import cartopy
 from pathlib import Path
 
 from cartopy.feature import NaturalEarthFeature
 
-data_root = Path("/Users/huziy/HLES/HLES_data_paper")
+data_root = Path("/Users/huziy/HLES")
 
 
 img_folder = Path("hles_cc_paper")
@@ -26,6 +26,9 @@ image_file_options = dict(
 
 LAKES_50m = NaturalEarthFeature('physical', 'lakes', '50m')
 COASTLINE_50m = NaturalEarthFeature('physical', 'coastline', '50m')
+
+OCEAN_50m = NaturalEarthFeature('physical', 'ocean', '50m')
+OCEAN_50m = NaturalEarthFeature('physical', 'ocean', '50m')
 
 
 RIVERS_50m = NaturalEarthFeature("physical", "rivers_lake_centerlines", "50m")

@@ -41,13 +41,16 @@ def get_gl_mask(path: Path):
 
     sel_file = None
 
-    for f in path.iterdir():
-        sel_file = f
-        break
-
+    if not path.is_dir():
+        sel_file = path
+    else:
+        for f in path.iterdir():
+            sel_file = f
+            break
 
     with xarray.open_dataset(sel_file) as ds:
         lons, lats = [ds[k].values for k in ["lon", "lat"]]
+        lons[lons > 180] -= 360
 
     return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_lakes_coast_shape/gl_cst.shp") > 0.5
 
