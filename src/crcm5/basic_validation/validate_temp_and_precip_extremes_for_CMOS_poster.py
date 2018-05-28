@@ -181,7 +181,7 @@ def main():
 
     sim_paths = OrderedDict()
     sim_paths[WC_044_DEFAULT_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/Samples")
-    sim_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/Samples")
+    sim_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_Crr1/Samples")
     sim_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples")
 
     mod_spatial_scales = OrderedDict([

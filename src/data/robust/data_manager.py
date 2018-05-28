@@ -285,18 +285,18 @@ class DataManager(object):
                             if not data_file.name.startswith(self.varname_to_file_prefix[varname_internal]):
                                 continue
 
-                        print(self.varname_mapping)
-                        print(data_file)
+                        # print(self.varname_mapping)
+                        # print(data_file)
 
                         with RPN(str(data_file)) as r:
                             r.get_first_record_for_name(self.varname_mapping[varname_internal])
                             lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
                             rll = RotatedLatLon(**r.get_proj_parameters_for_the_last_read_rec())
                             return rll.get_basemap_object_for_lons_lats(lons, lats, **bmap_kwargs)
-                    except Exception as exc:
+                    except IOError as exc:
                         # Try to look into several files before giving up
                         print(exc)
-                        pass
+
         else:
             raise NotImplementedError("Not impelmented for the data_source_type = {}".format(self.data_source_type))
 
