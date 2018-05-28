@@ -293,7 +293,7 @@ class DataManager(object):
                             lons, lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
                             rll = RotatedLatLon(**r.get_proj_parameters_for_the_last_read_rec())
                             return rll.get_basemap_object_for_lons_lats(lons, lats, **bmap_kwargs)
-                    except IOError as exc:
+                    except Exception as exc:
                         # Try to look into several files before giving up
                         print(exc)
 
