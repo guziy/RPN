@@ -34,7 +34,7 @@ def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, o
         if obs_label_hint not in data_key:
             ar_avg_bias[data_key] = bias_dict[data_key].values[:, good_i, good_j].mean(axis=1)
 
-    plot_utils.apply_plot_params(font_size=14)
+    plot_utils.apply_plot_params(font_size=14, width_cm=5)
     fig = plt.figure()
     ax_list = []
     gs = GridSpec(1, 1)
