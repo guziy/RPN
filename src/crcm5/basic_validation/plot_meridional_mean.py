@@ -102,13 +102,16 @@ def plot_meridional_mean(data_dict: dict,
 
     gs = GridSpec(nrows, 2, width_ratios=[2, 1], height_ratios=height_ratios, wspace=0.01, hspace=0.05)
     # plot values
-    ax = fig.add_subplot(gs[0, 0])
-    for data_key, data in meridional_avgs.items():
-        ax.plot(meridional_avg_lons[data_key], data[time_sel_vec, :].mean(axis=0), label=data_key.split("_ndrw")[0])
+    if plot_values:
+        ax = fig.add_subplot(gs[0, 0])
+        for data_key, data in meridional_avgs.items():
+            ax.plot(meridional_avg_lons[data_key], data[time_sel_vec, :].mean(axis=0), label=data_key.split("_ndrw")[0])
 
-    ax.yaxis.set_label_position("right")
-    ax.set_ylabel(f"{data_with_common_meta.units}", rotation=270, va="bottom")
-    ax_list.append(ax)
+        ax.yaxis.set_label_position("right")
+        ax.set_ylabel(f"{data_with_common_meta.units}", rotation=270, va="bottom")
+        ax_list.append(ax)
+    else:
+        ax = None
 
     # plot biases
     ax = fig.add_subplot(gs[1, 0], sharex=ax)
