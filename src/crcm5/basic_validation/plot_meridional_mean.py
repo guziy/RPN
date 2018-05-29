@@ -27,8 +27,14 @@ def create_ml_polygon(reg_lons, reg_lats, bmap):
 
 
 
-def plot_meridional_mean(data_dict: dict, bias_dict:dict, img_dir: Path, obs_label_hint="DAYMET",
-                         panel_titles=(), bmap: Basemap=None, months=None, season_name="annual",
+def plot_meridional_mean(data_dict: dict,
+                         bias_dict:dict,
+                         img_dir: Path,
+                         obs_label_hint="DAYMET",
+                         panel_titles=(),
+                         bmap: Basemap=None,
+                         months=None,
+                         season_name="annual",
                          meridional_elev_dict=None, map_topo=None):
 
     """
@@ -123,32 +129,31 @@ def plot_meridional_mean(data_dict: dict, bias_dict:dict, img_dir: Path, obs_lab
 
 
     # plot the map
-    ax = fig.add_subplot(gs[0, 1])
-    bmap.drawmapboundary(fill_color="0.4", ax=ax)
-    bmap.drawcoastlines(ax=ax, linewidth=0.1)
-    bmap.drawcountries(linewidth=0.1)
-    bmap.drawstates(linewidth=0.1)
+
+    if map_topo is not None:
+        ax = fig.add_subplot(gs[0, 1])
+        bmap.drawmapboundary(fill_color="0.4", ax=ax)
+        bmap.drawcoastlines(ax=ax, linewidth=0.1)
+        bmap.drawcountries(linewidth=0.1)
+        bmap.drawstates(linewidth=0.1)
 
 
-    data_random = list(data_dict.items())[0][1]
-    ax.add_patch(
-        create_ml_polygon(data_random.coords["lon"], data_random.coords["lat"], bmap)
-    )
+        data_random = list(data_dict.items())[0][1]
+        ax.add_patch(
+            create_ml_polygon(data_random.coords["lon"], data_random.coords["lat"], bmap)
+        )
 
-    topo_levels = [0, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000]
-    bn = BoundaryNorm(topo_levels, len(topo_levels) - 1)
-    cmap = cm.get_cmap("terrain", len(topo_levels) - 1)
-    cmap = colors.LinearSegmentedColormap.from_list("topo_cut", cmap(np.arange(0.4, 1.1, 0.1)), N=len(topo_levels) - 1)
+        topo_levels = [0, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000]
+        bn = BoundaryNorm(topo_levels, len(topo_levels) - 1)
+        cmap = cm.get_cmap("terrain", len(topo_levels) - 1)
+        cmap = colors.LinearSegmentedColormap.from_list("topo_cut", cmap(np.arange(0.4, 1.1, 0.1)), N=len(topo_levels) - 1)
 
-    lons, lats = map_topo.coords["lons"].values, map_topo.coords["lats"].values
-    xx, yy = bmap(lons, lats)
+        lons, lats = map_topo.coords["lons"].values, map_topo.coords["lats"].values
+        xx, yy = bmap(lons, lats)
 
-
-    to_plot = maskoceans(np.where(lons > 180, lons - 360, lons), lats, map_topo.values, inlands=True)
-    im = bmap.pcolormesh(xx, yy, to_plot, cmap=cmap, norm=bn)
-    bmap.colorbar(im)
-
-
+        to_plot = maskoceans(np.where(lons > 180, lons - 360, lons), lats, map_topo.values, inlands=True)
+        im = bmap.pcolormesh(xx, yy, to_plot, cmap=cmap, norm=bn)
+        bmap.colorbar(im)
 
     for pt, ax in zip(panel_titles, ax_list):
         ax.set_title(pt)

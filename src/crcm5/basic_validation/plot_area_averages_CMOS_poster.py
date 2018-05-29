@@ -67,7 +67,7 @@ def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, o
         ax.xaxis.set_major_locator(MonthLocator(bymonthday=1))
         if plot_legend:
             ax.legend()
-        ax.grid()
+        ax.grid(True, linestyle="--")
 
     imfile = img_dir / ("_".join([dl for dl in data_dict if obs_label_hint not in dl]) + "_CMOS_poster.png")
     fig.savefig(str(imfile), dpi=400, bbox_inches="tight")
