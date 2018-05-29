@@ -34,11 +34,8 @@ def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, o
         if obs_label_hint not in data_key:
             ar_avg_bias[data_key] = bias_dict[data_key].values[:, good_i, good_j].mean(axis=1)
 
-    # plotting
     plot_utils.apply_plot_params(font_size=14)
-
     fig = plt.figure()
-
     ax_list = []
     gs = GridSpec(1, 1)
     # ax = fig.add_subplot(gs[0, 0])
@@ -70,7 +67,7 @@ def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, o
         ax.grid(True, linestyle="--")
 
     imfile = img_dir / ("_".join([dl for dl in data_dict if obs_label_hint not in dl]) + "_CMOS_poster.png")
-    fig.savefig(str(imfile), dpi=400, bbox_inches="tight")
+    fig.savefig(str(imfile), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
