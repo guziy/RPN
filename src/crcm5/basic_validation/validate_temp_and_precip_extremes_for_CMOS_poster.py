@@ -342,7 +342,9 @@ def main():
         if len(data_dict[vn]) == 0:
             continue
 
-        plot_area_avg_CMOS_poster(data_dict[vn], bias_dict[vn], panel_titles=(vn, ""), img_dir=img_folder / "extremes_1d")
+        plot_area_avg_CMOS_poster(data_dict[vn], bias_dict[vn], panel_titles=(vn, ""),
+                                  img_dir=img_folder / "extremes_1d",
+                                  plot_legend=(vn == default_varname_mappings.T_AIR_2M_DAILY_MAX))
 
 
 
