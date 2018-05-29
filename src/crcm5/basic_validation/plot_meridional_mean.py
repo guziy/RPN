@@ -113,8 +113,10 @@ def plot_meridional_mean(data_dict: dict,
     else:
         ax = None
 
+
     # plot biases
-    ax = fig.add_subplot(gs[1, 0], sharex=ax)
+    row = int(plot_values)
+    ax = fig.add_subplot(gs[row, 0], sharex=ax)
     for data_key, data in meridional_avgs.items():
         if obs_label_hint in data_key:
             continue
@@ -126,7 +128,8 @@ def plot_meridional_mean(data_dict: dict,
 
     # plot the elevation
     if meridional_elev_dict is not None:
-        ax = fig.add_subplot(gs[2, 0], sharex=ax)
+        row += 1
+        ax = fig.add_subplot(gs[row, 0], sharex=ax)
         for data_key, elev in meridional_elev_dict.items():
             ax.plot(elev.coords["lon"], elev.values, label=data_key)
         # ax.legend(fontsize=legend_fontsize)
