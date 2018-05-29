@@ -50,7 +50,7 @@ def plot_meridional_mean(data_dict: dict,
     :param obs_label_hint:
     :param panel_titles:
     """
-    legend_fontsize = 8
+    legend_fontsize = 14
 
     img_dir.mkdir(parents=True, exist_ok=True)
 
@@ -172,7 +172,7 @@ def plot_meridional_mean(data_dict: dict,
 
 
     imfile = img_dir / ("_".join([dl for dl in data_dict if obs_label_hint not in dl]) + f"_{season_name}.png")
-    fig.savefig(str(imfile), dpi=400, bbox_inches="tight")
+    fig.savefig(str(imfile), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 

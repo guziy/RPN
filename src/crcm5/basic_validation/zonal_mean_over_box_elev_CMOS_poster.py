@@ -203,14 +203,14 @@ def main():
     }
 
 
-    WC_044_DEFAULT_LABEL = "WC_0.44deg_default"
-    WC_044_CTEM_FRSOIL_DYNGLA_LABEL = "WC_0.44deg_ctem+frsoil+dyngla"
-    WC_011_CTEM_FRSOIL_DYNGLA_LABEL = "WC_0.11deg_ctem+frsoil+dyngla"
+    WC_044_DEFAULT_LABEL = "WC_044_default"
+    WC_044_CTEM_FRSOIL_DYNGLA_LABEL = "WC_044_modified"
+    WC_011_CTEM_FRSOIL_DYNGLA_LABEL = "WC_011_modified"
 
     sim_paths = OrderedDict()
     sim_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples")
     sim_paths[WC_044_DEFAULT_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/Samples")
-    sim_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/Samples")
+    sim_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_Crr1/Samples")
 
 
     elevation_paths = OrderedDict()
@@ -247,7 +247,7 @@ def main():
         default_varname_mappings.TOTAL_PREC: default_varname_mappings.TOTAL_PREC,
     }
 
-    plot_utils.apply_plot_params(font_size=8)
+    plot_utils.apply_plot_params(font_size=14)
 
 
     # observations
@@ -259,7 +259,6 @@ def main():
         default_varname_mappings.T_AIR_2M_DAILY_MIN,
         default_varname_mappings.T_AIR_2M_DAILY_MAX
     ]
-
 
     data_dict = {vn: {} for vn in varnames_list}
     bias_dict = {vn: {} for vn in varnames_list}
@@ -279,10 +278,7 @@ def main():
         )
 
 
-
         for vname_daymet in varnames_list:
-
-
 
             obs_manager = DataManager(
                 store_config={
@@ -394,7 +390,7 @@ def main():
                                  img_dir=img_folder, bmap=bmap,
                                  months=months, season_name=sname,
                                  meridional_elev_dict=meridional_mean_elev_dict,
-                                 map_topo=topo_map)
+                                 map_topo=None)
 
 
 
