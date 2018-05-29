@@ -216,7 +216,7 @@ def main():
     elevation_paths = OrderedDict()
     elevation_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/nei_geophy_wc_011.rpn"
     elevation_paths[WC_044_DEFAULT_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_newdirs"
-    elevation_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/debug_NEI_WC0.44deg_Crr1/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_dirs_hshedsfix_CTEM_FRAC_GlVolFix"
+    elevation_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.44deg_Crr1/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_dirs_hshedsfix_CTEM_FRAC_GlVolFix"
 
 
     mod_spatial_scales = OrderedDict([
