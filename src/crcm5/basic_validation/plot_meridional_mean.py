@@ -35,7 +35,9 @@ def plot_meridional_mean(data_dict: dict,
                          bmap: Basemap=None,
                          months=None,
                          season_name="annual",
-                         meridional_elev_dict=None, map_topo=None):
+                         meridional_elev_dict=None, map_topo=None,
+                         plot_values=True
+                         ):
 
     """
     Expect the data to be already selected in space, and the average along the latitude axis (assumed to be the last) is calculated
@@ -95,7 +97,10 @@ def plot_meridional_mean(data_dict: dict,
     fig = plt.figure()
 
     ax_list = []
-    gs = GridSpec(3, 2, width_ratios=[2, 1], height_ratios=[2, 2, 1], wspace=0.01, hspace=0.05)
+    height_ratios = [2, 2, 1] if plot_values else [2, 1]
+    nrows = len(height_ratios)
+
+    gs = GridSpec(nrows, 2, width_ratios=[2, 1], height_ratios=height_ratios, wspace=0.01, hspace=0.05)
     # plot values
     ax = fig.add_subplot(gs[0, 0])
     for data_key, data in meridional_avgs.items():
@@ -121,7 +126,7 @@ def plot_meridional_mean(data_dict: dict,
         ax = fig.add_subplot(gs[2, 0], sharex=ax)
         for data_key, elev in meridional_elev_dict.items():
             ax.plot(elev.coords["lon"], elev.values, label=data_key)
-        ax.legend(fontsize=legend_fontsize)
+        # ax.legend(fontsize=legend_fontsize)
         ax.set_xlabel("Longitude")
         ax.grid(True, linestyle="--")
         ax.yaxis.set_label_position("right")

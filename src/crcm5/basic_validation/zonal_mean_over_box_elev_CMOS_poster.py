@@ -208,15 +208,15 @@ def main():
     WC_011_CTEM_FRSOIL_DYNGLA_LABEL = "WC_011_modified"
 
     sim_paths = OrderedDict()
-    sim_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples")
     sim_paths[WC_044_DEFAULT_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/Samples")
     sim_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.44deg_Crr1/Samples")
+    sim_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = Path("/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/Samples")
 
 
     elevation_paths = OrderedDict()
-    elevation_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/nei_geophy_wc_011.rpn"
     elevation_paths[WC_044_DEFAULT_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.44deg_default/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_newdirs"
     elevation_paths[WC_044_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.44deg_Crr1/geophys_CORDEX_NA_0.44d_filled_hwsd_dpth_om_MODIS_Glacier_v2_dirs_hshedsfix_CTEM_FRAC_GlVolFix"
+    elevation_paths[WC_011_CTEM_FRSOIL_DYNGLA_LABEL] = "/snow3/huziy/NEI/WC/NEI_WC0.11deg_Crr1/nei_geophy_wc_011.rpn"
 
 
     mod_spatial_scales = OrderedDict([
@@ -390,7 +390,7 @@ def main():
                                  img_dir=img_folder, bmap=bmap,
                                  months=months, season_name=sname,
                                  meridional_elev_dict=meridional_mean_elev_dict,
-                                 map_topo=None)
+                                 map_topo=None, plot_values=False)
 
 
 
