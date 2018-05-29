@@ -15,7 +15,7 @@ from matplotlib import dates
 
 
 def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, obs_label_hint="DAYMET",
-                  panel_titles=()):
+                  panel_titles=(), plot_legend=True):
 
     img_dir.mkdir(parents=True, exist_ok=True)
 
@@ -55,7 +55,7 @@ def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, o
     for data_key, data in ar_avgs.items():
         if obs_label_hint in data_key:
             continue
-        ax.plot(times, ar_avg_bias[data_key], label="$\Delta$" + data_key.split("_ndrw")[0])
+        ax.plot(times, ar_avg_bias[data_key], label="$\Delta$" + data_key.split("_ndrw")[0], lw=2)
 
     ax_list.append(ax)
 
@@ -65,7 +65,9 @@ def plot_area_avg_CMOS_poster(data_dict: dict, bias_dict: dict, img_dir: Path, o
     for ax in ax_list:
         ax.xaxis.set_major_formatter(DateFormatter("%b"))
         ax.xaxis.set_major_locator(MonthLocator(bymonthday=1))
-        ax.legend()
+        if plot_legend:
+            ax.legend()
+        ax.grid()
 
     imfile = img_dir / ("_".join([dl for dl in data_dict if obs_label_hint not in dl]) + "_CMOS_poster.png")
     fig.savefig(str(imfile), dpi=400, bbox_inches="tight")
