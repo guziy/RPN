@@ -92,7 +92,7 @@ def plot_meridional_mean(data_dict: dict,
 
 
     # plotting
-    plot_utils.apply_plot_params(font_size=14)
+    plot_utils.apply_plot_params(font_size=14, height_cm=8)
 
     fig = plt.figure()
 
