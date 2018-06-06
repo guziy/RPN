@@ -53,6 +53,7 @@ def plot_meridional_mean(data_dict: dict,
     :param panel_titles:
     """
     legend_fontsize = 14
+    line_width=3
 
     img_dir.mkdir(parents=True, exist_ok=True)
 
@@ -105,7 +106,8 @@ def plot_meridional_mean(data_dict: dict,
     if plot_values:
         ax = fig.add_subplot(gs[0, 0])
         for data_key, data in meridional_avgs.items():
-            ax.plot(meridional_avg_lons[data_key], data[time_sel_vec, :].mean(axis=0), label=data_key.split("_ndrw")[0])
+            ax.plot(meridional_avg_lons[data_key], data[time_sel_vec, :].mean(axis=0), label=data_key.split("_ndrw")[0],
+                    lw=line_width)
 
         ax.yaxis.set_label_position("right")
         ax.set_ylabel(f"{data_with_common_meta.units}", rotation=270, va="bottom")
@@ -121,7 +123,9 @@ def plot_meridional_mean(data_dict: dict,
         if obs_label_hint in data_key:
             continue
 
-        ax.plot(meridional_avg_lons[data_key], meridional_avg_bias[data_key][time_sel_vec, :].mean(axis=0), label="$\Delta$" + data_key.split("_ndrw")[0])
+        ax.plot(meridional_avg_lons[data_key], meridional_avg_bias[data_key][time_sel_vec, :].mean(axis=0),
+                label="$\Delta$" + data_key.split("_ndrw")[0], lw=line_width)
+
     ax.yaxis.set_label_position("right")
     ax.set_ylabel(f"bias, {data_with_common_meta.units}", rotation=270, va="bottom")
     ax_list.append(ax)
@@ -131,7 +135,7 @@ def plot_meridional_mean(data_dict: dict,
         row += 1
         ax = fig.add_subplot(gs[row, 0], sharex=ax)
         for data_key, elev in meridional_elev_dict.items():
-            ax.plot(elev.coords["lon"], elev.values, label=data_key)
+            ax.plot(elev.coords["lon"], elev.values, label=data_key, lw=line_width)
 
         if plot_legend:
             ax.legend(fontsize=legend_fontsize)
