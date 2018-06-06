@@ -36,7 +36,7 @@ def plot_meridional_mean(data_dict: dict,
                          months=None,
                          season_name="annual",
                          meridional_elev_dict=None, map_topo=None,
-                         plot_values=True
+                         plot_values=True, plot_legend=True
                          ):
 
     """
@@ -132,7 +132,10 @@ def plot_meridional_mean(data_dict: dict,
         ax = fig.add_subplot(gs[row, 0], sharex=ax)
         for data_key, elev in meridional_elev_dict.items():
             ax.plot(elev.coords["lon"], elev.values, label=data_key)
-        # ax.legend(fontsize=legend_fontsize)
+
+        if plot_legend:
+            ax.legend(fontsize=legend_fontsize)
+
         ax.set_xlabel("Longitude")
         ax.grid(True, linestyle="--")
         ax.yaxis.set_label_position("right")
@@ -170,7 +173,6 @@ def plot_meridional_mean(data_dict: dict,
         ax.set_title(pt)
 
     for ax in ax_list:
-        ax.legend(fontsize=legend_fontsize)
         ax.set_xlabel("Longitude")
         ax.grid(True, linestyle="--")
 

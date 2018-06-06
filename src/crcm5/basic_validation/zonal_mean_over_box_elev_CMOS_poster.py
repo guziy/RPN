@@ -390,7 +390,8 @@ def main():
                                  img_dir=img_folder, bmap=bmap,
                                  months=months, season_name=sname,
                                  meridional_elev_dict=meridional_mean_elev_dict,
-                                 map_topo=None, plot_values=False)
+                                 map_topo=None, plot_values=False,
+                                 )
 
 
 
