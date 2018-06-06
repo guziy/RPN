@@ -138,7 +138,7 @@ def plot_meridional_mean(data_dict: dict,
             ax.plot(elev.coords["lon"], elev.values, label=data_key, lw=line_width)
 
         if plot_legend:
-            ax.legend(fontsize=legend_fontsize, loc='upper center', bbox_to_anchor=(0.5,-0.2))
+            ax.legend(fontsize=legend_fontsize, loc='upper center', bbox_to_anchor=(0.5,-0.3))
 
         ax.set_xlabel("Longitude")
         ax.grid(True, linestyle="--")
