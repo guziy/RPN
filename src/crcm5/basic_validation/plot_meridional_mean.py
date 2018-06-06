@@ -36,7 +36,7 @@ def plot_meridional_mean(data_dict: dict,
                          months=None,
                          season_name="annual",
                          meridional_elev_dict=None, map_topo=None,
-                         plot_values=True, plot_legend=True
+                         plot_values=True, plot_legend=True, lon_min=None, lon_max=None
                          ):
 
     """
@@ -92,7 +92,7 @@ def plot_meridional_mean(data_dict: dict,
 
 
     # plotting
-    plot_utils.apply_plot_params(font_size=14, height_cm=8)
+    plot_utils.apply_plot_params(font_size=14, height_cm=5)
 
     fig = plt.figure()
 
@@ -140,6 +140,10 @@ def plot_meridional_mean(data_dict: dict,
         ax.grid(True, linestyle="--")
         ax.yaxis.set_label_position("right")
         ax.set_ylabel("Elevation, m", rotation=270, va="bottom")
+        if lon_min is not None and (lon_max is not None):
+            ax.set_xlim(lon_min, lon_max)
+
+
 
 
     # plot the map
@@ -182,6 +186,9 @@ def plot_meridional_mean(data_dict: dict,
 
         # Hide the xaxis label of the 2 upper panels
         ax.xaxis.get_label().set_visible(False)
+        if lon_min is not None and (lon_max is not None):
+            ax.set_xlim(lon_min, lon_max)
+
 
 
     imfile = img_dir / ("_".join([dl for dl in data_dict if obs_label_hint not in dl]) + f"_{season_name}.png")
