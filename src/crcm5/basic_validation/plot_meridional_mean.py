@@ -52,7 +52,7 @@ def plot_meridional_mean(data_dict: dict,
     :param obs_label_hint:
     :param panel_titles:
     """
-    legend_fontsize = 20
+    legend_fontsize = 30
     line_width=3
 
     img_dir.mkdir(parents=True, exist_ok=True)
@@ -93,7 +93,7 @@ def plot_meridional_mean(data_dict: dict,
 
 
     # plotting
-    plot_utils.apply_plot_params(font_size=16, height_cm=3)
+    plot_utils.apply_plot_params(font_size=24, height_cm=3)
 
     fig = plt.figure()
 
