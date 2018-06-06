@@ -353,9 +353,6 @@ def main():
             data_dict[vname_daymet][data_source_obs] = obs
             bias_dict[vname_daymet][data_source_mod] = mod - obs
 
-
-
-
             if bmap is None:
                 bmap = dm.get_basemap(varname_internal=vname_model, resolution="i", area_thresh=area_thresh_km2)
 
@@ -391,7 +388,8 @@ def main():
                                  months=months, season_name=sname,
                                  meridional_elev_dict=meridional_mean_elev_dict,
                                  map_topo=None, plot_values=False,
-                                 lon_min=236, lon_max=247
+                                 lon_min=236, lon_max=247,
+                                 plot_legend=(vn == default_varname_mappings.T_AIR_2M_DAILY_MAX) and (sname == "SON")
                                  )
 
 
