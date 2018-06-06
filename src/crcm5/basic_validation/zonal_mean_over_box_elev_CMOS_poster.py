@@ -391,6 +391,7 @@ def main():
                                  months=months, season_name=sname,
                                  meridional_elev_dict=meridional_mean_elev_dict,
                                  map_topo=None, plot_values=False,
+                                 lon_min=236, lon_max=247
                                  )
 
 
