@@ -126,8 +126,8 @@ def plot_meridional_mean(data_dict: dict,
         ax.plot(meridional_avg_lons[data_key], meridional_avg_bias[data_key][time_sel_vec, :].mean(axis=0),
                 label="$\Delta$" + data_key.split("_ndrw")[0], lw=line_width)
 
-    ax.yaxis.set_label_position("right")
-    ax.set_ylabel(f"bias, {data_with_common_meta.units}", rotation=270, va="bottom")
+    # ax.yaxis.set_label_position("right")
+    # ax.set_ylabel(f"bias, {data_with_common_meta.units}", rotation=270, va="bottom")
     ax_list.append(ax)
 
     # plot the elevation

@@ -386,7 +386,7 @@ def main():
                              map_topo=topo_map)
 
         for sname, months in season_to_months.items():
-            plot_meridional_mean(data_dict[vn], bias_dict[vn], panel_titles=(vn_to_title[vn] + f" ({sname})", ""),
+            plot_meridional_mean(data_dict[vn], bias_dict[vn], panel_titles=("", ""),
                                  img_dir=img_folder, bmap=bmap,
                                  months=months, season_name=sname,
                                  meridional_elev_dict=meridional_mean_elev_dict,
