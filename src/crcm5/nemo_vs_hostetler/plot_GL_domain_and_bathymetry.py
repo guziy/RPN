@@ -12,14 +12,19 @@ from matplotlib import patches
 
 
 
-def add_rectangle(ax, xx, yy, margin=10, edge_style="solid"):
+def add_rectangle(ax, xx, yy, margin=10, edge_style="solid", **kwargs):
 
     xll = xx[margin, margin]
     yll = yy[margin, margin]
     xur = xx[-margin, -margin]
     yur = yy[-margin, -margin]
+
+
+    lw = kwargs.pop("linewidth", 2)
+
     ax.add_patch(
-        patches.Polygon([(xll, yll), (xll, yur), (xur, yur), (xur, yll)], linewidth=2, edgecolor="k", facecolor="none", linestyle=edge_style)
+        patches.Polygon([(xll, yll), (xll, yur), (xur, yur), (xur, yll)], edgecolor="k",
+                        facecolor="none", linestyle=edge_style, linewidth=lw, **kwargs)
     )
 
 

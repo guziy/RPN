@@ -6,6 +6,7 @@ Plot the panel of cc for selected periods to all variables
 for now: HLES, ice cover
 
 """
+import cartopy
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import xarray
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import NullLocator
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import ttest_ind
 
 from application_properties import main_decorator
@@ -39,15 +41,20 @@ def get_gl_mask(path: Path):
 
     sel_file = None
 
-    for f in path.iterdir():
-        sel_file = f
-        break
-
+    if not path.is_dir():
+        sel_file = path
+    else:
+        for f in path.iterdir():
+            sel_file = f
+            break
 
     with xarray.open_dataset(sel_file) as ds:
         lons, lats = [ds[k].values for k in ["lon", "lat"]]
+        lons[lons > 180] -= 360
 
     return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_lakes_coast_shape/gl_cst.shp") > 0.5
+
+
 
 
 @main_decorator
@@ -90,7 +97,7 @@ def entry_for_cc_canesm2_gl():
         "cao_days": "CAO freq"
     }
 
-    plot_utils.apply_plot_params(width_cm=18, height_cm=23, font_size=8)
+    plot_utils.apply_plot_params(width_cm=25, height_cm=25, font_size=8)
 
     the_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     vars_info = {
@@ -132,16 +139,18 @@ def entry_for_cc_canesm2_gl():
             "multiplier": 1,
             "display_units": r"${\rm ^\circ C}$",
             "offset": 0,
-            "vmin": -10,
-            "vmax": 10,
+            "vmin": 0,
+            "vmax": 8,
+            "cmap": cm.get_cmap("Reds", 16)
         },
 
         "PR": {
             "multiplier": 1,
             "display_units": "mm/day",
             "offset": 0,
-            "vmin": -5,
-            "vmax": 5,
+            "vmin": 0,
+            "vmax": 3,
+            "cmap": cm.get_cmap("Reds", 12)
         }
 
     }
@@ -282,38 +291,32 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
     ncols = len(season_to_months)
     nrows = len(varnames)
 
-    gs = GridSpec(nrows, ncols, wspace=0)
+    gs = GridSpec(nrows, ncols, wspace=0, hspace=0)
     fig = plt.figure()
 
     for col, seas_name in enumerate(season_to_months):
         for row, vname in enumerate(varnames):
 
-            ax = fig.add_subplot(gs[row, col])
+            ax = fig.add_subplot(gs[row, col], projection=cartopy.crs.PlateCarree())
 
-            # set season titles
-            if row == 0:
-                ax.set_title(seas_name)
 
             # identify variable names
             if col == 0:
                 ax.set_ylabel(vname_display_names.get(vname, vname))
 
-
             cc, pv = var_to_season_to_data[vname][seas_name]
             to_plot = cc
 
             print(f"Plotting {vname} for {seas_name}.")
-
+            opts = vars_info[vname]
             vmin = None
             vmax = None
             if vars_info is not None:
                 if vname in vars_info:
-                    opts = vars_info[vname]
                     to_plot = to_plot * opts["multiplier"] + opts["offset"]
 
                     vmin = opts["vmin"]
                     vmax = opts["vmax"]
-
 
                     if "mask" in opts:
                         to_plot = np.ma.masked_where(~opts["mask"], to_plot)
@@ -325,15 +328,36 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
             ax.xaxis.set_major_locator(NullLocator())
             ax.yaxis.set_major_locator(NullLocator())
 
+            cmap = opts.get("cmap", cm.get_cmap("bwr", 11))
 
-            im = ax.pcolormesh(to_plot.T, cmap=cm.get_cmap("bwr", 11), vmin=vmin, vmax=vmax)
-            cb = plt.colorbar(im, extend="both")
+            im = ax.pcolormesh(cur_dm.lons, cur_dm.lats, to_plot,
+                               cmap=cmap, vmin=vmin, vmax=vmax)
+
+
+
+            # ax.add_feature(cartopy.feature.RIVERS, facecolor="none", edgecolor="0.75", linewidth=0.5)
+            line_color = "k"
+            ax.add_feature(common_params.LAKES_50m, facecolor="none", edgecolor=line_color, linewidth=0.5)
+            ax.add_feature(common_params.COASTLINE_50m, facecolor="none", edgecolor=line_color, linewidth=0.5)
+            ax.add_feature(common_params.RIVERS_50m, facecolor="none", edgecolor=line_color, linewidth=0.5)
+            ax.set_extent([cur_dm.lons[0, 0], cur_dm.lons[-1, -1], cur_dm.lats[0, 0], cur_dm.lats[-1, -1]])
+
+            divider = make_axes_locatable(ax)
+            ax_cb = divider.new_horizontal(size="5%", pad=0.1, axes_class=plt.Axes)
+            fig.add_axes(ax_cb)
+            cb = plt.colorbar(im, extend="both", cax=ax_cb)
 
             # if hasattr(to_plot, "mask"):
             #     to_plot = np.ma.masked_where(to_plot.mask, pv)
             # else:
             #     to_plot = pv
             # ax.contour(to_plot.T, levels=(pval_crit, ))
+
+
+            # set season titles
+            if row == 0:
+                ax.text(0.5, 1.05, seas_name, va="bottom", ha="center", multialignment="center", transform=ax.transAxes)
+
 
             if col < ncols - 1:
                 cb.ax.set_visible(False)

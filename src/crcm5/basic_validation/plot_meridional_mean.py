@@ -27,9 +27,17 @@ def create_ml_polygon(reg_lons, reg_lats, bmap):
 
 
 
-def plot_meridional_mean(data_dict: dict, bias_dict:dict, img_dir: Path, obs_label_hint="DAYMET",
-                         panel_titles=(), bmap: Basemap=None, months=None, season_name="annual",
-                         meridional_elev_dict=None, map_topo=None):
+def plot_meridional_mean(data_dict: dict,
+                         bias_dict:dict,
+                         img_dir: Path,
+                         obs_label_hint="DAYMET",
+                         panel_titles=(),
+                         bmap: Basemap=None,
+                         months=None,
+                         season_name="annual",
+                         meridional_elev_dict=None, map_topo=None,
+                         plot_values=True, plot_legend=True, lon_min=None, lon_max=None
+                         ):
 
     """
     Expect the data to be already selected in space, and the average along the latitude axis (assumed to be the last) is calculated
@@ -44,7 +52,8 @@ def plot_meridional_mean(data_dict: dict, bias_dict:dict, img_dir: Path, obs_lab
     :param obs_label_hint:
     :param panel_titles:
     """
-    legend_fontsize = 8
+    legend_fontsize = 30
+    line_width=3
 
     img_dir.mkdir(parents=True, exist_ok=True)
 
@@ -84,77 +93,94 @@ def plot_meridional_mean(data_dict: dict, bias_dict:dict, img_dir: Path, obs_lab
 
 
     # plotting
-    plot_utils.apply_plot_params(font_size=14)
+    plot_utils.apply_plot_params(font_size=24, height_cm=3)
 
     fig = plt.figure()
 
     ax_list = []
-    gs = GridSpec(3, 2, width_ratios=[2, 1], height_ratios=[2, 2, 1], wspace=0.01, hspace=0.05)
-    # plot values
-    ax = fig.add_subplot(gs[0, 0])
-    for data_key, data in meridional_avgs.items():
-        ax.plot(meridional_avg_lons[data_key], data[time_sel_vec, :].mean(axis=0), label=data_key.split("_ndrw")[0])
+    height_ratios = [2, 2, 1] if plot_values else [2, 1]
+    nrows = len(height_ratios)
 
-    ax.yaxis.set_label_position("right")
-    ax.set_ylabel(f"{data_with_common_meta.units}", rotation=270, va="bottom")
-    ax_list.append(ax)
+    gs = GridSpec(nrows, 2, width_ratios=[2, 1], height_ratios=height_ratios, wspace=0.01, hspace=0.05)
+    # plot values
+    if plot_values:
+        ax = fig.add_subplot(gs[0, 0])
+        for data_key, data in meridional_avgs.items():
+            ax.plot(meridional_avg_lons[data_key], data[time_sel_vec, :].mean(axis=0), label=data_key.split("_ndrw")[0],
+                    lw=line_width)
+
+        ax.yaxis.set_label_position("right")
+        ax.set_ylabel(f"{data_with_common_meta.units}", rotation=270, va="bottom")
+        ax_list.append(ax)
+    else:
+        ax = None
+
 
     # plot biases
-    ax = fig.add_subplot(gs[1, 0], sharex=ax)
+    row = int(plot_values)
+    ax = fig.add_subplot(gs[row, 0], sharex=ax)
     for data_key, data in meridional_avgs.items():
         if obs_label_hint in data_key:
             continue
 
-        ax.plot(meridional_avg_lons[data_key], meridional_avg_bias[data_key][time_sel_vec, :].mean(axis=0), label="$\Delta$" + data_key.split("_ndrw")[0])
-    ax.yaxis.set_label_position("right")
-    ax.set_ylabel(f"bias, {data_with_common_meta.units}", rotation=270, va="bottom")
+        ax.plot(meridional_avg_lons[data_key], meridional_avg_bias[data_key][time_sel_vec, :].mean(axis=0),
+                label="$\Delta$" + data_key.split("_ndrw")[0], lw=line_width)
+
+    # ax.yaxis.set_label_position("right")
+    # ax.set_ylabel(f"bias, {data_with_common_meta.units}", rotation=270, va="bottom")
     ax_list.append(ax)
 
     # plot the elevation
     if meridional_elev_dict is not None:
-        ax = fig.add_subplot(gs[2, 0], sharex=ax)
+        row += 1
+        ax = fig.add_subplot(gs[row, 0], sharex=ax)
         for data_key, elev in meridional_elev_dict.items():
-            ax.plot(elev.coords["lon"], elev.values, label=data_key)
-        ax.legend(fontsize=legend_fontsize)
+            ax.plot(elev.coords["lon"], elev.values, label=data_key, lw=line_width)
+
+        if plot_legend:
+            ax.legend(fontsize=legend_fontsize, loc='upper center', bbox_to_anchor=(0.5,-0.4))
+
         ax.set_xlabel("Longitude")
         ax.grid(True, linestyle="--")
         ax.yaxis.set_label_position("right")
         ax.set_ylabel("Elevation, m", rotation=270, va="bottom")
+        if lon_min is not None and (lon_max is not None):
+            ax.set_xlim(lon_min, lon_max)
+
+
 
 
     # plot the map
-    ax = fig.add_subplot(gs[0, 1])
-    bmap.drawmapboundary(fill_color="0.4", ax=ax)
-    bmap.drawcoastlines(ax=ax, linewidth=0.1)
-    bmap.drawcountries(linewidth=0.1)
-    bmap.drawstates(linewidth=0.1)
+
+    if map_topo is not None:
+        ax = fig.add_subplot(gs[0, 1])
+        bmap.drawmapboundary(fill_color="0.4", ax=ax)
+        bmap.drawcoastlines(ax=ax, linewidth=0.1)
+        bmap.drawcountries(linewidth=0.1)
+        bmap.drawstates(linewidth=0.1)
 
 
-    data_random = list(data_dict.items())[0][1]
-    ax.add_patch(
-        create_ml_polygon(data_random.coords["lon"], data_random.coords["lat"], bmap)
-    )
+        data_random = list(data_dict.items())[0][1]
+        ax.add_patch(
+            create_ml_polygon(data_random.coords["lon"], data_random.coords["lat"], bmap)
+        )
 
-    topo_levels = [0, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000]
-    bn = BoundaryNorm(topo_levels, len(topo_levels) - 1)
-    cmap = cm.get_cmap("terrain", len(topo_levels) - 1)
-    cmap = colors.LinearSegmentedColormap.from_list("topo_cut", cmap(np.arange(0.4, 1.1, 0.1)), N=len(topo_levels) - 1)
+        topo_levels = [0, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000]
+        bn = BoundaryNorm(topo_levels, len(topo_levels) - 1)
+        cmap = cm.get_cmap("terrain", len(topo_levels) - 1)
+        cmap = colors.LinearSegmentedColormap.from_list("topo_cut", cmap(np.arange(0.4, 1.1, 0.1)), N=len(topo_levels) - 1)
 
-    lons, lats = map_topo.coords["lons"].values, map_topo.coords["lats"].values
-    xx, yy = bmap(lons, lats)
+        lons, lats = map_topo.coords["lons"].values, map_topo.coords["lats"].values
+        xx, yy = bmap(lons, lats)
 
-
-    to_plot = maskoceans(np.where(lons > 180, lons - 360, lons), lats, map_topo.values, inlands=True)
-    im = bmap.pcolormesh(xx, yy, to_plot, cmap=cmap, norm=bn)
-    bmap.colorbar(im)
-
-
+        to_plot = maskoceans(np.where(lons > 180, lons - 360, lons), lats, map_topo.values, inlands=True)
+        im = bmap.pcolormesh(xx, yy, to_plot, cmap=cmap, norm=bn)
+        bmap.colorbar(im)
 
     for pt, ax in zip(panel_titles, ax_list):
         ax.set_title(pt)
 
     for ax in ax_list:
-        ax.legend(fontsize=legend_fontsize)
         ax.set_xlabel("Longitude")
         ax.grid(True, linestyle="--")
 
@@ -164,10 +190,13 @@ def plot_meridional_mean(data_dict: dict, bias_dict:dict, img_dir: Path, obs_lab
 
         # Hide the xaxis label of the 2 upper panels
         ax.xaxis.get_label().set_visible(False)
+        if lon_min is not None and (lon_max is not None):
+            ax.set_xlim(lon_min, lon_max)
+
 
 
     imfile = img_dir / ("_".join([dl for dl in data_dict if obs_label_hint not in dl]) + f"_{season_name}.png")
-    fig.savefig(str(imfile), dpi=400, bbox_inches="tight")
+    fig.savefig(str(imfile), dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 

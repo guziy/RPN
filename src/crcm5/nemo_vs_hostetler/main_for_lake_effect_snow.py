@@ -47,6 +47,7 @@ def get_mask_of_points_near_lakes(lake_mask, npoints_radius=10):
 
         the_mask[imin:imax + 1, jmin:jmax + 1] = True
 
+
     the_mask[lake_mask] = False
 
     return the_mask

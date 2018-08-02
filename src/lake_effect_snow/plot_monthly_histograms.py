@@ -27,8 +27,8 @@ def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbe
         if len(files) == 0:
             files = glob.glob(f"{data_dir}/*m{month}-{month}{fname_suffix}")
 
-
         print(f"Trying to read data from {files}")
+
         with xr.open_mfdataset(files) as ds:
 
             da = ds[varname]
@@ -40,7 +40,6 @@ def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbe
                 da2d = da.mean(dim="year").values
             else:
                 da2d = da.mean(dim="t").values
-
 
             if region_of_interest_mask is None:
                 month_to_accumulations[month] = da2d[~np.isnan(da2d)].mean()
