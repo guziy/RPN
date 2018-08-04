@@ -124,7 +124,24 @@ def calculate_correlations_and_pvalues(var_pairs, label_to_vname_to_season_to_ye
                     solver = Eof(v_lake_ice, weights=weights[..., np.newaxis])
                     print(label, solver.varianceFraction(neigs=10))
 
+
+                    # use the module of the PC1 to make sure it has physical meaning
                     pc1_ice = solver.pcs(npcs=1)[:, 0]
+
+                    # debug: plot eof
+                    eofs = solver.eofs(neofs=1)
+
+                    eof_2d = np.zeros_like(lats).flatten()
+                    eof_2d[positions_lakes] = eofs[:, 0] * pc1_ice
+                    eof_2d = eof_2d.reshape(lats.shape)
+
+                    plt.figure()
+                    im = plt.pcolormesh(eof_2d.T)
+                    plt.colorbar(im)
+                    plt.show()
+
+                    if True:
+                        raise Exception
 
 
                     # print(positions)
