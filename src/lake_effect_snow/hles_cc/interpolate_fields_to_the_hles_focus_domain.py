@@ -89,6 +89,30 @@ def entry_gl011_canesm2_future():
         main(f, grid_file, out_dir)
 
 
+def entry_gl011_canesm2_current_fix():
+    out_dir = Path("/scratch/huziy/NEI/HLES/GL_CC_CanESM2_RCP85/for_hles_analysis")
+
+    grid_file = out_dir / "lon_lat.nc"
+    in_dir = Path("/scratch/huziy/Output/GL_CC_CanESM2_RCP85/coupled-GL-current_CanESM2/Netcdf_exports_CanESM2_GL_1989-2010")
+
+    for f in in_dir.iterdir():
+        main(f, grid_file, out_dir)
+
+
+
+def entry_gl011_canesm2_future_fix():
+    out_dir = Path("/scratch/huziy/NEI/HLES/GL_CC_CanESM2_RCP85/for_hles_analysis")
+
+    grid_file = out_dir / "lon_lat.nc"
+    in_dir = Path("/scratch/huziy/Output/GL_CC_CanESM2_RCP85/coupled-GL-future_CanESM2/Netcdf_exports_CanESM2_GL_2079-2100")
+
+    for f in in_dir.iterdir():
+        main(f, grid_file, out_dir)
+
+
 if __name__ == '__main__':
-    entry_gl011_canesm2_current()
-    entry_gl011_canesm2_future()
+    # entry_gl011_canesm2_current()
+    # entry_gl011_canesm2_future()
+
+    entry_gl011_canesm2_current_fix()
+    entry_gl011_canesm2_future_fix()
