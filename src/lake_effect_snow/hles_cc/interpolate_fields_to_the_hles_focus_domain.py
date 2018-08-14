@@ -7,7 +7,19 @@ from scipy.spatial import KDTree
 from util.geo import lat_lon
 
 
+# TODO: fix the interpolation so that the value at the end of a period, i.e. at 00:00 of the start of the period are not considered as a value for that day.
+
 def main(in_file: Path, target_grid_file: Path, out_dir: Path=None):
+
+    if out_dir is not None:
+        out_dir.mkdir(exist_ok=True)
+        out_file = out_dir / (in_file.name + "_interpolated")
+    else:
+        out_file = in_file.parent / (in_file.name + "_interpolated")
+
+    if out_file.exists():
+        print(f"Skipping {in_file}, output already exists ({out_file})")
+        return
 
     with xarray.open_dataset(target_grid_file) as ds_grid:
         lons, lats = ds_grid["lon"][:].values, ds_grid["lat"][:].values
@@ -23,15 +35,6 @@ def main(in_file: Path, target_grid_file: Path, out_dir: Path=None):
             dists, inds = ktree.query(list(zip(xt, yt, zt)), k=1)
 
 
-            if out_dir is not None:
-                out_dir.mkdir(exist_ok=True)
-                out_file = out_dir / (in_file.name + "_interpolated")
-            else:
-                out_file = in_file.parent / (in_file.name + "_interpolated")
-
-            if out_file.exists():
-                print(f"Skipping {in_file}, output already exists ({out_file})")
-                return 
 
 
             # resample to daily
