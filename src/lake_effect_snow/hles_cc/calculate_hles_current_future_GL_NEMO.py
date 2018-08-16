@@ -42,7 +42,7 @@ def main_current(nprocs=20):
         datetime(1989, 1, 1), datetime(2010, 12, 31)
     )
 
-    label = "CRCM5_NEMO_fix_CanESM2_RCP85_{}-{}_monthly".format(period.start.year, period.end.year)
+    label = "CRCM5_NEMO_fix_TT_PR_CanESM2_RCP85_{}-{}_monthly".format(period.start.year, period.end.year)
 
     vname_to_level_erai = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
@@ -53,7 +53,8 @@ def main_current(nprocs=20):
 
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
-    vname_map[default_varname_mappings.SNOWFALL_RATE] = "SN"
+    # vname_map[default_varname_mappings.SNOWFALL_RATE] = "SN"
+    vname_map[default_varname_mappings.SNOWFALL_RATE] = "XXX"
 
     base_folder = "/scratch/huziy/Output/GL_CC_CanESM2_RCP85/coupled-GL-current_CanESM2/Samples"
 
@@ -99,7 +100,7 @@ def main_future(nprocs=20):
         datetime(2079, 1, 1), datetime(2100, 12, 31)
     )
 
-    label = "CRCM5_NEMO_fix_CanESM2_RCP85_{}-{}_monthly".format(period.start.year, period.end.year)
+    label = "CRCM5_NEMO_fix_TT_PR_CanESM2_RCP85_{}-{}_monthly".format(period.start.year, period.end.year)
 
     vname_to_level_erai = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
@@ -111,7 +112,8 @@ def main_future(nprocs=20):
 
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
-    vname_map[default_varname_mappings.SNOWFALL_RATE] = "SN"
+    # vname_map[default_varname_mappings.SNOWFALL_RATE] = "SN"
+    vname_map[default_varname_mappings.SNOWFALL_RATE] = "XXX"
 
 
 
