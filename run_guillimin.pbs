@@ -5,7 +5,7 @@
 #PBS -V
 #PBS -N hdf5export 
 #PBS -l walltime=01:12:00:00
-#PBS -A ugh-612-ab
+#PBS -A ACCOUNT
 cd $PBS_O_WORKDIR
 
 #. s.ssmuse.dot gfortran 
