@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=rrg-sushama-ab
+#SBATCH --account=ACCOUNT
 #SBATCH --nodes=1 --mem=102400              #
 #SBATCH --cpus-per-task=32 --ntasks-per-node=1               #
 #SBATCH --time=02-00:00           # time (DD-HH:MM)
