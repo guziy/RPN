@@ -38,6 +38,26 @@ def gridconfig_from_gemclim_settings_file(fpath=""):
     return gridconfig_from_grid_nml("\n".join(lines_of_interest))
 
 
+def gridconfig_from_dict(param_dict):
+    gc = GridConfig()
+
+    gc.dx = param_dict["dx"]
+    gc.dy = param_dict["dy"]
+    gc.ni = param_dict["ni"]
+    gc.nj = param_dict["nj"]
+    gc.iref = param_dict["iref"]
+    gc.jref = param_dict["jref"]
+
+    gc.xref = param_dict["lonr"]
+    gc.yref = param_dict["latr"]
+
+    parnames = ["xlat1", "xlat2", "xlon1", "xlon2"]
+    proj_pardict = {pn[1:]: param_dict[pn] for pn in parnames}
+    gc.rll = RotatedLatLon(**proj_pardict)
+    return gc
+
+
+
 def gridconfig_from_grid_nml(nml_str):
     """
     Parse the copy-pasted string nml_str and construct the gridconfig object
