@@ -13,6 +13,29 @@ from matplotlib.ticker import FuncFormatter
 from util import plot_utils
 
 
+def get_monthly_accumulations_area_avg_from_merged(data_file, varname="snow_fall", region_of_interest_mask=None):
+    months_of_interest = list(range(1, 13))
+    months_to_accumulations = {}
+
+    with xr.open_dataset(data_file) as ds:
+        da = ds[varname]
+
+        # monthly accumulations of hles
+        da_monthly = da.resample(t="1M").sum(dim="t")
+
+        da_monthclim = da_monthly.groupby("t.month").mean(dim="t")
+
+        for m in months_of_interest:
+            data = da_monthclim.sel(month=m).values
+            if region_of_interest_mask is None:
+                months_to_accumulations[m] = data[~np.isnan(data)].mean()
+            else:
+                months_to_accumulations[m] = data[region_of_interest_mask].mean()
+
+    return pd.Series(data=[months_to_accumulations[m] for m in months_of_interest], index=months_of_interest)
+
+
+
 def get_monthly_accumulations_area_avg(data_dir="/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009",
                                        varname="snow_fall", fname_suffix=".nc",
                                        region_of_interest_mask=None):
@@ -94,7 +117,7 @@ def main(varname="snow_fall"):
 
     }
     for label, datapath in label_to_datapath.items():
-        series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname)
+        series = get_monthly_accumulations_area_avg_from_merged(data_dir=datapath, varname=varname)
 
         label_to_series[label] = series
 

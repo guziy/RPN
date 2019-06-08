@@ -15,7 +15,7 @@ from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points
 from lake_effect_snow.hles_cc import common_params
 from lake_effect_snow.hles_cc.plot_cc_2d_all_variables_for_all_periods import get_gl_mask
 from lake_effect_snow.hles_cc.plot_domain_from_ncfile_using_cartopy import plot_domain_and_interest_region
-from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg
+from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg_from_merged
 from util import plot_utils
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,10 +42,9 @@ def main(varname=""):
     label_to_datapath = OrderedDict([
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
-        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010"),
-        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100"),
+        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010" / "merged"),
+        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100" / "merged"),
     ])
-
 
     label_to_series = OrderedDict()
     label_to_color = {
@@ -54,20 +53,32 @@ def main(varname=""):
 
     }
 
-    gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label] / "merged")
+    gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
 
     # select a file from the directory
     sel_file = None
     for f in label_to_datapath[common_params.crcm_nemo_cur_label].iterdir():
-        sel_file = f
+        if f.is_file():
+            sel_file = f
+            break
+
+    assert sel_file is not None, f"Could not find any files in {label_to_datapath[common_params.crcm_nemo_cur_label]}"
 
     with xarray.open_dataset(sel_file) as ds:
         hles_region_mask_lons, hles_region_mask_lats = [ds[k].values for k in ["lon", "lat"]]
 
     for label, datapath in label_to_datapath.items():
-        series = get_monthly_accumulations_area_avg(data_dir=datapath, varname=varname,
-                                                    fname_suffix="_daily.nc",
+
+        hles_file = None
+        for f in datapath.iterdir():
+            if f.name.endswith("_daily.nc"):
+                hles_file = f
+                break
+
+        assert hles_file is not None, f"Could not find any HLES files in {datapath}"
+
+        series = get_monthly_accumulations_area_avg_from_merged(data_file=hles_file, varname=varname,
                                                     region_of_interest_mask=hles_region_mask)
         label_to_series[label] = series
 

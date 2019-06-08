@@ -52,7 +52,8 @@ def get_gl_mask(path: Path):
         lons, lats = [ds[k].values for k in ["lon", "lat"]]
         lons[lons > 180] -= 360
 
-    return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_lakes_coast_shape/gl_cst.shp") > 0.5
+    #return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_lakes_coast_shape/gl_cst.shp") > 0.5
+    return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_Lakes/Great_Lakes.shp") > 0.5
 
 
 

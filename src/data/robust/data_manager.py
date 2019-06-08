@@ -7,7 +7,7 @@ import netCDF4
 import numpy as np
 import xarray
 from mpl_toolkits.basemap import Basemap
-from pendulum import Pendulum
+from pendulum import datetime as Pendulum
 from pendulum import Period
 from rpn import rpn
 from rpn.domains.rotated_lat_lon import RotatedLatLon
