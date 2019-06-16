@@ -1,5 +1,4 @@
 
-
 # plot monthly histograms for the CanESM2-driven simulations future vs current
 from collections import OrderedDict
 
@@ -33,7 +32,7 @@ def main(varname=""):
     # series = get_monthly_accumulations_area_avg(data_dir="/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_HL_1980-2009_monthly",
     #                                             varname=varname)
 
-    selected_months = [9, 10, 11, 12, 1, 2, 3, 4, 5]
+    selected_months = [10, 11, 12, 1, 2, 3, 4, 5]
 
 
 
@@ -42,8 +41,10 @@ def main(varname=""):
     label_to_datapath = OrderedDict([
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_1980-2009"),
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
-        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010" / "merged"),
-        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100" / "merged"),
+        # (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010" / "merged"),
+        # (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100" / "merged"),
+        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_1989-2010_monthly_1989-2010" / "merged"),
+        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_2079-2100_monthly_2079-2100" / "merged"),
     ])
 
     label_to_series = OrderedDict()
