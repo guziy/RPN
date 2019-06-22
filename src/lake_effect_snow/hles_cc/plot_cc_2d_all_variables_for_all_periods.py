@@ -359,7 +359,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
             if row == 0:
                 ax.text(0.5, 1.05, seas_name, va="bottom", ha="center", multialignment="center", transform=ax.transAxes)
 
-
             if col < ncols - 1:
                 cb.ax.set_visible(False)
 
@@ -370,7 +369,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
     img_file = img_folder / f"cc_{fut_label}-{cur_label}.png"
 
     fig.savefig(str(img_file), **common_params.image_file_options)
-
 
 
 if __name__ == '__main__':

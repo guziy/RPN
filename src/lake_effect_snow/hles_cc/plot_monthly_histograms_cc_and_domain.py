@@ -1,4 +1,3 @@
-
 # plot monthly histograms for the CanESM2-driven simulations future vs current
 from collections import OrderedDict
 
@@ -19,6 +18,11 @@ from util import plot_utils
 import matplotlib.pyplot as plt
 import numpy as np
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 @main_decorator
 def main(varname=""):
@@ -34,8 +38,6 @@ def main(varname=""):
 
     selected_months = [10, 11, 12, 1, 2, 3, 4, 5]
 
-
-
     data_root = common_params.data_root
 
     label_to_datapath = OrderedDict([
@@ -43,8 +45,10 @@ def main(varname=""):
         # ("Obs", "/HOME/huziy/skynet3_rech1/Netbeans Projects/Python/RPN/lake_effect_analysis_daily_Obs_monthly_icefix_1980-2009"),
         # (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010" / "merged"),
         # (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100" / "merged"),
-        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_1989-2010_monthly_1989-2010" / "merged"),
-        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_2079-2100_monthly_2079-2100" / "merged"),
+        (common_params.crcm_nemo_cur_label,
+         data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_1989-2010_monthly_1989-2010" / "merged"),
+        (common_params.crcm_nemo_fut_label,
+         data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_2079-2100_monthly_2079-2100" / "merged"),
     ])
 
     label_to_series = OrderedDict()
@@ -80,9 +84,8 @@ def main(varname=""):
         assert hles_file is not None, f"Could not find any HLES files in {datapath}"
 
         series = get_monthly_accumulations_area_avg_from_merged(data_file=hles_file, varname=varname,
-                                                    region_of_interest_mask=hles_region_mask)
+                                                                region_of_interest_mask=hles_region_mask)
         label_to_series[label] = series
-
 
     #
     # print(series)
@@ -102,27 +105,21 @@ def main(varname=""):
     dates = [start_date.replace(month=(start_date.month + i) % 13 + int((start_date.month + i) % 13 == 0),
                                 year=start_date.year + (start_date.month + i) // 13) for i in range(13)]
 
-
     def format_month_label(x, pos):
-        print(num2date(x))
+        logging.debug(num2date(x))
         return "{:%b}".format(num2date(x))
-
-
 
     # calculate bar widths
     dates_num = date2num(dates)
     width = np.diff(dates_num) / (len(label_to_series) * 1.5)
     width = np.array([width[0] for _ in width])
 
-
     # select the months
     width = np.array([w for w, d in zip(width, dates) if d.month in selected_months])
     dates = [d for d in dates[:-1] if d.month in selected_months]
     dates_num = date2num(dates)
 
-
     label_to_handle = OrderedDict()
-
 
     label_to_annual_hles = OrderedDict()
 
@@ -137,16 +134,15 @@ def main(varname=""):
 
         values = [v / values_sum * 100 for v in values]
 
-        print(label, values)
-        print(f"sum(values) = {sum(values)}")
+        logger.debug([label, values])
+        logger.debug(f"sum(values) = {sum(values)}")
 
         h = ax.bar(dates_num + i * width, values, width=width, align="edge", linewidth=0.5,
-               edgecolor="k", facecolor=label_to_color[label], label=label, zorder=10)
+                   edgecolor="k", facecolor=label_to_color[label], label=label, zorder=10)
         label_to_handle[label] = h
 
     ax.set_ylabel("% of total HLES")
     ax.set_title("(b) Monthly HLES distribution")
-
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
     ax.xaxis.set_major_locator(MonthLocator(bymonthday=int(sum(width[:len(label_to_series)]) / 2.) + 1))
@@ -171,7 +167,6 @@ def main(varname=""):
     topo_nc_file = data_root / "geophys_452x260_me.nc"
     ax = plot_domain_and_interest_region(ax, topo_nc_file)
     ax.set_title("(a) Experimental domain")
-
 
     # Add a common legend
     labels = list(label_to_handle)

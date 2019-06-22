@@ -35,11 +35,10 @@ def _get_year_and_month_from_filename(fname:str):
     :param fname:
     """
 
-
     fields = fname.split("_")
 
-    m1, m2 = [int(m) for m in re.findall("\d+", fields[-1])]
-    y1, y2 = [int(m) for m in re.findall("\d+", fields[-2])]
+    m1, m2 = [int(m) for m in re.findall(r"\d+", fields[-1])]
+    y1, y2 = [int(m) for m in re.findall(r"\d+", fields[-2])]
 
     assert m1 == m2
     assert y1 == y2
@@ -52,7 +51,6 @@ def get_year_month_to_filepath_map(data_dir: Path, skip_tokens=("_daily", )):
     ym_to_path = {}
 
     for f in data_dir.iterdir():
-
 
         if not f.name.lower().endswith(".nc"):
             continue

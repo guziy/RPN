@@ -4,7 +4,7 @@ from pathlib import Path
 from cartopy.feature import NaturalEarthFeature
 
 # data_root = Path("/Users/huziy/HLES")
-data_root = Path("/Users/huziy/Projects/HLES_data_paper")
+data_root = Path("/Users/huziy/Projects")
 
 
 img_folder = Path("hles_cc_paper")
