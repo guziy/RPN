@@ -7,6 +7,7 @@ import xarray
 from matplotlib.dates import MonthLocator, num2date, date2num
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FuncFormatter
+from scipy.spatial import KDTree
 
 from application_properties import main_decorator
 from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points_near_lakes
@@ -17,6 +18,7 @@ from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_a
 from util import plot_utils
 import matplotlib.pyplot as plt
 import numpy as np
+from rpn.domains import lat_lon
 
 import logging
 
@@ -51,6 +53,10 @@ def main(varname=""):
          data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_2079-2100_monthly_2079-2100" / "merged"),
     ])
 
+    # longutudes and latitudes of the focus region around the Great Lakes (we define it, mostly for performance
+    # issues and to eliminate regions with 0 hles that still are in the 200 km HLES zone)
+    focus_region_lonlat_nc_file = data_root / "lon_lat.nc"
+
     label_to_series = OrderedDict()
     label_to_color = {
         common_params.crcm_nemo_cur_label: "skyblue",
@@ -70,11 +76,28 @@ def main(varname=""):
 
     assert sel_file is not None, f"Could not find any files in {label_to_datapath[common_params.crcm_nemo_cur_label]}"
 
+    # Take into account the focus region
     with xarray.open_dataset(sel_file) as ds:
         hles_region_mask_lons, hles_region_mask_lats = [ds[k].values for k in ["lon", "lat"]]
 
-    for label, datapath in label_to_datapath.items():
+        with xarray.open_dataset(focus_region_lonlat_nc_file) as ds_focus:
+            focus_lons, focus_lats = [ds_focus[k].values for k in ["lon", "lat"]]
 
+        coords_src = lat_lon.lon_lat_to_cartesian(hles_region_mask_lons.flatten(), hles_region_mask_lats.flatten())
+        coords_dst = lat_lon.lon_lat_to_cartesian(focus_lons.flatten(), focus_lats.flatten())
+
+        ktree = KDTree(list(zip(*coords_src)))
+
+        dists, inds = ktree.query(list(zip(*coords_dst)), k=1)
+
+        focus_mask = hles_region_mask.flatten()
+        focus_mask[...] = False
+        focus_mask[inds] = True
+        focus_mask.shape = hles_region_mask.shape
+
+
+
+    for label, datapath in label_to_datapath.items():
         hles_file = None
         for f in datapath.iterdir():
             if f.name.endswith("_daily.nc"):
@@ -84,18 +107,11 @@ def main(varname=""):
         assert hles_file is not None, f"Could not find any HLES files in {datapath}"
 
         series = get_monthly_accumulations_area_avg_from_merged(data_file=hles_file, varname=varname,
-                                                                region_of_interest_mask=hles_region_mask)
+                                                                region_of_interest_mask=hles_region_mask & focus_mask)
         label_to_series[label] = series
 
-    #
-    # print(series)
-    # assert isinstance(series, pd.Series)
-    # ax = series.plot(kind="bar", width=1)
-    #
-    # ax.set_ylabel("%")
-    # ax.set_xlabel("Month")
-
-    gs = GridSpec(1, 2, wspace=0.)
+    #  plotting
+    gs = GridSpec(1, 2, wspace=0.05)
 
     fig = plt.figure()
     ax = fig.add_subplot(gs[0, 1])
@@ -124,7 +140,7 @@ def main(varname=""):
     label_to_annual_hles = OrderedDict()
 
     for i, (label, series) in enumerate(label_to_series.items()):
-        values = [series[d.month] for d in dates]
+        values = [series[d.month] * 100 for d in dates]
 
         # convert to percentages
         values_sum = sum(values)
@@ -132,7 +148,7 @@ def main(varname=""):
         # save the total annual hles for later reuse
         label_to_annual_hles[label] = values_sum
 
-        values = [v / values_sum * 100 for v in values]
+        # values = [v / values_sum * 100 for v in values]
 
         logger.debug([label, values])
         logger.debug(f"sum(values) = {sum(values)}")
@@ -141,7 +157,7 @@ def main(varname=""):
                    edgecolor="k", facecolor=label_to_color[label], label=label, zorder=10)
         label_to_handle[label] = h
 
-    ax.set_ylabel("% of total HLES")
+    ax.set_ylabel("HLES (cm)")
     ax.set_title("(b) Monthly HLES distribution")
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
@@ -165,7 +181,7 @@ def main(varname=""):
     # Plot the domain and the HLES region of interest
     ax = fig.add_subplot(gs[0, 0])
     topo_nc_file = data_root / "geophys_452x260_me.nc"
-    ax = plot_domain_and_interest_region(ax, topo_nc_file)
+    ax = plot_domain_and_interest_region(ax, topo_nc_file, focus_region_lonlat_nc_file=focus_region_lonlat_nc_file)
     ax.set_title("(a) Experimental domain")
 
     # Add a common legend
