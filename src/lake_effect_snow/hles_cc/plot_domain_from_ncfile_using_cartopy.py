@@ -20,11 +20,14 @@ import numpy as np
 
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-
-def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path):
+def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path, focus_region_lonlat_nc_file: Path=None):
     """
+    :param focus_region_lonlat_nc_file: Path to the file containing focus region lons and lats
     :param region_mask_lats: latitudes corresponding to the region mask
     :param region_mask_lons:
     :param ax:
@@ -55,8 +58,6 @@ def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path):
     with xarray.open_dataset(topo_nc_file_path) as topo_ds:
         topo_lons, topo_lats, topo = [topo_ds[k].values for k in ["lon", "lat", "ME"]]
 
-
-
         prj_params = topo_ds["proj_params"]
 
         rll = RotatedLatLon(lon1=prj_params.lon1, lat1=prj_params.lat1, lon2=prj_params.lon2, lat2=prj_params.lat2)
@@ -78,10 +79,6 @@ def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path):
     map_extent = [xll, xur, yll, yur]
     print("Map extent: ", map_extent)
 
-
-
-
-
     topo_clevs = [0, 100, 200, 300, 400, 500, 600, 800, 1000, 1200]
     # bn = BoundaryNorm(topo_clevs, len(topo_clevs) - 1)
     cmap = cm.get_cmap("terrain")
@@ -95,7 +92,15 @@ def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path):
     add_rectangle(ax, xx, yy, margin=20, edge_style="solid", zorder=10, linewidth=0.5)
     add_rectangle(ax, xx, yy, margin=10, edge_style="dashed", zorder=10, linewidth=0.5)
 
+    # plot a rectangle for the focus region
+    if focus_region_lonlat_nc_file is not None:
+        with xarray.open_dataset(focus_region_lonlat_nc_file) as fr:
+            focus_lons, focus_lats = fr["lon"].data, fr["lat"].data
 
+            xyz_coords = rot_pole_cpy.transform_points(cartopy.crs.PlateCarree(), focus_lons, focus_lats)
+            xxf, yyf = xyz_coords[..., 0], xyz_coords[..., 1]
+
+            add_rectangle(ax, xxf, yyf, edge_style="solid", margin=0, edgecolor="magenta", zorder=10, linewidth=1)
 
     cs = ax.pcolormesh(topo_lons[:, :], topo_lats[:, :], topo[:, :], transform=cartopy.crs.PlateCarree(),
                      cmap=cmap, norm=norm)
