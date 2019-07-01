@@ -23,6 +23,10 @@ from util.geo import lat_lon
 from lake_effect_snow import default_varname_mappings
 import pandas as pd
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 def _get_period_for_year(y):
     start = Pendulum(y, 1, 1)
@@ -197,12 +201,12 @@ class DataManager(object):
                     tmp_files.append(str(chunk_out_file))
 
                     if chunk_out_file.exists() and have_read_at_least_once:
-                        print(f"{chunk_out_file} already exists, skipping {y}{m:02}")
+                        logger.info(f"{chunk_out_file} already exists, skipping {y}{m:02}")
                         continue
 
                     da = self.read_data_for_period(_get_period_for_ym(year=y, month=m), vname, ndims=4)
 
-                    print(f"{_get_period_for_year(y)}")
+                    logger.info(f"{_get_period_for_year(y)}")
 
                     assert isinstance(da, xarray.DataArray)
 
@@ -258,12 +262,12 @@ class DataManager(object):
                             ds_in[k] = xarray.DataArray(data=vals, name=k, dims=("z",), attrs={"units": "m"})
 
                 try:
-                    print(f"Start merging into {out_file}")
+                    logger.info(f"Start merging into {out_file}")
                     ds_in.to_netcdf(str(out_file), unlimited_dims=["t"], encoding=encoding)
-                    print(f"Successfully merged data into: {out_file}")
+                    logger.info(f"Successfully merged data into: {out_file}")
                 except Exception as exc:
-                    print(f"Error occurred while creating {out_file}")
-                    print(exc)
+                    logger.error(f"Error occurred while creating {out_file}")
+                    logger.error(exc)
                     if out_file.exists():
                         out_file.unlink()
 
@@ -889,7 +893,7 @@ class DataManager(object):
                     continue
 
                 current_period = Period(d1, d2)
-                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                logger.info("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
                 data = self.read_data_for_period(current_period, hles_vname)
 
                 # calculate number of hles days
@@ -918,7 +922,6 @@ class DataManager(object):
         season_to_year_to_rolling_mean = defaultdict(dict)
         season_to_year_to_n_cao_days = defaultdict(dict)
 
-
         cache_dir = Path(self.base_folder) / "cache"
         cache_dir.mkdir(exist_ok=True)
         seasons_str = "-".join(season_to_months)
@@ -937,7 +940,7 @@ class DataManager(object):
                     continue
 
                 current_period = Period(d1, d2)
-                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                logger.info("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
                 data = self.read_data_for_period(current_period, temperature_vname)
 
                 # calculate daily means
@@ -979,7 +982,6 @@ class DataManager(object):
         return season_to_year_to_n_cao_days
 
 
-
     def get_seasonal_means(self, start_year: int, end_year: int, season_to_months: dict, varname_internal: str):
 
         """
@@ -1010,7 +1012,7 @@ class DataManager(object):
                     continue
 
                 current_period = Period(d1, d2)
-                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                logger.info("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
                 data = self.read_data_for_period(current_period, varname_internal)
 
                 result[season][y] = data.mean(dim="t").values
@@ -1040,7 +1042,7 @@ class DataManager(object):
                     continue
 
                 current_period = Period(d1, d2)
-                print("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
+                ("calculating mean for [{}, {}]".format(current_period.start, current_period.end))
                 data = self.read_data_for_period(current_period, varname_internal)
 
                 if varname_internal == LAKE_ICE_FRACTION:
