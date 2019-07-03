@@ -26,16 +26,16 @@ def main():
                                                      "orange", "orangered", "red", "firebrick", ]
 
 
-
     start_year = 1980
     end_year = 2009
 
+    data_root = Path("data/erainterim-driven")
 
     label_to_hles_dir = OrderedDict(
         [
-         ("Obs", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_icefix_1980-2009")),
-         ("CRCM5_NEMO", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_1980-2009")),
-         ("CRCM5_HL", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_Hostetler_1980-2009")),
+         ("Obs", data_root / "lake_effect_analysis_Obs_monthly_icefix_1980-2009"),
+         ("CRCM5_NEMO", data_root /"lake_effect_analysis_CRCM5_NEMO_1980-2009"),
+         ("CRCM5_HL",  data_root / "lake_effect_analysis_CRCM5_Hostetler_1980-2009"),
          # ("CRCM5_NEMO_TT_PR", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_based_on_TT_PR_1980-2009"))
         ]
     )
