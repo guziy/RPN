@@ -1,6 +1,6 @@
 from collections import OrderedDict, defaultdict
+import pendulum
 
-from pendulum import Pendulum
 from rpn import level_kinds
 
 from data.robust import data_source_types
@@ -76,7 +76,7 @@ def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None,
         ("source_dir", ""),
         ("project", "CNRCWP, NEI"),
         ("website", "http://cnrcwp.ca"),
-        ("converted_on", Pendulum.now().to_day_datetime_string()),
+        ("converted_on", pendulum.now().to_day_datetime_string()),
     ])
 
 
@@ -180,7 +180,8 @@ def main(field_list=None, start_year=1980, end_year=2010, label_to_simpath=None,
         "GZ": "dp",
         "P0": "dm",
         "PN": "dm",
-        "TT": "dm"
+        "TT": "dm",
+        "SN": "pm"
     })
 
     for vn in field_list:
