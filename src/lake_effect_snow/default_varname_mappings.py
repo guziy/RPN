@@ -79,6 +79,7 @@ vname_to_fname_prefix_CRCM5[LAKE_ICE_FRACTION] = "pm"
 vname_to_fname_prefix_CRCM5[U_WE] = "dm"
 vname_to_fname_prefix_CRCM5[V_SN] = "dm"
 vname_to_fname_prefix_CRCM5[STREAMFLOW] = "pm"
+vname_to_fname_prefix_CRCM5["AL"] = "pm"
 
 
 vname_map_netcdf = {
