@@ -103,7 +103,7 @@ def entry_for_cc_canesm2_gl():
     the_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     vars_info = {
         "hles_snow": {
-            # convert to mm/day
+            # convert to cm/day
             "multiplier": 10,
             "display_units": "cm",
             "offset": 0,
@@ -251,9 +251,7 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                 cur_means[seas_name] = {y: f * periods_info.get_numdays_for_season(y, month_list=months) for y, f in cur_means[seas_name].items()}
                 fut_means[seas_name] = {y: f * periods_info.get_numdays_for_season(y, month_list=months) for y, f in fut_means[seas_name].items()}
 
-
         var_to_season_to_data[vname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
-
 
     # add hles days
     hles_days_varname = "hles_snow_days"
@@ -268,7 +266,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                                                      hles_vname="hles_snow")
 
     var_to_season_to_data[hles_days_varname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
-
 
     # add CAO days
     cao_ndays_varname = "cao_days"

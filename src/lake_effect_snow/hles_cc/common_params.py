@@ -16,12 +16,12 @@ varname_to_display_name = {
 }
 
 
-crcm_nemo_cur_label = "CRCM5_NEMOc"
-crcm_nemo_fut_label = "CRCM5_NEMOf"
+crcm_nemo_cur_label = "GEM_NEMOc"
+crcm_nemo_fut_label = "GEM_NEMOf"
 
 
 image_file_options = dict(
-    bbox_inches="tight", dpi=300
+    bbox_inches="tight", dpi=300, transparent=True
 )
 
 

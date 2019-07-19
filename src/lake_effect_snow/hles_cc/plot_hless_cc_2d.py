@@ -223,9 +223,6 @@ def main():
                                                              start_month=hles_start_month, nmonths=hles_nmonths)
 
 
-
-
-
     # plotting ...
     plot_utils.apply_plot_params(font_size=8, width_cm=30, height_cm=10)
 
@@ -285,7 +282,8 @@ def main():
     period_current_s = "{}-{}".format(*period_current)
     period_future_s = "{}-{}".format(*period_future)
 
-    fig.savefig(str(image_dir.joinpath("hles_cs_{}_{}_{}.png".format(vname, period_current_s, period_future_s))), bbox_inches="tight", dpi=300)
+    fig.savefig(str(image_dir.joinpath("hles_cs_{}_{}_{}.png".format(vname, period_current_s, period_future_s))),
+                bbox_inches="tight", dpi=300)
 
 
 

@@ -95,8 +95,6 @@ def main(varname=""):
         focus_mask[inds] = True
         focus_mask.shape = hles_region_mask.shape
 
-
-
     for label, datapath in label_to_datapath.items():
         hles_file = None
         for f in datapath.iterdir():
@@ -157,7 +155,7 @@ def main(varname=""):
                    edgecolor="k", facecolor=label_to_color[label], label=label, zorder=10)
         label_to_handle[label] = h
 
-    ax.set_ylabel("HLES (cm)")
+    ax.set_ylabel("HLES (cm/day)")
     ax.set_title("(b) Monthly HLES distribution")
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))

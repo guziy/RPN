@@ -75,7 +75,7 @@ def entry_gl011_canesm2_current():
     out_dir = Path("/scratch/huziy/NEI/GL_samples_only/GL_CC_CanESM2_RCP85/for_hles_analysis")
 
     grid_file = out_dir / "lon_lat.nc"
-    in_dir =  out_dir.parent / "coupled-GL-current_CanESM2/Netcdf_exports_CanESM2_GL_1989-2010"
+    in_dir = out_dir.parent / "coupled-GL-current_CanESM2/Netcdf_exports_CanESM2_GL_1989-2010"
 
     for f in in_dir.iterdir():
         main(f, grid_file, out_dir)
@@ -113,9 +113,23 @@ def entry_gl011_canesm2_future_fix():
         main(f, grid_file, out_dir)
 
 
+def entry_gl011_canesm2_mbair():
+    grid_file = Path("/Users/huziy/Projects/lon_lat.nc")
+
+    files = [
+        Path("/Users/huziy/Projects/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100/merged/CanESM2_GL_2079-2100_SN_2079-2100.nc"),
+        Path("/Users/huziy/Projects/lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010/merged/CanESM2_GL_1989-2010_SN_1989-2010.nc")
+    ]
+
+    for f in files:
+        main(f, grid_file)
+
+
 if __name__ == '__main__':
     # entry_gl011_canesm2_current()
     # entry_gl011_canesm2_future()
 
-    entry_gl011_canesm2_current_fix()
-    entry_gl011_canesm2_future_fix()
+    # entry_gl011_canesm2_current_fix()
+    # entry_gl011_canesm2_future_fix()
+
+    entry_gl011_canesm2_mbair()
