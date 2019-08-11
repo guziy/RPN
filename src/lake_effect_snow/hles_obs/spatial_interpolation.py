@@ -41,7 +41,7 @@ def interpolate_wind_components_from_rpn_files(data_dir: Path = "", out_dir: Pat
     :param target_grid_config:
     """
 
-    # sort files to be in the hronological order
+    # sort files to be in the chronological order
     files_sorted = list(sorted((mfile for mfile in data_dir.iterdir()), key=file_sort_key))
 
     out_file_name = "erai0.75_interpolated_uu_vv_knots.nc"
