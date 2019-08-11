@@ -1,0 +1,231 @@
+ &grid
+
+  Grd_typ_S     = 'LU'   ,
+  Grd_ni        =   452  ,   Grd_nj          =   260   ,
+  Grd_dx        =    0.1,   Grd_dy          =    0.1 ,
+  Grd_iref      =   105  ,   Grd_jref        =   100   ,
+  Grd_latr      =    48,   Grd_lonr        =  -84 ,
+  Grd_xlat1     =   0,   Grd_xlon1       =  180,
+  Grd_xlat2     =    1.0 ,   Grd_xlon2       =   -84,
+
+ /
+
+ &ptopo
+
+  Ptopo_npex      = 8         , Ptopo_npey      = 9          ,
+  Ptopo_nblocx    = 1          , Ptopo_nblocy    = 1          ,
+  Ptopo_bind_L    = .true.    ,
+  Ptopo_smtdyn    = 0          , Ptopo_smtphy    = 0          ,
+
+ /
+
+ &gement
+
+  Mod_runstrt_S   = "19881201.000000" ,
+  Pil_jobstrt_S   = "20101201.060000" ,
+  Pil_jobend_S    = "20110101.000000" ,
+  Pil_nesdt       = 21600      ,
+  Pil_dx          = 1.5        ,
+  Pil_allin1_L    = .false.    ,
+  Pil_sfc2d_L     = .false.    , Pil_3df_L        = .true.    ,
+  Pil_bmf_L       = .true.     , Pil_bcs_hollow_L = .false.   ,
+  Pil_maxcfl      = 5          , Pil_hblen        = 10        ,
+
+  e_schm_stlag    = .true.     , e_schm_adcub    = .true.     ,
+
+  Topo_filmx_L    = .true.     ,
+  Topo_init_L     = .true.     , Topo_dgfmx_L    = .true.     ,
+  Topo_dgfms_L    = .true.     ,
+
+  E_geol_hscon_L  = .false.    ,
+  E_geol_glanl_L  = .true.     , E_geol_hsanl_L  = .false.    ,
+  E_geol_glreg_L  = .false.    , E_geol_hsreg_L  = .false.    ,
+  E_geol_gls      = 30.        , E_geol_hss      = 20.        ,
+  E_geol_gln      = 80.        , E_geol_hsn      = 80.        ,
+  E_geol_glw      = 220.       , E_geol_hsw      = 220.       ,
+  E_geol_gle      = 320.       , E_geol_hse      = 320.       ,
+  E_geol_hsea     = 3000       , E_geol_poin     = 3          ,
+  E_geol_z0cst    = -1.0       , E_geol_modex_L  = .false.    ,
+
+  E_tr3d_list_S   = 'QC'       ,
+
+ /
+
+ &gem_cfgs
+
+ hyb = 0.012500, 0.014340, 0.016404, 0.018694, 0.021206,
+       0.023930, 0.026849, 0.030074, 0.033623, 0.037515,
+       0.041764, 0.046384, 0.051386, 0.056780, 0.062570,
+       0.068760, 0.075347, 0.082325, 0.089684, 0.097408,
+       0.105909, 0.115273, 0.125596, 0.136986, 0.149561,
+       0.163458, 0.178827, 0.195837, 0.214679, 0.235567,
+       0.258743, 0.283548, 0.310015, 0.338169, 0.368022,
+       0.399577, 0.432822, 0.467732, 0.504269, 0.542379,
+       0.581991, 0.623018, 0.663901, 0.704243, 0.743627,
+       0.781631, 0.817824, 0.851783, 0.883096, 0.911374,
+       0.936255, 0.957414, 0.974571, 0.987495, 0.996010,
+       1.000000,
+
+  Grd_rcoef       = 1.6        , Pres_ptop       = -1.0 ,
+
+
+  Anal_AP =
+      1.021214125433642E+02, 2.583438128106612E+02, 5.772850934015569E+02,
+      1.175345333167274E+03, 1.988003098020588E+03, 2.969131008720000E+03,
+      4.083389971977184E+03, 4.924599331625683E+03, 5.948820217894571E+03,
+      7.160768282128889E+03, 8.446030465578895E+03, 9.912706584094030E+03,
+      1.145805205071159E+04, 1.296282123901236E+04, 1.424310246271591E+04,
+      1.491369551067379E+04, 1.501144895520479E+04, 1.462196760781622E+04,
+      1.385435233167298E+04, 1.282507535991845E+04, 1.165514531247809E+04,
+      1.043698051119081E+04, 9.247126236513597E+03, 8.112806022028789E+03,
+      7.078224010868327E+03, 6.139635473651832E+03, 5.321462033497594E+03,
+      4.600569418765165E+03, 3.989503035863309E+03, 3.362858724646428E+03,
+      2.720754252448303E+03, 2.063304755341175E+03, 1.390622834685193E+03,
+      7.028186487897100E+02, 2.527235777278061E+02, 0.0,
+
+  Anal_B  =
+      1.209028283296297E-05, 1.002189813397037E-04, 4.223579411611053E-04,
+      1.399671010982294E-03, 3.378966659883661E-03, 6.695509191472564E-03,
+      1.169808555095555E-02, 1.639558496224159E-02, 2.328681190392251E-02,
+      3.332522421902005E-02, 4.664004672740925E-02, 6.616436454703879E-02,
+      9.391223795191876E-02, 1.330605878502531E-01, 1.884245710351766E-01,
+      2.508060056190901E-01, 3.178412065218635E-01, 3.866852782489517E-01,
+      4.552614258618932E-01, 5.214201010667346E-01, 5.829669827035325E-01,
+      6.389899278405961E-01, 6.887334560154600E-01, 7.329288785824242E-01,
+      7.711399130391993E-01, 8.044035188151221E-01, 8.324786613353968E-01,
+      8.565936693765776E-01, 8.766247232938876E-01, 8.968095269971731E-01,
+      9.171469181558597E-01, 9.376357604091871E-01, 9.582749424132926E-01,
+      9.790633769365406E-01, 9.925056891262554E-01, 1.0,
+
+
+  Step_total  = 2321568          , Step_rsti  = 8928       ,
+  Step_gstat      = 256        , Step_cleanup  = 288        ,
+  Lctl_debug_L    = .false.    ,
+  Rstri_glbcol_L  = .false.    ,
+
+  Lam_toptt_L     = .true.     , Lam_0ptend_L    = .true.     ,
+  Lam_nesdt       = 21600      ,
+  Step_maxcfl     = 5          ,
+  Hblen_x         = 10         , Hblen_y         = 10         ,
+
+  Clim_climat_L   = .true.     ,
+  Clim_inincr_L   = .true.     ,
+  Clim_allin1_L   = .true.     ,
+
+
+  Cstv_dt_8       = 300.      , Cstv_tstr_8     = 200.0      ,
+  Cstv_uvdf_8     = 8333.     , Cstv_phidf_8    = 8333.     ,
+  Cstv_pitop_8    = -1.0       , Cstv_pisrf_8    = 1000.0     ,
+
+  Hspng_mf        = 0          ,
+  Hspng_nj        = 0          ,
+
+  Hzd_type_S      = "HO"       , Hzd_lnR         = .04        ,
+  Hzd_pwr         = 6          , Hzd_uvwdt_L     = .true.     ,
+  Hzd_type_S      = "EXPLICIT" ,
+
+  Init_balgm_L    = .false.    , Init_dftr_L     = .false.    ,
+  Init_dfwin_L    = .true.     , Init_dfnp       =  25 ,
+  Init_dfpl_8     = 21600.     ,
+
+  Level_ip12000_L = .true.     ,
+
+  Offc_a0_8       = 1.0        , Offc_a1_8       = -1.0       ,
+  Offc_b0_8       = 0.6        , Offc_b1_8       =  0.4       ,
+
+  Out3_etik_s     = 'BCMK_01',
+  Out3_zund       = 2500, 2000, 1500,
+  Out3_nbitg      = 16         , Out3_cliph_L     = .true.    ,
+  Out3_unit_S     = 'P'        , Out3_vt2gz_L     = .true.    ,
+  Out3_ndigits    =  8         ,
+  Out3_cubzt_L    = .false.    , Out3_cubuv_L     = .false.   ,
+  Out3_cubds_L    = .false.    , Out3_cubqs_L     = .false.   ,
+  Out3_cubdd_L    = .false.    , Out3_cubqq_L     = .false.   ,
+  Out3_cubww_L    = .false.    , Out3_linbot      =  3        ,
+  Out3_rotate_L   = .true.     ,
+  Out3_anal_S     = '1989010100',
+
+
+  Schm_hydro_L    = .true.     , Schm_nonhy_8    = 1.0        ,
+  Schm_xwvt3      = 0          , Schm_hdlast_L   = .true.     ,
+  Schm_itcn       = 2          , Schm_modcn      = 1          ,
+  Schm_itnlh      = 2          , Schm_itraj      = 3          ,
+  Schm_moist_L    = .true.     , Schm_adcub_L    = .true.     ,
+  Schm_difqp_L    = .true.     , Schm_psadj_L    = .false.    ,
+  Schm_sfix_L     = .false.    , Schm_wload_L    = .false.    ,
+
+  P_lmvd_valml_8  = 0.0        ,
+  P_pbd_dumpbus   = 0          ,
+
+  Vspng_mf        = 10.        , Vspng_nk        = 4          ,
+  Vspng_uvwdt_L   = .true.     , Vspng_rwnd_L    = .true.     ,
+  Vspng_njpole    = 0          , Vspng_zmean_L   = .false.    ,
+
+  Vrtd_L          = .true.     ,
+
+ /
+
+ &physics_cfgs
+
+ RADNIVL          = 01,02,03,05,07,09,11,13,15,17,
+                    19,21,23,25,27,29,31,33,35,37,
+                    39,41,43,45,47,49,51,53,54,55,
+                    56,
+
+ qcfc12           = 0.521187      ,
+ qcfc11           = 0.233520      ,
+ qch4             = 1.788027      ,
+ qn2o             = 0.323809      ,
+ qco2             = 391.638010      ,
+ PHY_PCK_VERSION  = 'RPN-CMC_5.0.4' ,
+
+ RADIA            = 'cccmarad' , KNTRAD          = 6          ,
+ RADFILES         = 'std'      ,
+ FOMIC            = .false.    , SIMISCCP        = .false.     ,
+
+ MOYHR            =  6         ,
+
+ SCHMSOL          = 'CLASS'     ,
+ GWDRAG           = 'GWD86'    ,
+ LAKES  	  = 'HOSTETLER',
+
+ PBL_RICRIT       = 0.25, 2.0  ,
+
+ LONGMEL          = 'boujo'    ,
+ FLUVERT          = 'CLEF'     , DRAG            = .true.     ,
+ BKGALB           = .true.     , Z0TLAT          = 20., 25.   ,
+ CHAUF            = .true.     , EVAP            = .true.     ,
+ DBGMEM           = .false.    , SNOWMELT        = .false.    ,
+ STOMATE          = .false.    , TYPSOL          = .true.     ,
+ AGREGAT          = .true.     , CORTM           = .true.     ,
+                                 DRYLAPS         = .true.     ,
+                                 ICEMELT         = .true.     ,
+ IMPFLX           = .true.     ,
+
+ PARSOL(5)        = 0.1E-06    , PARSOL(2)       = 0.8E+06    ,
+
+ SHLCVT           = 'conres','ktrsnt',
+ KFCPCP           = 'conspcpn' ,
+ CONVEC           = 'kfc'      , STCOND          ='consun'    ,
+ HC2              = 0.8        ,
+ HF2              = 0.8        , HM2             = 0.8        ,
+ SATUCO           = .true.     , INILWC          = .true.     ,
+ KFCMOM           = .false.    ,
+ KFCTRIG4         = 0. , 0., 0.034, 0.034                     ,
+ KFCTRIGA         = 50.        ,
+ KFCRAD           = 1500.      , KFCDEPTH        = 4000.      ,
+ KFCDLEV          = 0.5        , KFCDET          = 0.         ,
+ KFCTIMEC         = 3600.      , KFCTIMEA        = 3600.      ,
+ PCPTYPE          = 'BOURGE3D'      , KTICEFRAC       = .false.    ,
+
+ EPONGE           = 450. , 449.6292 , 362.0958 , 106.7958 ,
+ ROUTE_SURF_WATER = .true. ,
+ ROUTE_READ_IC = .false.,
+ CLASS_IG = 26 ,
+ SCHMSOL_LEV = 0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+               1.0, 3.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
+ INTERFLOW_L = .false.,
+ NEMO_FOR_LARGE_LAKES = .false.,
+ CTEM_MODE = 0,
+ NEMO_CALL_FREQ = 6
+/

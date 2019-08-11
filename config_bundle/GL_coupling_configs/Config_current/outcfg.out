@@ -1,0 +1,41 @@
+
+ grid=1,free;
+
+ levels=1, eta, -1;
+ levels=2, pres,[1000.,975.,925.,850.,700.,500.,300.,200.,100.,50.,20.,10.];
+ levels=3, eta, 0;
+
+ steps=1,hour,<192723,193464,3>;
+ steps=2,hour,<192744,193464,24>;
+ steps=3,hour,0.;
+ steps=4,step,1;
+ steps=5,step,<2312646,2321568,6>;
+
+ sortie([TT,GZ,HU,HR,UU,VV,WW,QQ]         , grid, 1, levels, 3, steps, 1)
+
+ sortie([TT,GZ,HU,HR,UU,VV,WW,QQ]         , grid, 1, levels, 2, steps, 1)
+
+ sortie([P0,PN]                            , grid, 1, levels, 1, steps, 1)
+
+ sortie_p([DX,8L,VF,MG,ML,CLDP], grid,1, levels, 3, steps, 3)
+ sortie_p([NEM7], grid, 1, levels, 3, steps, 4)
+
+ sortie_p([AS,AI,AV,AH,AR,AB,AU,N4,AD,TRAF,TDRA,SD, FV, FC]                         , grid, 1, levels, 1, steps, 1)
+ sortie_p([J8,J9,L1,LM,LC,LD,LJ,AL,FN,NC]     , grid, 1, levels, 1, steps, 1)
+ sortie_p([NEM1,NEM2,NEM3,NEM4,NEM5,NEM6, NEM8]     , grid, 1, levels, 1, steps, 2)
+ sortie_p([TJ, FI, FB, UD, VD, QD, U1, U3, SN]     , grid, 1, levels, 1, steps, 1)
+ sortie_p([I0,I1,I2, IMAV]     , grid, 1, levels, 1, steps, 2)
+
+ sortie_p([N7,MS,UVAV,H,S7,S8]                                 , grid, 1, levels, 1, steps, 1)
+ sortie_p([C9,H7,HT,E8,D2,D5,C3,BG,S5,S6,SK,Y3,S2]             , grid, 1, levels, 1, steps, 1)
+ sortie_p([O3,F5,V3,H5,G4,W7C]                                 , grid, 1, levels, 1, steps, 1)
+
+
+ sortie_p([T5,T9,UVMX]                     , grid, 1, levels, 3, steps, 2)
+ sortie_p([STFL,UPIN,STFA,SWST,SWSR,SWSL,GWST,CLDP,PR,PC,FR,PE, N3, I4, I5, I6, I7, I8, I9, TN, DN], grid, 1, levels, 1, steps, 1)
+ sortie_p([GLOU], grid, 1, levels, 1, steps, 4)
+
+ sortie_p([SAND,CLAY,MG,MABF,STBM,FLDR,FAA,LB,LF1,GWRT, SLOP], grid, 1, levels,1,steps,3)
+ sortie_p([LKOU,LKAR,COB,CBF,LKID], grid, 1, levels,1,steps,3)
+ xnbit([STBM,SWSR,SWSL,SWST,GWST,FAA, TDRA, TRAF, TRUN, TDR,CBF], bits, 32)
+ xnbit([STFL, STFA], bits, 32)
