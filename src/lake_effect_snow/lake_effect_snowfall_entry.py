@@ -320,10 +320,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         # check the winds
         print("Reading the winds into memory")
         u_we = data_mngr.read_data_for_period(p, default_varname_mappings.U_WE)
-        u_we = u_we.resample("1D", dim="t", how="mean")
+        u_we = u_we.resample("1D", dim="t").mean()
 
         v_sn = data_mngr.read_data_for_period(p, default_varname_mappings.V_SN)
-        v_sn = v_sn.resample("1D", dim="t", how="mean")
+        v_sn = v_sn.resample("1D", dim="t").mean()
         print("Successfully imported wind components")
 
         assert len(v_sn.t) == len(np.unique(v_sn.t[:]))
