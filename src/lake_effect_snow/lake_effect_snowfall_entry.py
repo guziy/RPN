@@ -238,7 +238,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         # try to read snowfall if not available, try to calculate from total precip
         try:
             snfl = data_mngr.read_data_for_period(p, default_varname_mappings.SNOWFALL_RATE)
-            snfl = snfl.resample("1D", dim="t", how="mean")
+            snfl = snfl.resample(t="1D").mean()
             rhosn = base_utils.get_snow_density_kg_per_m3(tair_deg_c=air_temp.values)
 
             # convert from water depth to snow depth
@@ -256,11 +256,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
             #
             print("Calculating daily mean 2-m air temperature")
-            air_temp = air_temp.resample("1D", dim="t").mean()
+            air_temp = air_temp.resample(t="1D").mean()
 
             # use  daily mean precip (to be consistent with the 2-meter air temperature)
             precip_m_s = data_mngr.read_data_for_period(p, default_varname_mappings.TOTAL_PREC)
-            precip_m_s = precip_m_s.resample("1D", dim="t").mean()
+            precip_m_s = precip_m_s.resample(t="1D").mean()
 
             # Calculate snowfall from the total precipitation and 2-meter air temperature
             snfl = precip_m_s.copy()
@@ -320,10 +320,10 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         # check the winds
         print("Reading the winds into memory")
         u_we = data_mngr.read_data_for_period(p, default_varname_mappings.U_WE)
-        u_we = u_we.resample("1D", dim="t").mean()
+        u_we = u_we.resample(t="1D").mean()
 
         v_sn = data_mngr.read_data_for_period(p, default_varname_mappings.V_SN)
-        v_sn = v_sn.resample("1D", dim="t").mean()
+        v_sn = v_sn.resample(t="1D").mean()
         print("Successfully imported wind components")
 
         assert len(v_sn.t) == len(np.unique(v_sn.t[:]))
@@ -333,7 +333,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         lake_ice_fraction = None
         try:
             lake_ice_fraction = data_mngr.read_data_for_period(p, default_varname_mappings.LAKE_ICE_FRACTION)
-            lake_ice_fraction = lake_ice_fraction.resample("1D", dim="t", how="mean")  # Calculate the daily means
+            lake_ice_fraction = lake_ice_fraction.resample(t="1D").mean()  # Calculate the daily means
             lake_ice_fraction = lake_ice_fraction.sel(t=v_sn.coords["t"], method="nearest")
 
             # update the time coordinates as well
