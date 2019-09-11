@@ -256,11 +256,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
             #
             print("Calculating daily mean 2-m air temperature")
-            air_temp = air_temp.resample("1D", dim="t", how="mean")
+            air_temp = air_temp.resample("1D", dim="t").mean()
 
             # use  daily mean precip (to be consistent with the 2-meter air temperature)
             precip_m_s = data_mngr.read_data_for_period(p, default_varname_mappings.TOTAL_PREC)
-            precip_m_s = precip_m_s.resample("1D", dim="t", how="mean")
+            precip_m_s = precip_m_s.resample("1D", dim="t").mean()
 
             # Calculate snowfall from the total precipitation and 2-meter air temperature
             snfl = precip_m_s.copy()
