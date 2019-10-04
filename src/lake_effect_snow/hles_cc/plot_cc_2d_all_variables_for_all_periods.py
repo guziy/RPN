@@ -30,7 +30,7 @@ from datetime import datetime
 
 from util.geo.mask_from_shp import get_mask
 import numpy as np
-
+from lake_effect_snow.hles_cc.common_params import var_display_names
 
 def get_gl_mask(path: Path):
     """
@@ -89,14 +89,6 @@ def entry_for_cc_canesm2_gl():
 
     varnames = ["hles_snow", "lake_ice_fraction", "TT", "PR", ]
 
-    var_display_names = {
-        "hles_snow": "HLES",
-        "hles_snow_days": "HLES freq",
-        "lake_ice_fraction": "Lake ice fraction",
-        "TT": "2m air\n temperature",
-        "PR": "total\nprecipitation",
-        "cao_days": "CAO freq"
-    }
 
     plot_utils.apply_plot_params(width_cm=25, height_cm=25, font_size=8)
 

@@ -252,11 +252,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             try:
                 air_temp = data_mngr.read_data_for_period(p, default_varname_mappings.T_AIR_2M)
             except IOError as e:
-                print(e)
+                sys.stderr.write(e)
                 continue
 
             #
-            print("Calculating daily mean 2-m air temperature")
+            sys.stderr.write("Calculating daily mean 2-m air temperature\n")
             air_temp = air_temp.resample(t="1D", restore_coord_dims=True).mean(dim="t")
 
             # use  daily mean precip (to be consistent with the 2-meter air temperature)
@@ -266,14 +266,21 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             # Calculate snowfall from the total precipitation and 2-meter air temperature
             snfl = precip_m_s.copy()
             snfl.name = default_varname_mappings.SNOWFALL_RATE
-            snfl.values = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values, tair_deg_c=air_temp.values)
+
+            valid = ~(np.isnan(precip_m_s) | np.isnan(air_temp)).values
+            snfl.values[valid] = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values[valid], tair_deg_c=air_temp.values[valid])
 
             sys.stderr.write(f"{precip_m_s}\n")
-            # print("===========air temp ranges=======")
-            # print(air_temp.min(), " .. ", air_temp.max())
 
-        print("Snowfall values ranges: ")
-        # print(snfl.min(), snfl.max(), common_params.lower_limit_of_daily_snowfall)
+            sys.stderr.write("===========precip ranges (expect in M/S)=======\n")
+            sys.stderr.write(f"{precip_m_s.min().values.item(), '...', precip_m_s.max().values.item()}\n")
+
+
+            sys.stderr.write("===========air temp ranges=======\n")
+            sys.stderr.write(f"{air_temp.min().values.item(), '...', air_temp.max().values.item()}\n")
+
+        sys.stderr.write("Snowfall values ranges: \n")
+        sys.stderr.write(f"{snfl.min().values.item(), '...' , snfl.max().values.item(), common_params.lower_limit_of_daily_snowfall}\n")
 
         # save snowfall total
         snfl_total = snfl.copy()
@@ -357,6 +364,7 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
             lake_ice_fraction = snfl * 0
 
+            # lake ice fraction is not continuous in time, exists only for months when there is typically ice cover
             # raise e
 
 
@@ -375,6 +383,11 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         print("wind_blows_from_lakes.shape = ", wind_blows_from_lakes.shape)
         print("snfl.shape = ", snfl.shape)
 
+
+        # take into account the case when there are some missing times for snfl
+        # like dec 31 for daymet
+        if snfl.coords["t"].size < u_we.coords["t"].size:
+            snfl = snfl.interp(t=u_we.coords["t"]).ffill("t")
 
         snfl = wind_blows_from_lakes * snfl
 

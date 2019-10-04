@@ -19,7 +19,7 @@ LWRAD_DOWN = "longwave_rad_down"
 SWRAD_DOWN = "shortwave_rad_down"
 LAKE_WATER_TEMP = "lake_water_temp"
 STREAMFLOW = "streamflow"
-
+HLES_AMOUNT = "hles_snowfall"
 
 U_WE = "u_we"
 V_SN = "v_sn"

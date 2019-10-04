@@ -33,7 +33,8 @@ def file_sort_key(fobj):
     return d
 
 
-def interpolate_wind_components_from_rpn_files(data_dir: Path = "", out_dir: Path = "", target_grid_config=None):
+def interpolate_wind_components_from_rpn_files(data_dir: Path = "", out_dir: Path = "", target_grid_config=None,
+                                               wind_level=1., wind_level_kind=level_kinds.HYBRID):
     """
     Interpolate wind component fields and save to a netcdf file
     :param data_dir:
@@ -65,8 +66,8 @@ def interpolate_wind_components_from_rpn_files(data_dir: Path = "", out_dir: Pat
 
             with RPN(str(in_file)) as r:
                 assert isinstance(r, RPN)
-                uu = r.get_all_time_records_for_name_and_level("UU", level=1, level_kind=level_kinds.HYBRID)
-                vv = r.get_all_time_records_for_name_and_level("VV", level=1, level_kind=level_kinds.HYBRID)
+                uu = r.get_all_time_records_for_name_and_level("UU", level=wind_level, level_kind=wind_level_kind)
+                vv = r.get_all_time_records_for_name_and_level("VV", level=wind_level, level_kind=wind_level_kind)
 
                 # create dimensions, initialize variables and coordiates
                 if uu_var is None:

@@ -14,7 +14,7 @@ from geopy.distance import distance
 # maximum number of iterations for backtracking
 N_ITER_MAX_BACKTRACK = 5
 
-@jit
+#@jit
 def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
     """
     :type ktree: KDTree
@@ -52,7 +52,7 @@ def get_velocity_at(vel_field, r, ktree, i_grd, j_grd, nneighbours=1):
         return vel_mean / w_total
 
 
-@jit
+#@jit
 def get_epsilon(lons2d, lats2d):
     """
     Get the minimum displacement of the starting point to be able to declare convergence
@@ -64,7 +64,7 @@ def get_epsilon(lons2d, lats2d):
     eps = distance((lats2d[1, 1], lons2d[1, 1]), (lats2d[0, 0], lons2d[0, 0])).meters
     return eps
 
-@jit
+#@jit
 def get_wind_blows_from_lakes_mask(lons, lats, u_we, v_sn, lake_mask, ktree,
                                    region_of_interest=None, dt_secs=None,
                                    nneighbours=1, lake_ice_fraction=None, snowfall=None,

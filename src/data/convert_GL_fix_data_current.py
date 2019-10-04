@@ -20,8 +20,8 @@ def parallel_conversion_entry():
               "STFL", "SWSL", "SWSR", "T5", "T9", "TDRA", "TJ", "TRAF", "UD", "VD"]
     """
 
-    fields = ["TT", "PR", "N3", "AV", "GZ", "P0", "SN", "N4", "TJ", "HU", ]
-
+    # fields = ["TT", "PR", "N3", "AV", "GZ", "P0", "SN", "N4", "TJ", "HU", ]
+    fields = ["LC", ]
     start_year = 1989
     end_year = 2010
 
@@ -31,13 +31,11 @@ def parallel_conversion_entry():
 
     input = [[start_year, end_year, fname, label_to_simpath] for fname in fields]
 
-
     nprocs = min([multiprocessing.cpu_count(), 1, len(fields)])
     p = Pool(processes=min(nprocs, len(fields)))
 
     # do the conversion in parallel
     p.map(main_for_parallel_processing, input)
-
 
 
 if __name__ == '__main__':

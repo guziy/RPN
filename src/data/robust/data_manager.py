@@ -6,7 +6,7 @@ from pathlib import Path
 import netCDF4
 import numpy as np
 import xarray
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
 from pendulum import datetime as Pendulum
 from pendulum import Period
 from rpn import rpn
@@ -509,6 +509,7 @@ class DataManager(object):
         return data_res
 
     def __update_bmp_info_from_rpnfile_obj(self, r):
+        from mpl_toolkits.basemap import Basemap
         # save projection paarams for a possible re-use in the future
         proj_params = r.get_proj_parameters_for_the_last_read_rec()
         self.lons, self.lats = r.get_longitudes_and_latitudes_for_the_last_read_rec()
@@ -632,7 +633,6 @@ class DataManager(object):
             lvl = self.level_mapping[varname_internal]
             assert isinstance(lvl, VerticalLevel)
             level, level_kind = lvl.get_value_and_kind()
-
 
         data = {}
         lons, lats = None, None
