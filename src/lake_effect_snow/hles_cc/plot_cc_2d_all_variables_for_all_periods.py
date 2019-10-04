@@ -311,6 +311,8 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                     if "mask" in opts:
                         to_plot = np.ma.masked_where(~opts["mask"], to_plot)
 
+                    # mask non-significant changes
+                    to_plot = np.ma.masked_where(pv > pval_crit, to_plot)
 
             ax.set_facecolor("0.75")
 
