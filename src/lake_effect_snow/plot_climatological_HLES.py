@@ -1,7 +1,6 @@
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 
-from eofs.standard import Eof
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import maskoceans, Basemap
