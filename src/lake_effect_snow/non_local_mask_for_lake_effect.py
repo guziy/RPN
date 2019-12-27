@@ -7,7 +7,7 @@ from lake_effect_snow import common_params
 from util.geo import lat_lon
 
 
-@jit
+#@jit
 def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall, lake_mask, outer_radius_km=500):
 
     nonlocal_snfl = snowfall.copy()
@@ -33,7 +33,7 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall,
     return nonlocal_snfl
 
 
-@jit
+#@jit
 def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, outer_radius_km=500):
 
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lon0, lat0, R=lat_lon.EARTH_RADIUS_METERS)

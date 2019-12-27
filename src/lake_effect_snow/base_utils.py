@@ -30,13 +30,15 @@ def get_snow_density_kg_per_m3(tair_deg_c):
     """
     rhos = np.zeros_like(tair_deg_c)
 
-    valid = ~np.isnan(tair_deg_c)
+    T_threshold_degC = -15
 
-    rhos[valid & (tair_deg_c < -15)] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3
+    lt_points = tair_deg_c < T_threshold_degC
+    ge_points = ~lt_points
 
-    where_not_very_cold = valid & (tair_deg_c >= -15)
-    if np.any(where_not_very_cold):
-        rhos[where_not_very_cold] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3 + 1.7 * (tair_deg_c[where_not_very_cold] + 15) ** 1.5
+    rhos[...] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3
+
+    if np.any(ge_points):
+        rhos[ge_points] = FRESH_SNOW_MIN_DENSITY_KG_PER_M3 + 1.7 * (tair_deg_c[ge_points] - T_threshold_degC) ** 1.5
 
     return rhos
 
@@ -61,11 +63,11 @@ def get_snow_fall_m_per_s(precip_m_per_s, tair_deg_c):
     if not np.any(where_cold):
         return result
 
-
     rhos = get_snow_density_kg_per_m3(tair_deg_c)
 
     result[~where_cold] = 0.0
 
+    # insure that there is no division by 0
     result[where_cold] = precip_m_per_s[where_cold] * WATER_DENSITY_KG_PER_M3 / rhos[where_cold]
 
     return result

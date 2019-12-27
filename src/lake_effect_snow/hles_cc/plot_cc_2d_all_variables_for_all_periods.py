@@ -30,7 +30,7 @@ from datetime import datetime
 
 from util.geo.mask_from_shp import get_mask
 import numpy as np
-
+from lake_effect_snow.hles_cc.common_params import var_display_names
 
 def get_gl_mask(path: Path):
     """
@@ -52,7 +52,8 @@ def get_gl_mask(path: Path):
         lons, lats = [ds[k].values for k in ["lon", "lat"]]
         lons[lons > 180] -= 360
 
-    return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_lakes_coast_shape/gl_cst.shp") > 0.5
+    #return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_lakes_coast_shape/gl_cst.shp") > 0.5
+    return get_mask(lons2d=lons, lats2d=lats, shp_path="data/shp/Great_Lakes/Great_Lakes.shp") > 0.5
 
 
 
@@ -88,21 +89,13 @@ def entry_for_cc_canesm2_gl():
 
     varnames = ["hles_snow", "lake_ice_fraction", "TT", "PR", ]
 
-    var_display_names = {
-        "hles_snow": "HLES",
-        "hles_snow_days": "HLES freq",
-        "lake_ice_fraction": "Lake ice fraction",
-        "TT": "2m air\n temperature",
-        "PR": "total\nprecipitation",
-        "cao_days": "CAO freq"
-    }
 
     plot_utils.apply_plot_params(width_cm=25, height_cm=25, font_size=8)
 
     the_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     vars_info = {
         "hles_snow": {
-            # convert to mm/day
+            # convert to cm/day
             "multiplier": 10,
             "display_units": "cm",
             "offset": 0,
@@ -250,9 +243,7 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                 cur_means[seas_name] = {y: f * periods_info.get_numdays_for_season(y, month_list=months) for y, f in cur_means[seas_name].items()}
                 fut_means[seas_name] = {y: f * periods_info.get_numdays_for_season(y, month_list=months) for y, f in fut_means[seas_name].items()}
 
-
         var_to_season_to_data[vname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
-
 
     # add hles days
     hles_days_varname = "hles_snow_days"
@@ -267,7 +258,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                                                      hles_vname="hles_snow")
 
     var_to_season_to_data[hles_days_varname] = calculate_change_and_pvalues(cur_means, fut_means, percentages=False)
-
 
     # add CAO days
     cao_ndays_varname = "cao_days"
@@ -321,6 +311,8 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                     if "mask" in opts:
                         to_plot = np.ma.masked_where(~opts["mask"], to_plot)
 
+                    # mask non-significant changes
+                    to_plot = np.ma.masked_where(pv > pval_crit, to_plot)
 
             ax.set_facecolor("0.75")
 
@@ -358,7 +350,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
             if row == 0:
                 ax.text(0.5, 1.05, seas_name, va="bottom", ha="center", multialignment="center", transform=ax.transAxes)
 
-
             if col < ncols - 1:
                 cb.ax.set_visible(False)
 
@@ -369,7 +360,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
     img_file = img_folder / f"cc_{fut_label}-{cur_label}.png"
 
     fig.savefig(str(img_file), **common_params.image_file_options)
-
 
 
 if __name__ == '__main__':

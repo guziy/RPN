@@ -19,7 +19,9 @@ LWRAD_DOWN = "longwave_rad_down"
 SWRAD_DOWN = "shortwave_rad_down"
 LAKE_WATER_TEMP = "lake_water_temp"
 STREAMFLOW = "streamflow"
-
+HLES_AMOUNT = "hles_snowfall"
+HLES_FREQUENCY = "hles_snowfall_frequency"
+CAO = "cold_air_outbreak"
 
 U_WE = "u_we"
 V_SN = "v_sn"
@@ -79,6 +81,7 @@ vname_to_fname_prefix_CRCM5[LAKE_ICE_FRACTION] = "pm"
 vname_to_fname_prefix_CRCM5[U_WE] = "dm"
 vname_to_fname_prefix_CRCM5[V_SN] = "dm"
 vname_to_fname_prefix_CRCM5[STREAMFLOW] = "pm"
+vname_to_fname_prefix_CRCM5["AL"] = "pm"
 
 
 vname_map_netcdf = {

@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 
 from util.seasons_info import MonthPeriod
-from pendulum import Period, Pendulum
 
 img_dir = Path("hles_results_analysis_using_monthly_files")
 
@@ -137,7 +136,7 @@ def main():
 
         # convert annual mean
         hles_snfall = np.array(hles_snfall)
-        total_snfall = np.array(total_snfall) # <-- not using this one
+        total_snfall = np.array(total_snfall)  # <-- not using this one
 
         label_to_hles_data[label] = hles_snfall
 

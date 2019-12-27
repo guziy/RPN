@@ -1,8 +1,6 @@
 from collections import OrderedDict
 
 from descartes import PolygonPatch
-from matplotlib.collections import PatchCollection
-from mpl_toolkits.basemap import Basemap
 from pathlib import Path
 
 from shapely.geometry import Polygon

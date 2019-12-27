@@ -35,11 +35,10 @@ def _get_year_and_month_from_filename(fname:str):
     :param fname:
     """
 
-
     fields = fname.split("_")
 
-    m1, m2 = [int(m) for m in re.findall("\d+", fields[-1])]
-    y1, y2 = [int(m) for m in re.findall("\d+", fields[-2])]
+    m1, m2 = [int(m) for m in re.findall(r"\d+", fields[-1])]
+    y1, y2 = [int(m) for m in re.findall(r"\d+", fields[-2])]
 
     assert m1 == m2
     assert y1 == y2
@@ -52,7 +51,6 @@ def get_year_month_to_filepath_map(data_dir: Path, skip_tokens=("_daily", )):
     ym_to_path = {}
 
     for f in data_dir.iterdir():
-
 
         if not f.name.lower().endswith(".nc"):
             continue
@@ -225,9 +223,6 @@ def main():
                                                              start_month=hles_start_month, nmonths=hles_nmonths)
 
 
-
-
-
     # plotting ...
     plot_utils.apply_plot_params(font_size=8, width_cm=30, height_cm=10)
 
@@ -287,7 +282,8 @@ def main():
     period_current_s = "{}-{}".format(*period_current)
     period_future_s = "{}-{}".format(*period_future)
 
-    fig.savefig(str(image_dir.joinpath("hles_cs_{}_{}_{}.png".format(vname, period_current_s, period_future_s))), bbox_inches="tight", dpi=300)
+    fig.savefig(str(image_dir.joinpath("hles_cs_{}_{}_{}.png".format(vname, period_current_s, period_future_s))),
+                bbox_inches="tight", dpi=300)
 
 
 

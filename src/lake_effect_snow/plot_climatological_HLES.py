@@ -1,7 +1,6 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from pathlib import Path
 
-from eofs.standard import Eof
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.basemap import maskoceans, Basemap
@@ -21,21 +20,25 @@ import pandas as pd
 @main_decorator
 def main():
     clevs_lkeff_snowfalldays = [0, 0.1, 0.8, 1.6, 2.4, 3.2, 4.0, 5]
-    clevs_lkeff_snowfall = [0, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5, 10]
+    clevs_lkeff_snowfall = [0, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5]
     mycolors = ["white", "indigo", "blue", "dodgerblue", "aqua", "lime", "yellow", "gold",
                                                      "orange", "orangered", "red", "firebrick", ]
 
-
+    vname = "snow_fall"
+    # vname = "lkeff_snowfall_days"
 
     start_year = 1980
     end_year = 2009
 
+    img_dir = Path("hles_cc_paper")
+
+    data_root = Path("data/erainterim-driven")
 
     label_to_hles_dir = OrderedDict(
         [
-         ("Obs", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_Obs_monthly_icefix_1980-2009")),
-         ("CRCM5_NEMO", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_1980-2009")),
-         ("CRCM5_HL", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_Hostetler_1980-2009")),
+         ("Obs", data_root / "lake_effect_analysis_Obs_monthly_icefix_1980-2009"),
+         ("GEM_NEMO", data_root /"lake_effect_analysis_CRCM5_NEMO_1980-2009_monthly"),
+         # ("CRCM5_HL",  data_root / "lake_effect_analysis_CRCM5_Hostetler_1980-2009"),
          # ("CRCM5_NEMO_TT_PR", Path("/RESCUE/skynet3_rech1/huziy/Netbeans Projects/Python/RPN/lake_effect_analysis_CRCM5_NEMO_based_on_TT_PR_1980-2009"))
         ]
     )
@@ -48,21 +51,24 @@ def main():
         "CRCM5_NEMO_TT_PR": "g"
     }
 
-    # clevs = clevs_lkeff_snowfall
-    # vname = "snow_fall"
-    # units = "cm"
+    vname_to_clevs = {
+        "snow_fall": clevs_lkeff_snowfall,
+        "lkeff_snowfall_days": clevs_lkeff_snowfalldays
+    }
 
-    clevs = clevs_lkeff_snowfalldays
-    vname = "lkeff_snowfall_days"
-    units = "days"
-    npc = 1
+    vname_to_units = {
+        "snow_fall": "m",
+        "lkeff_snowfall_days": "days"
+    }
+
+
+    units = vname_to_units[vname]
+    clevs = vname_to_clevs[vname]
+
 
 
     cmap, bn = colors.from_levels_and_colors(clevs, mycolors[:len(clevs) - 1])
     cmap.set_over(mycolors[len(clevs) - 2])
-
-
-
 
 
     label_to_y_to_snfl = {}
@@ -82,8 +88,7 @@ def main():
     the_mask = None
     for label, folder in label_to_hles_dir.items():
 
-        y_to_snfl = {}
-
+        y_to_snfl = defaultdict(lambda: 0)
 
         for the_file in folder.iterdir():
             if not the_file.name.endswith(".nc"):
@@ -99,15 +104,11 @@ def main():
                     lons[lons > 180] -= 360
                     mask = maskoceans(lons, lats, lons, inlands=True, resolution="i")
 
-
                 if start_year <= year_current[0] <= end_year:
-                    y_to_snfl[year_current[0]] = snfl[0]
+                    y_to_snfl[year_current[0]] += snfl[0]
 
 
         label_to_y_to_snfl[label] = y_to_snfl
-
-
-
 
     lons[lons < 0] += 360
     b = Basemap(lon_0=180,
@@ -117,19 +118,12 @@ def main():
                 urcrnrlat=lats[-1, -1],
                 resolution="i", area_thresh=2000)
 
-
-
-    # plot the eofs
-
-
     plot_utils.apply_plot_params(font_size=10, width_cm=30, height_cm=8)
-
 
     xx, yy = b(lons, lats)
 
     fig = plt.figure()
     gs = GridSpec(1, len(label_to_hles_dir), wspace=0)
-
 
     for col, label in enumerate(label_to_hles_dir):
 
@@ -145,10 +139,10 @@ def main():
             ax.set_title("{}".format(label))
 
             b.drawcoastlines(ax=ax)
+            cb.ax.set_title(units)
 
-
-
-    fig.savefig(str(label_to_hles_dir["Obs"].joinpath("hles_clim_{}_{}-{}.png".format(vname, start_year, end_year))), bbox_inches="tight", dpi=300)
+    fig.savefig(img_dir / f"hles_clim_{vname}_{start_year}-{end_year}.png",
+                bbox_inches="tight", dpi=300, transparent=True)
 
 
 if __name__ == '__main__':

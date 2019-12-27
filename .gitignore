@@ -18,3 +18,4 @@ __pycache__
 .ipynb_checkpoints
 *.hdf
 .DS_Store
+data

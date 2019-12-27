@@ -82,7 +82,10 @@ def main_current(nprocs=20):
         )])
 
         kwargs = dict(
-            label_to_config=label_to_config, period=current_month_period, months_of_interest=current_month_period.months_of_interest, nprocs_to_use=1
+            label_to_config=label_to_config,
+            period=current_month_period,
+            months_of_interest=current_month_period.months_of_interest,
+            nprocs_to_use=1
         )
 
         print(current_month_period.months_of_interest)
