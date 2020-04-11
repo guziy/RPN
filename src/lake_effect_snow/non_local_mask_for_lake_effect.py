@@ -8,10 +8,9 @@ from lake_effect_snow import common_params
 from util.geo import lat_lon
 
 
-#@jit
+# @jit
 def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall: xarray.DataArray,
                                lake_mask, outer_radius_km=500):
-
     nonlocal_snfl = snowfall.copy()
 
     # need non-local snowfall only for points where actual snowfall occurs
@@ -20,7 +19,8 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall:
     for i, j in zip(*np.where(region_of_interest & where_snows_heavy)):
         lon, lat = lons[i, j], lats[i, j]
 
-        the_mask = get_non_local_mask_for_location(lon, lat, kdtree, mask_shape=lons.shape, outer_radius_km=outer_radius_km)
+        the_mask = get_non_local_mask_for_location(lon, lat, kdtree, mask_shape=lons.shape,
+                                                   outer_radius_km=outer_radius_km)
 
         # ignore lakes and the areas within the lake effect zone
         the_mask &= (~region_of_interest)
@@ -36,9 +36,8 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall:
     return nonlocal_snfl
 
 
-#@jit
+# @jit
 def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, outer_radius_km=500):
-
     x0, y0, z0 = lat_lon.lon_lat_to_cartesian(lon0, lat0, R=lat_lon.EARTH_RADIUS_METERS)
 
     METERS_PER_KM = 1000.0
@@ -59,12 +58,12 @@ def get_non_local_mask_for_location(lon0, lat0, ktree: KDTree, mask_shape=None, 
     return result
 
 
-
-if __name__ == '__main__':
-    lons = np.zeros((2,2))
-    lats = np.zeros((2,2))
-
-
+def test_get_non_local_mask_for_lake_effect():
+    """
+    Testing
+    """
+    lons = np.zeros((2, 2))
+    lats = np.zeros((2, 2))
 
     xs, ys, zs = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
 
@@ -73,3 +72,7 @@ if __name__ == '__main__':
 
     the_mask = get_non_local_mask_for_location(5, 0, ktree, mask_shape=(2, 2))
     print(the_mask)
+
+
+if __name__ == '__main__':
+    test_get_non_local_mask_for_lake_effect()
