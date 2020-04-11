@@ -23,33 +23,33 @@ from data.robust.data_manager import DataManager
 
 from lake_effect_snow import default_varname_mappings
 from lake_effect_snow.base_utils import VerticalLevel
+from lake_effect_snow.default_varname_mappings import CAO, SNOWFALL_RATE, T_AIR_2M, TOTAL_PREC
 from lake_effect_snow.hles_cc import common_params
 
 from lake_effect_snow.hles_cc.common_params import var_display_names
+
+from lake_effect_snow.data_utils import get_data as get_data_gen, all_known_variables
 
 import sys
 import logging
 
 from util import plot_utils
 
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-
-known_variables = [
-    default_varname_mappings.HLES_AMOUNT,
-    default_varname_mappings.T_AIR_2M,
-    default_varname_mappings.TOTAL_PREC,
-    default_varname_mappings.LAKE_ICE_FRACTION,
-]
 
 units = {
     default_varname_mappings.HLES_AMOUNT: "cm/day",
     default_varname_mappings.T_AIR_2M: r"${\rm ^\circ}$C",
     default_varname_mappings.TOTAL_PREC: "mm/day",
     default_varname_mappings.LAKE_ICE_FRACTION: "-",
-
+    default_varname_mappings.HLES_FREQUENCY: "days",
+    default_varname_mappings.CAO: "days",
+    default_varname_mappings.SNOWFALL_RATE: "mm/day"
 }
+
+units.update({f"bias_{k}": v for k, v in units.items()})
 
 
 def get_data(vname=default_varname_mappings.T_AIR_2M, season_to_months=None, beg_year=1989, end_year=2010):
@@ -64,68 +64,70 @@ def get_data(vname=default_varname_mappings.T_AIR_2M, season_to_months=None, beg
     obs_dir = "/home/huziy/data/big1/Projects/HLES_GL_NEMO_CRCM5_CC/validation_of_coupled-GL-current_CanESM2/obs"
     mod_dir = "/home/huziy/data/big1/Projects/HLES_GL_NEMO_CRCM5_CC/validation_of_coupled-GL-current_CanESM2/mod"
 
-    res = {
-        "mod": None, "obs": None
+    data_query = {
+        "obs": {
+            "root_dir": obs_dir,
+            "beg_year": beg_year,
+            "end_year": end_year
+        },
+        "mod": {
+            "root_dir": mod_dir,
+            "beg_year": beg_year,
+            "end_year": end_year
+        }
     }
 
-    if vname not in known_variables:
-        raise ValueError(f"Unknown variable {vname}")
+    return get_data_gen(vname=vname, season_to_months=season_to_months, data_query=data_query)
 
-    vname_map = {
-        default_varname_mappings.T_AIR_2M: "TT",
-        default_varname_mappings.TOTAL_PREC: "PR",
-        default_varname_mappings.LAKE_ICE_FRACTION: "LC",
-        default_varname_mappings.HLES_AMOUNT: "hles_snow"
-    }
-
-    level_map = {v: VerticalLevel(1, level_kinds.HYBRID) for v in known_variables}
-
-    obs_multipliers = {
-        default_varname_mappings.TOTAL_PREC: 1,  # mm/day
-        default_varname_mappings.T_AIR_2M: 1.,
-        default_varname_mappings.LAKE_ICE_FRACTION: 1.,
-        default_varname_mappings.HLES_AMOUNT: 100. # M/day -> cm/day
-    }
-
-    mod_multipliers = obs_multipliers.copy()
-    mod_multipliers[default_varname_mappings.TOTAL_PREC] = 24 * 3600. # M/s to mm/day
-    offset_map = defaultdict(lambda : 0)
-
-    obs_store_config = {
-        DataManager.SP_BASE_FOLDER: obs_dir,
-        DataManager.SP_DATASOURCE_TYPE: data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY,
-        DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
-        DataManager.SP_OFFSET_MAPPING: offset_map,
-        DataManager.SP_MULTIPLIER_MAPPING: obs_multipliers,
-        DataManager.SP_LEVEL_MAPPING: level_map
-    }
-
-    mod_store_config = obs_store_config.copy()
-    mod_store_config[DataManager.SP_BASE_FOLDER] = mod_dir
-    mod_store_config[DataManager.SP_MULTIPLIER_MAPPING] = mod_multipliers
-
-
-    logger.debug(obs_store_config)
-    logger.debug(mod_store_config)
-
-    dm_obs = DataManager(store_config=obs_store_config)
-    dm_mod = DataManager(store_config=mod_store_config)
-
-    # calculate seasonal means
-    res["mod"] = dm_mod.get_seasonal_means(start_year=beg_year, end_year=end_year, season_to_months=season_to_months,
-                                           varname_internal=vname)
-    res["obs"] = dm_obs.get_seasonal_means(start_year=beg_year, end_year=end_year, season_to_months=season_to_months,
-                                           varname_internal=vname)
-
-    # read some data to get coordinates
-    beg_dummy = datetime(beg_year, 1, 1)
-    dm_obs.read_data_for_period(Period(beg_dummy, beg_dummy.add(months=1)), varname_internal=vname)
-
-    return res, dm_obs.lons, dm_obs.lats
+    #
+    # the comments below are for documentation purposes
+    #
+    # vname_map = {
+    #     default_varname_mappings.T_AIR_2M: "TT",
+    #     default_varname_mappings.TOTAL_PREC: "PR",
+    #     default_varname_mappings.LAKE_ICE_FRACTION: "LC",
+    #     default_varname_mappings.HLES_AMOUNT: "hles_snow"
+    # }
+    #
+    # level_map = {v: VerticalLevel(1, level_kinds.HYBRID) for v in known_variables}
+    #
+    # obs_multipliers = {
+    #     default_varname_mappings.TOTAL_PREC: 1,  # mm/day
+    #     default_varname_mappings.T_AIR_2M: 1.,
+    #     default_varname_mappings.LAKE_ICE_FRACTION: 1.,
+    #     default_varname_mappings.HLES_AMOUNT: 100.  # M/day -> cm/day
+    # }
+    #
+    # mod_multipliers = obs_multipliers.copy()
+    # mod_multipliers[default_varname_mappings.TOTAL_PREC] = 1.  # converted to mm/day on netcdf export
+    # offset_map = defaultdict(lambda: 0)
+    #
+    # obs_store_config = {
+    #     DataManager.SP_BASE_FOLDER: obs_dir,
+    #     DataManager.SP_DATASOURCE_TYPE: data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY,
+    #     DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: vname_map,
+    #     DataManager.SP_OFFSET_MAPPING: offset_map,
+    #     DataManager.SP_MULTIPLIER_MAPPING: obs_multipliers,
+    #     DataManager.SP_LEVEL_MAPPING: level_map
+    # }
+    #
+    # mod_store_config = obs_store_config.copy()
+    # mod_store_config[DataManager.SP_BASE_FOLDER] = mod_dir
+    # mod_store_config[DataManager.SP_MULTIPLIER_MAPPING] = mod_multipliers
 
 
-def calc_biases_and_pvals(v_to_data):
+def __calculate_spatial_correlations(data1, data2):
     """
+    datas are 2d arrays, of shape (t, x)
+    :param data1:
+    :param data2:
+    """
+    return np.corrcoef(data1.mean(axis=0), data2.mean(axis=0))[0, 1]
+
+
+def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
+    """
+    :param multipliers: (1, -1) yields a-b, (1,0) =>  a; for debugging purposes
     :param v_to_data: dict(variable:{"mod":<seasonal means for each year>, "obs": <seasonal mean for each year>})
     """
 
@@ -134,7 +136,7 @@ def calc_biases_and_pvals(v_to_data):
 
     # extract numpy array from a dict
     def __get_np_data(a_dict):
-        x = np.array([a_dict[k] for k in sorted(a_dict)])
+        x = np.ma.array([a_dict[k] for k in sorted(a_dict)])
         x = np.ma.masked_where(np.isnan(x), x)
         return x
 
@@ -150,20 +152,35 @@ def calc_biases_and_pvals(v_to_data):
                 mod_data = np.ma.masked_where(mod_data > 1, mod_data)
                 obs_data = np.ma.masked_where(obs_data > 1, obs_data)
 
-            annual_bias = mod_data - obs_data
+            annual_bias = mod_data * multipliers[0] + obs_data * multipliers[1]
+
 
             v_to_bias[v][season] = annual_bias.mean(axis=0)
 
-            good_points = ~v_to_bias[v][season].mask
+            the_mask = v_to_bias[v][season].mask
+            if not np.any(the_mask):
+                good_points = np.ones_like(v_to_bias[v][season], dtype=np.bool)
+            else:
+                good_points = ~the_mask
+
+            logger.info(good_points.shape)
+
             i_pos, j_pos = np.where(good_points)
             v_to_pvalue[v][season] = np.ma.masked_all_like(v_to_bias[v][season])
-            v_to_pvalue[v][season][good_points] = ttest_ind(mod_data[:, i_pos, j_pos], obs_data[:, i_pos, j_pos],
-                                                            equal_var=False, axis=0)[1]
+            pv = ttest_ind(mod_data[:, i_pos, j_pos], obs_data[:, i_pos, j_pos],
+                           equal_var=False, axis=0)[1]
+
+            r = __calculate_spatial_correlations(mod_data[:, i_pos, j_pos], obs_data[:, i_pos, j_pos])
+            print(f"Correlation: var={v}, season={season}, r={r}")
+
+            v_to_pvalue[v][season][good_points] = np.ma.masked_where(np.isnan(pv), pv)
 
     return v_to_bias, v_to_pvalue
 
 
-def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
+def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
+                exp_label="validation_canesm2c",
+                vname_to_clevs=None):
     """
     Plot the biases on a panel, mask
     row for parameter, col for season
@@ -177,7 +194,10 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
     from cartopy import crs as ccrs
     import matplotlib.pyplot as plt
 
-    img_dir = common_params.img_folder / "validation_canesm2c"
+    if vname_to_clevs is None:
+        vname_to_clevs = common_params.bias_vname_to_clevels
+
+    img_dir = common_params.img_folder / exp_label
 
     projection = ccrs.PlateCarree()
     axes_class = (GeoAxes, dict(map_projection=projection))
@@ -196,8 +216,10 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
             break
 
     p = None
+    clevs = None
 
-    plot_utils.apply_plot_params(font_size=10, width_cm=40)
+    plot_utils.apply_plot_params(font_size=9, width_cm=50)
+    plt.rcParams["axes.titlesize"] = plt.rcParams["font.size"]
     fig = plt.figure()
 
     # create an AxesGrid for each variable
@@ -217,9 +239,9 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
             season = seasons[col]
 
             if col == 0:
-                ax.annotate(f"{var_display_names[var]}", (-0.1, 0.5),
+                ax.annotate(f"{var_display_names[var]}\n", (-0.1, 0.5),
                             xycoords="axes fraction", va="center", ha="center", rotation="vertical",
-                            font_properties=FontProperties(size=plt.rcParams["axes.titlesize"]))
+                            font_properties=FontProperties(size=plt.rcParams["font.size"]))
 
             if ivar == 0:
                 ax.set_title(season)
@@ -236,14 +258,15 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
             data = np.ma.masked_where(np.isnan(data), data)
             # to handle outside of the region of interest
             # data = np.ma.masked_where(np.abs(data) < 1e-7, data)
-            data = np.ma.masked_where((pval > pval_max) | pval.mask, data)
+            data = np.ma.masked_where((pval > pval_max), data)
 
             plot_field = True
-            if np.all(data.mask | np.isnan(data)):
+            if np.all(data.mask):
                 plot_field = False
                 logger.info(f"all is not significant for {var} during {season}")
             else:
                 logger.info(f"Plotting biases for {var} during {season}")
+                assert not np.all(data.mask)
 
             ax.background_patch.set_facecolor("0.75")
 
@@ -257,18 +280,31 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
 
             lons[lons > 180] -= 360
 
-            clevs = common_params.bias_vname_to_clevels[var]
-            norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1)
+            clevs = vname_to_clevs[var]
+            norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1, clip=False)
             cmap = cm.get_cmap("bwr", len(clevs) - 1)
+            assert cmap.N == len(clevs) - 1
+            cmap.set_over("orange")
+            cmap.set_under("cyan")
 
             if plot_field:
-                logger.debug(f"Not plotting {var} during {season}, nothing is significant")
-                p = ax.contourf(lons, lats, data,
+                logger.info([var,
+                            season,
+                            np.sum(~data.mask) * 100. / np.product(data.shape),
+                            np.sum(~data.mask)])
+
+                p = ax.pcolormesh(lons, lats, data,
                                 transform=projection,
                                 cmap=cmap,
-                                levels=clevs, norm=norm, extend="both")
+                                norm=norm)
+            else:
+                logger.debug(f"Not plotting {var} during {season}, nothing is significant")
 
             line_color = "k"
+
+            lakes_fc = "0.75"
+            if var == default_varname_mappings.LAKE_ICE_FRACTION:
+                lakes_fc = "none"
 
             ax.add_feature(common_params.LAKES_50m, facecolor="none", edgecolor=line_color, linewidth=0.5)
             ax.add_feature(common_params.COASTLINE_50m, facecolor="none", edgecolor=line_color, linewidth=0.5)
@@ -278,13 +314,19 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05):
             logger.info(extent)
             ax.set_extent(common_map_extent, crs=projection)
 
-        axgr.cbar_axes[0].colorbar(p)
+        # axgr.cbar_axes[0].colorbar(p, extend="both", ticks=clevs[::3])
+        # axgr.cbar_axes[0].set_ylabel(units[var], fontdict=dict(size=plt.rcParams["font.size"]))
+
+        plt.colorbar(p, extend="both", ticks=clevs[::3], cax=axgr.cbar_axes[0])
         axgr.cbar_axes[0].set_ylabel(units[var], fontdict=dict(size=plt.rcParams["font.size"]))
 
+
+
     img_dir.mkdir(exist_ok=True, parents=True)
-    img_file = img_dir / "all_biases.png"
+    img_file = img_dir / f"all_{exp_label}.png"
     sys.stderr.write(f"Saving plots to {img_file}")
     fig.savefig(img_file, dpi=400, bbox_inches="tight")
+
 
 def main():
     beg_year = 1989
@@ -295,17 +337,32 @@ def main():
         ("MA", (2, 3)),
     ])
 
+    known_variables = all_known_variables.copy()
+    known_variables.remove(CAO)
+    known_variables.remove(SNOWFALL_RATE)
+
+    # for the 20200410 version of the validation plot
+    known_variables.remove(T_AIR_2M)
+    known_variables.remove(TOTAL_PREC)
+
     pval_max = 0.1
 
     v_to_data = OrderedDict()
     v_to_lons = OrderedDict()
     v_to_lats = OrderedDict()
     for v in known_variables:
-        v_to_data[v], v_to_lons[v], v_to_lats[v] = get_data(v, season_to_months=season_to_months, beg_year=beg_year, end_year=end_year)
+        v_to_data[v], v_to_lons[v], v_to_lats[v] = get_data(v,
+                                                            season_to_months=season_to_months,
+                                                            beg_year=beg_year,
+                                                            end_year=end_year)
 
     v_to_bias, v_to_pvalue = calc_biases_and_pvals(v_to_data)
 
-    plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=pval_max)
+    v_to_obs, _ = calc_biases_and_pvals(v_to_data, multipliers=[0, 1])
+
+    plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=pval_max,
+                exp_label="validation_canesm2c_excl_tt_and_pr")
+
 
 if __name__ == '__main__':
     main()

@@ -2,7 +2,6 @@ import cartopy
 from collections import OrderedDict
 from datetime import datetime
 
-from eofs.standard import Eof
 from matplotlib import cm
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import NullLocator
@@ -33,9 +32,9 @@ def entry_for_cc_canesm2_gl():
     data_root = common_params.data_root
     label_to_datapath = OrderedDict([
         (common_params.crcm_nemo_cur_label,
-         data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010/merged/"),
+         data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010/merged"),
         (common_params.crcm_nemo_fut_label,
-         data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100/merged/"),
+         data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100/merged"),
     ])
 
     cur_st_date = datetime(1989, 1, 1)

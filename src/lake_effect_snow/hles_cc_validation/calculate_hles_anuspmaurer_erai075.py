@@ -13,7 +13,7 @@ from lake_effect_snow.default_varname_mappings import T_AIR_2M, V_SN, U_WE, vnam
     vname_to_multiplier_CRCM5, vname_to_fname_prefix_CRCM5
 
 
-def calculate_hles_daymet_erai075(nprocs=6):
+def calculate_hles_anuspmaurer_erai075(nprocs=6):
     """
     Calculate HLES
     """
@@ -24,10 +24,10 @@ def calculate_hles_daymet_erai075(nprocs=6):
 
     # debug
     period = Period(
-        datetime(1989, 1, 1), datetime(1989, 2, 1)
+        datetime(1989, 1, 1), datetime(1989, 2, 28)
     )
 
-    label = "HLES_obs_daymet_erai075_niccis_{}-{}_monthly_test".format(period.start.year, period.end.year)
+    label = "HLES_obs_anuspmaur_erai075_niccis_{}-{}".format(period.start.year, period.end.year)
 
     vname_to_level_erai = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
@@ -40,16 +40,16 @@ def calculate_hles_daymet_erai075(nprocs=6):
 
     # It seems that the Daymet data I have are in mm/day
     # converting to M/S
-    vname_to_multiplier[default_varname_mappings.TOTAL_PREC] = 1e-3 / (24 * 3600)
-    # vname_to_multiplier[default_varname_mappings.TOTAL_PREC] = 1 # debug test with anuspmauer tt,pr
+    vname_to_multiplier[default_varname_mappings.TOTAL_PREC] = 1. # no need to convert for anusplin
 
     vname_map = {}
     vname_map.update(vname_map_CRCM5)
     # vname_map[default_varname_mappings.SNOWFALL_RATE] = "SN"
     vname_map[default_varname_mappings.SNOWFALL_RATE] = "XXX"
 
-    base_folder = "/home/huziy/data/big1/Projects/observations/obs_data_for_HLES/interploated_to_the_same_grid/test"
-    # base_folder = "/home/huziy/data/big1/Projects/observations/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_412x220_icefix_daymet"
+    # base_folder = "/home/huziy/data/big1/Projects/observations/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260_icefix_daymet"
+    # base_folder = "/home/huziy/data/big1/Projects/observations/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260.backup"
+    base_folder = "/home/huziy/data/big1/Projects/observations/obs_data_for_HLES/interploated_to_the_same_grid/GL_0.1_452x260_icefix"
 
     pool = Pool(processes=nprocs)
 
@@ -84,11 +84,11 @@ def calculate_hles_daymet_erai075(nprocs=6):
         input_params.append(kwargs)
 
     # execute in parallel
-    pool.map(monthly_func, input_params)
-    # for ip in input_params:
-    #     monthly_func(ip)
+    #pool.map(monthly_func, input_params)
+    for ip in input_params:
+         monthly_func(ip)
 
 
 
 if __name__ == '__main__':
-    calculate_hles_daymet_erai075()
+    calculate_hles_anuspmaurer_erai075()

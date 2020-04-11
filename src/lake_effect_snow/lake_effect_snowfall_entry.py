@@ -218,6 +218,9 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
 
     secs_per_day = timedelta(days=1).total_seconds()
 
+    air_temp = None
+    precip_m_s = None
+
     for start in period.range("years"):
 
         end_date = start.add(months=len(months_of_interest))
@@ -267,32 +270,32 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             snfl = precip_m_s.copy()
             snfl.name = default_varname_mappings.SNOWFALL_RATE
 
-            valid = ~(np.isnan(precip_m_s) | np.isnan(air_temp)).values
-            snfl.values[valid] = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values[valid], tair_deg_c=air_temp.values[valid])
+            valid = ~(np.isnan(precip_m_s.values) | np.isnan(air_temp.values))
+            snfl.values[valid] = base_utils.get_snow_fall_m_per_s(precip_m_per_s=precip_m_s.values[valid],
+                                                                  tair_deg_c=air_temp.values[valid])
 
             sys.stderr.write(f"{precip_m_s}\n")
 
             sys.stderr.write("===========precip ranges (expect in M/S)=======\n")
             sys.stderr.write(f"{precip_m_s.min().values.item(), '...', precip_m_s.max().values.item()}\n")
 
-
             sys.stderr.write("===========air temp ranges=======\n")
             sys.stderr.write(f"{air_temp.min().values.item(), '...', air_temp.max().values.item()}\n")
 
         sys.stderr.write("Snowfall values ranges: \n")
-        sys.stderr.write(f"{snfl.min().values.item(), '...' , snfl.max().values.item(), common_params.lower_limit_of_daily_snowfall}\n")
+        sys.stderr.write(
+            f"{snfl.min().values.item(), '...' , snfl.max().values.item(), common_params.lower_limit_of_daily_snowfall}\n")
 
         # save snowfall total
         snfl_total = snfl.copy()
         snfl_total *= timedelta(days=1).total_seconds()
         snfl_total.attrs["units"] = "M/day"
 
-
-        # set to 0 snowfall lower than 1 cm/day
-        snfl.values[snfl.values <= common_params.lower_limit_of_daily_snowfall] = 0
+        # set to 0 snowfall lower than 10 cm/day
+        where_valid = ~np.isnan(snfl.values)
+        snfl.values[where_valid][snfl.values[where_valid] <= common_params.lower_limit_of_daily_snowfall] = 0
         snfl *= timedelta(days=1).total_seconds()
         snfl.attrs["units"] = "M/day"
-
 
         years_index.append(start.year)
 
@@ -396,10 +399,12 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
             xs_nnlc, ys_nnlcl, zs_nnlcl = lat_lon.lon_lat_to_cartesian(lons.flatten(), lats.flatten())
             ktree_for_nonlocal_snowfall_calculations = KDTree(list(zip(xs_nnlc, ys_nnlcl, zs_nnlcl)))
 
+
         snfl_nonlocal = get_nonlocal_mean_snowfall(lons=lons, lats=lats, region_of_interest=reg_of_interest,
                                                    kdtree=ktree_for_nonlocal_snowfall_calculations,
                                                    snowfall=snfl, lake_mask=lake_mask, outer_radius_km=500)
 
+        # debug comment non-local contribution
         snfl = (snfl > (common_params.snfl_local_amplification_m_per_s + snfl_nonlocal)).values * snfl
 
         # save daily data to file
@@ -412,11 +417,16 @@ def calculate_enh_lakeffect_snowfall_for_a_datasource(data_mngr, label="", perio
         # import pickle
         # pickle.dump(lake_ice_fraction, open(str(out_file_daily) + ".bin", "wb"))
 
-        ds["lake_ice_fraction"] = lake_ice_fraction.loc[:, i_min:i_max + 1, j_min:j_max + 1]
-        ds["u_we"] = u_we.loc[:, i_min:i_max + 1, j_min:j_max + 1]
-        ds["v_sn"] = v_sn.loc[:, i_min:i_max + 1, j_min:j_max + 1]
-        ds["total_snowfall"] = snfl_total.loc[:, i_min:i_max + 1, j_min:j_max + 1]
+        slices = (slice(None), slice(i_min, i_max + 1), slice(j_min, j_max + 1))
+        ds["lake_ice_fraction"] = lake_ice_fraction.loc[slices]
+        ds["u_we"] = u_we.loc[slices]
+        ds["v_sn"] = v_sn.loc[slices]
+        ds["total_snowfall"] = snfl_total.loc[slices]
 
+        if air_temp is not None:
+            ds["t2m"] = air_temp[slices]
+            ds["pr_m_s"] = precip_m_s[slices]
+            ds["pr_m_s"]["units"] = "m/s"
 
         ds.to_netcdf(str(out_file_daily))
 

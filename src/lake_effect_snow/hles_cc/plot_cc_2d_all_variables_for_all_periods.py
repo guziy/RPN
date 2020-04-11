@@ -267,7 +267,6 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
                                                     season_to_months=season_to_months,
                                                     temperature_vname="TT")
 
-
     fut_means = fut_dm.get_mean_number_of_cao_days(start_year=fut_start_yr, end_year=fut_end_year,
                                                      season_to_months=season_to_months,
                                                      temperature_vname="TT")

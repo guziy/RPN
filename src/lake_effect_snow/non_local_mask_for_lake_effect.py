@@ -1,5 +1,6 @@
 from functools import lru_cache
 import numpy as np
+import xarray
 from numba import jit
 from scipy.spatial import KDTree
 
@@ -8,7 +9,8 @@ from util.geo import lat_lon
 
 
 #@jit
-def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall, lake_mask, outer_radius_km=500):
+def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall: xarray.DataArray,
+                               lake_mask, outer_radius_km=500):
 
     nonlocal_snfl = snowfall.copy()
 
@@ -23,12 +25,13 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall,
         # ignore lakes and the areas within the lake effect zone
         the_mask &= (~region_of_interest)
         the_mask &= (~lake_mask)
+        the_mask &= (~np.isnan(snowfall.values[0]))
 
         if np.any(the_mask):
             for t_ind, snfl_current in enumerate(snowfall):
                 nonlocal_snfl[t_ind, i, j] = snfl_current.values[the_mask].mean()
         else:
-            nonlocal_snfl[:, i, j] = snowfall[:, i, j]
+            nonlocal_snfl[:, i, j] = 0.
 
     return nonlocal_snfl
 

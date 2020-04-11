@@ -746,7 +746,7 @@ class DataManager(object):
 
             if self.varname_to_file_path is None:
                 base_folder = Path(self.base_folder)
-                ds = xarray.open_mfdataset(str(base_folder / "*.nc*"), data_vars="minimal")
+                ds = xarray.open_mfdataset(str(base_folder / "*.nc*"), data_vars="minimal", combine="by_coords")
             else:
                 ## In the case of very different netcdf files in the folder
                 ## i.e. data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES_OPEN_EACH_FILE_SEPARATELY
@@ -870,8 +870,6 @@ class DataManager(object):
 
         return kdtree
 
-
-
     def get_mean_number_of_hles_days(self, start_year: int, end_year: int, season_to_months: dict, hles_vname: str):
         result = defaultdict(dict)
 
@@ -899,8 +897,13 @@ class DataManager(object):
                 # calculate number of hles days
 
                 data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t")
+                data_daily = data_daily.to_masked_array()
 
-                result[season][y] = (data_daily.values >= 0.1).sum(axis=0)
+                data_daily[data_daily.mask] = 0
+                data_daily[np.isnan(data_daily)] = 0
+
+                # TODO: make something smarter than hardcoding hles units to M/day
+                result[season][y] = (data_daily >= 0.1).sum(axis=0)
 
 
         pickle.dump(result, cache_file.open("wb"))

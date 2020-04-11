@@ -21,8 +21,9 @@ all_known_variables = [
     default_varname_mappings.HLES_FREQUENCY,
     default_varname_mappings.T_AIR_2M,
     default_varname_mappings.TOTAL_PREC,
+    default_varname_mappings.SNOWFALL_RATE,
     default_varname_mappings.LAKE_ICE_FRACTION,
-    default_varname_mappings.CAO
+    default_varname_mappings.CAO,
 ]
 
 
@@ -58,7 +59,8 @@ def get_data(vname=default_varname_mappings.T_AIR_2M,
         default_varname_mappings.T_AIR_2M: "TT",
         default_varname_mappings.TOTAL_PREC: "PR",
         default_varname_mappings.LAKE_ICE_FRACTION: "LC",
-        default_varname_mappings.HLES_AMOUNT: "hles_snow"
+        default_varname_mappings.HLES_AMOUNT: "hles_snow",
+        default_varname_mappings.SNOWFALL_RATE: "SN"
     }
 
     level_map = {v: VerticalLevel(1, level_kinds.HYBRID) for v in all_known_variables}
@@ -68,7 +70,8 @@ def get_data(vname=default_varname_mappings.T_AIR_2M,
             default_varname_mappings.TOTAL_PREC: 1.,  # converted to mm/day on netcdf export
             default_varname_mappings.T_AIR_2M: 1.,
             default_varname_mappings.LAKE_ICE_FRACTION: 1.,
-            default_varname_mappings.HLES_AMOUNT: 100.  # M/day -> cm/day
+            default_varname_mappings.HLES_AMOUNT: 100.,  # M/day -> cm/day
+            default_varname_mappings.SNOWFALL_RATE: 1000. * 24 * 3600. # M/s  -> mm/day
         }
     else:
         obs_multipliers = data_query["obs"]["multipliers"]
