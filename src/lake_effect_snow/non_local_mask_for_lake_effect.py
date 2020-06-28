@@ -4,17 +4,20 @@ import xarray
 from numba import jit
 from scipy.spatial import KDTree
 
-from lake_effect_snow import common_params
+from lake_effect_snow import common_params, base_utils
 from util.geo import lat_lon
 
 
 # @jit
-def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall: xarray.DataArray,
+def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree,
+                               hles_snowfall: xarray.DataArray,
+                               total_snowfall: xarray.DataArray,
                                lake_mask, outer_radius_km=500):
-    nonlocal_snfl = snowfall.copy()
+    nonlocal_snfl = hles_snowfall.copy()
 
-    # need non-local snowfall only for points where actual snowfall occurs
-    where_snows_heavy = nonlocal_snfl.sum(dim="t").values >= common_params.lower_limit_of_daily_snowfall
+    # need non-local snowfall only for points where (at least once) actual heavy snowfall occurs
+    snfl_limit_m_per_d = common_params.lower_limit_of_daily_snowfall * base_utils.SECONDS_PER_DAY
+    where_snows_heavy = hles_snowfall.sum(dim="t").values >= snfl_limit_m_per_d
 
     for i, j in zip(*np.where(region_of_interest & where_snows_heavy)):
         lon, lat = lons[i, j], lats[i, j]
@@ -25,10 +28,10 @@ def get_nonlocal_mean_snowfall(lons, lats, region_of_interest, kdtree, snowfall:
         # ignore lakes and the areas within the lake effect zone
         the_mask &= (~region_of_interest)
         the_mask &= (~lake_mask)
-        the_mask &= (~np.isnan(snowfall.values[0]))
+        the_mask &= (~np.isnan(hles_snowfall.values[0]))
 
         if np.any(the_mask):
-            for t_ind, snfl_current in enumerate(snowfall):
+            for t_ind, snfl_current in enumerate(total_snowfall):
                 nonlocal_snfl[t_ind, i, j] = snfl_current.values[the_mask].mean()
         else:
             nonlocal_snfl[:, i, j] = 0.

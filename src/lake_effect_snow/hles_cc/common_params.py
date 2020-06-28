@@ -1,13 +1,11 @@
-from collections import defaultdict
-
-import cartopy
 from pathlib import Path
 import numpy as np
 from cartopy.feature import NaturalEarthFeature
 
 # data_root = Path("/Users/huziy/HLES")
 # data_root = Path("/Users/huziy/Projects")
-data_root = Path("/home/huziy/data/big1/Projects/HLES_GL_NEMO_CRCM5_CC/HLES_analysis_air_backup/HLES_data_paper/")
+# data_root = Path("/home/huziy/data/big1/Projects/HLES_GL_NEMO_CRCM5_CC/HLES_analysis_air_backup/HLES_data_paper/")
+data_root = Path("/home/huziy/data/big1/Projects/HLES_GL_NEMO_CRCM5_CC/cc_coupled-GL_CanESM2/")
 
 img_folder = Path("hles_cc_paper")
 from lake_effect_snow import default_varname_mappings
@@ -61,13 +59,24 @@ var_display_names.update(bias_display_names)
 
 bias_vname_to_clevels = {
     default_varname_mappings.HLES_AMOUNT: np.arange(-2.1, 2.2, 0.2,),
-    default_varname_mappings.HLES_FREQUENCY: np.arange(-2.1, 2.2, 0.2,),
+    default_varname_mappings.HLES_FREQUENCY: np.arange(-2.9, 3.0, 0.4,),
     default_varname_mappings.T_AIR_2M: np.arange(-5.5, 5.6, 1),
     default_varname_mappings.TOTAL_PREC: np.arange(-3.75, 4., 0.5),
     default_varname_mappings.LAKE_ICE_FRACTION: np.arange(-0.75, 0.8, 0.1),
     default_varname_mappings.CAO: np.arange(-2.1, 2.2, 0.2,),
     default_varname_mappings.SNOWFALL_RATE: np.arange(-3.75, 4., 0.5)
 }
+
+obs_vname_to_clevels = {
+    default_varname_mappings.HLES_AMOUNT: np.arange(0, 4, 0.2,),
+    default_varname_mappings.HLES_FREQUENCY: np.arange(0, 8, 0.4),
+    default_varname_mappings.T_AIR_2M: np.arange(-25.5, 25.6, 1),
+    default_varname_mappings.TOTAL_PREC: np.arange(0, 10., 0.5),
+    default_varname_mappings.LAKE_ICE_FRACTION: np.arange(0, 1, 0.1),
+    default_varname_mappings.CAO: np.arange(0, 2.2, 0.2,),
+    default_varname_mappings.SNOWFALL_RATE: np.arange(0, 4., 0.5)
+}
+
 
 cc_vname_to_clevels = {
     default_varname_mappings.HLES_AMOUNT: np.arange(-2.1, 2.2, 0.2,),
@@ -78,3 +87,5 @@ cc_vname_to_clevels = {
     default_varname_mappings.CAO: np.arange(-2.1, 2.2, 0.2,),
     default_varname_mappings.SNOWFALL_RATE: np.arange(-1.8, 2, 0.4),
 }
+
+NEAR_GL_HLES_ZONE_SIZE_KM = 200.0

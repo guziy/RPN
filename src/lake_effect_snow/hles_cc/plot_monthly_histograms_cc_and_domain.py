@@ -104,7 +104,8 @@ def main(varname=""):
 
         assert hles_file is not None, f"Could not find any HLES files in {datapath}"
 
-        series = get_monthly_accumulations_area_avg_from_merged(data_file=hles_file, varname=varname,
+        series = get_monthly_accumulations_area_avg_from_merged(data_file=hles_file,
+                                                                varname=varname,
                                                                 region_of_interest_mask=hles_region_mask & focus_mask)
         label_to_series[label] = series
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import netCDF4
 import numpy as np
+import pytz
 import xarray
 #from mpl_toolkits.basemap import Basemap
 from pendulum import datetime as Pendulum
@@ -12,7 +13,7 @@ from pendulum import Period
 from rpn import rpn
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
-from scipy.spatial import KDTree
+# from scipy.spatial import KDTree
 from xarray import DataArray
 
 import util.stat_helpers
@@ -1008,7 +1009,7 @@ class DataManager(object):
         for season, months in season_to_months.items():
 
             for y in range(start_year, end_year + 1):
-                d1 = Pendulum(y, months[0], 1)
+                d1 = Pendulum(y, months[0], 1, tz=None)
                 d2 = d1.add(months=len(months)).subtract(seconds=1)
 
                 if d2.year > end_year:

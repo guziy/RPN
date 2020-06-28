@@ -32,9 +32,9 @@ def entry_for_cc_canesm2_gl():
     data_root = common_params.data_root
     label_to_datapath = OrderedDict([
         (common_params.crcm_nemo_cur_label,
-         data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010/merged"),
+         data_root / "cur/hles"),
         (common_params.crcm_nemo_fut_label,
-         data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100/merged"),
+         data_root / "fut/hles"),
     ])
 
     cur_st_date = datetime(1989, 1, 1)
@@ -68,13 +68,15 @@ def entry_for_cc_canesm2_gl():
     gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
 
-
-    main(label_to_data_path=label_to_datapath, var_pairs=var_pairs, periods_info=periods_info,
+    main(label_to_data_path=label_to_datapath,
+         var_pairs=var_pairs, periods_info=periods_info,
          vname_display_names=var_display_names, season_to_months=season_to_months,
          hles_region_mask=hles_region_mask, lakes_mask=gl_mask)
 
 
-def calculate_correlations_and_pvalues(var_pairs, label_to_vname_to_season_to_yearlydata: dict, season_to_months: dict,
+def calculate_correlations_and_pvalues(var_pairs,
+                                       label_to_vname_to_season_to_yearlydata: dict,
+                                       season_to_months: dict,
                                        region_of_interest_mask, lakes_mask=None, lats=None) -> dict:
     """
 
@@ -117,7 +119,6 @@ def calculate_correlations_and_pvalues(var_pairs, label_to_vname_to_season_to_ye
                     v_lake_ice = v_lake_ice[:, positions_lakes]
                     # calculate anomalies
                     area_avg_lake_ice = (v_lake_ice - v_lake_ice.mean(axis=0)[np.newaxis, :]).mean(axis=1)
-
 
                     # print(positions)
                     for i in positions_hles_region:
@@ -165,18 +166,18 @@ def main(label_to_data_path: dict, var_pairs: list,
     level_mapping = {v: VerticalLevel(0) for v in
                      varnames}  # Does not really make a difference, since all variables are 2d
 
-    comon_store_config = {
+    common_store_config = {
         DataManager.SP_DATASOURCE_TYPE: data_source_types.ALL_VARS_IN_A_FOLDER_IN_NETCDF_FILES,
         DataManager.SP_INTERNAL_TO_INPUT_VNAME_MAPPING: varname_mapping,
         DataManager.SP_LEVEL_MAPPING: level_mapping
     }
 
     cur_dm = DataManager(
-        store_config=dict({DataManager.SP_BASE_FOLDER: label_to_data_path[cur_label]}, **comon_store_config)
+        store_config=dict({DataManager.SP_BASE_FOLDER: label_to_data_path[cur_label]}, **common_store_config)
     )
 
     fut_dm = DataManager(
-        store_config=dict({DataManager.SP_BASE_FOLDER: label_to_data_path[fut_label]}, **comon_store_config)
+        store_config=dict({DataManager.SP_BASE_FOLDER: label_to_data_path[fut_label]}, **common_store_config)
     )
 
     # get the data and do calculations
@@ -185,9 +186,9 @@ def main(label_to_data_path: dict, var_pairs: list,
     cur_start_yr, cur_end_year = periods_info.get_cur_year_limits()
     fut_start_yr, fut_end_year = periods_info.get_fut_year_limits()
 
-
-    #load coordinates in memory
-    cur_dm.read_data_for_period(Period(datetime(cur_start_yr, 1, 1), datetime(cur_start_yr, 1, 2)), varname_internal=varnames[0])
+    # load coordinates in memory
+    cur_dm.read_data_for_period(Period(datetime(cur_start_yr, 1, 1), datetime(cur_start_yr, 1, 2)),
+                                varname_internal=varnames[0])
 
     label_to_vname_to_season_to_data = {
         cur_label: {}, fut_label: {}
@@ -203,18 +204,14 @@ def main(label_to_data_path: dict, var_pairs: list,
         label_to_vname_to_season_to_data[cur_label][vname] = cur_means
         label_to_vname_to_season_to_data[fut_label][vname] = fut_means
 
-
     if hles_region_mask is None:
         data_field = label_to_vname_to_season_to_data[common_params.crcm_nemo_cur_label][list(season_to_months.keys())[0]]
         hles_region_mask = np.ones_like(data_field)
-
-
 
     correlation_data = calculate_correlations_and_pvalues(var_pairs, label_to_vname_to_season_to_data,
                                                           season_to_months=season_to_months,
                                                           region_of_interest_mask=hles_region_mask,
                                                           lats=cur_dm.lats, lakes_mask=lakes_mask)
-
 
     # Calculate mean seasonal temperature
     label_to_season_to_tt_mean = {}
@@ -222,8 +219,6 @@ def main(label_to_data_path: dict, var_pairs: list,
         label_to_season_to_tt_mean[label] = {}
         for season, yearly_data in vname_to_season_to_data["TT"].items():
             label_to_season_to_tt_mean[label][season] = np.mean([f for f in yearly_data.values()], axis=0)
-
-
 
     # do the plotting
     fig = plt.figure()
@@ -272,7 +267,6 @@ def main(label_to_data_path: dict, var_pairs: list,
                             rotation=90,
                             transform=ax.transAxes)
 
-
                 divider = make_axes_locatable(ax)
                 ax_cb = divider.new_horizontal(size="5%", pad=0.1, axes_class=plt.Axes)
                 fig.add_axes(ax_cb)
@@ -288,10 +282,6 @@ def main(label_to_data_path: dict, var_pairs: list,
 
     img_file = img_dir / "hles_tt_pr_correlation_fields_cur_and_fut_mean_ice_fraction.png"
     fig.savefig(str(img_file), **common_params.image_file_options)
-
-
-
-
 
 
 if __name__ == '__main__':

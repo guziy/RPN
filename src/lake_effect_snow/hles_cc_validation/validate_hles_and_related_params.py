@@ -1,5 +1,3 @@
-
-
 """
 Panel plot of biases.
 1 row for parameter
@@ -15,6 +13,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.font_manager import FontProperties
 from mpl_toolkits.axes_grid1 import AxesGrid
 from pendulum import Period, datetime
+from pykdtree.kdtree import KDTree
 from rpn import level_kinds
 from scipy.stats import ttest_ind
 
@@ -33,7 +32,11 @@ from lake_effect_snow.data_utils import get_data as get_data_gen, all_known_vari
 import sys
 import logging
 
+from lake_effect_snow.lake_effect_snowfall_entry import get_zone_around_lakes_mask
 from util import plot_utils
+from util.geo import lat_lon
+from util.geo.mask_from_shp import get_mask
+from lake_effect_snow import common_params as hles_alg_common_params
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -133,6 +136,7 @@ def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
 
     v_to_bias = {}
     v_to_pvalue = {}
+    v_to_corr = {}
 
     # extract numpy array from a dict
     def __get_np_data(a_dict):
@@ -144,6 +148,7 @@ def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
     for v, data in v_to_data.items():
         v_to_bias[v] = {}
         v_to_pvalue[v] = {}
+        v_to_corr[v] = {}
         for season in data["mod"]:
             mod_data = __get_np_data(data["mod"][season])
             obs_data = __get_np_data(data["obs"][season])
@@ -153,7 +158,6 @@ def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
                 obs_data = np.ma.masked_where(obs_data > 1, obs_data)
 
             annual_bias = mod_data * multipliers[0] + obs_data * multipliers[1]
-
 
             v_to_bias[v][season] = annual_bias.mean(axis=0)
 
@@ -172,18 +176,20 @@ def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
 
             r = __calculate_spatial_correlations(mod_data[:, i_pos, j_pos], obs_data[:, i_pos, j_pos])
             print(f"Correlation: var={v}, season={season}, r={r}")
-
+            v_to_corr[v][season] = r
             v_to_pvalue[v][season][good_points] = np.ma.masked_where(np.isnan(pv), pv)
 
-    return v_to_bias, v_to_pvalue
+    return v_to_bias, v_to_pvalue, v_to_corr
 
 
 def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
                 exp_label="validation_canesm2c",
-                vname_to_clevs=None):
+                vname_to_clevs=None, v_to_corr=None,
+                var_display_names=common_params.var_display_names):
     """
     Plot the biases on a panel, mask
     row for parameter, col for season
+    :param var_display_names:
     :param pval_max:
     :param v_to_bias:
     :param v_to_pvalue:
@@ -217,6 +223,15 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
 
     p = None
     clevs = None
+
+    # box properties for the correlation value box
+    bbox_properties = dict(
+        boxstyle="round,pad=0.2",
+        ec="k",
+        fc="w",
+        ls="-",
+        lw=1
+    )
 
     plot_utils.apply_plot_params(font_size=9, width_cm=50)
     plt.rcParams["axes.titlesize"] = plt.rcParams["font.size"]
@@ -257,8 +272,24 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
 
             data = np.ma.masked_where(np.isnan(data), data)
             # to handle outside of the region of interest
-            # data = np.ma.masked_where(np.abs(data) < 1e-7, data)
+            # data = np.ma.masked_where(np.abs(data) <= np.abs(data).min(), data)
             data = np.ma.masked_where((pval > pval_max), data)
+
+            # mask outside of the HLES zone
+            lake_mask = get_mask(lons, lats, shp_path=hles_alg_common_params.GL_COAST_SHP_PATH) > 0.1
+
+            # get the KDTree for interpolation purposes
+            ktree = KDTree(
+                np.array(list(zip(*lat_lon.lon_lat_to_cartesian(lon=lons.flatten(), lat=lats.flatten()))))
+            )
+
+            # define the ~200km near lake zone
+            near_lake_x_km_zone_mask = get_zone_around_lakes_mask(lons=lons, lats=lats, lake_mask=lake_mask,
+                                                                  ktree=ktree,
+                                                                  dist_km=common_params.NEAR_GL_HLES_ZONE_SIZE_KM)
+
+            reg_of_interest = near_lake_x_km_zone_mask | lake_mask
+            data = np.ma.masked_where(~reg_of_interest, data)  # actual masking happens here
 
             plot_field = True
             if np.all(data.mask):
@@ -282,21 +313,25 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
 
             clevs = vname_to_clevs[var]
             norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1, clip=False)
-            cmap = cm.get_cmap("bwr", len(clevs) - 1)
+            if var.startswith("bias"):
+                cmap = cm.get_cmap("bwr", len(clevs) - 1)
+                cmap.set_over("orange")
+                cmap.set_under("cyan")
+            else:
+                cmap = cm.get_cmap("gist_ncar_r", len(clevs) - 1)
+
             assert cmap.N == len(clevs) - 1
-            cmap.set_over("orange")
-            cmap.set_under("cyan")
 
             if plot_field:
                 logger.info([var,
-                            season,
-                            np.sum(~data.mask) * 100. / np.product(data.shape),
-                            np.sum(~data.mask)])
+                             season,
+                             np.sum(~data.mask) * 100. / np.product(data.shape),
+                             np.sum(~data.mask)])
 
                 p = ax.pcolormesh(lons, lats, data,
-                                transform=projection,
-                                cmap=cmap,
-                                norm=norm)
+                                  transform=projection,
+                                  cmap=cmap,
+                                  norm=norm)
             else:
                 logger.debug(f"Not plotting {var} during {season}, nothing is significant")
 
@@ -314,13 +349,19 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
             logger.info(extent)
             ax.set_extent(common_map_extent, crs=projection)
 
+            if v_to_corr is not None:
+                if var in v_to_corr:
+                    ax.annotate(f"$r=${v_to_corr[var][season]:.2f}", (0.05, 0.05),
+                                xycoords="axes fraction", va="bottom", ha="left",
+                                bbox=bbox_properties)
+
         # axgr.cbar_axes[0].colorbar(p, extend="both", ticks=clevs[::3])
         # axgr.cbar_axes[0].set_ylabel(units[var], fontdict=dict(size=plt.rcParams["font.size"]))
 
-        plt.colorbar(p, extend="both", ticks=clevs[::3], cax=axgr.cbar_axes[0])
+        cb_extend = "both" if var.startswith("bias") else "max"
+
+        plt.colorbar(p, extend=cb_extend, ticks=clevs[::3], cax=axgr.cbar_axes[0])
         axgr.cbar_axes[0].set_ylabel(units[var], fontdict=dict(size=plt.rcParams["font.size"]))
-
-
 
     img_dir.mkdir(exist_ok=True, parents=True)
     img_file = img_dir / f"all_{exp_label}.png"
@@ -356,12 +397,18 @@ def main():
                                                             beg_year=beg_year,
                                                             end_year=end_year)
 
-    v_to_bias, v_to_pvalue = calc_biases_and_pvals(v_to_data)
+    v_to_bias, v_to_pvalue, v_to_corr = calc_biases_and_pvals(v_to_data)
 
-    v_to_obs, _ = calc_biases_and_pvals(v_to_data, multipliers=[0, 1])
+    v_to_obs, _, _ = calc_biases_and_pvals(v_to_data, multipliers=[0, 1])
+
+    # mask obs as well
+    for v, season_to_bias in v_to_bias.items():
+        for season, bias in season_to_bias.items():
+            v_to_obs[v][season] = np.ma.masked_where(bias.mask, v_to_obs[v][season])
 
     plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=pval_max,
-                exp_label="validation_canesm2c_excl_tt_and_pr")
+                exp_label="validation_canesm2c_excl_tt_and_pr",
+                v_to_corr=v_to_corr)
 
 
 if __name__ == '__main__':

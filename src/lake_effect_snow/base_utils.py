@@ -1,3 +1,4 @@
+from datetime import timedelta
 
 import numpy as np
 
@@ -5,7 +6,7 @@ from crcm5.nemo_vs_hostetler import commons
 
 FRESH_SNOW_MIN_DENSITY_KG_PER_M3 = 50.0
 WATER_DENSITY_KG_PER_M3 = 1000.0
-
+SECONDS_PER_DAY = timedelta(days=1).total_seconds()
 
 
 class VerticalLevel(object):

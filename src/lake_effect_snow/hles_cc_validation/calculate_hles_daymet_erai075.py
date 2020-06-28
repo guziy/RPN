@@ -23,18 +23,17 @@ def calculate_hles_daymet_erai075(nprocs=6):
     )
 
     # debug
-    period = Period(
-        datetime(1989, 1, 1), datetime(1989, 2, 1)
-    )
+    # period = Period(
+    #     datetime(1989, 1, 1), datetime(1990, 2, 1)
+    # )
 
-    label = "HLES_obs_daymet_erai075_niccis_{}-{}_monthly_test".format(period.start.year, period.end.year)
+    label = "HLES_obs_daymet_erai075_niccis_{}-{}_based_on_452x260_v002".format(period.start.year, period.end.year)
 
     vname_to_level_erai = {
         T_AIR_2M: VerticalLevel(1, level_kinds.HYBRID),
         U_WE: VerticalLevel(1, level_kinds.HYBRID),
         V_SN: VerticalLevel(1, level_kinds.HYBRID),
     }
-
 
     vname_to_multiplier = vname_to_multiplier_CRCM5.copy()
 
@@ -54,7 +53,7 @@ def calculate_hles_daymet_erai075(nprocs=6):
     pool = Pool(processes=nprocs)
 
     input_params = []
-    for month_start in period.range("months"):
+    for month_count, month_start in enumerate(period.range("months")):
         month_end = month_start.add(months=1).subtract(seconds=1)
 
         current_month_period = Period(month_start, month_end)
@@ -87,7 +86,6 @@ def calculate_hles_daymet_erai075(nprocs=6):
     pool.map(monthly_func, input_params)
     # for ip in input_params:
     #     monthly_func(ip)
-
 
 
 if __name__ == '__main__':
