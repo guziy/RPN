@@ -280,7 +280,7 @@ def main(label_to_data_path: dict, var_pairs: list,
     img_dir = common_params.img_folder
     img_dir.mkdir(exist_ok=True)
 
-    img_file = img_dir / "hles_tt_pr_correlation_fields_cur_and_fut_mean_ice_fraction.png"
+    img_file = img_dir / "hles_tt_pr_correlation_fields_cur_and_fut_mean_ice_fraction.pdf"
     fig.savefig(str(img_file), **common_params.image_file_options)
 
 

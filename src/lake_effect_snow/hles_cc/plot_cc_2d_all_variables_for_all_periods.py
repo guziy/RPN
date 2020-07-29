@@ -356,7 +356,7 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
     img_folder = common_params.img_folder
     img_folder.mkdir(exist_ok=True)
 
-    img_file = img_folder / f"cc_{fut_label}-{cur_label}.png"
+    img_file = img_folder / f"cc_{fut_label}-{cur_label}.pdf"
 
     fig.savefig(str(img_file), **common_params.image_file_options)
 

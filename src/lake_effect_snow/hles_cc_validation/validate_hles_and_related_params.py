@@ -364,7 +364,7 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
         axgr.cbar_axes[0].set_ylabel(units[var], fontdict=dict(size=plt.rcParams["font.size"]))
 
     img_dir.mkdir(exist_ok=True, parents=True)
-    img_file = img_dir / f"all_{exp_label}.png"
+    img_file = img_dir / f"all_{exp_label}.pdf"
     sys.stderr.write(f"Saving plots to {img_file}")
     fig.savefig(img_file, dpi=400, bbox_inches="tight")
 
