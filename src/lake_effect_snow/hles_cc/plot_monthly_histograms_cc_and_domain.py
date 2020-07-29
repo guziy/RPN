@@ -48,9 +48,9 @@ def main(varname=""):
         # (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010" / "merged"),
         # (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100" / "merged"),
         (common_params.crcm_nemo_cur_label,
-         data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_1989-2010_monthly_1989-2010" / "merged"),
+         data_root / "cur" / "hles"),
         (common_params.crcm_nemo_fut_label,
-         data_root / "lake_effect_analysis_CRCM5_NEMO_fix_CanESM2_RCP85_2079-2100_monthly_2079-2100" / "merged"),
+         data_root / "fut" / "hles"),
     ])
 
     # longutudes and latitudes of the focus region around the Great Lakes (we define it, mostly for performance
@@ -97,10 +97,9 @@ def main(varname=""):
 
     for label, datapath in label_to_datapath.items():
         hles_file = None
-        for f in datapath.iterdir():
-            if f.name.endswith("_daily.nc"):
-                hles_file = f
-                break
+        for f in datapath.glob("*daily*.nc"):
+            hles_file = f
+            break
 
         assert hles_file is not None, f"Could not find any HLES files in {datapath}"
 
@@ -192,7 +191,7 @@ def main(varname=""):
     sel_months_str = "_".join([str(m) for m in selected_months])
 
     common_params.img_folder.mkdir(exist_ok=True)
-    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}_domain.png"
+    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}_domain.pdf"
     print(f"Saving plot to {img_file}")
     fig.savefig(img_file, **common_params.image_file_options)
 

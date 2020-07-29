@@ -1,6 +1,6 @@
 from matplotlib import cm
 from matplotlib.colors import BoundaryNorm
-from mpl_toolkits.basemap import maskoceans
+# from mpl_toolkits.basemap import maskoceans
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 from rpn.rpn import RPN
 import matplotlib.pyplot as plt
@@ -11,7 +11,6 @@ from matplotlib import colors
 from matplotlib import patches
 
 
-
 def add_rectangle(ax, xx, yy, margin=10, edge_style="solid", **kwargs):
 
     xll = xx[margin, margin]
@@ -19,11 +18,11 @@ def add_rectangle(ax, xx, yy, margin=10, edge_style="solid", **kwargs):
     xur = xx[-margin, -margin]
     yur = yy[-margin, -margin]
 
-
     lw = kwargs.pop("linewidth", 2)
+    ec = kwargs.pop("edgecolor", "k")
 
     ax.add_patch(
-        patches.Polygon([(xll, yll), (xll, yur), (xur, yur), (xur, yll)], edgecolor="k",
+        patches.Polygon([(xll, yll), (xll, yur), (xur, yur), (xur, yll)], edgecolor=ec,
                         facecolor="none", linestyle=edge_style, linewidth=lw, **kwargs)
     )
 
