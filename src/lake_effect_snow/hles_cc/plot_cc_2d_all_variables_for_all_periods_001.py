@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main(img_type="pdf"):
     season_to_months = OrderedDict([
         ("ND", (11, 12)),
         ("JF", (1, 2)),
@@ -52,10 +52,20 @@ def main():
         v_to_data[v], v_to_lons[v], v_to_lats[v] = get_data(v, season_to_months=season_to_months,
                                                             data_query=data_query)
 
-    v_to_bias, v_to_pvalue = calc_biases_and_pvals(v_to_data, multipliers=(1, -1))
+    v_to_bias, v_to_pvalue, v_to_corr = calc_biases_and_pvals(v_to_data, multipliers=(1, -1))
 
-    plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=pval_max, exp_label="cc_canesm2",
-                vname_to_clevs=common_params.cc_vname_to_clevels)
+    # add bias_ prefix to the variable names for the right colormap
+    v_to_bias = OrderedDict([(f"bias_{k}", v) for k, v in v_to_bias.items()])
+    v_to_pvalue = OrderedDict([(f"bias_{k}", v) for k, v in v_to_pvalue.items()])
+    v_to_lons = OrderedDict([(f"bias_{k}", v) for k, v in v_to_lons.items()])
+    v_to_lats = OrderedDict([(f"bias_{k}", v) for k, v in v_to_lats.items()])
+    vname_to_clevs = OrderedDict([(f"bias_{k}", v) for k, v in common_params.cc_vname_to_clevels.items()])
+
+    plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats,
+                pval_max=pval_max,
+                exp_label="cc_canesm2",
+                vname_to_clevs=vname_to_clevs,
+                img_type=img_type)
 
 
 if __name__ == '__main__':

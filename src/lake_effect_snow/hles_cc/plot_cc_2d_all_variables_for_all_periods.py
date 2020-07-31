@@ -59,14 +59,14 @@ def get_gl_mask(path: Path):
 
 
 @main_decorator
-def entry_for_cc_canesm2_gl():
+def entry_for_cc_canesm2_gl(img_type="pdf"):
     """
     for CanESM2 driven CRCM5_NEMO simulation
     """
     data_root = common_params.data_root
     label_to_datapath = OrderedDict([
-        (common_params.crcm_nemo_cur_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_1989-2010_1989-2010/merged/"),
-        (common_params.crcm_nemo_fut_label, data_root / "lake_effect_analysis_CRCM5_NEMO_CanESM2_RCP85_2079-2100_2079-2100/merged/"),
+        (common_params.crcm_nemo_cur_label, data_root / "cur/hles/"),
+        (common_params.crcm_nemo_fut_label, data_root / "fut/hles/"),
     ])
 
     cur_st_date = datetime(1989, 1, 1)
@@ -118,8 +118,8 @@ def entry_for_cc_canesm2_gl():
             "multiplier": 1,
             "display_units": "days",
             "offset": 0,
-            "vmin": -1,
-            "vmax": 1,
+            "vmin": -2,
+            "vmax": 2,
         },
         "lake_ice_fraction": {
             "multiplier": 1,
@@ -153,7 +153,7 @@ def entry_for_cc_canesm2_gl():
          fut_label=common_params.crcm_nemo_fut_label,
          season_to_months=season_to_months,
          vname_display_names=var_display_names, periods_info=periods_info,
-         vars_info=vars_info)
+         vars_info=vars_info, img_type=img_type)
 
 
 def calculate_change_and_pvalues(cur_data: dict, fut_data: dict, percentages=True):
@@ -189,7 +189,7 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
          cur_label="", fut_label="",
          vname_to_mask: dict=None, vname_display_names:dict=None,
          pval_crit=0.1, periods_info: CcPeriodsInfo=None,
-         vars_info: dict=None):
+         vars_info: dict=None, img_type="pdf"):
 
     """
 
@@ -356,7 +356,7 @@ def main(label_to_data_path: dict, varnames=None, season_to_months: dict=None,
     img_folder = common_params.img_folder
     img_folder.mkdir(exist_ok=True)
 
-    img_file = img_folder / f"cc_{fut_label}-{cur_label}.pdf"
+    img_file = img_folder / f"cc_{fut_label}-{cur_label}.{img_type}"
 
     fig.savefig(str(img_file), **common_params.image_file_options)
 

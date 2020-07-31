@@ -29,12 +29,14 @@ all_known_variables = [
 
 def get_data(vname=default_varname_mappings.T_AIR_2M,
              season_to_months=None,
-             data_query=None):
+             data_query=None, tz=None):
     """
     Get seasonal means for each year for vname, obs and mod
+    :param tz: if tz is None use naive dates for selecting periods of interest
     :param data_query: dict, specifies root_dir, beg_year, end_year for mod and obs
     :param season_to_months:
     :param vname:
+
     """
 
     if season_to_months is None:
@@ -103,6 +105,10 @@ def get_data(vname=default_varname_mappings.T_AIR_2M,
     dm_mod = DataManager(store_config=mod_store_config)
 
     beg_dummy = datetime(data_query["obs"]["beg_year"], 1, 1)
+
+    if tz is None:
+        beg_dummy = beg_dummy.naive()
+
     vname_dummy = vname
 
     # calculate seasonal means

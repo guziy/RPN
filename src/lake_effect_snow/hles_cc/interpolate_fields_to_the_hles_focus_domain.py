@@ -95,7 +95,7 @@ def main(in_file: Path, target_grid_file: Path, out_dir: Path = None):
                     t_chunk_size = 1000
                     for ti_left in range(0, var.shape[0], t_chunk_size):
 
-                        ti_right = min(ti_left + t_chunk_size, var.shape[0] - 1)
+                        ti_right = min(ti_left + t_chunk_size, var.shape[0])
 
                         var_interpolated = var[ti_left:ti_right].values[:, i_mat, j_mat]
 

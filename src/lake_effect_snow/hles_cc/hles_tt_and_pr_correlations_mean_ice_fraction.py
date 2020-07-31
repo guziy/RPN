@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 
 
 @main_decorator
-def entry_for_cc_canesm2_gl():
+def entry_for_cc_canesm2_gl(img_type="pdf"):
     """
     for CanESM2 driven CRCM5_NEMO simulation
     """
@@ -71,7 +71,7 @@ def entry_for_cc_canesm2_gl():
     main(label_to_data_path=label_to_datapath,
          var_pairs=var_pairs, periods_info=periods_info,
          vname_display_names=var_display_names, season_to_months=season_to_months,
-         hles_region_mask=hles_region_mask, lakes_mask=gl_mask)
+         hles_region_mask=hles_region_mask, lakes_mask=gl_mask, img_type=img_type)
 
 
 def calculate_correlations_and_pvalues(var_pairs,
@@ -149,7 +149,8 @@ def main(label_to_data_path: dict, var_pairs: list,
          season_to_months: dict = None,
          cur_label=common_params.crcm_nemo_cur_label,
          fut_label=common_params.crcm_nemo_fut_label,
-         hles_region_mask=None, lakes_mask=None):
+         hles_region_mask=None, lakes_mask=None,
+         img_type="pdf"):
     # get a flat list of all the required variable names (unique)
     varnames = []
     for vpair in var_pairs:
@@ -280,7 +281,7 @@ def main(label_to_data_path: dict, var_pairs: list,
     img_dir = common_params.img_folder
     img_dir.mkdir(exist_ok=True)
 
-    img_file = img_dir / "hles_tt_pr_correlation_fields_cur_and_fut_mean_ice_fraction.pdf"
+    img_file = img_dir / f"hles_tt_pr_correlation_fields_cur_and_fut_mean_ice_fraction.{img_type}"
     fig.savefig(str(img_file), **common_params.image_file_options)
 
 

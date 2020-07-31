@@ -1,6 +1,6 @@
 import pickle
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, tzinfo
 from pathlib import Path
 
 import netCDF4
@@ -759,6 +759,7 @@ class DataManager(object):
             # print(ds[self.varname_mapping[varname_internal]])
 
             # try both time and t
+            print(period.start.tz)
             try:
                 var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start, period.end)).squeeze()
             except ValueError:
@@ -871,7 +872,8 @@ class DataManager(object):
 
         return kdtree
 
-    def get_mean_number_of_hles_days(self, start_year: int, end_year: int, season_to_months: dict, hles_vname: str):
+    def get_mean_number_of_hles_days(self, start_year: int, end_year: int, season_to_months: dict, hles_vname: str,
+                                     tz=None):
         result = defaultdict(dict)
 
         cache_dir = Path(self.base_folder) / "cache"
@@ -885,7 +887,12 @@ class DataManager(object):
         for season, months in season_to_months.items():
 
             for y in range(start_year, end_year + 1):
-                d1 = Pendulum(y, months[0], 1)
+                d1 = Pendulum(y, months[0], 1, tz=tz)
+                # Convert to naive if time zone is not specified
+                if tz is None:
+                    d1 = d1.naive()
+                    print(d1.tz)
+
                 d2 = d1.add(months=len(months)).subtract(seconds=1)
 
                 if d2.year > end_year:
@@ -911,7 +918,7 @@ class DataManager(object):
         return result
 
     def get_mean_number_of_cao_days(self, start_year: int, end_year: int, season_to_months: dict,
-                                    temperature_vname: str, min_cao_width_cells=5):
+                                    temperature_vname: str, min_cao_width_cells=5, tz=None):
         """
         calculate mean number of CAO days for each season and year {season: {year: field}}
         Calculation following Wheeler et al 2011
@@ -920,6 +927,7 @@ class DataManager(object):
         :param end_year:
         :param season_to_months:
         :param temperature_vname:
+        :param tz timezone info in the file, if tz is None, dates are converted to naive before comparison
         """
         season_to_year_to_std = defaultdict(dict)
         season_to_year_to_data = defaultdict(dict)
@@ -938,6 +946,9 @@ class DataManager(object):
 
             for y in range(start_year, end_year + 1):
                 d1 = Pendulum(y, months[0], 1)
+                if tz is None:
+                    d1 = d1.naive()
+
                 d2 = d1.add(months=len(months)).subtract(seconds=1)
 
                 if d2.year > end_year:
@@ -949,8 +960,6 @@ class DataManager(object):
 
                 # calculate daily means
                 data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t").dropna(dim="t")
-
-
 
                 assert isinstance(data_daily, xarray.DataArray)
 
@@ -976,7 +985,6 @@ class DataManager(object):
 
                 cao_suspect = (np.array(season_to_year_to_data[season][y]) <= t31_rolling - 1.5 * std_clim) & (std_clim > 2)
                 
-
                 n_cao_days = cao_suspect.sum(axis=0)
 
                 season_to_year_to_n_cao_days[season][y] = n_cao_days

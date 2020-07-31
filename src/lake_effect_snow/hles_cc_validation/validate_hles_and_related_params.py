@@ -185,7 +185,7 @@ def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
 def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
                 exp_label="validation_canesm2c",
                 vname_to_clevs=None, v_to_corr=None,
-                var_display_names=common_params.var_display_names):
+                var_display_names=common_params.var_display_names, img_type="pdf"):
     """
     Plot the biases on a panel, mask
     row for parameter, col for season
@@ -215,7 +215,7 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
     # get common map extent
     common_map_extent = None
     for var, lons in v_to_lons.items():
-        if var == default_varname_mappings.HLES_AMOUNT:
+        if var.endswith(default_varname_mappings.HLES_AMOUNT):
             lats = v_to_lats[var]
             common_map_extent = [lons[0, 0], lons[-1, -1], lats[0, 0], lats[-1, -1]]
             logger.info(f"common_map_extent={common_map_extent}")
@@ -364,7 +364,7 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
         axgr.cbar_axes[0].set_ylabel(units[var], fontdict=dict(size=plt.rcParams["font.size"]))
 
     img_dir.mkdir(exist_ok=True, parents=True)
-    img_file = img_dir / f"all_{exp_label}.pdf"
+    img_file = img_dir / f"all_{exp_label}.{img_type}"
     sys.stderr.write(f"Saving plots to {img_file}")
     fig.savefig(img_file, dpi=400, bbox_inches="tight")
 
