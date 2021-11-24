@@ -4,19 +4,21 @@ validation plot script
 """
 from collections import OrderedDict
 
+from matplotlib import cm
+
 from lake_effect_snow.data_utils import get_data
 from lake_effect_snow.hles_cc import common_params
 from lake_effect_snow.hles_cc_validation.validate_hles_and_related_params import calc_biases_and_pvals, plot_biases
-from lake_effect_snow import data_utils
+from lake_effect_snow import data_utils, default_varname_mappings
 import logging
-
-
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-def main(img_type="pdf"):
+def main(img_type="png"):
+    plt.rcParams["hatch.linewidth"] = 0.2
     season_to_months = OrderedDict([
         ("ND", (11, 12)),
         ("JF", (1, 2)),
@@ -49,8 +51,9 @@ def main(img_type="pdf"):
     v_to_lons = OrderedDict()
     v_to_lats = OrderedDict()
     for v in known_variables:
+        masking = v in [default_varname_mappings.LAKE_ICE_FRACTION]
         v_to_data[v], v_to_lons[v], v_to_lats[v] = get_data(v, season_to_months=season_to_months,
-                                                            data_query=data_query)
+                                                            data_query=data_query, masking=masking)
 
     v_to_bias, v_to_pvalue, v_to_corr = calc_biases_and_pvals(v_to_data, multipliers=(1, -1))
 
@@ -61,11 +64,28 @@ def main(img_type="pdf"):
     v_to_lats = OrderedDict([(f"bias_{k}", v) for k, v in v_to_lats.items()])
     vname_to_clevs = OrderedDict([(f"bias_{k}", v) for k, v in common_params.cc_vname_to_clevels.items()])
 
+    display_names_cc = OrderedDict([(f"bias_{k}", v) for k, v in common_params.var_display_names.items()])
+
+
+    # create custom colormap for the temperature changes
+    clevs = common_params.cc_vname_to_clevels[default_varname_mappings.T_AIR_2M]
+    cmap = cm.get_cmap("Reds", len(clevs) - 1)
+    cmap.set_under("darkblue")
+
+    vname_to_cmap = {
+        f"bias_{default_varname_mappings.T_AIR_2M}": cmap
+    }
+
+
+    var_list_to_mask_lakes = [
+        f"bias_{default_varname_mappings.HLES_AMOUNT}",
+        f"bias_{default_varname_mappings.HLES_FREQUENCY}"]
+
     plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats,
                 pval_max=pval_max,
                 exp_label="cc_canesm2",
-                vname_to_clevs=vname_to_clevs,
-                img_type=img_type)
+                vname_to_clevs=vname_to_clevs, var_display_names=display_names_cc,
+                img_type=img_type, varlist_to_mask_gl=var_list_to_mask_lakes, vname_to_cmap=vname_to_cmap)
 
 
 if __name__ == '__main__':

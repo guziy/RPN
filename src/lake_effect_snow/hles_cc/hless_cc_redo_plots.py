@@ -15,8 +15,8 @@ from lake_effect_snow.hles_cc import hles_tt_and_pr_correlations_mean_ice_fracti
 def main():
     # fig1.main(varname="hles_snow")
     # fig2.main()  # validation
-    fig3.main(img_type="tiff")
-    fig4.entry_for_cc_canesm2_gl(img_type="tiff")
+    fig3.main(img_type="png")
+    fig4.entry_for_cc_canesm2_gl(img_type="png")
 
 
 if __name__ == "__main__":

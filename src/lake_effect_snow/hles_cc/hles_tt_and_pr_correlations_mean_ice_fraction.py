@@ -7,6 +7,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import NullLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pendulum import Period
+from scipy.spatial import KDTree
 
 from application_properties import main_decorator
 from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points_near_lakes
@@ -16,6 +17,7 @@ from lake_effect_snow.base_utils import VerticalLevel
 from lake_effect_snow.hles_cc import common_params
 from lake_effect_snow.hles_cc.cc_period import CcPeriodsInfo
 from lake_effect_snow.hles_cc.plot_cc_2d_all_variables_for_all_periods import get_gl_mask
+from lake_effect_snow.lake_effect_snowfall_entry import get_zone_around_lakes_mask
 from util import plot_utils
 
 import numpy as np
@@ -23,12 +25,17 @@ from scipy.stats import pearsonr
 
 import matplotlib.pyplot as plt
 
+from util.geo import lat_lon
+
 
 @main_decorator
-def entry_for_cc_canesm2_gl(img_type="pdf"):
+def entry_for_cc_canesm2_gl(img_type="png"):
     """
     for CanESM2 driven CRCM5_NEMO simulation
     """
+
+    pvalue_max = 0.1
+    plt.rcParams["hatch.linewidth"] = 0.2
     data_root = common_params.data_root
     label_to_datapath = OrderedDict([
         (common_params.crcm_nemo_cur_label,
@@ -66,12 +73,14 @@ def entry_for_cc_canesm2_gl(img_type="pdf"):
     plot_utils.apply_plot_params(width_cm=25, height_cm=25, font_size=8)
 
     gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
-    hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
+    # hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
+
+
 
     main(label_to_data_path=label_to_datapath,
          var_pairs=var_pairs, periods_info=periods_info,
          vname_display_names=var_display_names, season_to_months=season_to_months,
-         hles_region_mask=hles_region_mask, lakes_mask=gl_mask, img_type=img_type)
+         hles_region_mask=None, lakes_mask=gl_mask, img_type=img_type, pvalue_max=pvalue_max)
 
 
 def calculate_correlations_and_pvalues(var_pairs,
@@ -150,7 +159,7 @@ def main(label_to_data_path: dict, var_pairs: list,
          cur_label=common_params.crcm_nemo_cur_label,
          fut_label=common_params.crcm_nemo_fut_label,
          hles_region_mask=None, lakes_mask=None,
-         img_type="pdf"):
+         img_type="png", pvalue_max=0.1):
     # get a flat list of all the required variable names (unique)
     varnames = []
     for vpair in var_pairs:
@@ -206,8 +215,20 @@ def main(label_to_data_path: dict, var_pairs: list,
         label_to_vname_to_season_to_data[fut_label][vname] = fut_means
 
     if hles_region_mask is None:
-        data_field = label_to_vname_to_season_to_data[common_params.crcm_nemo_cur_label][list(season_to_months.keys())[0]]
-        hles_region_mask = np.ones_like(data_field)
+        # data_field = label_to_vname_to_season_to_data[common_params.crcm_nemo_cur_label][list(season_to_months.keys())[0]]
+
+        # get the KDTree for interpolation purposes
+        ktree = KDTree(
+            np.array(list(zip(*lat_lon.lon_lat_to_cartesian(lon=cur_dm.lons.flatten(), lat=cur_dm.lats.flatten()))))
+        )
+
+        # define the ~200km near lake zone
+        hles_region_mask = get_zone_around_lakes_mask(lons=cur_dm.lons, lats=cur_dm.lats, lake_mask=lakes_mask,
+                                                              ktree=ktree,
+                                                              dist_km=common_params.NEAR_GL_HLES_ZONE_SIZE_KM)
+
+
+
 
     correlation_data = calculate_correlations_and_pvalues(var_pairs, label_to_vname_to_season_to_data,
                                                           season_to_months=season_to_months,
@@ -234,11 +255,14 @@ def main(label_to_data_path: dict, var_pairs: list,
 
         for vpair in var_pairs:
             for label in sorted(label_to_vname_to_season_to_data):
-                ax = fig.add_subplot(gs[row, col], projection=cartopy.crs.PlateCarree())
+                proj = cartopy.crs.PlateCarree()
+                ax = fig.add_subplot(gs[row, col], projection=proj)
 
                 r, pv = correlation_data[vpair][label][season]
 
                 r[np.isnan(r)] = 0
+                pv[np.isnan(pv)] = 2 * pvalue_max
+
                 r = np.ma.masked_where(~hles_region_mask, r)
                 ax.set_facecolor("0.75")
 
@@ -246,14 +270,25 @@ def main(label_to_data_path: dict, var_pairs: list,
                 ax.xaxis.set_major_locator(NullLocator())
                 ax.yaxis.set_major_locator(NullLocator())
 
-                im = ax.pcolormesh(cur_dm.lons, cur_dm.lats, r, cmap=cm.get_cmap("bwr", 11), vmin=-1, vmax=1)
+                im = ax.pcolormesh(cur_dm.lons, cur_dm.lats, r, cmap=cm.get_cmap("bwr", 11), vmin=-1, vmax=1,
+                                   transform=proj)
 
-                # add 0 deg line
-                cs = ax.contour(cur_dm.lons, cur_dm.lats, label_to_season_to_tt_mean[label][season], levels=[0,],
-                                linewidths=1, colors="k")
+                tt = label_to_season_to_tt_mean[label][season]
+                if tt.min() * tt.max() <= 0:
+                    # add 0 deg line
+                    cs = ax.contour(cur_dm.lons, cur_dm.lats, tt, levels=[0,], transform=proj,
+                                    linewidths=1, colors="k")
+
                 ax.set_extent([cur_dm.lons[0, 0], cur_dm.lons[-1, -1], cur_dm.lats[0, 0], cur_dm.lats[-1, -1]])
 
-                ax.background_patch.set_facecolor("0.75")
+                print(f"pvalue range {pv.min()} ... {pv.max()}")
+                if pv.max() > pvalue_max:
+                    pv = np.ma.masked_where(r.mask, pv)  # no need to plot outside the region of interest
+                    ax.contourf(cur_dm.lons, cur_dm.lats, pv, colors='none',
+                                levels=[pvalue_max, np.inf],
+                                hatches=["//////"], transform=proj)
+
+                ax.patch.set_facecolor("0.75")
 
                 if row == 0:
                     # ax.set_title(season + f", {vname_display_names[vpair[0]]}")

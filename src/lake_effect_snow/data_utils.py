@@ -29,7 +29,7 @@ all_known_variables = [
 
 def get_data(vname=default_varname_mappings.T_AIR_2M,
              season_to_months=None,
-             data_query=None, tz=None):
+             data_query=None, tz=None, masking=True):
     """
     Get seasonal means for each year for vname, obs and mod
     :param tz: if tz is None use naive dates for selecting periods of interest
@@ -149,9 +149,10 @@ def get_data(vname=default_varname_mappings.T_AIR_2M,
     if vname in [default_varname_mappings.LAKE_ICE_FRACTION]:
         gl_mask = ~gl_mask
 
-    for case in res:
-        for season, data in res[case].items():
-            for year in data:
-                data[year] = np.ma.masked_where(gl_mask, data[year])
+    if masking:
+        for case in res:
+            for season, data in res[case].items():
+                for year in data:
+                    data[year] = np.ma.masked_where(gl_mask, data[year])
 
     return res, dm_obs.lons, dm_obs.lats

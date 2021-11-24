@@ -4,6 +4,9 @@ Panel plot of biases.
 2 col for season ()
 
 """
+import matplotlib
+matplotlib.use("Agg")
+
 from collections import OrderedDict, defaultdict
 import numpy as np
 from cartopy.mpl.geoaxes import GeoAxes
@@ -185,10 +188,13 @@ def calc_biases_and_pvals(v_to_data, multipliers=(1, -1)):
 def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
                 exp_label="validation_canesm2c",
                 vname_to_clevs=None, v_to_corr=None,
-                var_display_names=common_params.var_display_names, img_type="pdf"):
+                var_display_names=common_params.var_display_names, img_type="pdf",
+                varlist_to_mask_gl=None, vname_to_cmap=None
+                ):
     """
     Plot the biases on a panel, mask
     row for parameter, col for season
+    :param varlist_to_mask_gl: list of var names for which the Great Lakes are masked
     :param var_display_names:
     :param pval_max:
     :param v_to_bias:
@@ -196,6 +202,12 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
     :param v_to_lons:
     :param v_to_lats:
     """
+    if varlist_to_mask_gl is None:
+        varlist_to_mask_gl = ()
+
+    if vname_to_cmap is None:
+        vname_to_cmap = {}
+
     logging.getLogger().setLevel(logging.INFO)
     from cartopy import crs as ccrs
     import matplotlib.pyplot as plt
@@ -273,7 +285,7 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
             data = np.ma.masked_where(np.isnan(data), data)
             # to handle outside of the region of interest
             # data = np.ma.masked_where(np.abs(data) <= np.abs(data).min(), data)
-            data = np.ma.masked_where((pval > pval_max), data)
+            # data = np.ma.masked_where((pval > pval_max), data)
 
             # mask outside of the HLES zone
             lake_mask = get_mask(lons, lats, shp_path=hles_alg_common_params.GL_COAST_SHP_PATH) > 0.1
@@ -289,6 +301,7 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
                                                                   dist_km=common_params.NEAR_GL_HLES_ZONE_SIZE_KM)
 
             reg_of_interest = near_lake_x_km_zone_mask | lake_mask
+
             data = np.ma.masked_where(~reg_of_interest, data)  # actual masking happens here
 
             plot_field = True
@@ -313,12 +326,16 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
 
             clevs = vname_to_clevs[var]
             norm = BoundaryNorm(boundaries=clevs, ncolors=len(clevs) - 1, clip=False)
-            if var.startswith("bias"):
-                cmap = cm.get_cmap("bwr", len(clevs) - 1)
-                cmap.set_over("orange")
-                cmap.set_under("cyan")
+
+            if var not in vname_to_cmap:
+                if var.startswith("bias"):
+                    cmap = cm.get_cmap("bwr", len(clevs) - 1)
+                    cmap.set_over("darkred")
+                    cmap.set_under("darkblue")
+                else:
+                    cmap = cm.get_cmap("gist_ncar_r", len(clevs) - 1)
             else:
-                cmap = cm.get_cmap("gist_ncar_r", len(clevs) - 1)
+                cmap = vname_to_cmap[var]
 
             assert cmap.N == len(clevs) - 1
 
@@ -328,10 +345,18 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
                              np.sum(~data.mask) * 100. / np.product(data.shape),
                              np.sum(~data.mask)])
 
+                # mask great lakes for some params
+                if var in varlist_to_mask_gl:
+                    data = np.ma.masked_where(lake_mask, data)
+                    logger.info(f"Masking lakes for {var}")
+
                 p = ax.pcolormesh(lons, lats, data,
                                   transform=projection,
                                   cmap=cmap,
                                   norm=norm)
+                # show significance
+                pval = np.ma.masked_where(data.mask, pval)  # no need to plot outside the region of interest
+                ax.contourf(lons, lats, pval, colors='none', levels=[pval_max, np.inf], hatches=["//////"])
             else:
                 logger.debug(f"Not plotting {var} during {season}, nothing is significant")
 
@@ -366,7 +391,7 @@ def plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=0.05,
     img_dir.mkdir(exist_ok=True, parents=True)
     img_file = img_dir / f"all_{exp_label}.{img_type}"
     sys.stderr.write(f"Saving plots to {img_file}")
-    fig.savefig(img_file, dpi=400, bbox_inches="tight")
+    fig.savefig(img_file, dpi=300, bbox_inches="tight")
 
 
 def main():
@@ -408,7 +433,7 @@ def main():
 
     plot_biases(v_to_bias, v_to_pvalue, v_to_lons, v_to_lats, pval_max=pval_max,
                 exp_label="validation_canesm2c_excl_tt_and_pr",
-                v_to_corr=v_to_corr)
+                v_to_corr=v_to_corr, img_type="png")
 
 
 if __name__ == '__main__':

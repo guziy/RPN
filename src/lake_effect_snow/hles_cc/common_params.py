@@ -24,7 +24,7 @@ crcm_nemo_fut_label = "GEM_NEMOf"
 
 
 image_file_options = dict(
-    bbox_inches="tight", dpi=300, transparent=True
+    bbox_inches="tight", dpi=300, transparent=False
 )
 
 
@@ -61,8 +61,8 @@ var_display_names.update(bias_display_names)
 
 
 bias_vname_to_clevels = {
-    default_varname_mappings.HLES_AMOUNT: np.arange(-2.1, 2.2, 0.2,),
-    default_varname_mappings.HLES_FREQUENCY: np.arange(-2.9, 3.0, 0.4,),
+    default_varname_mappings.HLES_AMOUNT: np.arange(-0.5, 0.54, 0.04,),
+    default_varname_mappings.HLES_FREQUENCY: np.arange(-2.9, 3.0, 0.2,),
     default_varname_mappings.T_AIR_2M: np.arange(-5.5, 5.6, 1),
     default_varname_mappings.TOTAL_PREC: np.arange(-3.75, 4., 0.5),
     default_varname_mappings.LAKE_ICE_FRACTION: np.arange(-0.75, 0.8, 0.1),
@@ -71,7 +71,7 @@ bias_vname_to_clevels = {
 }
 
 obs_vname_to_clevels = {
-    default_varname_mappings.HLES_AMOUNT: np.arange(0, 4, 0.2,),
+    default_varname_mappings.HLES_AMOUNT: np.arange(0, 1.0, 0.04,),
     default_varname_mappings.HLES_FREQUENCY: np.arange(0, 8, 0.4),
     default_varname_mappings.T_AIR_2M: np.arange(-25.5, 25.6, 1),
     default_varname_mappings.TOTAL_PREC: np.arange(0, 10., 0.5),
@@ -82,9 +82,9 @@ obs_vname_to_clevels = {
 
 
 cc_vname_to_clevels = {
-    default_varname_mappings.HLES_AMOUNT: np.arange(-2.1, 2.2, 0.2,),
+    default_varname_mappings.HLES_AMOUNT: np.arange(-1.05, 1.1, 0.1,),
     default_varname_mappings.HLES_FREQUENCY: np.arange(-2.1, 2.2, 0.2,),
-    default_varname_mappings.T_AIR_2M: np.arange(-10.5, 10.6, 1),
+    default_varname_mappings.T_AIR_2M: np.arange(0, 7.5, 0.5),
     default_varname_mappings.TOTAL_PREC: np.arange(-3.75, 4, 0.5),
     default_varname_mappings.LAKE_ICE_FRACTION: np.arange(-0.75, 0.8, 0.1),
     default_varname_mappings.CAO: np.arange(-2.1, 2.2, 0.2,),

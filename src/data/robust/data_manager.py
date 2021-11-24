@@ -762,7 +762,7 @@ class DataManager(object):
             print(period.start.tz)
             try:
                 var = ds[self.varname_mapping[varname_internal]].sel(time=slice(period.start, period.end)).squeeze()
-            except ValueError:
+            except KeyError:
                 var = ds[self.varname_mapping[varname_internal]].sel(t=slice(period.start, period.end)).squeeze()
 
             for cname, cvals in var.coords.items():
@@ -823,6 +823,9 @@ class DataManager(object):
                 "reading of the layout type {} is not implemented yet.".format(self.data_source_type))
 
         # print(dates[0], dates[1], "...", dates[-1], len(dates))
+
+        if isinstance(dates, xarray.DataArray):
+            dates = dates.data
 
         # Construct a dictionary for xarray.DataArray ...
         vardict = {
@@ -904,7 +907,7 @@ class DataManager(object):
 
                 # calculate number of hles days
 
-                data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t")
+                data_daily = data.resample(t="1D").mean(dim="t", keep_attrs=True)
                 data_daily = data_daily.to_masked_array()
 
                 data_daily[data_daily.mask] = 0
@@ -959,7 +962,7 @@ class DataManager(object):
                 data = self.read_data_for_period(current_period, temperature_vname)
 
                 # calculate daily means
-                data_daily = data.resample(t="1D", keep_attrs=True).mean(dim="t").dropna(dim="t")
+                data_daily = data.resample(t="1D").mean(dim="t", keep_attrs=True).dropna(dim="t")
 
                 assert isinstance(data_daily, xarray.DataArray)
 
