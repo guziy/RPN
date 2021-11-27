@@ -13,13 +13,16 @@ from matplotlib import patches
 
 def add_rectangle(ax, xx, yy, margin=10, edge_style="solid", **kwargs):
 
+    nx, ny = xx.shape
     xll = xx[margin, margin]
     yll = yy[margin, margin]
-    xur = xx[-margin, -margin]
-    yur = yy[-margin, -margin]
+    xur = xx[nx - margin - 1, ny - margin - 1]
+    yur = yy[nx - margin - 1, ny - margin - 1]
 
     lw = kwargs.pop("linewidth", 2)
     ec = kwargs.pop("edgecolor", "k")
+
+    print((xll, yll), (xll, yur), (xur, yur), (xur, yll))
 
     ax.add_patch(
         patches.Polygon([(xll, yll), (xll, yur), (xur, yur), (xur, yll)], edgecolor=ec,

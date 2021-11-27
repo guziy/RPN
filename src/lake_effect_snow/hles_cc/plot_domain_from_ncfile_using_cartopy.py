@@ -7,6 +7,7 @@ from matplotlib import cm, colors
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.spatial import KDTree
 
 from application_properties import main_decorator
 from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points_near_lakes
@@ -21,6 +22,9 @@ import numpy as np
 from rpn.domains.rotated_lat_lon import RotatedLatLon
 
 import logging
+
+from lake_effect_snow.lake_effect_snowfall_entry import get_zone_around_lakes_mask
+from util.geo import lat_lon
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +73,14 @@ def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path, focus_reg
     # ax.coastlines()
 
     gl_mask = get_gl_mask(topo_nc_file_path)
-    region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
+    # define the ~200km near lake zone
+    ktree = KDTree(list(zip(*lat_lon.lon_lat_to_cartesian(topo_lons.flatten(), topo_lats.flatten()))))
+    region_mask = get_zone_around_lakes_mask(lons=topo_lons, lats=topo_lats,
+                                             lake_mask=gl_mask,
+                                             ktree=ktree,
+                                             dist_km=common_params.NEAR_GL_HLES_ZONE_SIZE_KM)
+
+    # region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
     topo_lons[topo_lons > 180] -= 360
 
 
@@ -93,14 +104,26 @@ def plot_domain_and_interest_region(ax: Axes, topo_nc_file_path: Path, focus_reg
     add_rectangle(ax, xx, yy, margin=10, edge_style="dashed", zorder=10, linewidth=0.5)
 
     # plot a rectangle for the focus region
+    logging.warning("Focus region file: %s", focus_region_lonlat_nc_file)
     if focus_region_lonlat_nc_file is not None:
         with xarray.open_dataset(focus_region_lonlat_nc_file) as fr:
             focus_lons, focus_lats = fr["lon"].data, fr["lat"].data
 
+            focus_lons[focus_lons > 180] -= 360
+
+            logger.warning(f"focus region coords, lon: %f, ..., %f, lats: %f, ..., %f",
+                        focus_lons.min(), focus_lons.max(),
+                        focus_lats.min(), focus_lats.max())
+            logger.warning(f"focus_reg shape = (%d, %d)", *focus_lons.shape)
+
             xyz_coords = rot_pole_cpy.transform_points(cartopy.crs.PlateCarree(), focus_lons, focus_lats)
             xxf, yyf = xyz_coords[..., 0], xyz_coords[..., 1]
 
-            add_rectangle(ax, xxf, yyf, edge_style="solid", margin=0, edgecolor="magenta", zorder=10, linewidth=1)
+            add_rectangle(ax, xxf, yyf, edge_style="solid",
+                          margin=0,
+                          edgecolor="magenta",
+                          zorder=10,
+                          linewidth=1)
 
     cs = ax.pcolormesh(topo_lons[:, :], topo_lats[:, :], topo[:, :], transform=cartopy.crs.PlateCarree(),
                      cmap=cmap, norm=norm)

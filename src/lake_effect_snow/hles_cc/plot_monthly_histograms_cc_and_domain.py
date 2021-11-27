@@ -14,6 +14,7 @@ from crcm5.nemo_vs_hostetler.main_for_lake_effect_snow import get_mask_of_points
 from lake_effect_snow.hles_cc import common_params
 from lake_effect_snow.hles_cc.plot_cc_2d_all_variables_for_all_periods import get_gl_mask
 from lake_effect_snow.hles_cc.plot_domain_from_ncfile_using_cartopy import plot_domain_and_interest_region
+from lake_effect_snow.lake_effect_snowfall_entry import get_zone_around_lakes_mask
 from lake_effect_snow.plot_monthly_histograms import get_monthly_accumulations_area_avg_from_merged
 from util import plot_utils
 import matplotlib.pyplot as plt
@@ -55,7 +56,7 @@ def main(varname=""):
 
     # longutudes and latitudes of the focus region around the Great Lakes (we define it, mostly for performance
     # issues and to eliminate regions with 0 hles that still are in the 200 km HLES zone)
-    focus_region_lonlat_nc_file = data_root / "lon_lat.nc"
+    focus_region_lonlat_nc_file = data_root / "cur/hles/CRCM5_NEMO_fix_CanESM2_RCP85_1989-2010_monthly_lkeff_snfl_daily_merged.nc"
 
     label_to_series = OrderedDict()
     label_to_color = {
@@ -67,7 +68,9 @@ def main(varname=""):
     gl_mask = get_gl_mask(label_to_datapath[common_params.crcm_nemo_cur_label])
     hles_region_mask = get_mask_of_points_near_lakes(gl_mask, npoints_radius=20)
 
-    # select a file from the directory
+
+
+# select a file from the directory
     sel_file = None
     for f in label_to_datapath[common_params.crcm_nemo_cur_label].iterdir():
         if f.is_file():
@@ -87,6 +90,13 @@ def main(varname=""):
         coords_dst = lat_lon.lon_lat_to_cartesian(focus_lons.flatten(), focus_lats.flatten())
 
         ktree = KDTree(list(zip(*coords_src)))
+
+        # define the ~200km near lake zone
+        hles_region_mask = get_zone_around_lakes_mask(lons=hles_region_mask_lons, lats=hles_region_mask_lats,
+                                                      lake_mask=gl_mask,
+                                                      ktree=ktree,
+                                                      dist_km=common_params.NEAR_GL_HLES_ZONE_SIZE_KM)
+
 
         dists, inds = ktree.query(list(zip(*coords_dst)), k=1)
 
@@ -156,7 +166,7 @@ def main(varname=""):
         label_to_handle[label] = h
 
     ax.set_ylabel("HLES (cm/day)")
-    ax.set_title("(b) Monthly HLES distribution")
+    ax.set_title("Monthly HLES distribution")
 
     ax.xaxis.set_major_formatter(FuncFormatter(func=format_month_label))
     ax.xaxis.set_major_locator(MonthLocator(bymonthday=int(sum(width[:len(label_to_series)]) / 2.) + 1))
@@ -180,7 +190,7 @@ def main(varname=""):
     ax = fig.add_subplot(gs[0, 0])
     topo_nc_file = data_root / "geophys_452x260_me.nc"
     ax = plot_domain_and_interest_region(ax, topo_nc_file, focus_region_lonlat_nc_file=focus_region_lonlat_nc_file)
-    ax.set_title("(a) Experimental domain")
+    ax.set_title("Experimental domain")
 
     # Add a common legend
     labels = list(label_to_handle)
@@ -191,13 +201,13 @@ def main(varname=""):
     sel_months_str = "_".join([str(m) for m in selected_months])
 
     common_params.img_folder.mkdir(exist_ok=True)
-    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}_domain.pdf"
+    img_file = common_params.img_folder / f"{varname}_histo_cc_m{sel_months_str}_domain.png"
     print(f"Saving plot to {img_file}")
     fig.savefig(img_file, **common_params.image_file_options)
 
 
 if __name__ == '__main__':
     # main(varname="hles_snow")
-
+    logging.basicConfig(level=logging.WARN)
     for varname in ["hles_snow", ]:
         main(varname=varname)
